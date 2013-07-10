@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import subprocess
 import tempfile
 
 # list of functions in this module:
@@ -43,8 +44,8 @@ def tmpfile(ext=''):
     return imout
 
 def run(cmd):
-    os.system("echo '%s'" % cmd)
-    os.system(cmd)
+    print cmd
+    subprocess.call(cmd, shell=True)
 
 def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
