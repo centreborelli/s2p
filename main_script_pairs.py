@@ -28,7 +28,6 @@ cloud = '/tmp/cloud.ply'
 ## 1. rectification
 H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
                                                        x, y, w, h, rect1, rect2)
-print disp_min, disp_max
 
 # save homographies and disp_range to tmp files
 np.savetxt('/tmp/h1', H1)
@@ -37,8 +36,10 @@ np.savetxt('/tmp/disp_range', [disp_min, disp_max])
 
 
 ## 2. block-matching
-block_matching(rect1, rect2, disp_range, disp, 'hirshmuller')
+block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
+                                                        'hirshmuller')
 
 
 ## 3. triangulation
-triangulation(rpc1, '/tmp/h1', rpc2, '/tmp/h2', disp, mask, im1, cloud)
+triangulation.compute_point_cloud(rpc1, '/tmp/h1', rpc2, '/tmp/h2', disp, mask,
+                                                                    im1, cloud)

@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
+import os
+import numpy as np
 from python import common
 
 
 # define paths of various bm binaries
-hirshmuller = '../stereoHirschmuller2002/subpix.sh'
+hirshmuller = '%s/../stereoHirschmuller2002/subpix.sh' % (os.path.dirname(
+                                                                __file__))
 
 
-def block_matching(im1, im2, disp_range, out_disp, algo):
+def compute_disparity_map(im1, im2, disp_range, out_disp, algo):
     # read the disp_range file
     disp = np.loadtxt(disp_range)
     disp_min = disp[0]
