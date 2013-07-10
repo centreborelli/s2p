@@ -8,10 +8,10 @@ from python import common
 img_name = 'toulouse'
 exp_name = 'blagnac'
 
-im1 = 'pleiades_images_tif/%s/im01.tif' % (img_name)
-im2 = 'pleiades_images_tif/%s/im02.tif' % (img_name)
-rpc1 = 'rpc_data/%s/rpc01.xml' % (img_name)
-rpc2 = 'rpc_data/%s/rpc02.xml' % (img_name)
+im1  = 'pleiades_data/images/%s/im01.tif' % (img_name)
+im2  = 'pleiades_data/images/%s/im02.tif' % (img_name)
+rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
+rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
 x = 6000
 y = 6000
 w = 1000
@@ -30,7 +30,7 @@ print disp_min, disp_max
 # 2. block-matching
 bm_binary = 'bin/stereoHirschmuller2002/subpix.sh'
 disp = '/tmp/disp.pgm'
-run("%s %s %s %s %d %d" %(bm_binary, rect1, rect2, disp, disp_min, disp_max))
+common.run("%s %s %s %s %d %d" %(bm_binary, rect1, rect2, disp, disp_min, disp_max))
 
 # 3. triangulation
 #np.savetxt('/tmp/h1', H1)

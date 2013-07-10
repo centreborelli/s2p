@@ -227,9 +227,9 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # for debug
     print "min, max, mean rectification error on rpc matches ------------------"
-    tmp = common.points_apply_homography(H1, np.vstack([x1, y1]).T)
+    tmp = common.points_apply_homography(H1, rpc_matches[:, 0:2])
     y1 = tmp[:, 1]
-    tmp = common.points_apply_homography(H2, np.vstack([x2, y2]).T)
+    tmp = common.points_apply_homography(H2, rpc_matches[:, 2:4])
     y2 = tmp[:, 1]
     err = np.abs(y1 - y2)
     print np.min(err), np.max(err), np.mean(err)

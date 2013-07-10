@@ -43,7 +43,7 @@ def tmpfile(ext=''):
     return imout
 
 def run(cmd):
-    os.system("echo %s" % cmd)
+    os.system("echo '%s'" % cmd)
     os.system(cmd)
 
 def shellquote(s):

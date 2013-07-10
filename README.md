@@ -1,3 +1,10 @@
+# S2P - Satellite Stereo Pipeline
+
+This code implements a stereo pipeline for producing elevation models from
+Pleiades satellite images. It aims at automatically generating digital
+elevation models from tristereo sets (three images).
+
+
 ## Pleiades data
 
 Several Pleiades stereoscopic datasets are available. We have pairs and
@@ -8,7 +15,8 @@ subfolders, `rpc` and `images`.
 
 ## Needed binaries
 
-The following binaries should be in your PATH:
+The following binaries are used by the python routines and should be in your
+PATH:
     srtm4
     rectify_mindistortion
     gdal_translate
