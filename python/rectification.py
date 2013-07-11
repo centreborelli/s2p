@@ -294,8 +294,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
     assert (y0 == 0)
 
     # apply homographies and do the crops
-    homography_cropper.image_crop_and_apply_homography(out1, im1, H1, w0, h0)
-    homography_cropper.image_crop_and_apply_homography(out2, im2, H2, w0, h0)
+    homography_cropper.crop_and_apply_homography_panchro(out1, im1, H1, w0, h0)
+    homography_cropper.crop_and_apply_homography_panchro(out2, im2, H2, w0, h0)
 
     return H1, H2, disp_min, disp_max
 
