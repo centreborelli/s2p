@@ -169,7 +169,7 @@ def image_apply_homography(im, H):
 
 def image_qauto(im):
     """
-    Uniform requantization between 0 and 255.
+    Uniform requantization between between min and max intensity.
 
     Args:
         im: path to input image
@@ -179,6 +179,39 @@ def image_qauto(im):
     """
     out = tmpfile('.png')
     run('qauto %s %s 2> /dev/null' % (im, out))
+    return out
+
+
+def image_qeasy(im, black, white):
+    """
+    Uniform requantization between user-specified min and max levels.
+
+    Args:
+        im: path to input image
+        black: lower threshold. Values lower or equal are mapped to 0
+        white: upper threshold. Values greater or equal are mapped to 255
+
+    Returns:
+        path of requantized image, saved as png
+    """
+    out = tmpfile('.png')
+    run('qeasy %d %d %s %s 2> /dev/null' % (black, white, im, out))
+    return out
+
+
+def rgbi_to_rgb(im):
+    """
+    Converts a 4-channel red, green, blue, infrared (rgbi) image to rgb.
+
+    Args:
+        im: path to the input image
+
+    Returns:
+        output rgb image
+    """
+    out = tmpfile('.tif')
+    run('plambda %s "x[0] x[1] 0.6 * x[3] 0.4 * + x[2] join3" | iion - %s'%(im,
+                                                                           out))
     return out
 
 
@@ -310,4 +343,3 @@ def image_pleiades_unsharpening_mtf():
     """
     return '%s/../pleiades_data/idata_0009_MTF_89x89.tif'%(os.path.dirname(
                                                 os.path.abspath(__file__)))
-    
