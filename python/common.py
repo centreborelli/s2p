@@ -141,6 +141,7 @@ def image_apply_homography2(out, im, H, w, h):
         return
     else:
         print "image_apply_homography2: im dimensions must be bigger than (w, h)"
+        # TODO: abort
         return
 
 
