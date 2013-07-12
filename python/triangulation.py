@@ -55,6 +55,6 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud):
             homography
         cloud: path to the output points cloud (ply format)
     """
-    common.run("colormeshh %s %s %s %s > %s" % (crop_colorized, heights, rpc,
-                                                                    H, cloud))
+    common.run("colormesh %s %s %s %s %s" % (crop_colorized, heights, rpc, H,
+        cloud))
     return
