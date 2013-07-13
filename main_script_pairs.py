@@ -6,12 +6,12 @@ from python import rectification
 from python import block_matching
 from python import triangulation
 
-#img_name = 'toulouse'
-#exp_name = 'blagnac'
-#x = 6000
-#y = 6000
-#w = 1000
-#h = 1000
+img_name = 'toulouse'
+exp_name = 'blagnac'
+x = 6000
+y = 6000
+w = 1000
+h = 1000
 
 #img_name = 'calanques'
 #exp_name = 'collines'
@@ -20,12 +20,12 @@ from python import triangulation
 #w = 1000
 #h = 1000
 
-img_name = 'calanques'
-exp_name = 'collines2'
-x = 28800
-y = 6600
-w = 1000
-h = 1000
+#img_name = 'calanques'
+#exp_name = 'collines2'
+#x = 28800
+#y = 6600
+#w = 1000
+#h = 1000
 
 im1  = 'pleiades_data/images/%s/im01.tif' % (img_name)
 im2  = 'pleiades_data/images/%s/im02.tif' % (img_name)

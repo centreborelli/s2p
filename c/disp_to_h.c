@@ -118,7 +118,6 @@ int main_disp_to_h(int c, char *v[])
 
     int npoints = 0;
     for (int y = 0; y < ny; y++) {
-        printf("line %03d\n", y);
         for (int x = 0; x < nx; x++) {
             int pos = x + nx*y;
             if (msk[pos] <= 0) {

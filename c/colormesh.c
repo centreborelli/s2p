@@ -70,8 +70,8 @@ void write_ply_header(FILE* f, int npoints) {
 }
 
 #include "smapa.h"
-SMART_PARAMETER_SILENT(IJMESH,0)
-SMART_PARAMETER_SILENT(IJMESHFAC,2)
+SMART_PARAMETER_SILENT(IJMESH, 0)
+SMART_PARAMETER_SILENT(IJMESHFAC, 2)
 
 int main(int c, char *v[])
 {
