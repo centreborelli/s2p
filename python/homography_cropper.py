@@ -51,7 +51,7 @@ def crop_and_apply_homography_panchro(im_out, im_in, H, w, h):
     # compensate the homography with the translation induced by the preliminary
     # crop, then apply the homography and crop.
     H = np.dot(H, common.matrix_translation(x0, y0))
-    common.image_apply_homography2(im_out, tmp, H, w, h)
+    common.image_apply_homography(im_out, tmp, H, w, h)
     return
 
 

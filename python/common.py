@@ -19,7 +19,6 @@ import tempfile
 #
 # image_crop_LARGE
 # image_crop_TIFF
-# image_apply_homography2
 # image_apply_homography
 # image_size
 # image_crop
@@ -114,7 +113,7 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
     return out
 
-def image_apply_homography2(out, im, H, w, h):
+def image_apply_homography(out, im, H, w, h):
     """
     Applies an homography to an image.
 
@@ -128,44 +127,16 @@ def image_apply_homography2(out, im, H, w, h):
         nothing
 
     The output image is defined on the domain [0, w] x [0, h]. Its pixels
-    intensities are defined by out(x) = im(H^{-1}(x)).
-    """
-    # if the input image dimensions are bigger than (w, h), then we just need
-    # to call the homography binary, and crop the result to the desired size.
-    # If not, request a bigger input image. This is due to the interface of the
-    # homography binary we are using.
-    in_w, in_h = image_size(im)
-    if (w < in_w and h < in_h):
-        im = image_apply_homography(im, H)
-        image_crop(im, 0, 0, w, h, out)
-        return
-    else:
-        print "image_apply_homography2: im dimensions must be bigger than (w, h)"
-        # TODO: abort
-        return
-
-
-def image_apply_homography(im, H):
-    """
-    Applies an homography to an image.
-
-    Args:
-        im: path to the input image file
-        H: numpy array containing the 3x3 homography matrix
-
-    Returns:
-        path to the output image.
-
-    It uses Pascal Monasse homography binary, which doesn't allow to specify
-    the output image size. Output image has the same size as input.
+    intensities are defined by out(x) = im(H^{-1}(x)). This function calls
+    Pascal Monasse homography binary, refactored by Gabriele.
     """
     # write the matrix to a file
     Hf = tmpfile('.txt')
     matrix_write(Hf, H)
     # apply the homography
-    out = tmpfile('.tif')
-    run("homography %s %s %s" % (im, Hf, out))
-    return out
+    out_png = tmpfile('.png')
+    run("homography %s %s %s %s 0 %d %d" % (im, Hf, out_png, out, w, h))
+    return
 
 
 def image_qauto(im):
