@@ -6,8 +6,8 @@ from python import common
 
 
 # define paths of various bm binaries
-hirshmuller = '%s/../stereoHirschmuller2002/subpix.sh' % (os.path.dirname(
-                                                                __file__))
+hirshmuller = '%s/../3rdparty/stereo_hirschmuller_2002/subpix.sh' % (
+    os.path.dirname( __file__))
 
 
 def compute_disparity_map(im1, im2, disp_range, out_disp, algo):
