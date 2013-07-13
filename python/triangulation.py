@@ -40,7 +40,7 @@ def colorize(crop_panchro, im_color, H, out_colorized):
     H = np.dot(H, H_zoom)
     w, h = common.image_size(crop_panchro)
     crop_ms = common.tmpfile('.tif')
-    homography_cropper.crop_and_apply_homography_ms(crop_ms, im_color, H, w, h)
+    homography_cropper.crop_and_apply_homography(crop_ms, im_color, H, w, h)
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
