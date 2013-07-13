@@ -40,6 +40,7 @@ disp  = '/tmp/%s_disp.pgm'% (exp_name)
 mask  = '/tmp/%s_disp.pgm.mask.png'% (exp_name)
 cloud = '/tmp/%s_cloud.ply'% (exp_name)
 height = '/tmp/%s_height.tif'% (exp_name)
+rpc_err = '/tmp/%s_rpc_err.tif'% (exp_name)
 
 
 ## 1. rectification
@@ -58,8 +59,8 @@ block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
 
 
 ## 3. triangulation
-triangulation.compute_height_map(rpc1, '/tmp/h1', rpc2, '/tmp/h2', disp, mask,
-    rect1, cloud, height)
+triangulation.compute_height_map(rpc1, rpc2, '/tmp/h1', '/tmp/h2', disp, mask,
+    height, rpc_err)
 
 ## 4. colorize and generate point cloud
 triangulation.colorize(rect1, im1_color, '/tmp/h1', rect1_color)

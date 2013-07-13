@@ -4,9 +4,19 @@ import numpy as np
 import common
 import homography_cropper
 
-def compute_height_map(rpc1, H1, rpc2, H2, disp, mask, im1, cloud, height):
-    common.run("disp_to_h %s %s %s %s %s %s %s %s %s" % (rpc1, H1, rpc2, H2,
-                                            disp, mask, im1, cloud, height))
+def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err):
+    """
+    Computes a height map from a disparity map, using rpc.
+
+    Args:
+        rpc1, rpc2: paths to the xml files
+        H1, H2: paths to the files containing the homography matrices
+        disp, mask: paths to the diparity and mask maps
+        height: path to the output height map
+        rpc_err: path to the output rpc_error of triangulation
+    """
+    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, H2,
+        disp, mask, height, rpc_err))
     return
 
 
@@ -47,6 +57,7 @@ def colorize(crop_panchro, im_color, H, out_colorized):
 def compute_point_cloud(crop_colorized, heights, rpc, H, cloud):
     """
     Computes a color point cloud from a height map.
+
     Args:
         crop_colorized: path to the colorized rectified crop
         heights: height map. Its size is the same as the crop_color image

@@ -80,44 +80,46 @@ int main_disp_to_h(int c, char *v[])
 {
     if (c != 9) {
         fprintf(stderr, "usage:\n\t"
-                "%s rpca Ha rpcb Hb dispAB mskAB out_heights RPCerr"
-              // 0   1   2   3   4   5      6      7           8
+                "%s rpca rpcb Ha Hb dispAB mskAB out_heights RPCerr"
+              // 0   1   2    3   4   5      6       7         8
                 "\n", *v);
         return EXIT_FAILURE;
     }
+
+    // read input data
+    struct rpc rpca[1], rpcb[1];
+    read_rpc_file_xml(rpca, v[1]);
+    read_rpc_file_xml(rpcb, v[2]);
     double Ha[3][3], Hb[3][3];
-    read_matrix(Ha,v[2]);
+    read_matrix(Ha,v[3]);
     read_matrix(Hb,v[4]);
-    struct rpc rpca[1]; read_rpc_file_xml(rpca, v[1]);
-    struct rpc rpcb[1]; read_rpc_file_xml(rpcb, v[3]);
+
     int nx, ny, nch;
     float *dispy;
     float *dispx = iio_read_image_float_split(v[5], &nx, &ny, &nch);
     if (nch > 1) dispy = dispx + nx*ny;
     else dispy = calloc(nx*ny, sizeof(*dispy));
+
     float *msk  = iio_read_image_float_split(v[6], &nx, &ny, &nch);
     char *fout_heights  = v[7];
     char *fout_err = v[8];
     float *heightMap = calloc(nx*ny, sizeof(*heightMap));
     float *errMap = calloc(nx*ny, sizeof(*errMap));
 
+    // invert homographies
     double det;
     double invHa[3][3];
     double invHb[3][3];
     INVERT_3X3(invHa, det, Ha);
     INVERT_3X3(invHb, det, Hb);
 
-
     // allocate structure for the output data
     struct world_point *outbuf = malloc(nx*ny*sizeof(*outbuf));
 
-    int x, y;
     int npoints = 0;
-    double lon0 = -10000;  // initialized to an unfeasible value to detect the initial longitude
-    for (y = 0; y < ny; y++)
-    {
+    for (int y = 0; y < ny; y++) {
         printf("line %03d\n", y);
-        for (x = 0; x < nx; x++) {
+        for (int x = 0; x < nx; x++) {
             int pos = x + nx*y;
             if (msk[pos] <= 0) {
                 heightMap[pos] = NAN;
@@ -129,10 +131,10 @@ int main_disp_to_h(int c, char *v[])
                 double err, h;
                 double dx = dispx[pos];
                 double dy = dispy[pos];
-                double p0[3] = {x,y,1};
-                double p1[3] = {x+dx, y+dy,1};
-                applyHom(q0,invHa,p0);
-                applyHom(q1,invHb,p1);
+                double p0[3] = {x, y, 1};
+                double p1[3] = {x+dx, y+dy, 1};
+                applyHom(q0, invHa, p0);
+                applyHom(q1, invHb, p1);
 
                 // compute the coordinates
                 h = rpc_height(rpca, rpcb, q0[0], q0[1], q1[0], q1[1], &err);
@@ -178,10 +180,14 @@ int main_disp_to_h(int c, char *v[])
                 outbuf[npoints].x            = x;
                 outbuf[npoints].y            = y;
 
-                heightMap[pos] = h;
-                errMap[pos] = err;
-                if (err < 5)
-                    npoints++;
+                if (err < 5) {
+                    heightMap[pos] = h;
+                    errMap[pos] = err;
+                } else {
+                    heightMap[pos] = NAN;
+                    errMap[pos] = NAN;
+                }
+
             }
         }
     }
