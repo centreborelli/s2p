@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sys
 import subprocess
 import tempfile
 
@@ -279,7 +280,6 @@ def bounding_box2D(pts):
     return x, y, w, h
 
 
-
 def image_crop_TIFF(im, x, y, w, h):
     """
     Crops tif images.
@@ -298,16 +298,22 @@ def image_crop_TIFF(im, x, y, w, h):
     tmp = tmpfile('.tif')
     out = tmpfile('.tif')
 
-    # do the crop with gdal_translate
-    run('gdal_translate -srcwin %d %d %d %d %s %s' % (x, y, w, h,
-                                      shellquote(im), shellquote(tmp)))
-    # remove GeoTiff tags
-    run('tiffcp %s %s 2> /dev/null' % (tmp, out))
-    return out
+    try:
+        with open(im, 'r'):
+            # do the crop with gdal_translate
+            run('gdal_translate -srcwin %d %d %d %d %s %s' % (x, y, w, h,
+                shellquote(im), shellquote(tmp)))
+
+            # remove GeoTiff tags
+            run('tiffcp %s %s 2> /dev/null' % (tmp, out))
+            return out
+
+    except IOError:
+        print """image_crop_TIFF: input image not found! Verify your paths to
+                 Pleiades full images"""
+        sys.exit()
 
     # Remark: with tiffcrop it fails:
-    #    run('tiffcrop -U px -z %d,%d,%d,%d  %s  %s'%( x0,y0,x0+w,y0+h,
-    #    shellquote(im),shellquote(imout)) )
 
 
 def image_crop_LARGE(im, x, y, w, h):
