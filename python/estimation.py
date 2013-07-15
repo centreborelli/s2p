@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import common
 
 def normalize_2d_points(pts):
