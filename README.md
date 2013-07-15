@@ -10,15 +10,17 @@ binaries written in C.
 ## Usage
 
 The pipeline is implemented in the file `main_script_pairs.py`. Its parameters
-(paths to Pléiades data and region of interest), are defined at the beginning
-of that file. To run it, simply do:
+(paths to Pleiades data, definition of a region of interest, paths for output
+data), are defined at the beginning of that file. To launch it, simply run:
+
     ./main_script_pairs.py
 
 
 ## Pleiades data
 
 Several Pleiades stereoscopic datasets are available. We have pairs and
-triplets. Each image is accompanied by an xml file containing rpc coefficients.
+triplets. Each image is accompanied by an `xml` file containing rpc
+coefficients.
 
 All the data is stored in the `pleiades_data` folder, which contains two
 subfolders, `rpc` and `images`.
@@ -30,6 +32,7 @@ the `3rdparty` directories. You must compile them before launching the script,
 using the provided makefiles.
 
 In addition, the following binaries must be available on your system:
+
     gdal_translate
     tiffcp
     java
