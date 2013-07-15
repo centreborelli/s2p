@@ -104,7 +104,7 @@ static void download_tile_file(int tlon, int tlat)
 	int rd = download(zipname, url);
 	if (0 == rd) {
 		char cmd[n];
-		snprintf(cmd, n, "unzip -o %s -d %s", zipname, cachedir());
+		snprintf(cmd, n, "unzip -qq -o %s -d %s", zipname, cachedir());
 		rd = system(cmd);
 		if (rd) {
 			fprintf(stderr,"failed unzipping file %s\n", zipname);
