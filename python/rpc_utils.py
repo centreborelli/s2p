@@ -191,6 +191,7 @@ def round_updown(a, b, q):
     b = q*np.ceil(b/q)
     return a, b
 
+
 def run_binary_on_list_of_points(points, binary):
     """
     Runs a binary that reads its input on stdin.
