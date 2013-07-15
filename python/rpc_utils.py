@@ -261,11 +261,18 @@ def altitude_range(rpc, x, y, w, h):
     # resolution)
     ellipsoid_points = sample_bounding_box(lon_m, lon_M, lat_m, lat_M)
 
-    # compute srtm and geoid height on all these points
-    geoid = run_binary_on_list_of_points(ellipsoid_points, 'GeoidEval')
+    # compute srtm height on all these points
     srtm = run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
 
+    # srtm data may contain 'nan' values (meaning no data is available there).
+    # These points are most likely water (sea) and thus their height with
+    # respect to geoid is 0. But for safety we prefer to give up the precise
+    # altitude estimation in these cases and use the coarse one.
+    if np.isnan(np.sum(srtm)):
+        return altitude_range_coarse(rpc)
+
     # offset srtm heights with the geoid - ellipsoid difference
+    geoid = run_binary_on_list_of_points(ellipsoid_points, 'GeoidEval')
     h = geoid + srtm
 
     # extract extrema (and add a +-100m security margin)
@@ -344,7 +351,7 @@ def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
         n: cube root of the desired number of matches.
 
     Returns:
-        a list of matches, expressed as x1, y1, x2, y2
+        an array of matches, one per line, expressed as x1, y1, x2, y2.
     """
     m, M = altitude_range(rpc1, x, y, w, h)
     lon, lat, alt = ground_control_points(rpc1, x, y, w, h, m, M, n)
@@ -367,7 +374,7 @@ def world_to_image_correspondences_from_rpc(rpc, x, y, w, h, n):
         n: cube root of the desired number of correspondences.
 
     Returns:
-        a list of correspondences, expressed as X, Y, Z, x, y.
+        an array of correspondences, one per line, expressed as X, Y, Z, x, y.
     """
     m, M = altitude_range(rpc, x, y, w, h)
     lon, lat, alt = ground_control_points(rpc, x, y, w, h, m, M, n)
