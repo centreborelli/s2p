@@ -1,0 +1,5 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+SET(SRC LWImage.h LWImage.cpp)
+
+INSTALL(FILES CMakeLists.txt ${SRC} DESTINATION src/libLWImage)

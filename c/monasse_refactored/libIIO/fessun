@@ -1,0 +1,11 @@
+#c99 $WARNS -D_GNU_SOURCE -Wno-unused -g -rdynamic iio.c piio.c -ljpeg -ltiff -lpng
+#c99 $WARNS -D_GNU_SOURCE -Wno-unused -g -rdynamic -c iio.c
+export CPATH=/usr/include/OpenEXR
+EXRLIB="-lIex -lHalf -lIlmImf"
+sunc99 -I$CPATH -DI_CAN_HAS_LINUX -DIIO_SHOW_DEBUG_MESSAGES -D_GNU_SOURCE -g  -c iio.c
+#c99 $WARNS -DNDEBUG -D_GNU_SOURCE -Wno-unused -O3 -c iio.c
+sunc99 -g iio_test.c iio.o -ljpeg -ltiff -lpng $EXRLIB -o iio_test
+sunc99 -g iio_test_named.c iio.o -ljpeg -ltiff -lpng $EXRLIB -o iio_test_named
+cp iio_test ~/bin/iio
+cp iio_test_named ~/bin/iion
+#c99 -Wno-unused -g simplecube.c iio.o -ljpeg -ltiff -lpng -o simplecube

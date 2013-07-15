@@ -12,3 +12,8 @@ all:
 	cc -o ../bin/srtm4 -std=c99 -g -O3 -DMAIN_SRTM4 srtm4.c -lm
 	cc -o ../bin/disp_to_h -std=c99 -g -O3 -DDONT_USE_TEST_MAIN iio.c rpc.c disp_to_h.c -lpng -ltiff
 	cc -o ../bin/colormesh -std=c99 -g -O3 -DDONT_USE_TEST_MAIN iio.c rpc.c colormesh.c -lpng -ltiff
+	mkdir -p ../bin/monasse_refactored_build
+	cd ../bin/monasse_refactored_build; cmake ../../c/monasse_refactored; make
+	cp ../bin/monasse_refactored_build/bin/homography ../bin
+	cp ../bin/monasse_refactored_build/bin/rectify_mindistortion ../bin
+	cp ../bin/monasse_refactored_build/bin/sift_keypoints ../bin

@@ -1,0 +1,7 @@
+This is a C library for opening images in any format.
+File "iio.c" contains all the functions.
+File "iio.h" contains (part of) the API and some documentation.
+The other "*.c" files are example programs.
+The philosophy underlying the library is described on file "iio.txt".
+The directory "samples" contains sample images in various formats.
+The "fes*" files are (tentative) build scripts for different conditions.

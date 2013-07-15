@@ -1,0 +1,27 @@
+Status of IIO development
+-------------------------
+
+
+HIGH PRIORITY:
+
+* Stabilize API name conventions
+* Code all necessary type conversion functions
+
+
+
+MEDIUM PRIORITY:
+
+* adopt the "offensive programming" philosophy for error recovery
+* pnm (2d) file format support
+* qnm (3d) file format support
+* tiff file format support
+* megawave (RIM) file format support
+* openexr file format support
+* cimg asc file format suport
+* "hackraw" file format support (ascii headers + ascii data + size heuristics)
+
+
+LOW PRIORITY:
+
+* Auto-generate API and its implementation
+* bmp, jp2, vtk, pau, dicom formats support

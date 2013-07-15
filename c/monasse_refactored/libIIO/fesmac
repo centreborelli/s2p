@@ -1,0 +1,9 @@
+CC="gcc -std=c99"
+LIBS="-ljpeg -ltiff -lpng"
+
+#export C_INCLUDE_PATH=/usr/X11/include:/opt/macports/include
+#export LIBRARY_PATH=/opt/macports/lib
+
+$CC -c iio.c
+$CC iio_test.c iio.o $LIBS -o iio
+$CC iio_test_named.c iio.o $LIBS -o iion

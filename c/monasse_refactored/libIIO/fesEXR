@@ -1,0 +1,12 @@
+EXRINC="-I/usr/local/include/OpenEXR/"
+EXRLIB="-lIex -lHalf -lIlmImf -lstdc++"
+
+gcc -std=c99 -DI_CAN_HAS_LIBEXR -O3 -c iio.c ${EXRINC} -o iio.o
+#g++ -DI_CAN_HAS_LIBEXR -c -Wall -I. ${EXRINC}  read_exr_float.cpp 
+
+gcc -DI_CAN_HAS_LIBEXR -std=c99 ${EXRLIB} -Wno-unused iio_test.c  iio.o -ljpeg -ltiff -lpng -o iio
+gcc -DI_CAN_HAS_LIBEXR -std=c99 ${EXRLIB} -Wno-unused iio_test_named.c  iio.o -ljpeg -ltiff -lpng -o iio_test_named
+
+cp iio_test ~/bin/iio
+cp iio_test_named ~/bin/iion
+

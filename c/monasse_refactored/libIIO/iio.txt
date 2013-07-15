@@ -1,0 +1,415 @@
+(Please, read file iio.h if you want to use the library.
+The present file contains only boring philosophical discussion.)
+
+
+
+
+*************************
+DEFINITION AND PRINCIPLES
+*************************
+
+
+An image is a multidimensional array of numbers.  A small image is an
+image that fits comfortably in memory.  There are hundreds of file
+formats for storing images.  IIO is a library for reading small
+images from files, regardless of their format.  It is written in C,
+and it is intended to be used in C programs.  The goals of this
+library, in decreasing order of importance, are the following:
+
+
+1. Be written in standard C
+
+All the code must be standard ANSI/ISO C (namely, the current
+standard as of November 2010, which is named "ISO/IEC 9899:1999
+Technical Corrigendum 2004", commonly known as C99).  Whenever
+non-language constructs such as POSIX extensions are used, they must
+be hidden behind appropriate #ifdef macros and a pure C alternative
+must be available.  Currently, the only POSIX extension is the
+"fmemopen" function, for which an alternative implementation is
+provided (based on writing a temporary file).
+
+
+2. Have a nice and clean API
+
+This library is intended to be used in tiny parts of larger programs,
+without disturbing the work flow of the main program.  The data
+provided by the library must be usable directly by the programmer in
+the way which she decides, not in any way imposed by the library.  An
+image is just an array of numbers, and this is what the
+"iio_read_image" function returns.  In particular, the API does not
+use structs to communicate with the user.  The functions of the API
+all look like this (with slight variations, to allow different data
+types for numbers, and different dimensions and number of channels):
+
+	float *iio_read_image_float(char *filename, int *width, int *height);
+	float *x = iio_read_image_float("/dev/stdin", &w, &h);
+	x[i+j*w] = ...;
+
+Needless to say, the library uses no monstrosities such as "init"
+functions.
+
+
+
+3. Have a nice and clean code
+
+Every function fits into a 80x25 screen, with K&R bracing style and 8
+spaces per tab.  The names of functions are long and descriptive,
+without abbreviations.  There are no global nor static variables, and
+local variables have very short names (usually, a single letter).
+All identifiers are lowercase, with underscores to separate different
+words.  The code compiles without warnings, with all warnings enabled
+on all known C compilers.
+
+
+
+4. Be trivial to compile, to use and to port
+
+An acceptable way of using the library is to copy the code of the
+desired function into your program.  In fact, this is the preferred
+way.  The set of dependences (such as libpng, libjpeg) is small, but
+not empty.  However, any dependency can be disabled by changing a
+single line on "iio.h".  In execution time, if there is no available
+external library to read a given image, then IIO will fall back to
+some desperate hacks, such as writing the file to disc and calling an
+external conversion program.
+
+
+5. Open all image file formats.
+
+If there is an image file which can not be read, this is a bug and it
+must be solved.
+
+
+
+
+OLD NOTE: the word "small" on the beginning of this document means
+that the whole image data must fit in memory.  There are no
+provisions for memory-mapped files, virtual crops, multi-scale
+access, or other fancy methods needed to deal with large images or
+real videos.  These interesting features must be the goal of a very
+different library, because I do not know a way to provide this
+functionality without uglifying the API.
+
+
+
+***********************
+IMAGES ACCORDING TO IIO
+***********************
+
+Mathematically, an image is a function
+
+	f:R^d -> R^p.		(1)
+
+The number "d" is called the "dimension" of the image, and the number
+"p" may be called the "depth", the "pixel dimension" or the "number
+of channels", depending on context.  Typically, d=2 or 3, and p=1 or
+3.  A digital image is an approximation of a mathematical image, in a
+very precise sense.  Since R is an infinite set, we are forced to take
+appropriate finite subsets of R.  Now, R appears two times on
+formula (1).  The process of taking a finite subset of the first R is
+called "sampling" or "discretization".  The process of taking a
+finite subset of the second R is called "quantization".
+
+In IIO, discretization consists always in taking points of R^d with
+non-negative consecutive integer coordinates starting from zero.
+Thus, R^d is discretized as a product of d intervals of possibly
+different length.  If we denote by [n] the set {0, 1, 2, ..., n-1},
+then the discretization turns R^d into the finite set [s_0] x [s_1] x
+... x [s_{n-1}].  The numbers s_i are called the "sizes" of the
+image, and they specify completely the discretization of the digital
+image.  The quantization of R^p is done by expressing each of the "p"
+numbers, called "samples" using one of the numeric types of the C
+language.  There are the following 12 options available for samples:
+
+	int8_t, integers between -128 and 127
+	uint8_t, integers between 0 and 255
+	int16_t, ...
+	uint16_t
+	int32_t
+	uint32_t
+	int64_t
+	uint64_t
+	half, IEEE floats of 16 bits
+	float, IEEE floats of 32 bits
+	double, IEEE floats of 64 bits
+	long double, IEEE floats of 96 bits
+
+as a convenience, the sample types "char", "short", "int" and "long"
+are also available, in their signed and unsigned versions, with
+whatever standard meaning they have in each platform (however, their
+use is not necessarily portable when sharing data between platforms).
+
+The pair (d,p) is called the "signature" of the image.  Some examples
+of numeric data that can be encoded as images of different
+signatures:
+
+	d  p  interpretation
+	---------------------------------
+	1  1  mono sound
+	1  2  stereo sound, plane curve
+	1  3  spatial curve
+	2  1  gray image
+	2  2  vector field
+	2  3  color image, parametrized surface
+	3  1  gray video/medical image
+	3  3  color video
+	3  9  tensor-valued medical image
+
+After discretization and quantization, the signatures can be
+rewritten as "(s_0, ..., s_d ; p type)".  For example:
+
+	signature
+	---------------------------------------
+	(256,256; 1 char)       low-resolution gray-scale image
+	(256,256; 3 char)       low-resolution color image
+	(2048,2048; 1 char)     high-resolution gray-scale image
+	(2048,2048; 1 float)    high-resolution floating point gray-scale image
+	(2048,2048; 30 char)    high-resolution multi-spectral image
+	(128,128,128; 1 short)  low-resolution medical image of 16 bits
+	(512,512,512; 1 char)   high-resolution medical image of 8 bits
+	(320,200,250; 1 char)	ten seconds of low quality black and white video
+	(700,500,50; 3 char)	one second of med-def color video
+
+Observation: (a,b; c type) has exactly the same data as (a,b,c; 1 type)
+
+
+Thus, an IIO image is defined in the following way (this struct is
+imaginary, as the IIO library does not use structs):
+
+	// an image R^d -> R^p
+	struct iio_image {
+		int dimension;                // d
+		int sizes[IIO_MAX_DIMENSION]; // s[0], ... , s[d-1]
+		int pixel_dimension;          // p
+		int integer_size;             // 0, 1, 2, 4 or 8
+		int float_size;               // 0, 2, 4, 8, 12 or 16
+		bool signedness;              // true or false
+		void *data;                   // pointer to samples
+	}
+
+The number of samples of an image x is
+
+	x.sizes[0] * ... * x.sizes[x.dimension-1] * x.pixel_dimension
+
+and the total size of the memory block pointed by x->data is the
+number of samples times (x->integer_size + x->float_size).
+
+
+***********
+CONVERSIONS
+***********
+
+The IIO library does not do image processing.  Its only task is to
+give to the user the numbers found inside image files.  However, the
+user may ask for the numbers in 8-bits, even when the input image has
+floating point values.  Thus, some data conversion is necessary.
+There are two cases: lossless conversion and lossy data conversion.
+Lossless conversion is done silently.  Lossy compression is done as
+nicely as possible, but then a warning message is printed to stderr.
+First we treat the conversion of samples, which is clear and nice.
+Later we treat the conversion of pixels (which may have multiple
+samples), which is tricky and artificial.  Finally, we treat
+conversion of signatures, which is called transposition or
+interlacing, depending on the context.
+
+* Lossless conversions of samples:
+
+	- From unsigned integer to unsigned integer of larger size
+	- From signed integer to signed integer of larger size
+	- From floating point to floating point of larger size
+	- From signed or unsigned integer of 8 or 16 bits to float
+
+* Slightly lossy conversions of samples:
+
+* Lossy conversions:
+
+	- the rest of them
+
+...
+
+
+
+**************
+ERROR HANDLING
+**************
+
+There are many legitimate situations in which the library can not
+read an image as requested: either because the provided filename does
+not exist, because it has an incorrect format, because there is not
+enough memory to store the numbers, whatever.  There are three
+possible strategies for dealing with errors:
+
+	1. Abort the caller program when any error is encountered
+	2. Return NULL when any error is encountered
+	3. Return NULL and set a global variable indicating the cause
+
+The behaviour of IIO can be set on compilation time using the macros
+IIO_ABORT_ON_ERROR and IIO_SET_ERROR_CAUSE.  The advantage of the
+first case is that the functions always return valid data.  The other
+two approaches require some amount of error checking code in the
+caller program, which is probably tedious to write in some
+applications.  It is up to the user of the library to decide which
+kind of error recovery to do.  The default is number (2).
+
+
+
+****************
+DESIGN TRADEOFFS
+****************
+
+1. API conventions.
+-------------------
+
+There is a choice between the following two kinds of API:
+
+a) Return type specified as argument:
+
+	#define FORMAT_FLOAT 1
+	#define FORMAT_CHAR 2
+	void *read_stuff(char *filename, int desired_format);
+
+b) Return type determined by function name:
+
+	float *read_floats(char *filename);
+	char *read_chars(char *filename);
+
+Although the differences are small and purely stylistic, a firm
+decision was taken towards the second option.  The reasons for
+choosing "b)" are the following:
+
+* no macros or constants in the API
+* locality: the declaration of any function is enough to understand it
+* no need to cast anything
+
+There are, however, disadvantages with respect to the advantages of
+"a)", which were disregarded:
+
+* only one function in the API
+* easier to extend with new formats using the same API
+* more comfortable when the list of formats is a cartesian product of
+  options (e.g.: using bitmasks for the desired format)
+
+
+2. Pixel slicing
+----------------
+
+The order of "channels" inside a pixel, RGB BGR RGBA ARGB, does not
+matter.  This ordering is ignored and kept as it was found inside the
+input file.  There is a mechanism for querying which order it was
+stored.  It is up to the user of the library to apply the desired
+conversions if this order is not satisfactory.
+
+Another issue is slicing these "channels", by scattering the
+components of each pixel along the input file.  This is an
+unacceptable act of violence which is not supported by this library.
+It is braindead, inefficient, and makes no sense at all.  It is akin
+to listing the names and surnames of the students in a class in
+different sheets of paper.  A pixel is an atom of information which
+must never be divided at a higher level.
+
+
+3. ...
+------
+
+
+
+
+
+**************
+WRITING IMAGES
+**************
+
+Although the main concern of IIO is to READ images, the library
+provides some convenience functions for writing images.  This is a
+secondary afterthought, and there is no intention to support a
+complete set of formats.  Specifically, lossy compression is not
+implemented.
+
+
+
+*************
+DOCUMENTATION
+*************
+
+The only necessary documentation is the file "iio.h"
+
+
+
+********
+TUTORIAL
+********
+
+cat > try_iio.c
+#include <stdlib.h> // for free
+#include "iio.h"
+int main()
+{
+	int w, h;
+	float *x = iio_read_image_floats("image.jpg", &w, &h);
+	x[0+w*0] = 0;
+	iio_write_foats_to_image("image_with_first_pixel_black.png", x, w, h);
+        free(x);
+        return 0;
+}
+^D
+c99 try_iio.c iio.c -ljpeg
+./a.out
+
+
+*********
+COMPILERS
+*********
+
+for CC in gcc icc suncc pcc lcc clang; do
+	$CC -c iio.c
+done
+
+
+
+
+*********
+LICENCING
+*********
+
+I do not believe in licences: they hold no meaning to me.  I do not
+like them either: they are boilerplate noise added at the beginning
+of otherwise perfectly clean files.  If, for whatever reason, you
+need a licenced version of this software, ask me which kind of
+licence do you want, and I will stick it to the code and send you the
+resulting dirty files.
+
+
+
+
+********
+SEE ALSO
+********
+
+* stb_image.c by Sean Barrett
+* io_png.c and io_tiff.c by Nicolas Limare
+* imageio.c by Pascal Getreuer
+
+
+
+*******
+CREDITS
+*******
+
+Author: Enric Meinhardt-Llopis
+
+I am the only one to blame for the code itself.
+
+I took from ImageMagick the idea of reading arbitrary images from
+pipes, but this idea was probably well-known folklore.
+
+I took from Nicolas Limare's "png_io.h" the idea of returning an
+image into a free-able block, but this idea was probably well-known
+folklore.
+
+I had the idea of returning a free-able double pointer, but this idea
+was probably well-known folklore.
+
+
+
+
+vim:set tw=69:
