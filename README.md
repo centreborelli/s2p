@@ -4,6 +4,16 @@ This code implements a stereo pipeline for producing elevation models from
 Pleiades satellite images. It aims at automatically generating digital
 elevation models from tristereo sets (three images).
 
+The main language is Python, although several operations are handled by
+binaries written in C.
+
+## Usage
+
+The pipeline is implemented in the file `main_script_pairs.py`. Its parameters
+(paths to Pléiades data and region of interest), are defined at the beginning
+of that file. To run it, simply do:
+    ./main_script_pairs.py
+
 
 ## Pleiades data
 
@@ -13,15 +23,13 @@ triplets. Each image is accompanied by an xml file containing rpc coefficients.
 All the data is stored in the `pleiades_data` folder, which contains two
 subfolders, `rpc` and `images`.
 
-## Needed binaries
+## Dependencies
 
-The following binaries are used by the python routines and should be in your
-PATH:
-    srtm4
-    rectify_mindistortion
+All the binaries called by the python script are either located in the `bin` or
+the `3rdparty` directories. You must compile them before launching the script,
+using the provided makefiles.
+
+In addition, the following binaries must be available on your system:
     gdal_translate
-    sift_keypoints
-    siftu
-    homography
-    zoom_zeropadding
-    fftconvolve
+    tiffcp
+    java
