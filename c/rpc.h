@@ -20,6 +20,9 @@ struct rpc {
 	double inumy[20];
 	double ideny[20];
 	double iscale[3], ioffset[3];
+
+	double dmval[4];
+	double imval[4];
 };
 
 
