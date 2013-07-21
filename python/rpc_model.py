@@ -1,30 +1,94 @@
+import numpy as np
 from xml.etree.ElementTree import ElementTree
 
+
 def apply_poly(poly, x, y, z):
-    #TODO: use numpy poly3d function. Test if its faster
     """
-    Evaluates a 3-variate polynom of degree 3, on a triplet of numbers.
+    Evaluates a 3-variables polynom of degree 3 on a triplet of numbers.
 
     Args:
-        poly: list of the 20 coefficients of the 3-variate degree 3 polynom
-        x, y, z: triplet of floats
+        poly: list of the 20 coefficients of the 3-variate degree 3 polynom,
+            ordered following the RPC convention.
+        x, y, z: triplet of floats. They may be numpy arrays of same length.
 
     Returns:
-        the value of the polynom
+        the value(s) of the polynom on the input point(s).
     """
-    return poly[0] +\
-           poly[1]*y + poly[2]*x + poly[3]*z +\
-           poly[4]*y*x + poly[5]*y*z +poly[6]*x*z +\
-           poly[7]*y*y + poly[8]*x*x + poly[9]*z*z +\
-           poly[10]*x*y*z +\
-           poly[11]*y*y*y +\
-           poly[12]*y*x*x + poly[13]*y*z*z + poly[14]*y*y*x +\
-           poly[15]*x*x*x +\
-           poly[16]*x*z*z + poly[17]*y*y*z + poly[18]*x*x*z +\
-           poly[19]*z*z*z
+    out = 0
+    out += poly[0]
+    out += poly[1]*y + poly[2]*x + poly[3]*z
+    out += poly[4]*y*x + poly[5]*y*z +poly[6]*x*z
+    out += poly[7]*y*y + poly[8]*x*x + poly[9]*z*z
+    out += poly[10]*x*y*z
+    out += poly[11]*y*y*y
+    out += poly[12]*y*x*x + poly[13]*y*z*z + poly[14]*y*y*x
+    out += poly[15]*x*x*x
+    out += poly[16]*x*z*z + poly[17]*y*y*z + poly[18]*x*x*z
+    out += poly[19]*z*z*z
+    return out
 
 def apply_rfm(num, den, x, y, z):
+    """
+    Evaluates a Rational Function Model (rfm), on a triplet of numbers.
+
+    Args:
+        num: list of the 20 coefficients of the numerator
+        den: list of the 20 coefficients of the denominator
+            All these coefficients are ordered following the RPC convention.
+        x, y, z: triplet of floats. They may be numpy arrays of same length.
+
+    Returns:
+        the value(s) of the rfm on the input point(s).
+    """
     return apply_poly(num, x, y, z) / apply_poly(den, x, y, z)
+
+
+# this function was written to use numpy.polynomial.polynomial.polyval3d
+# function, instead of our apply_poly function.
+def reshape_coefficients_vector(c):
+    """
+    Transform a 1D array of coefficients of a 3D polynom into a 3D array.
+
+    Args:
+        c: 1D array of length 20, containing the coefficients of the
+            3-variables polynom of degree 3, ordered with the RPC convention.
+    Returns:
+        a 4x4x4 ndarray, with at most 20 non-zero entries, containing the
+        coefficients of input array.
+    """
+    out = np.zeros((4, 4, 4))
+    out[0, 0, 0] = c[0]
+    out[0, 1, 0] = c[1]
+    out[1, 0, 0] = c[2]
+    out[0, 0, 1] = c[3]
+    out[1, 1, 0] = c[4]
+    out[0, 1, 1] = c[5]
+    out[1, 0, 1] = c[6]
+    out[0, 2, 0] = c[7]
+    out[2, 0, 0] = c[8]
+    out[0, 0, 2] = c[9]
+    out[1, 1, 1] = c[10]
+    out[0, 3, 0] = c[11]
+    out[2, 1, 0] = c[12]
+    out[0, 1, 2] = c[13]
+    out[1, 2, 0] = c[14]
+    out[3, 0, 0] = c[15]
+    out[1, 0, 2] = c[16]
+    out[0, 2, 1] = c[17]
+    out[2, 0, 1] = c[18]
+    out[0, 0, 3] = c[19]
+    return out
+
+def apply_rfm_numpy(num, den, x, y, z):
+    """
+    Alternative implementation of apply_rfm, that uses numpy to evaluate
+    polynoms.
+    """
+    c_num = reshape_coefficients_vector(num)
+    c_den = reshape_coefficients_vector(den)
+    a = np.polynomial.polynomial.polyval3d(x, y, z, c_num)
+    b = np.polynomial.polynomial.polyval3d(x, y, z, c_den)
+    return a/b
 
 class RPCModel:
     def __init__(self, XMLfile):
@@ -97,8 +161,8 @@ class RPCModel:
         cAlt = (alt - self.altOff) / self.altScale
         cCol = apply_rfm(self.inverseColNum, self.inverseColDen, cLat, cLon, cAlt)
         cLin = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat, cLon, cAlt)
-        col = cCol*self.colScale+self.colOff
-        lin = cLin*self.linScale+self.linOff
+        col = cCol*self.colScale + self.colOff
+        lin = cLin*self.linScale + self.linOff
         return col, lin, alt
 
     def __repr__(self):
