@@ -19,6 +19,7 @@ def compute_disparity_map(im1, im2, disp_range, out_disp, algo, extra_params='')
         disp_range: path to a text file containing the disparity range
         out_disp: path to the output file (diparity map)
         algo: string used to indicate the desired binary
+        extra_params: optional string with algorithm-dependent parameters
     """
     # read the disp_range file
     disp = np.loadtxt(disp_range)
@@ -30,6 +31,9 @@ def compute_disparity_map(im1, im2, disp_range, out_disp, algo, extra_params='')
         bm_binary = hirshmuller
         common.run("%s %s %s %s %d %d %s" %(bm_binary, im1, im2, out_disp,
             disp_min, disp_max, extra_params))
+        # extra_params: LoG(0) regionRadius(3)
+        #    LoG: Laplacian of Gaussian preprocess 1:enabled 0:disabled
+        #    regionRadius: radius of the window
 
     elif (algo == 'msmw'):
         bm_binary = iip_stereo_correlation_multi_win2

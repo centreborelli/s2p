@@ -2,7 +2,7 @@
 
 if [ "$3" == "" ]; then
    echo "Usage:"
-   echo "   $0 im1 im2 out.pgm [mindisp(0) maxdisp(60) LoG(1) regionRadius(3) maxPerPixelError(20) validateRtoL(1) texture(0.2)]"
+   echo "   $0 im1 im2 out.pgm [mindisp(0) maxdisp(60) LoG(0) regionRadius(3) maxPerPixelError(20) validateRtoL(1) texture(0.2)]"
    echo ""
    echo "   LoG: Laplacian of Gaussian preprocess 1:enabled 0:disabled"
    echo "   regionRadius: radius of the window"
