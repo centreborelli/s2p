@@ -34,16 +34,14 @@ echo "Params:: LoG=$LoG regionRadius=$rad maxPerPixelError=$ppe validateRtoL=$lr
 aa=$(basename "$a")
 a_extension="${aa##*.}"
 a_name="${aa%.*}"
-if [ $a_extension == "tif" ]; then
-    qauto $a /tmp/$a_name.png
-    a=/tmp/$a_name.png
-fi
-
 bb=$(basename "$b")
 b_extension="${bb##*.}"
 b_name="${bb%.*}"
-if [ $b_extension == "tif" ]; then
-    qauto $b /tmp/$b_name.png
+if [ $a_extension == "tif" ]; then
+    thresholds=`qauto $a /tmp/$a_name.png 2>&1 |  cut -f2 -d=`
+    a=/tmp/$a_name.png
+    # use the same threshods for the second image
+    qeasy $thresholds $b /tmp/$b_name.png
     b=/tmp/$b_name.png
 fi
 
