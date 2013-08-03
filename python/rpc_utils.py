@@ -2,6 +2,7 @@ import subprocess
 import numpy as np
 import estimation
 import geographiclib
+import common
 
 
 def print_distance_between_vectors(u, v, msg):
@@ -73,7 +74,7 @@ def approximate_rpc_as_projective(rpc_model, col_range, lin_range, alt_range,
     # coordinates
     cols, lins, alts = generate_point_mesh(col_range, lin_range, alt_range)
     lons, lats, alts = rpc_model.direct_estimate(cols, lins, alts)
-    x, y, z = geographiclib.geodetic_to_geocentric_array(lats, lons, alts)
+    x, y, z = geographiclib.geodetic_to_geocentric(lats, lons, alts)
 
     ### step 2: estimate the camera projection matrix from corresponding
     # 3-space and image entities
@@ -192,33 +193,6 @@ def round_updown(a, b, q):
     return a, b
 
 
-def run_binary_on_list_of_points(points, binary):
-    """
-    Runs a binary that reads its input on stdin.
-
-    Args:
-        points: numpy array containing all the input points, one per line
-        binary: path to the binary. It is supposed to write one output value on
-            stdout for each input point
-
-    Returns:
-        a numpy array containing all the output values.
-    """
-    # run the binary
-    np.savetxt('/tmp/pts', points, '%.18f')
-    p1 = subprocess.Popen(['cat', '/tmp/pts'], stdout = subprocess.PIPE)
-    p2 = subprocess.Popen([binary], stdin = p1.stdout, stdout =
-            subprocess.PIPE)
-
-    # recover output values
-    out = np.zeros(len(points))
-    for i in range(len(points)):
-        line = p2.stdout.readline()
-        out[i] = float(line.split()[0])
-
-    return out
-
-
 def altitude_range_coarse(rpc):
     """
     Computes a coarse altitude range using the RPC informations only.
@@ -250,7 +224,6 @@ def altitude_range(rpc, x, y, w, h):
         these bounds, we use SRTM data. The altitudes are computed with respect
         to the WGS84 reference ellipsoid.
     """
-
     # find bounding box on the ellipsoid (in geodesic coordinates)
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
 
@@ -263,7 +236,7 @@ def altitude_range(rpc, x, y, w, h):
     ellipsoid_points = sample_bounding_box(lon_m, lon_M, lat_m, lat_M)
 
     # compute srtm height on all these points
-    srtm = run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
+    srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
 
     # srtm data may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
@@ -273,7 +246,7 @@ def altitude_range(rpc, x, y, w, h):
         return altitude_range_coarse(rpc)
 
     # offset srtm heights with the geoid - ellipsoid difference
-    geoid = run_binary_on_list_of_points(ellipsoid_points, 'GeoidEval')
+    geoid = common.run_binary_on_list_of_points(ellipsoid_points, 'GeoidEval')
     h = geoid + srtm
 
     # extract extrema (and add a +-100m security margin)
@@ -380,6 +353,6 @@ def world_to_image_correspondences_from_rpc(rpc, x, y, w, h, n):
     m, M = altitude_range(rpc, x, y, w, h)
     lon, lat, alt = ground_control_points(rpc, x, y, w, h, m, M, n)
     x, y, h = rpc.inverse_estimate(lon, lat, alt)
-    X, Y, Z = geographiclib.geodetic_to_geocentric_array(lat, lon, alt)
+    X, Y, Z = geographiclib.geodetic_to_geocentric(lat, lon, alt)
 
     return np.vstack([X, Y, Z]).T, np.vstack([x, y]).T

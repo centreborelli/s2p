@@ -3,3 +3,4 @@
 *.a
 bin
 3rdparty/GeographicLib-1.32/tools
+.DS_Store

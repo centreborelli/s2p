@@ -34,9 +34,11 @@ def colorize(crop_panchro, im_color, H, out_colorized):
     # 1. Get a rectified and zoomed crop from the color image. It has to be
     # sampled on exactly the same grid as the panchro rectified crop. To do
     # that we compose the rectifying homography with a 4x zoom (because color
-    # pleiades images have 4x lower resolution)
+    # pleiades images have 4x lower resolution).
+    # There is also a small horizontal translation (4 pixels at the panchro
+    # resolution)
     H = np.loadtxt(H)
-    H_zoom = np.array([[4, 0, 0], [0, 4, 0], [0, 0, 1]])
+    H_zoom = np.array([[4, 0, -4], [0, 4, 0], [0, 0, 1]])
     H = np.dot(H, H_zoom)
     w, h = common.image_size(crop_panchro)
     crop_ms = common.tmpfile('.tif')
@@ -48,8 +50,8 @@ def colorize(crop_panchro, im_color, H, out_colorized):
     panchro  = common.image_qeasy(crop_panchro, 300, 3000)
 
     # 2. Combine linearly the intensity and the color to obtain the result
-    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' % (panchro,
-                                                            rgb, out_colorized))
+    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' %
+        (panchro, rgb, out_colorized))
     return
 
 

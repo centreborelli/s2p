@@ -4,34 +4,6 @@ import sys
 import subprocess
 import tempfile
 
-# list of functions in this module:
-
-# tmpfile
-# run
-# shellquote
-#
-# matrix_write
-# matrix_read
-# matrix_read_from_string
-# matrix_translation
-#
-# bounding_box2D
-# points_apply_homography
-#
-# image_crop_LARGE
-# image_crop_TIFF
-# image_apply_homography
-# image_size
-# image_crop
-#
-# image_sift_keypoints
-# sift_keypoints_match
-# image_qauto
-#
-# image_pleiades_unsharpening_mtf
-# image_zeropadding_from_image_with_target_size
-# image_fftconvolve
-
 
 # add the bin folder to system path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -44,28 +16,53 @@ os.environ['PATH'] += bin_dir
 garbage = list()
 
 def tmpfile(ext=''):
-    # TODO: fix this function
-    # imout = os.tmpnam()+ext
-    handler, imout = tempfile.mkstemp(suffix = ext)
-    garbage.append(imout);
-    return imout
+    """
+    Creates a temporary file in the /tmp directory.
+
+    Args:
+        ext: desired file extension
+
+    Returns:
+        absolute path to the created file
+
+    The path of the created file is added to the garbage list to allow cleaning
+    at the end of the pipeline.
+    """
+    out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = '/tmp')[1]
+    garbage.append(out)
+    return out
+
 
 def run(cmd):
+    """
+    Runs a shell command, and print it before running.
+    """
     print cmd
     subprocess.call(cmd, shell=True)
+
 
 def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
 
-def matrix_write(filename , H12):
-    f = open(filename,'w')
-    f.write('[ %.20f  %.20f  %.20f ; '%(H12[0, 0], H12[0, 1], H12[0, 2]))
-    f.write('  %.20f  %.20f  %.20f ; '%(H12[1, 0], H12[1, 1], H12[1, 2]))
-    f.write('  %.20f  %.20f  %.20f ] '%(H12[2, 0], H12[2, 1], H12[2, 2]))
+
+def matrix_write(filename, H):
+    """
+    Writes a 3x3 matrix in a file using the matlab format.
+
+    Args:
+        filename: path of the file where to write the matrix
+        H: 3x3 array
+    """
+    f = open(filename, 'w')
+    f.write('[ %.20f  %.20f  %.20f ; ' % (H[0, 0], H[0, 1], H[0, 2]))
+    f.write('  %.20f  %.20f  %.20f ; ' % (H[1, 0], H[1, 1], H[1, 2]))
+    f.write('  %.20f  %.20f  %.20f ] ' % (H[2, 0], H[2, 1], H[2, 2]))
     f.close()
+
 
 def matrix_read(fileName, rows=None, cols=None):
     return matrix_read_from_string(open(fileName).read(), rows, cols)
+
 
 def matrix_read_from_string(line, rows=None, cols=None):
     x0 = []
@@ -83,11 +80,13 @@ def matrix_read_from_string(line, rows=None, cols=None):
     #
     return(x0)
 
+
 def matrix_translation(tx, ty):
     T = np.eye(3)
     T[0, 2] = tx;
     T[1, 2] = ty;
     return T
+
 
 def image_size(im):
     out = tmpfile()
@@ -95,17 +94,20 @@ def image_size(im):
     (nc, nr) = map(int, open(out).read().split())
     return (nc, nr)
 
+
 def image_pix_dim(im):
     out = tmpfile()
     run('imprintf "%%c" %s > %s' % (shellquote(im), out));
     dim = open(out).readline().split()[0]
     return int(dim)
 
+
 def image_crop(im, x, y, w, h, out=None):
     if (out == None):
         out = tmpfile()
     run('crop %s %s %d %d %d %d' % (im, out, x, y, w, h));
     return out
+
 
 def image_fftconvolve(im, mtf):
     """
@@ -115,6 +117,7 @@ def image_fftconvolve(im, mtf):
     out = tmpfile()
     run('fftconvolve %s %s %s' % (mtf, im, out))
     return out
+
 
 def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     """
@@ -127,6 +130,7 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
     return out
 
+
 def image_apply_homography(out, im, H, w, h):
     """
     Applies an homography to an image.
@@ -136,9 +140,6 @@ def image_apply_homography(out, im, H, w, h):
         im: path to the input image file
         H: numpy array containing the 3x3 homography matrix
         w, h: dimensions (width and height) of the output image
-
-    Returns:
-        nothing
 
     The output image is defined on the domain [0, w] x [0, h]. Its pixels
     intensities are defined by out(x) = im(H^{-1}(x)). This function calls
@@ -201,10 +202,22 @@ def rgbi_to_rgb(im):
     return out
 
 
-def image_sift_keypoints(I1, keyfile='', max_nb=None):
+def image_sift_keypoints(im, keyfile='', max_nb=None):
+    """
+    Runs sift (the keypoints detection and description only, no matching).
+
+    Args:
+        im: path to the input image
+        keyfile: path to the file where to write the list of sift descriptors
+        max_nb: maximal number of keypoints. If more keypoints are detected,
+            those at smallest scales are discarded
+
+    Returns:
+        path to the file containing the list of descriptors
+    """
     if (keyfile == ''):
        keyfile = tmpfile('.txt')
-    run("sift_keypoints %s %s" % (image_qauto(I1), keyfile))
+    run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
 
     # remove header from keypoint files
     tmp = tmpfile('.txt')
@@ -216,6 +229,7 @@ def image_sift_keypoints(I1, keyfile='', max_nb=None):
         run("head -n %d %s > %s" % (max_nb, keyfile, tmp))
         run("cp %s %s" % (tmp, keyfile))
     return keyfile
+
 
 def sift_keypoints_match(k1, k2, thresh):
     """
@@ -249,7 +263,6 @@ def points_apply_homography(H, pts):
     Returns:
         a numpy array containing the list of transformed points, one per line
     """
-    import numpy as np
     # if the list of points is not a numpy array, convert it
     if (type(pts) == list):
         pts = np.array(pts)
@@ -334,3 +347,37 @@ def image_pleiades_unsharpening_mtf():
     """
     return '%s/../pleiades_data/idata_0009_MTF_89x89.tif'%(os.path.dirname(
                                                 os.path.abspath(__file__)))
+
+
+def run_binary_on_list_of_points(points, binary, option=None):
+    """
+    Runs a binary that reads its input on stdin.
+
+    Args:
+        points: numpy array containing all the input points, one per line
+        binary: path to the binary. It is supposed to write one output value on
+            stdout for each input point
+        option: optional option to pass to the binary
+
+    Returns:
+        a numpy array containing all the output points, one per line.
+    """
+    # run the binary
+    np.savetxt('/tmp/pts', points, '%.18f')
+    p1 = subprocess.Popen(['cat', '/tmp/pts'], stdout = subprocess.PIPE)
+    if option:
+        p2 = subprocess.Popen([binary, option], stdin = p1.stdout, stdout =
+            subprocess.PIPE)
+    else:
+        p2 = subprocess.Popen([binary], stdin = p1.stdout, stdout =
+            subprocess.PIPE)
+
+    # recover output values: first point first, then loop over all the others
+    line = p2.stdout.readline()
+    out = np.array([[float(val) for val in line.split()]])
+    for i in range(1, len(points)):
+        line = p2.stdout.readline()
+        l = [float(val) for val in line.split()]
+        out = np.vstack((out, l))
+
+    return out

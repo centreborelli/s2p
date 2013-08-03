@@ -1,5 +1,6 @@
 import subprocess
 import numpy as np
+import common
 
 def geodetic_to_geocentric(lat, lon, alt):
     """
@@ -18,15 +19,10 @@ def geodetic_to_geocentric(lat, lon, alt):
     the GeographicLib library:
     http://geographiclib.sourceforge.net/html/intro.html
     """
-    p1 = subprocess.Popen(['echo', str(lat), str(lon), str(alt)],
-                                             stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(['CartConvert'], stdin=p1.stdout,
-                                             stdout=subprocess.PIPE)
-    line = p2.stdout.readline()
-    x = float(line.split()[0])
-    y = float(line.split()[1])
-    z = float(line.split()[2])
-    return x, y, z
+    pts = np.vstack([lat, lon, alt]).T
+    out = common.run_binary_on_list_of_points(pts, 'CartConvert')
+    return out[:, 0], out[:, 1], out[:, 2]
+
 
 def geocentric_to_geodetic(x, y, z):
     """
@@ -45,29 +41,9 @@ def geocentric_to_geodetic(x, y, z):
     the GeographicLib library:
     http://geographiclib.sourceforge.net/html/intro.html
     """
-    p1 = subprocess.Popen(['echo', str(x), str(y), str(z)],
-                                                 stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(['CartConvert', '-r'], stdin=p1.stdout,
-                                                 stdout=subprocess.PIPE)
-    line = p2.stdout.readline()
-    lat = float(line.split()[0])
-    lon = float(line.split()[1])
-    alt = float(line.split()[2])
-    return lat, lon, alt
-
-
-def geodetic_to_geocentric_array(lat, lon, alt):
-    """
-    converts lists of WGS84 (lat, lon, alt) coordinates to lists of geocentric
-    cartesian (x, y, z), using the previous function.
-    """
-    x = np.zeros(len(lat))
-    y = np.zeros(len(lat))
-    z = np.zeros(len(lat))
-    for i in range(len(lat)):
-        x[i], y[i], z[i] = geodetic_to_geocentric(lat[i], lon[i], alt[i])
-
-    return x, y, z
+    pts = np.vstack([x, y, z]).T
+    out = common.run_binary_on_list_of_points(pts, 'CartConvert', '-r')
+    return out[:, 0], out[:, 1], out[:, 2]
 
 
 def geoid_above_ellipsoid(lat, lon):
