@@ -1,0 +1,6 @@
+Download boofcv (only tested with v0.12)
+http://sourceforge.net/projects/boofcv/files/v0.12/boofcv-v0.12-src.zip/download
+
+Compile the boofcv library
+
+Run "ant" to copile the modules in src

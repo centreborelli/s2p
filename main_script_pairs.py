@@ -27,6 +27,25 @@ h = 1000
 #w = 1000
 #h = 1000
 
+img_name = 'uy1'
+exp_name = 'campo'
+# FULL ROI
+#x = 4500
+#y = 12000
+#w = 8000
+#h = 11000
+# portion inside ROI 
+x = 5500
+y = 25000
+w = 1500
+h = 1500
+
+x = 7000
+y = 25000
+w = 1000
+h = 1000
+
+
 im1  = 'pleiades_data/images/%s/im01.tif' % (img_name)
 im2  = 'pleiades_data/images/%s/im02.tif' % (img_name)
 im1_color  = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
@@ -54,8 +73,10 @@ np.savetxt(disp_range, [disp_min, disp_max])
 
 
 ## 2. block-matching
+#block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
+#    'hirshmuller')
 block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
-    'hirshmuller')
+    'hirshmuller', '1 3')
 
 
 ## 3. triangulation
