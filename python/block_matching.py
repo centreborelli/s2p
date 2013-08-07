@@ -9,6 +9,9 @@ from python import common
 hirshmuller = '%s/../3rdparty/stereo_hirschmuller_2002/subpix.sh' % (
     os.path.dirname( __file__))
 
+hirshmuller08 = '%s/../3rdparty/stereo_hirschmuller_2008/callSGBM.sh' % (
+    os.path.dirname( __file__))
+
 
 def compute_disparity_map(im1, im2, disp_range, out_disp, algo, extra_params=''):
     """
@@ -34,6 +37,15 @@ def compute_disparity_map(im1, im2, disp_range, out_disp, algo, extra_params='')
         # extra_params: LoG(0) regionRadius(3)
         #    LoG: Laplacian of Gaussian preprocess 1:enabled 0:disabled
         #    regionRadius: radius of the window
+
+    if (algo == 'hirshmuller08'):
+        bm_binary = hirshmuller08
+        common.run("%s %s %s %s %d %d %s" %(bm_binary, im1, im2, out_disp,
+            disp_min, disp_max, extra_params))
+        # extra_params: regionRadius(3) P1(default) P2(default) LRdiff(1)
+        #    regionRadius: radius of the window
+        #    P1,P2 : regularization parameters 
+        #    LRdiff: maximum difference between left and right disparity maps
 
     elif (algo == 'msmw'):
         bm_binary = iip_stereo_correlation_multi_win2

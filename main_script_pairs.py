@@ -73,10 +73,17 @@ np.savetxt(disp_range, [disp_min, disp_max])
 
 
 ## 2. block-matching
+# TODO: ATTENTION 
+#   mask = '/tmp/%s_disp.pgm.mask.png is hardcoded for the hirshmuller method, 
+#   the compute_disparity_map function shoould receive it like:
+#   block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,  'hirshmuller')
+
 #block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
 #    'hirshmuller')
+#block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
+#    'hirshmuller', '1 3')
 block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
-    'hirshmuller', '1 3')
+    'hirshmuller08')
 
 
 ## 3. triangulation

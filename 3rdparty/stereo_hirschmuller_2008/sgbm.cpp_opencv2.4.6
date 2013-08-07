@@ -14,8 +14,9 @@
  
 
 #include <stdio.h>
-#include <cv.hpp>
-#include <highgui.h>
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
 extern "C" {
 #include "iio.h"
 }
@@ -130,10 +131,10 @@ int main(int argc, char** argv){
    paste(uu2,u2,max(maxdisp,0),0);
    Mat ddisp(uu1.rows,uu1.cols,CV_16S);
 
-   StereoSGBM sgbm( mindisp, drange , SADwin,
+   Ptr<StereoSGBM> sgbm = createStereoSGBM( mindisp, drange , SADwin,
          P1,P2, LRdiff,
          0,0,0,0,   true);
-   sgbm(uu1,uu2,ddisp);
+   sgbm->compute(uu1,uu2,ddisp);
 
    Mat disp = ddisp( Range::all(), Range(max(maxdisp,0),max(maxdisp,0)+u1.cols ) );
 
