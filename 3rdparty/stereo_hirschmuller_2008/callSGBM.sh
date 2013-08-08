@@ -1,20 +1,36 @@
 #!/bin/bash
 
-# get real path of the jar file
+# get real path of the binary file
 rel_path_script=`dirname $0`
 
 if [ "$3" == "" ]; then
    echo "Usage:"
-   $rel_path_script/SGBM
+   echo "  $0 im1 im2 out_disp out_mask [mindisp(0) maxdisp(60) LoG(0) regionRadius(3) maxPerPixelError(20) validateRtoL(1) texture(0.2)]"
    echo ""
-   echo "   Implements: H. Hirschmuller, P.R. Innocent, and J.Garibaldi. "
-   echo "   \"Real-Time Correlation-Based Stereo Vision with Reduced Border Errors.\" "
-   echo "   Int. J. Comput. Vision 47, 1-3 2002"
+   echo "  LoG: Laplacian of Gaussian preprocess 1:enabled 0:disabled"
+   echo "  regionRadius: radius of the window"
+   echo "  maxPerPixelError: <0 disabled"
+   echo "  validateRtoL: 1:enabled 0:disabled"
+   echo "  texture: normalized diffrence between best and second best minimum  0:disabled"
+   echo ""
+   echo "  Wrapper to opencv SGBM function, which implements a modified version"
+   echo "  of Hirschmuller's Semi-Global Matching (SGM):"
+   echo "  Hirschmuller, H. \"Stereo Processing by Semiglobal Matching and Mutual Information\""
+   echo "  PAMI(30), No. 2, February 2008, pp. 328-34"
    exit 1
 fi
 
 a=$1
 b=$2
+disp=$3
+mask=$4
+im=$5
+iM=$6
+
+SAD_win=$7
+P1=$8
+P2=$9
+lr=${10}
 
 
 # convert input images to png
@@ -37,8 +53,8 @@ if [ $a_extension == "tif" ]; then
 
 fi
 
-
-$rel_path_script/SGBM $a $b $3 $4 $5 $6 $7 $8 $9
-plambda $3 "x isnan 0 255 if" | iion - ${3}.mask.png
+#usage: ./build/SGBM im1 im2 out [mindisp(0) maxdisp(64) SADwindow(1) P1(0) P2(0) LRdiff(1)]
+$rel_path_script/SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr
+plambda $disp "x isnan 0 255 if" | iion - $mask
 
 rm $a $b
