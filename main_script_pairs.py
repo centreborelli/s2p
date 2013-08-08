@@ -34,7 +34,7 @@ exp_name = 'campo'
 #y = 12000
 #w = 8000
 #h = 11000
-# portion inside ROI 
+# portion inside ROI
 x = 5500
 y = 25000
 w = 1500
@@ -46,9 +46,9 @@ w = 1000
 h = 1000
 
 
-im1  = 'pleiades_data/images/%s/im01.tif' % (img_name)
-im2  = 'pleiades_data/images/%s/im02.tif' % (img_name)
-im1_color  = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
+im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
+im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
+im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
 rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
 rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
 rect1 = '/tmp/%s1.tif' % (exp_name)
@@ -56,7 +56,7 @@ rect2 = '/tmp/%s2.tif' % (exp_name)
 rect1_color = '/tmp/%s1_color.tif' % (exp_name)
 disp_range  = '/tmp/%s_disp_range'% (exp_name)
 disp  = '/tmp/%s_disp.pgm'% (exp_name)
-mask  = '/tmp/%s_disp.pgm.mask.png'% (exp_name)
+mask  = '/tmp/%s_mask.png'% (exp_name)
 cloud = '/tmp/%s_cloud.ply'% (exp_name)
 height = '/tmp/%s_height.tif'% (exp_name)
 rpc_err = '/tmp/%s_rpc_err.tif'% (exp_name)
@@ -73,17 +73,12 @@ np.savetxt(disp_range, [disp_min, disp_max])
 
 
 ## 2. block-matching
-# TODO: ATTENTION 
-#   mask = '/tmp/%s_disp.pgm.mask.png is hardcoded for the hirshmuller method, 
-#   the compute_disparity_map function shoould receive it like:
-#   block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,  'hirshmuller')
-
-#block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
-#    'hirshmuller')
-#block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
-#    'hirshmuller', '1 3')
-block_matching.compute_disparity_map(rect1, rect2, disp_range, disp,
-    'hirshmuller08')
+#block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,
+#    'hirschmuller02')
+#block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,
+#    'hirschmuller02', '1 3')
+block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,
+    'hirschmuller08')
 
 
 ## 3. triangulation
