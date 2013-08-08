@@ -2,7 +2,7 @@
 
 if [ "$3" == "" ]; then
    echo "Usage:"
-   echo "   $0 im1 im2 out.pgm [mindisp(0) maxdisp(60) LoG(0) regionRadius(3) maxPerPixelError(20) validateRtoL(1) texture(0.2)]"
+   echo "   $0 im1 im2 out_disp.pgm out_mask.png [mindisp(0) maxdisp(60) LoG(0) regionRadius(3) maxPerPixelError(20) validateRtoL(1) texture(0.2)]"
    echo ""
    echo "   LoG: Laplacian of Gaussian preprocess 1:enabled 0:disabled"
    echo "   regionRadius: radius of the window"
@@ -18,15 +18,16 @@ fi
 
 a=$1
 b=$2
-out=$3
-im=$4
-iM=$5
+disp=$3
+mask=$4
+im=$5
+iM=$6
 
-LoG=$6
-rad=$7
-ppe=$8
-lr=$9
-txt=${10}
+LoG=$7
+rad=$8
+ppe=$9
+lr=${10}
+txt=${11}
 
 echo "Params:: LoG=$LoG regionRadius=$rad maxPerPixelError=$ppe validateRtoL=$lr texture=$txt"
 
@@ -72,33 +73,32 @@ then
    crop $a /tmp/a.tif $m 0 $neww $h
    let newM=M-m
    let newm=0
-   # echo java -classpath build/boofcv_stereo.jar subpix${LoG} /tmp/a.png /tmp/b.png /tmp/out.pgm $newm $newM  $rad $ppe $lr $txt
-   time java -classpath $jar subpix${LoG} /tmp/a.tif /tmp/b.tif /tmp/out.pgm $newm $newM  $rad $ppe $lr $txt
+   # echo java -classpath build/boofcv_stereo.jar subpix${LoG} /tmp/a.png /tmp/b.png /tmp/disp.pgm $newm $newM  $rad $ppe $lr $txt
+   time java -classpath $jar subpix${LoG} /tmp/a.tif /tmp/b.tif /tmp/disp.pgm $newm $newM  $rad $ppe $lr $txt
 
    # mismatches
    let nomatchtag=newM+1
-   plambda /tmp/out.pgm "1 x $nomatchtag = - 255 *" | iion - $out.mask.png
+   plambda /tmp/disp.pgm "1 x $nomatchtag = - 255 *" | iion - $mask
 
    # restore the order of disparities
    let mm=-m
-   plambda /tmp/out.pgm "0 x $mm - -" | iion - $3
+   plambda /tmp/disp.pgm "0 x $mm - -" | iion - $disp
 
    ## also recover the false color disparity
-   crop $3 $3 $mm 0 $w $h
-   crop  /tmp/out.pgm.png $3.png $mm 0 $w $h
-   crop  $out.mask.png $out.mask.png $mm 0 $w $h
+   crop $disp $disp $mm 0 $w $h
+   crop  $mask $mask $mm 0 $w $h
 
 else
-   echo "java -classpath $jar subpix${LoG} $a $b $out $m $M $rad $ppe $lr $txt"
-   time  java -classpath $jar subpix${LoG} $a $b $out $m $M $rad $ppe $lr $txt
+   echo "java -classpath $jar subpix${LoG} $a $b $disp $m $M $rad $ppe $lr $txt"
+   time  java -classpath $jar subpix${LoG} $a $b $disp $m $M $rad $ppe $lr $txt
 
    # mismatches
    let nomatchtag=M+1
    echo $nomatchtag
-   plambda $out "1 x $nomatchtag = - 255 *" | iion - $out.mask.png
+   plambda $disp "1 x $nomatchtag = - 255 *" | iion - $mask
 
    # restore the order of disparities
-   plambda $out "0 x -" | iion - $out
+   plambda $disp "0 x -" | iion - $disp
 fi
 
 
