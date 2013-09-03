@@ -4,3 +4,4 @@
 bin
 3rdparty/GeographicLib-1.32/tools
 .DS_Store
+pleiades_data/images/*/*.tif

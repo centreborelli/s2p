@@ -24,10 +24,10 @@ for dataset in images/*
             do
                 i=$(($i+1))
                 abs_path=$pleiades_dir/$image
-                echo $abs_path
+                #echo $abs_path
                 link_name=`printf im%02d.tif $i`
-                echo $link_name
-                #ln -s $abs_path $dataset/$link_name
+                #echo $dataset/$link_name
+                ln -s $abs_path $dataset/$link_name
         done
         # multi-spectral
         i=0
@@ -35,9 +35,9 @@ for dataset in images/*
             do
                 i=$(($i+1))
                 abs_path=$pleiades_dir/$image
-                echo $abs_path
+                #echo $abs_path
                 link_name=`printf im%02d_color.tif $i`
-                echo $link_name
-                #ln -s $abs_path $dataset/$link_name
+                #echo $dataset/$link_name
+                ln -s $abs_path $dataset/$link_name
         done
     done
