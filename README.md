@@ -42,6 +42,17 @@ the provided makefiles. For example, for GeographicLib, do:
     make
     sudo make install
 
+For SGBM (Semi-Global Block-Matching), do:
+
+    cd 3rdparty/stereo_hirschmuller_2008
+    mkdir build
+    cd build
+    cmake ..
+    make
+
+This binary uses OpenCV implementation of Hirschmuller Semi-Global Matching.
+You must have OpenCV 2.4.x installed on your system to compile it.
+
 In addition, the following binaries must be available on your system:
 
     gdal_translate
@@ -57,5 +68,17 @@ Several Pleiades stereoscopic datasets are available. We have pairs and
 triplets. Each image is accompanied by an `xml` file containing rpc
 coefficients.
 
-All the data is stored in the `pleiades_data` folder, which contains two
-subfolders, `rpc` and `images`.
+Due to storage limitations, the images are not available on this repository.
+If you want to run the s2p code, **you have to get a copy of our Pleiades
+dataset by other means.** The size of these images is around 40000 x 40000
+pixels, covering an area of 20km x 20km. The files weigh approximately 2GB
+each.
+
+Only the `xml` files containing the calibration data (encoded by rpc
+coefficients) are provided. They are located in the folder `pleiades_data/rpc`.
+The folder `pleiades_data/images` contains the list of the relative paths to
+the full images of our dataset. These paths are relative to the location of
+your copy of the dataset. Run the script `create_links.sh` to generate symbolic
+links to the images files. These links will be located in the
+`pleiades_data/images/*` subfolders and are easier to use than the actual real
+paths to the image files.

@@ -19,25 +19,30 @@ fi
 for dataset in images/*
     do
         # panchro
-        i=0
-        for image in `cat $dataset/images_paths_panchro.txt`
-            do
-                i=$(($i+1))
-                abs_path=$pleiades_dir/$image
-                #echo $abs_path
-                link_name=`printf im%02d.tif $i`
-                #echo $dataset/$link_name
-                ln -s $abs_path $dataset/$link_name
-        done
+        if [ -f "$dataset/images_paths_panchro.txt" ] ; then
+            i=0
+            for image in `cat $dataset/images_paths_panchro.txt`
+                do
+                    i=$(($i+1))
+                    abs_path=$pleiades_dir/$image
+                    #echo $abs_path
+                    link_name=`printf im%02d.tif $i`
+                    #echo $dataset/$link_name
+                    ln -sf $abs_path $dataset/$link_name
+            done
+        fi
+
         # multi-spectral
-        i=0
-        for image in `cat $dataset/images_paths_ms.txt`
-            do
-                i=$(($i+1))
-                abs_path=$pleiades_dir/$image
-                #echo $abs_path
-                link_name=`printf im%02d_color.tif $i`
-                #echo $dataset/$link_name
-                ln -s $abs_path $dataset/$link_name
-        done
+        if [ -f "$dataset/images_paths_ms.txt" ] ; then
+            i=0
+            for image in `cat $dataset/images_paths_ms.txt`
+                do
+                    i=$(($i+1))
+                    abs_path=$pleiades_dir/$image
+                    #echo $abs_path
+                    link_name=`printf im%02d_color.tif $i`
+                    #echo $dataset/$link_name
+                    ln -sf $abs_path $dataset/$link_name
+            done
+        fi
     done
