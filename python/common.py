@@ -231,25 +231,31 @@ def image_sift_keypoints(im, keyfile='', max_nb=None):
     return keyfile
 
 
-def sift_keypoints_match(k1, k2, thresh):
+def sift_keypoints_match(k1, k2, method, thresh):
     """
     Find matches among two lists of sift keypoints.
 
     Args:
         k1, k2: paths to text files containing the lists of sift descriptors
+        method: flag (0 or 1) indicating wether to use absolute distance (0) or
+            relative distance (1)
         thresh: threshold for distance between SIFT descriptors. These
             descriptors are 128-vectors, whose coefficients range from 0 to 255,
-            thus a reasonable value for this threshold is between 200 and 300.
+            thus with absolute distance a reasonable value for this threshold
+            is between 200 and 300. With relative distance (ie ratio between
+            distance to nearest and distance to second nearest), the commonly
+            used value for the threshold is 0.6.
 
     Returns:
         a numpy array containing the list of matches
 
-    It uses Enric's siftu binary, with the nn distance
+    It uses Ives' matching binary, from the IPOL http://www.ipol.im/pub/pre/82/
     """
     matchfile = tmpfile('.txt')
-    run("siftu pair %f %s %s %s" % (thresh, k1, k2, matchfile))
+    run("matching %s %s %d %f 4 8 36 > %s" % (k1, k2, method, thresh, matchfile))
     matches = np.loadtxt(matchfile)
-    return matches
+    # discard scale and orientation, then return
+    return matches[:, [0, 1, 4, 5]]
 
 
 def points_apply_homography(H, pts):
