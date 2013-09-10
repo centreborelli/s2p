@@ -106,6 +106,7 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
         the input list.
     """
     out = []
+    mask = np.zeros((len(matches), 1)) # for debug only
     for i in range(len(matches)):
         x  = np.array([matches[i, 0], matches[i, 1], 1])
         xx = np.array([matches[i, 2], matches[i, 3], 1])
@@ -116,7 +117,9 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
         d = max(d1, d2)
         if (d < thresh):
             out.append(matches[i, :])
+            mask[i] = 1 # for debug only
 
+    np.savetxt('/tmp/sift_F_msk', mask, '%d') # for debug only
     return np.array(out)
 
 
