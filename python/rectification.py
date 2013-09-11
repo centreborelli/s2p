@@ -79,8 +79,8 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     T2 = common.matrix_translation(x2, y2)
 
     # apply sift, then transport keypoints coordinates in the big images frame
-    kpts1 = common.image_sift_keypoints(crop1, '', 1000)
-    kpts2 = common.image_sift_keypoints(crop2, '', 1000)
+    kpts1 = common.image_sift_keypoints(crop1, '')
+    kpts2 = common.image_sift_keypoints(crop2, '')
     matches = common.sift_keypoints_match(kpts1, kpts2, 1, 0.6)
     # 300: distance threshold for sift descriptors
     if matches.size:

@@ -57,7 +57,7 @@ def compute_height(model_a, model_b, x, y, xp, yp):
         if np.max(np.fabs(h0inc)) < 0.001:
             break
 
-    return (h0,err)
+    return (h0, err)
 
 
 def approximate_rpc_as_projective(rpc_model, col_range, lin_range, alt_range,

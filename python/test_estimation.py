@@ -17,6 +17,6 @@ def test_normalize_3d_points():
                                         [-1, -1,  1], [1, -1,  1], [1, 1,  1], [-1, 1,  1]])
 
 def test_camera_matrix():
-def test_fundametal_matrix():
-def test_fundametal_matrix_ransac():
+def test_fundamental_matrix():
+def test_fundamental_matrix_ransac():
 def test_loop_zhang():
