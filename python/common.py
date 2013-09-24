@@ -1,3 +1,4 @@
+# This Python file uses the following encoding: utf-8
 import numpy as np
 import os
 import sys
@@ -89,14 +90,14 @@ def matrix_translation(tx, ty):
 
 
 def image_size(im):
-    out = tmpfile()
+    out = tmpfile('.txt')
     run('imprintf "%%w %%h" %s > %s' % (shellquote(im), out));
     (nc, nr) = map(int, open(out).read().split())
     return (nc, nr)
 
 
 def image_pix_dim(im):
-    out = tmpfile()
+    out = tmpfile('.txt')
     run('imprintf "%%c" %s > %s' % (shellquote(im), out));
     dim = open(out).readline().split()[0]
     return int(dim)
@@ -104,7 +105,7 @@ def image_pix_dim(im):
 
 def image_crop(im, x, y, w, h, out=None):
     if (out == None):
-        out = tmpfile()
+        out = tmpfile('.tif')
     run('crop %s %s %d %d %d %d' % (im, out, x, y, w, h));
     return out
 
@@ -114,7 +115,7 @@ def image_fftconvolve(im, mtf):
     returns the fourier convolution: F^{-1} ( F(im)  mtf )
     mtf and im must be the same size
     """
-    out = tmpfile()
+    out = tmpfile('.tif')
     run('fftconvolve %s %s %s' % (mtf, im, out))
     return out
 
@@ -126,10 +127,27 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     and just adds or remove frequencies from it
     No control of Gibbs artifacts
     """
-    out = tmpfile()
+    out = tmpfile('.tif')
     run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
     return out
 
+def image_safe_zoom_fft(im, f):
+    """
+    zooms im by a factor: f∈[0,1] for zoom in, f∈[1 +inf] for zoom out
+    It works with the fft representation of the symmetrized im thus it 
+    controls the Gibbs artifacts.
+    In case of zoom out it filters the image before truncating the 
+    spectrum, for zoom in it performs a zero padding.
+    Because of the discrete frequency representation the zero padding/
+    truncation may yield a final zoom factor that differs from the 
+    desired one, particularly for small source or target images.
+    """
+    out = tmpfile('.tif')
+    sz = image_size(im)
+    # FFT doesn't play nice with infinite values, so we remove them
+    run('plambda %s "x isfinite x 0 if" | iion - %s'%(im, out)) 
+    run('zoom_2d %s %s %d %d' % (out, out, sz[0]/f, sz[1]/f))
+    return out
 
 def image_apply_homography(out, im, H, w, h):
     """
