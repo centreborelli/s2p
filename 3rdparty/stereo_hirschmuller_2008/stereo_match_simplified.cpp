@@ -15,7 +15,7 @@ static void print_help(char *bin_name)
 
 int main(int c, char **v)
 {
-    if(c != 4 && c != 10)
+    if(c < 4 || c > 10)
     {
         print_help(*v);
         return 0;
@@ -29,31 +29,21 @@ int main(int c, char **v)
     Mat im2 = imread(im2_filename, -1);
     int cn = im1.channels();
 
-    // default values for optional parameters
-    int mindisp = 0;
-    int maxdisp = 64;
-    int SADwindow = 1;
-    int P1 =  8*cn*SADwindow*SADwindow;
-    int P2 = 32*cn*SADwindow*SADwindow;
-    int LRdiff = 1;
-
-    // read optional parameters
-    if (c == 10)
-    {
-        mindisp = atoi(v[4]);
-        maxdisp = atoi(v[5]);
-        SADwindow = atoi(v[6]);
-        P1 = atoi(v[7]);
-        P2 = atoi(v[8]);
-        LRdiff = atoi(v[9]);
-    }
+    // optional parameters
+    int i = 4;
+    int mindisp = (c>i) ? atoi(v[i]) :  0;  i++;
+    int maxdisp = (c>i) ? atoi(v[i]) : 64;  i++;
+    int SADwin  = (c>i) ? atoi(v[i]) :  1;  i++;
+    int P1      = (c>i) ? atoi(v[i]) :  8*cn*SADwin*SADwin; i++;
+    int P2      = (c>i) ? atoi(v[i]) : 32*cn*SADwin*SADwin; i++;
+    int LRdiff  = (c>i) ? atoi(v[i]) :  1;  i++;
 
     // prepare the StereoSGBM object
     StereoSGBM sgbm;
     sgbm.minDisparity = mindisp;
     // the number of disparities has to be a multiple of 16
     sgbm.numberOfDisparities = (int) 16 * ceil((maxdisp - mindisp)/16.0);
-    sgbm.SADWindowSize = SADwindow;
+    sgbm.SADWindowSize = SADwin;
     sgbm.P1 = P1;
     sgbm.P2 = P2;
     sgbm.disp12MaxDiff = LRdiff;
