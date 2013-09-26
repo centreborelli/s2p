@@ -4,6 +4,7 @@ import os
 import sys
 import subprocess
 import tempfile
+import rpc_model
 
 
 # add the bin folder to system path
@@ -404,3 +405,62 @@ def run_binary_on_list_of_points(points, binary, option=None):
         out = np.vstack((out, l))
 
     return out
+
+
+def get_rectangle_coordinates(im):
+    """
+    Get the coordinates of a rectangle defined by the user's clicks.
+
+    Args:
+        im: path to an image to be displayed.
+
+    Returns:
+        x, y, w, h: coordinates of the rectangle selected by the user. x, y are the
+            coordinates of the top-left corner, while (w, h) is the size of the
+            rectangle.
+    """
+    points_file = tmpfile('.txt')
+    os.system('./viewGL.py %s > %s' % (shellquote(im), points_file));
+    (x1, y1, x2, y2) = map(int, open(points_file).read().split())
+    # viewGL.py returns the coordinates of two corners defining the rectangle.
+    # We can's make any assumption on the ordering of these coordinates.
+
+    x = min(x1, x2)
+    w = max(x1, x2) - x
+    y = min(y1, y2)
+    h = max(y1, y2) - y
+    return x, y, w, h
+
+
+def get_roi_coordinates(rpc, preview):
+    """
+    Get the coordinates of a desired ROI in a Pleiades image from user's clicks.
+
+    Args:
+        rpc: path to the rpc xml file of the Pleiades image.
+        preview: path to the preview image file associated to the Pleiades
+            image.
+
+    Returns:
+        x, y, w, h: coordinates of the ROI selected by the user, in the
+            Pleiades full image frame. x, y are the coordinates of the top-left
+            corner, while (w, h) is the size of the rectangle.
+
+    A preview image is displayed, on which the user selects a rectangular
+    region.
+    """
+    # read preview/full images dimensions
+    rpc = rpc_model.RPCModel(rpc);
+    nc = int(rpc.lastCol)
+    nr = int(rpc.lastRow)
+    nc_preview, nr_preview = image_size(preview)
+
+    # get the rectangle coordinates
+    x, y, w, h = get_rectangle_coordinates(preview)
+
+    # rescale according to preview/full ratio
+    x = int(x*nc/nc_preview)
+    y = int(y*nr/nr_preview)
+    w = int(w*nc/nc_preview)
+    h = int(h*nr/nr_preview)
+    return x, y, w, h

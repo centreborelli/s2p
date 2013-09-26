@@ -10,8 +10,8 @@ img_name = 'lenclio'
 exp_name = 'beu'
 x = 15700
 y = 16400
-w = 4000
-h = 4000
+w = 1000
+h = 1000
 
 #img_name = 'toulouse'
 #exp_name = 'blagnac'
@@ -85,7 +85,6 @@ rect2 = '/tmp/%s2.tif' % (exp_name)
 hom1  = '/tmp/%s_hom1' % (exp_name)
 hom2  = '/tmp/%s_hom2' % (exp_name)
 rect1_color = '/tmp/%s1_color.tif' % (exp_name)
-disp_range  = '/tmp/%s_disp_range' % (exp_name)
 disp    = '/tmp/%s_disp.pgm'   % (exp_name)
 mask    = '/tmp/%s_mask.png'   % (exp_name)
 cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
@@ -105,19 +104,17 @@ def main():
     H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
         x, y, w, h, rect1, rect2)
 
-    # save homographies and disp_range to tmp files
+    # save homographies to tmp files
     np.savetxt(hom1, H1)
     np.savetxt(hom2, H2)
-    np.savetxt(disp_range, [disp_min, disp_max])
-
 
     ## 2. block-matching
-    #block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,
-    #    'hirschmuller02')
-    #block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,
-    #    'hirschmuller02', '1 3')
-    block_matching.compute_disparity_map(rect1, rect2, disp_range, disp, mask,
-        'hirschmuller08')
+    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+    #    'hirschmuller02', disp_min, disp_max)
+    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+    #    'hirschmuller02', disp_min, disp_max, '1 3')
+    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+        'hirschmuller08', disp_min, disp_max)
 
 
     ## 3. triangulation
