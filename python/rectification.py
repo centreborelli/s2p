@@ -252,11 +252,17 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
         sift_matches = matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
     except Exception:
         print 'something failed with sift matches'
-        return H1, H2
+        sys.exit()
 
     # filter sift matches with the known fundamental matrix
     F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
     sift_matches = filter_matches_epipolar_constraint(F, sift_matches, 2.0)
+    if not len(sift_matches):
+        print """all the sift matches have been discarded by the epipolar
+        constraint. This is probably due to the pointing error. Try with a
+        bigger threshold."""
+        sys.exit()
+
     H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2, 'negative')
 
     return H1, H2, disp_m, disp_M
