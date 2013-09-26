@@ -24,10 +24,14 @@ for dataset in images/*
             for image in `cat $dataset/images_paths_panchro.txt`
                 do
                     i=$(($i+1))
+                    # image
                     abs_path=$pleiades_dir/$image
-                    #echo $abs_path
                     link_name=`printf im%02d.tif $i`
-                    #echo $dataset/$link_name
+                    ln -sf $abs_path $dataset/$link_name
+                    # preview
+                    dir_path=`dirname $image`
+                    abs_path=$pleiades_dir/$dir_path/PREVIEW_*.JPG
+                    link_name=`printf prev%02d.tif $i`
                     ln -sf $abs_path $dataset/$link_name
             done
         fi
@@ -37,11 +41,15 @@ for dataset in images/*
             i=0
             for image in `cat $dataset/images_paths_ms.txt`
                 do
+                    # image
                     i=$(($i+1))
                     abs_path=$pleiades_dir/$image
-                    #echo $abs_path
                     link_name=`printf im%02d_color.tif $i`
-                    #echo $dataset/$link_name
+                    ln -sf $abs_path $dataset/$link_name
+                    # preview
+                    dir_path=`dirname $image`
+                    abs_path=$pleiades_dir/$dir_path/PREVIEW_*.JPG
+                    link_name=`printf prev%02d_color.tif $i`
                     ln -sf $abs_path $dataset/$link_name
             done
         fi

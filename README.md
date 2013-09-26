@@ -53,6 +53,12 @@ For SGBM (Semi-Global Block-Matching), do:
 This binary uses OpenCV implementation of Hirschmuller Semi-Global Matching.
 You must have OpenCV 2.4.x installed on your system to compile it.
 
+For sift, do:
+
+    cd 3rdparty/sift_20130403
+    make
+    cp bin/matching ../../bin
+
 In addition, the following binaries must be available on your system:
 
     gdal_translate
