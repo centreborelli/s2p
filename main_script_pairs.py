@@ -8,10 +8,10 @@ from python import triangulation
 
 img_name = 'lenclio'
 exp_name = 'beu'
-x = 15700
-y = 16400
-w = 1000
-h = 1000
+#x = 15700
+#y = 16400
+#w = 1000
+#h = 1000
 
 #img_name = 'toulouse'
 #exp_name = 'blagnac'
@@ -63,6 +63,7 @@ h = 1000
 im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
 im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
 im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
+prev1 = 'pleiades_data/images/%s/prev01.tif' % (img_name)
 rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
 rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
 
@@ -82,6 +83,13 @@ def main():
     """
     Launches the s2p stereo pipeline on a pair of Pleiades images
     """
+    ## 0. select ROI
+    try:
+        x and y and w and h
+    except NameError:
+        x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
+    print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+
     ## 1. rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
         x, y, w, h, rect1, rect2)
