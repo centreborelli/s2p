@@ -6,8 +6,8 @@ from python import rectification
 from python import block_matching
 from python import triangulation
 
-img_name = 'lenclio'
-exp_name = 'beu'
+#img_name = 'lenclio'
+#exp_name = 'tournon'
 #x = 15700
 #y = 16400
 #w = 1000
@@ -34,12 +34,12 @@ exp_name = 'beu'
 #w = 1000
 #h = 1000
 
-#img_name = 'mera'
-#exp_name = 'crete'
-#x = 15700
-#y = 36400
-#w = 1200
-#h = 1000
+img_name = 'mera'
+exp_name = 'crete'
+x = 11127
+y = 28545
+w = 1886
+h = 1755
 
 #img_name = 'uy1'
 #exp_name = 'campo'
@@ -85,10 +85,11 @@ def main():
     """
     ## 0. select ROI
     try:
-        x and y and w and h
+        global x, y, w, h
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
     except NameError:
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
-    print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
     ## 1. rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
@@ -98,25 +99,25 @@ def main():
     np.savetxt(hom1, H1)
     np.savetxt(hom2, H2)
 
-    ## 2. block-matching
-    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-    #    'hirschmuller02', disp_min, disp_max)
-    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-    #    'hirschmuller02', disp_min, disp_max, '1 3')
-    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        'hirschmuller08', disp_min, disp_max)
-
-
-    ## 3. triangulation
-    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask, height,
-        rpc_err)
-
-    ## 4. colorize and generate point cloud
-    triangulation.colorize(rect1, im1_color, hom1, rect1_color)
-    triangulation.compute_point_cloud(rect1_color, height, rpc1, hom1, cloud)
-
-    # display results
-    print "vflip %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
-    print "meshlab %s" % (cloud)
+#    ## 2. block-matching
+#    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+#    #    'hirschmuller02', disp_min, disp_max)
+#    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+#    #    'hirschmuller02', disp_min, disp_max, '1 3')
+#    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+#        'hirschmuller08', disp_min, disp_max)
+#
+#
+#    ## 3. triangulation
+#    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask, height,
+#        rpc_err)
+#
+#    ## 4. colorize and generate point cloud
+#    triangulation.colorize(rect1, im1_color, hom1, rect1_color)
+#    triangulation.compute_point_cloud(rect1_color, height, rpc1, hom1, cloud)
+#
+#    # display results
+#    print "vflip %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
+#    print "meshlab %s" % (cloud)
 
 if __name__ == '__main__': main()
