@@ -41,23 +41,37 @@ h = 4000
 #w = 1200
 #h = 1000
 
-#img_name = 'uy1'
-#exp_name = 'campo'
-## FULL ROI
-##x = 4500
-##y = 12000
-##w = 8000
-##h = 11000
-## portion inside ROI
-#x = 5500
-#y = 25000
-#w = 1500
-#h = 1500
-#
-#x = 7000
-#y = 25000
-#w = 1000
-#h = 1000
+img_name = 'uy1'
+exp_name = 'campo'
+# FULL ROI
+#x = 4500
+#y = 12000
+#w = 8000
+#h = 11000
+# portion inside ROI
+x = 5500
+y = 25000
+w = 1500
+h = 1500
+
+x = 7000
+y = 25000
+w = 2000
+h = 2000
+
+
+
+## Try to import the global parameters module
+#  it permits to pass values between different modules
+try:
+   from python import global_params
+
+   global_params.subsampling_factor=1
+   global_params.subsampling_factor_registration=1
+
+except ImportError:
+  pass
+
 
 
 im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
@@ -83,6 +97,10 @@ def main():
     """
     Launches the s2p stereo pipeline on a pair of Pleiades images
     """
+
+    # ATTENTION if subsampling_factor is set the rectified images will be smaller, 
+    # and the homography matrices and disparity range will reflect this fact
+
     ## 1. rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
         x, y, w, h, rect1, rect2)
@@ -114,4 +132,8 @@ def main():
     print "vflip %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
     print "meshlab %s" % (cloud)
 
+    ### cleanup 
+    for name in common.garbage:
+        common.run('rm ' + name)
+    
 if __name__ == '__main__': main()

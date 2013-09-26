@@ -15,7 +15,7 @@ def image_apply_pleiades_unsharpening_filter(im):
     return common.image_fftconvolve(im, tmp_mtf_large)
 
 
-def crop_and_apply_homography(im_out, im_in, H, w, h):
+def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
     """
     Warps a piece of a Pleiades (panchro or ms) image with a homography.
 
@@ -24,6 +24,11 @@ def crop_and_apply_homography(im_out, im_in, H, w, h):
         im_in: path to the input (jp2 or tif) full Pleiades image
         H: numpy array containing the 3x3 homography matrix
         w, h: size of the output image
+        subsampling_factor (optional, default=1): when set to z>1 
+           will result in the application of the homography Z*H  
+           where Z = diag(1/z,1/z,1)
+           So the output will be zoomed out by a factor z
+           The output image will be (w/z, h/z)
 
     Returns:
         nothing
@@ -40,13 +45,39 @@ def crop_and_apply_homography(im_out, im_in, H, w, h):
     x0, y0, w0, h0 = common.bounding_box2D(inv_H_pts)
     tmp = common.image_crop_LARGE(im_in, x0, y0, w0, h0)
 
-    # This filter is needed (for panchro images) because the original PLEAIDES
-    # SENSOR PERFECT images are aliased
-    if (common.image_pix_dim(tmp) == 1):
-        tmp = image_apply_pleiades_unsharpening_filter(tmp)
-
     # compensate the homography with the translation induced by the preliminary
     # crop, then apply the homography and crop.
     H = np.dot(H, common.matrix_translation(x0, y0))
+
+
+    # This filter is needed (for panchro images) because the original PLEAIDES
+    # SENSOR PERFECT images are aliased
+    if (common.image_pix_dim(tmp) == 1 and subsampling_factor == 1):
+        tmp = image_apply_pleiades_unsharpening_filter(tmp)
+
+
+    # the output image is zoomed out by subsampling_factor so
+    # H, w, and h are updated accordingly 
+    assert( subsampling_factor >= 1 )
+    Z = np.eye(3); 
+    Z[0,0] = Z[1,1] = 1.0/subsampling_factor
+    H = np.dot(Z,H)
+
+    w = w/subsampling_factor
+    h = h/subsampling_factor
+    
+
+    # Since the objective is to commpute a zoomed out homographic application
+    # to save computations we zoom out the image before applying the homography 
+    # and then update H accordingly 
+    if not subsampling_factor == 1:
+        # zoom out the input image
+        tmp = common.image_safe_zoom_fft(tmp , subsampling_factor)
+        # update H
+        Z = np.eye(3); 
+        Z[0,0] = Z[1,1] = 1.0*subsampling_factor
+        H = np.dot(H,Z)
+
+
     common.image_apply_homography(im_out, tmp, H, w, h)
     return
