@@ -90,14 +90,14 @@ def matrix_translation(tx, ty):
 
 
 def image_size(im):
-    out = tmpfile()
+    out = tmpfile('.txt')
     run('imprintf "%%w %%h" %s > %s' % (shellquote(im), out));
     (nc, nr) = map(int, open(out).read().split())
     return (nc, nr)
 
 
 def image_pix_dim(im):
-    out = tmpfile()
+    out = tmpfile('.txt')
     run('imprintf "%%c" %s > %s' % (shellquote(im), out));
     dim = open(out).readline().split()[0]
     return int(dim)
@@ -105,7 +105,7 @@ def image_pix_dim(im):
 
 def image_crop(im, x, y, w, h, out=None):
     if (out == None):
-        out = tmpfile()
+        out = tmpfile('.tif')
     run('crop %s %s %d %d %d %d' % (im, out, x, y, w, h));
     return out
 
@@ -115,7 +115,7 @@ def image_fftconvolve(im, mtf):
     returns the fourier convolution: F^{-1} ( F(im)  mtf )
     mtf and im must be the same size
     """
-    out = tmpfile()
+    out = tmpfile('.tif')
     run('fftconvolve %s %s %s' % (mtf, im, out))
     return out
 
@@ -127,7 +127,7 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     and just adds or remove frequencies from it
     No control of Gibbs artifacts
     """
-    out = tmpfile()
+    out = tmpfile('.tif')
     run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
     return out
 
