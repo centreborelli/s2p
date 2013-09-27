@@ -1,3 +1,4 @@
+# This Python file uses the following encoding: utf-8
 import numpy as np
 import os
 import sys
@@ -131,6 +132,22 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
     return out
 
+def image_safe_zoom_fft(im, f):
+    """
+    zooms im by a factor: f∈[0,1] for zoom in, f∈[1 +inf] for zoom out
+    It works with the fft representation of the symmetrized im thus it 
+    controls the Gibbs artifacts.
+    In case of zoom out it filters the image before truncating the 
+    spectrum, for zoom in it performs a zero padding.
+    Because of the discrete frequency representation the zero padding/
+    truncation may yield a final zoom factor that differs from the 
+    desired one, particularly for small source or target images.
+    """
+    out = tmpfile('.tif')
+    sz = image_size(im)
+    # FFT doesn't play nice with infinite values, so we remove them
+    run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
+    return out
 
 def image_apply_homography(out, im, H, w, h):
     """
