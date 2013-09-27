@@ -317,8 +317,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
     pts1 = common.points_apply_homography(H1, roi)
     x0, y0, w0, h0 = common.bounding_box2D(pts1)
     # check that the first homography maps the ROI in the positive quadrant
-    assert (x0 == 0)
-    assert (y0 == 0)
+    assert (round(x0) == 0)
+    assert (round(y0) == 0)
 
     ## Try to import the global parameters module
     #  it permits to pass values between different modules

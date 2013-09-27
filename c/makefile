@@ -5,6 +5,7 @@ all:
 	cc -o ../bin/iion -std=c99 -g -O3 -DNDEBUG iio.c iion.c -lpng -ltiff -ljpeg
 	cc -o ../bin/qauto -std=c99 -g -O3 -DNDEBUG iio.c qauto.c -lpng -ltiff -ljpeg
 	cc -o ../bin/qeasy -std=c99 -g -O3 -DNDEBUG iio.c qeasy.c -lpng -ltiff -ljpeg
+	cc -o ../bin/gblur -std=c99 -g -O3 -DNDEBUG iio.c gblur.c -lpng -ltiff -ljpeg -lfftw3f
 	cc -o ../bin/crop -std=c99 -g -O3 -DNDEBUG iio.c crop.c -lpng -ltiff -ljpeg
 	cc -o ../bin/fftconvolve -std=c99 -g -O3 -DNDEBUG iio.c fftconvolve.c -lpng -ltiff -ljpeg -lfftw3f
 	cc -o ../bin/zoom_zeropadding -std=c99 -g -O3 -DNDEBUG iio.c zoom_zeropadding.c -lpng -ltiff -ljpeg -lfftw3f
