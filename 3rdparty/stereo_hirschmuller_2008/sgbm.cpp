@@ -97,6 +97,11 @@ int main(int c, char** v)
     int nch = u1.channels();
 
     int i = 4;
+    // Warning: here we convert between openCV (and Hirschmuller, and
+    // Middlebury) disparity convention and ours. What we call disparity is the
+    // opposite of what they call disparity.
+    // the min and max disparities given as inputs of this binary follow our
+    // convention, while in the code the disparities follow openCV convention.
     int maxdisp = - ( (c>i) ? atoi(v[i]) : 0);   i++;
     int mindisp = - ( (c>i) ? atoi(v[i]) : 64);  i++;
     int SADwin  = (c>i) ? atoi(v[i]) : 1;  i++;
