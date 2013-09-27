@@ -1,7 +1,10 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/highgui/highgui.hpp"
-
 #include <cstdio>
+extern "C" {
+#include "iio.h"
+}
+
 
 using namespace cv;
 
@@ -24,19 +27,25 @@ int main(int c, char **v)
     // mandatory arguments
     const char* im1_filename = v[1];
     const char* im2_filename = v[2];
-    const char* disparity_filename = v[3];
+    char* disparity_filename = v[3];
     Mat im1 = imread(im1_filename, -1); // -1: no color conversion
     Mat im2 = imread(im2_filename, -1);
     int cn = im1.channels();
 
     // optional parameters
     int i = 4;
-    int mindisp = (c>i) ? atoi(v[i]) :  0;  i++;
-    int maxdisp = (c>i) ? atoi(v[i]) : 64;  i++;
-    int SADwin  = (c>i) ? atoi(v[i]) :  1;  i++;
-    int P1      = (c>i) ? atoi(v[i]) :  8*cn*SADwin*SADwin; i++;
-    int P2      = (c>i) ? atoi(v[i]) : 32*cn*SADwin*SADwin; i++;
-    int LRdiff  = (c>i) ? atoi(v[i]) :  1;  i++;
+    int mind   = (c>i) ? atoi(v[i]) :  0;  i++;
+    int maxd   = (c>i) ? atoi(v[i]) : 64;  i++;
+    int SADwin = (c>i) ? atoi(v[i]) :  1;  i++;
+    int P1     = (c>i) ? atoi(v[i]) :  8*cn*SADwin*SADwin; i++;
+    int P2     = (c>i) ? atoi(v[i]) : 32*cn*SADwin*SADwin; i++;
+    int LRdiff = (c>i) ? atoi(v[i]) :  1;  i++;
+
+    // convert between openCV (and Hirschmuller, and Middlebury) disparity
+    // convention and ours. What we call disparity is the opposite of what they
+    // call disparity.
+    int mindisp = - maxd;
+    int maxdisp = - mind;
 
     // prepare the StereoSGBM object
     StereoSGBM sgbm;
@@ -51,7 +60,7 @@ int main(int c, char **v)
     sgbm.fullDP = 1; // to run the full-scale two-pass dynamic programming algorithm
     sgbm.preFilterCap = 63;
     sgbm.uniquenessRatio = 10;
-    sgbm.speckleWindowSize = 0;
+    sgbm.speckleWindowSize = 50;
     sgbm.speckleRange = 1;
 // from openCV documentation:
 //  preFilterCap – Truncation value for the prefiltered image pixels. The
@@ -71,12 +80,28 @@ int main(int c, char **v)
 //  enough.
 
     // run the sgbm
-    Mat disp, disp8;
+    Mat disp;
     sgbm(im1, im2, disp);
 
     // save the disparity map
-    disp.convertTo(disp8, CV_8U);
-    imwrite(disparity_filename, disp8);
+//    disp.convertTo(disp8, CV_8U);
+//    imwrite(disparity_filename, disp8);
 
+    // convert back the disparities to our convention before saving
+    float *odisp = (float*) malloc(disp.rows*disp.cols*sizeof(float));
+
+    for (int y=0; y<disp.rows; y++)
+        for (int x=0; x<disp.cols; x++)
+            if (disp.at<int16_t>(y, x) == -((-mindisp+1)*16))
+                odisp[x+y*disp.cols] = NAN;
+            else
+                odisp[x+y*disp.cols] = -((float) disp.at<int16_t>(y, x)) / 16.0;
+                // sgbm output disparity map is a 16-bit signed single-channel
+                // image of the same size as the input image. It contains
+                // disparity values scaled by 16. So, to get the floating-point
+                // disparity map, you need to divide each disp element by 16.
+
+    iio_save_image_float(disparity_filename, odisp, disp.cols, disp.rows);
+    free(odisp);
     return 0;
 }
