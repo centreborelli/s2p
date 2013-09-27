@@ -53,6 +53,11 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
 
+        This function uses the parameter subsampling_factor_registration
+        from the global_params module. If factor > 1 then the registration
+        is performed over subsampled images, but the resulting keypoints
+        are then scaled back to conceal the subsampling
+
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
             contains one pair of points, ordered as x1 y1 x2 y2.
@@ -78,14 +83,27 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     T1 = common.matrix_translation(x1, y1)
     T2 = common.matrix_translation(x2, y2)
 
+    ## Try to import the global parameters module
+    #  it permits to pass values between different modules
+    try:
+        from global_params import subsampling_factor_registration
+        if not subsampling_factor_registration==1:
+            crop1 = common.image_safe_zoom_fft(crop1, subsampling_factor_registration)
+            crop2 = common.image_safe_zoom_fft(crop2, subsampling_factor_registration)
+    except ImportError:
+        subsampling_factor_registration = 1
+
+
     # apply sift, then transport keypoints coordinates in the big images frame
     kpts1 = common.image_sift_keypoints(crop1, '')
     kpts2 = common.image_sift_keypoints(crop2, '')
     matches = common.sift_keypoints_match(kpts1, kpts2, 1, 0.6)
     # 300: distance threshold for sift descriptors
     if matches.size:
-        pts1 = common.points_apply_homography(T1, matches[:, 0:2])
-        pts2 = common.points_apply_homography(T2, matches[:, 2:4])
+        # compensate coordinates for the zoom
+        pts1 = common.points_apply_homography(T1, matches[:, 0:2]*subsampling_factor_registration)
+        pts2 = common.points_apply_homography(T2, matches[:, 2:4]*subsampling_factor_registration)
+
         return np.hstack([pts1, pts2])
     else:
         raise Exception("no sift matches")
@@ -123,13 +141,15 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     return np.array(out)
 
 
-def register_horizontally(matches, H1, H2, flag='center'):
+def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     """
     Adjust rectifying homographies to modify the disparity range.
 
     Args:
         matches: list of pairs of 2D points, stored as a Nx4 numpy array
         H1, H2: two homographies, stored as numpy 3x3 matrices
+        do_shear: boolean flag indicating wheter to minimize the shear on im2
+            or not.
         flag: option needed to control how to modify the disparity range:
             'center': move the barycenter of disparities of matches to zero
             'positive': make all the disparities positive
@@ -148,12 +168,23 @@ def register_horizontally(matches, H1, H2, flag='center'):
     of matches are extracted, with a security margin of 20 percent.
     """
     # transform the matches according to the homographies
-    tmp = common.points_apply_homography(H1, matches[:, 0:2])
-    x1 = tmp[:, 0]
-    y1 = tmp[:, 1]
-    tmp = common.points_apply_homography(H2, matches[:, 2:4])
-    x2 = tmp[:, 0]
-    y2 = tmp[:, 1]
+    pt1 = common.points_apply_homography(H1, matches[:, 0:2])
+    x1 = pt1[:, 0]
+    y1 = pt1[:, 1]
+    pt2 = common.points_apply_homography(H2, matches[:, 2:4])
+    x2 = pt2[:, 0]
+    y2 = pt2[:, 1]
+
+    # shear correction
+    if do_shear:
+        A = np.vstack((y2, y2*0+1)).T
+        b = x1 - x2
+        z = np.linalg.lstsq(A, b)[0]
+        print z
+        s = z[0]
+        b = -z[1]
+        H2 = np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
+        x2 = x2 + s*y2 + b
 
     # compute the disparity offset according to selected option
     if (flag == 'center'):
@@ -263,10 +294,9 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
         bigger threshold."""
         sys.exit()
 
-    H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2, 'negative')
+    H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2)
 
     return H1, H2, disp_m, disp_M
-
 
 
 def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
@@ -281,6 +311,12 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
             rectangle.
         out1, out2: paths to the output crops
 
+        This function uses the parameter subsampling_factor from the global_params module.
+        If the factor z > 1 then the output images will be subsampled by a factor z.
+        The output matrices H1, H2, and the ranges are also updated accordingly:
+        Hi = Z*Hi   with Z = diag(1/z,1/z,1)   and
+        disp_min = disp_min/z  (resp _max)
+
     Returns:
         H1, H2: Two 3x3 matrices representing the rectifying homographies that
             have been applied to the two (big) images.
@@ -294,6 +330,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
     H1, H2, disp_min, disp_max = compute_rectification_homographies(im1, im2,
                                                         rpc1, rpc2, x, y, w, h)
 
+
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
     pts1 = common.points_apply_homography(H1, roi)
@@ -302,9 +339,30 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
     assert (x0 == 0)
     assert (y0 == 0)
 
+    ## Try to import the global parameters module
+    #  it permits to pass values between different modules
+    try:
+        from python.global_params import subsampling_factor
+    except ImportError:
+        subsampling_factor=1
+
+
     # apply homographies and do the crops
-    homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0)
-    homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0)
+    homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, subsampling_factor)
+    homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, subsampling_factor)
+
+
+    #  If subsampling_factor the homographies are altered to reflect the zoom
+    if not subsampling_factor==1:
+        # update the H1 and H2 to reflect the zoom
+        Z = np.eye(3); 
+        Z[0,0] = Z[1,1] = 1.0/subsampling_factor
+
+        H1 = np.dot(Z, H1)
+        H2 = np.dot(Z, H2)
+        disp_min = disp_min/subsampling_factor
+        disp_max = disp_max/subsampling_factor
+
 
     return H1, H2, disp_min, disp_max
 

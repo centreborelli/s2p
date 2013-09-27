@@ -34,30 +34,50 @@ from python import triangulation
 #w = 1000
 #h = 1000
 
-img_name = 'mera'
-exp_name = 'crete'
-x = 11127
-y = 28545
-w = 1886
-h = 1755
+#img_name = 'mera'
+#exp_name = 'crete'
+#x = 11127
+#y = 28545
+#w = 1886
+#h = 1755
 
-#img_name = 'uy1'
-#exp_name = 'campo'
-## FULL ROI
-##x = 4500
-##y = 12000
-##w = 8000
-##h = 11000
-## portion inside ROI
-#x = 5500
-#y = 25000
-#w = 1500
-#h = 1500
-#
-#x = 7000
-#y = 25000
-#w = 1000
-#h = 1000
+img_name = 'new_york'
+exp_name = 'manhattan'
+
+#img_name = 'ubaye'
+#exp_name = 'pic02'
+
+img_name = 'uy1'
+exp_name = 'campo'
+# FULL ROI
+#x = 4500
+#y = 12000
+#w = 8000
+#h = 11000
+# portion inside ROI
+x = 5500
+y = 25000
+w = 1500
+h = 1500
+
+x = 7000
+y = 25000
+w = 2000
+h = 2000
+
+
+
+## Try to import the global parameters module
+#  it permits to pass values between different modules
+try:
+   from python import global_params
+
+   global_params.subsampling_factor=2
+   global_params.subsampling_factor_registration=4
+
+except ImportError:
+  pass
+
 
 
 im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
@@ -91,6 +111,10 @@ def main():
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
+    # ATTENTION if subsampling_factor is set the rectified images will be
+    # smaller, and the homography matrices and disparity range will reflect
+    # this fact
+
     ## 1. rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
         x, y, w, h, rect1, rect2)
@@ -99,25 +123,30 @@ def main():
     np.savetxt(hom1, H1)
     np.savetxt(hom2, H2)
 
-#    ## 2. block-matching
-#    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-#    #    'hirschmuller02', disp_min, disp_max)
-#    #block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-#    #    'hirschmuller02', disp_min, disp_max, '1 3')
-#    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-#        'hirschmuller08', disp_min, disp_max)
-#
-#
-#    ## 3. triangulation
-#    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask, height,
-#        rpc_err)
-#
-#    ## 4. colorize and generate point cloud
-#    triangulation.colorize(rect1, im1_color, hom1, rect1_color)
-#    triangulation.compute_point_cloud(rect1_color, height, rpc1, hom1, cloud)
-#
-#    # display results
-#    print "vflip %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
-#    print "meshlab %s" % (cloud)
+    ## 2. block-matching
+    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+        'hirschmuller08', disp_min, disp_max)
+
+
+    ## 3. triangulation
+    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask, height,
+        rpc_err)
+
+    ## 4. colorize and generate point cloud
+    try:
+        with open(im1_color):
+            triangulation.colorize(rect1, im1_color, hom1, rect1_color)
+            triangulation.compute_point_cloud(rect1_color, height, rpc1, hom1, cloud)
+    except IOError:
+        print 'no color image available for this dataset.'
+        triangulation.compute_point_cloud(common.image_qauto(rect1), height, rpc1, hom1, cloud)
+
+    # display results
+    print "v %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
+    print "meshlab %s" % (cloud)
+
+    ### cleanup
+    for name in common.garbage:
+        common.run('rm ' + name)
 
 if __name__ == '__main__': main()
