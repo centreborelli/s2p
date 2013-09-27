@@ -48,13 +48,9 @@ if [ $a_extension == "tif" ]; then
     # use the same threshods for the second image
     qeasy $thresholds $b /tmp/$b_name.png
     b=/tmp/$b_name.png
-
-    # HACK! make it invariant to illumination changes?
-    gblur 2 $a | plambda - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + " | qauto - $a
-    gblur 2 $b | plambda - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + " | qauto - $b
-
 fi
 
 #usage: ./build/SGBM im1 im2 out [mindisp(0) maxdisp(64) SADwindow(1) P1(0) P2(0) LRdiff(1)]
+echo "$rel_path_script/build/SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr"
 $rel_path_script/build/SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr
 plambda $disp "x isnan 0 255 if" | iion - $mask
