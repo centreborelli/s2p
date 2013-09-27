@@ -141,13 +141,15 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     return np.array(out)
 
 
-def register_horizontally(matches, H1, H2, flag='center'):
+def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     """
     Adjust rectifying homographies to modify the disparity range.
 
     Args:
         matches: list of pairs of 2D points, stored as a Nx4 numpy array
         H1, H2: two homographies, stored as numpy 3x3 matrices
+        do_shear: boolean flag indicating wheter to minimize the shear on im2
+            or not.
         flag: option needed to control how to modify the disparity range:
             'center': move the barycenter of disparities of matches to zero
             'positive': make all the disparities positive
@@ -166,12 +168,23 @@ def register_horizontally(matches, H1, H2, flag='center'):
     of matches are extracted, with a security margin of 20 percent.
     """
     # transform the matches according to the homographies
-    tmp = common.points_apply_homography(H1, matches[:, 0:2])
-    x1 = tmp[:, 0]
-    y1 = tmp[:, 1]
-    tmp = common.points_apply_homography(H2, matches[:, 2:4])
-    x2 = tmp[:, 0]
-    y2 = tmp[:, 1]
+    pt1 = common.points_apply_homography(H1, matches[:, 0:2])
+    x1 = pt1[:, 0]
+    y1 = pt1[:, 1]
+    pt2 = common.points_apply_homography(H2, matches[:, 2:4])
+    x2 = pt2[:, 0]
+    y2 = pt2[:, 1]
+
+    # shear correction
+    if do_shear:
+        A = np.vstack((y2, y2*0+1)).T
+        b = x1 - x2
+        z = np.linalg.lstsq(A, b)[0]
+        print z
+        s = z[0]
+        b = -z[1]
+        H2 = np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
+        x2 = x2 + s*y2 + b
 
     # compute the disparity offset according to selected option
     if (flag == 'center'):
@@ -281,7 +294,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
         bigger threshold."""
         sys.exit()
 
-    H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2, 'negative')
+    H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2)
 
     return H1, H2, disp_m, disp_M
 
