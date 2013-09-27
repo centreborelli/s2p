@@ -6,12 +6,12 @@ from python import rectification
 from python import block_matching
 from python import triangulation
 
-img_name = 'lenclio'
-exp_name = 'beu'
-x = 15700
-y = 16400
-w = 1000
-h = 1000
+#img_name = 'lenclio'
+#exp_name = 'tournon'
+#x = 15700
+#y = 16400
+#w = 1000
+#h = 1000
 
 #img_name = 'toulouse'
 #exp_name = 'blagnac'
@@ -34,12 +34,12 @@ h = 1000
 #w = 1000
 #h = 1000
 
-#img_name = 'mera'
-#exp_name = 'crete'
-#x = 15700
-#y = 36400
-#w = 1200
-#h = 1000
+img_name = 'mera'
+exp_name = 'crete'
+x = 11127
+y = 28545
+w = 1886
+h = 1755
 
 img_name = 'uy1'
 exp_name = 'campo'
@@ -77,6 +77,7 @@ except ImportError:
 im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
 im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
 im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
+prev1 = 'pleiades_data/images/%s/prev01.tif' % (img_name)
 rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
 rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
 
@@ -96,9 +97,17 @@ def main():
     """
     Launches the s2p stereo pipeline on a pair of Pleiades images
     """
+    ## 0. select ROI
+    try:
+        global x, y, w, h
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+    except NameError:
+        x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
-    # ATTENTION if subsampling_factor is set the rectified images will be smaller, 
-    # and the homography matrices and disparity range will reflect this fact
+    # ATTENTION if subsampling_factor is set the rectified images will be
+    # smaller, and the homography matrices and disparity range will reflect
+    # this fact
 
     ## 1. rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
@@ -129,8 +138,8 @@ def main():
     print "vflip %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
     print "meshlab %s" % (cloud)
 
-    ### cleanup 
+    ### cleanup
     for name in common.garbage:
         common.run('rm ' + name)
-    
+
 if __name__ == '__main__': main()

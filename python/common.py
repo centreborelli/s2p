@@ -420,7 +420,8 @@ def get_rectangle_coordinates(im):
             rectangle.
     """
     points_file = tmpfile('.txt')
-    os.system('./viewGL.py %s > %s' % (shellquote(im), points_file));
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    run('%s/viewGL.py %s > %s' % (current_dir, shellquote(im), points_file));
     (x1, y1, x2, y2) = map(int, open(points_file).read().split())
     # viewGL.py returns the coordinates of two corners defining the rectangle.
     # We can's make any assumption on the ordering of these coordinates.
