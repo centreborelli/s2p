@@ -42,6 +42,12 @@ the provided makefiles. For example, for GeographicLib, do:
     make
     sudo make install
 
+Since we use GeographicLib to evaluate geoid heights we must also install the geoids data files by running the script:
+
+    3rdparty/GeographicLib-1.32/tools/geographiclib-get-geoids.sh 
+
+
+
 For SGBM (Semi-Global Block-Matching), do:
 
     cd 3rdparty/stereo_hirschmuller_2008
