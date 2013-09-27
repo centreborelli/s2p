@@ -47,23 +47,23 @@ exp_name = 'manhattan'
 #img_name = 'ubaye'
 #exp_name = 'pic02'
 
-img_name = 'uy1'
-exp_name = 'campo'
-# FULL ROI
-#x = 4500
-#y = 12000
-#w = 8000
-#h = 11000
-# portion inside ROI
-x = 5500
-y = 25000
-w = 1500
-h = 1500
+#img_name = 'uy1'
+#exp_name = 'campo'
+## FULL ROI
+##x = 4500
+##y = 12000
+##w = 8000
+##h = 11000
+## portion inside ROI
+#x = 5500
+#y = 25000
+#w = 1500
+#h = 1500
 
-x = 7000
-y = 25000
-w = 2000
-h = 2000
+#x = 7000
+#y = 25000
+#w = 2000
+#h = 2000
 
 
 
