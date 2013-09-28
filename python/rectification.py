@@ -87,7 +87,7 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     #  it permits to pass values between different modules
     try:
         from global_params import subsampling_factor_registration
-        if not subsampling_factor_registration==1:
+        if subsampling_factor_registration != 1:
             crop1 = common.image_safe_zoom_fft(crop1, subsampling_factor_registration)
             crop2 = common.image_safe_zoom_fft(crop2, subsampling_factor_registration)
     except ImportError:
@@ -97,8 +97,11 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     # apply sift, then transport keypoints coordinates in the big images frame
     kpts1 = common.image_sift_keypoints(crop1, '')
     kpts2 = common.image_sift_keypoints(crop2, '')
-    matches = common.sift_keypoints_match(kpts1, kpts2, 1, 0.6)
-    # 300: distance threshold for sift descriptors
+    try:
+        from global_params import sift_match_thresh
+    except ImportError:
+        sift_match_thresh = 0.6
+    matches = common.sift_keypoints_match(kpts1, kpts2, 1, sift_match_thresh)
     if matches.size:
         # compensate coordinates for the zoom
         pts1 = common.points_apply_homography(T1, matches[:, 0:2]*subsampling_factor_registration)
@@ -176,6 +179,8 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     y2 = pt2[:, 1]
 
     # shear correction
+    # we search the (s, b) vector that minimises \sum (x1 - (x2+s*y2+b))^2
+    # it is a least squares minimisation problem
     if do_shear:
         A = np.vstack((y2, y2*0+1)).T
         b = x1 - x2
@@ -202,15 +207,19 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     dispx_min = np.floor((np.min(x2 - x1)))
     dispx_max = np.ceil((np.max(x2 - x1)))
 
-    # add 20% security margin
+    # add a security margin to the disp range
+    try:
+        from python.global_params import disp_range_extra_margin as d
+    except ImportError:
+        d = 0.2
     if (dispx_min < 0):
-        dispx_min = 1.2 * dispx_min
+        dispx_min = (1+d) * dispx_min
     else:
-        dispx_min = 0.8 * dispx_min
+        dispx_min = (1-d) * dispx_min
     if (dispx_max > 0):
-        dispx_max = 1.2 * dispx_max
+        dispx_max = (1+d) * dispx_max
     else:
-        dispx_max = 0.8 * dispx_max
+        dispx_max = (1-d) * dispx_max
 
     # for debug, print the vertical disparities. Should be zero.
     print "Residual vertical disparities: min, max, mean. Should be zero ------"
@@ -244,7 +253,11 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
     # effects of the loop-zhang rectification. These effects may become very
     # important (~ 10 pixels error) when using coordinates around 20000.
     print "step 1: find matches, and center them ------------------------------"
-    rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
+    try:
+        from python.global_params import n_gcp_per_axis as n
+    except ImportError:
+        n = 5
+    rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, n)
     p1, T1 = center_2d_points(rpc_matches[:, 0:2])
     p2, T2 = center_2d_points(rpc_matches[:, 2:4])
 
@@ -287,11 +300,16 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # filter sift matches with the known fundamental matrix
     F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
-    sift_matches = filter_matches_epipolar_constraint(F, sift_matches, 2.0)
+    try:
+        from python.global_params import epipolar_thresh
+    except ImportError:
+        epipolar_thresh = 2.0
+    sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
+        epipolar_thresh
     if not len(sift_matches):
         print """all the sift matches have been discarded by the epipolar
         constraint. This is probably due to the pointing error. Try with a
-        bigger threshold."""
+        bigger value for epipolar_thresh."""
         sys.exit()
 
     H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2)
@@ -355,7 +373,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
     #  If subsampling_factor the homographies are altered to reflect the zoom
     if not subsampling_factor==1:
         # update the H1 and H2 to reflect the zoom
-        Z = np.eye(3); 
+        Z = np.eye(3);
         Z[0,0] = Z[1,1] = 1.0/subsampling_factor
 
         H1 = np.dot(Z, H1)

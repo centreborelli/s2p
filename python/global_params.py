@@ -1,9 +1,13 @@
-
-
 subsampling_factor = 4
-# register using subsampled image 
+# register using subsampled image
 subsampling_factor_registration = 4
 
+# other parameters
+sift_match_thresh = 0.6
+disp_range_extra_margin = 0.2
+# number of ground control points per axis in matches from rpc generation
+n_gcp_per_axis = 5
+epipolar_thresh = 2
 
 
 
