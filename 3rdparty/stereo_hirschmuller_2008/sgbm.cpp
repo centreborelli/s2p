@@ -119,7 +119,7 @@ int main(int c, char** v)
     sgbm.P2 = P2;
     sgbm.disp12MaxDiff = LRdiff;
 
-    sgbm.fullDP = 0; // to run the full-scale two-pass dynamic programming algorithm
+    sgbm.fullDP = 1; // to run the full-scale two-pass dynamic programming algorithm
     sgbm.preFilterCap = 63;
     sgbm.uniquenessRatio = 10;
     sgbm.speckleWindowSize = 50;
