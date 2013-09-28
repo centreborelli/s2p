@@ -364,7 +364,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
     except ImportError:
         epipolar_thresh = 2.0
     sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
-        epipolar_thresh
+        epipolar_thresh)
     if not len(sift_matches):
         print """all the sift matches have been discarded by the epipolar
         constraint. This is probably due to the pointing error. Try with a
