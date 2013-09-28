@@ -187,7 +187,7 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
         z = np.linalg.lstsq(A, b)[0]
         print z
         s = z[0]
-        b = -z[1]
+        b = z[1]
         H2 = np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
         x2 = x2 + s*y2 + b
 
@@ -198,6 +198,9 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
         t = np.min(x2 - x1)
     if (flag == 'negative'):
         t = np.max(x2 - x1)
+    if (flag == 'none'):
+        t = 0
+
 
     # correct H2 with a translation
     H2 = np.dot(common.matrix_translation(-t, 0), H2)
@@ -226,6 +229,62 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     print np.min(y2 - y1), np.max(y2 - y1), np.mean(y1 - y2)
     return H2, dispx_min, dispx_max
 
+
+def update_minmax_range_extrapolating_registration_affinity(matches, H1, H2,w_roi,h_roi):
+    """
+    Update the disparity range considering the extrapolation of the affine registration 
+    transformation. Extrapolate until the boundary of the region of interest
+
+    Args:
+        matches: list of pairs of 2D points, stored as a Nx4 numpy array
+        H1, H2: two homographies, stored as numpy 3x3 matrices
+        roi_w/h: width and height of the region of interest
+
+    Returns:
+        disp_min, disp_max: horizontal disparity range
+    """
+    # transform the matches according to the homographies
+    pt1 = common.points_apply_homography(H1, matches[:, 0:2])
+    x1 = pt1[:, 0]
+    y1 = pt1[:, 1]
+    pt2 = common.points_apply_homography(H2, matches[:, 2:4])
+    x2 = pt2[:, 0]
+    y2 = pt2[:, 1]
+
+    # estimate an affine transformation (tilt, shear and bias)
+    # from the matched keypoints 
+    A = np.vstack((x2, y2, y2*0+1)).T
+#    A = x2[:, np.newaxis]
+    b = x1
+    z = np.linalg.lstsq(A, b)[0]
+    t,s,dx = z[0:3]
+
+    # corners of ROI
+    xx2 = np.array([0,w_roi,0,w_roi])
+    yy2 = np.array([0,0,h_roi,h_roi])
+
+    # compute the max and min disparity values (according to 
+    # the estimated model) at the ROI corners 
+    roi_disparities_by_the_affine_model = (xx2*t + yy2*s + dx) - xx2
+    maxb = np.max(roi_disparities_by_the_affine_model)
+    minb = np.min(roi_disparities_by_the_affine_model)
+    #print minb,maxb
+
+    # compute the rage with the extract min and max disparities
+    dispx_min = np.floor(minb + np.min(x2 - x1)) 
+    dispx_max = np.ceil(maxb + np.max(x2 - x1)) 
+
+    # add 20% security margin
+    if (dispx_min < 0):
+        dispx_min = 1.2 * dispx_min
+    else:
+        dispx_min = 0.8 * dispx_min
+    if (dispx_max > 0):
+        dispx_max = 1.2 * dispx_max
+    else:
+        dispx_max = 0.8 * dispx_max
+
+    return dispx_min, dispx_max
 
 
 def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -314,6 +373,8 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
 
     H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2)
 
+    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(sift_matches, H1, H2,w,h)
+
     return H1, H2, disp_m, disp_M
 
 
@@ -372,14 +433,15 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
 
     #  If subsampling_factor the homographies are altered to reflect the zoom
     if not subsampling_factor==1:
+        from math import floor, ceil
         # update the H1 and H2 to reflect the zoom
         Z = np.eye(3);
         Z[0,0] = Z[1,1] = 1.0/subsampling_factor
 
         H1 = np.dot(Z, H1)
         H2 = np.dot(Z, H2)
-        disp_min = disp_min/subsampling_factor
-        disp_max = disp_max/subsampling_factor
+        disp_min = floor(disp_min/subsampling_factor)
+        disp_max = ceil(disp_max/subsampling_factor)
 
 
     return H1, H2, disp_min, disp_max
