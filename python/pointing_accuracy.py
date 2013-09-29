@@ -5,7 +5,7 @@ import rectification
 import rpc_utils
 import common
 
-def pointing_accuracy_evaluation(im1, im2, rpc1, rpc2, x, y, w, h):
+def evaluation(im1, im2, rpc1, rpc2, x, y, w, h):
     """
     Measures the maximal pointing error on a Pleiades' pair of images.
 
@@ -48,3 +48,46 @@ def pointing_accuracy_evaluation(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # return the highest one
     return np.max(np.abs(e))
+
+
+
+def cost_function(rpc1, rpc2, matches, A, alpha=0.01):
+    """
+    Arguments:
+        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        matches: 2D numpy array containing a list of matches. Each line
+            contains one pair of points, ordered as x1 y1 x2 y2.
+            The coordinate system is the one of the big images.
+        A: 3x3 matrix stored as a numpy array, representing an affine planar
+            transform in homogeneous coordinates.
+        alpha: relative weight of the error terms: e + alpha*(h-h0)^2. See
+            paper for more explanations.
+
+    Returns:
+        The sum of pointing errors and altitude differences, as written in the
+        paper formula (1).
+    """
+    # compute the altitudes from the matches without correction
+    n = np.shape(matches)[0]
+    h0 = np.zeros((n, 1))
+    x1 = matches[:, 0]
+    y1 = matches[:, 1]
+    x2 = matches[:, 2]
+    y2 = matches[:, 3]
+    for i in range(n):
+        h0[i] = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i],
+            y2[i])[0]
+
+    # transform the coordinates of points in the second image according to matrix A
+    p2 = common.points_apply_homography(A, matches[:, 2:4])
+    x2 = p2[:, 0]
+    y2 = p2[:, 1]
+
+    # compute the cost
+    cost = 0
+    for i in range(n):
+        h, e = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i], y2[i])
+        cost += e
+        cost += alpha * (h - h0[i])**2
+
+    return cost
