@@ -103,7 +103,7 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
         sift_match_thresh = 0.6
     matches = common.sift_keypoints_match(kpts1, kpts2, 1, sift_match_thresh)
     if matches.size:
-        # compensate coordinates for the zoom
+        # compensate coordinates for the crop and the zoom
         pts1 = common.points_apply_homography(T1, matches[:, 0:2]*subsampling_factor_registration)
         pts2 = common.points_apply_homography(T2, matches[:, 2:4]*subsampling_factor_registration)
 
