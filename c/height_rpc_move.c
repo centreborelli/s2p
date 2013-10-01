@@ -14,6 +14,8 @@
 
 #define max(a,b) (((a)>(b))?(a):(b))
 
+#include "read_matrix.c"
+
 int writeMatrix_FILE(double H[3][3], FILE *f) {
   fprintf(f, "[");
   fprintf(f, "%20f %20f %20f ;", H[0][0],  H[0][1],  H[0][2]);
@@ -39,21 +41,6 @@ int writeMatrix(double H[3][3] , char *file) {
    else return 0;
 }
 
-#include "read_matrix.c"
-
-//int readMatrix(double H[3][3], char* name) {
-//  FILE *f = fopen(name,"r"); 
-//
-//  int r;
-//  r += fscanf(f, "[");
-//  r += fscanf(f, "%lf %lf %lf ;", &H[0][0],  &H[0][1], &H[0][2]);
-//  r += fscanf(f, "%lf %lf %lf ;", &H[1][0],  &H[1][1], &H[1][2]);
-//  r += fscanf(f, "%lf %lf %lf", &H[2][0],  &H[2][1], &H[2][2]);
-//  r += fscanf(f, "]");
-//
-//  fclose(f);
-//  return 1;
-//}
 
 /// Find endianness of the system
 static char * endian() {
@@ -100,23 +87,42 @@ static int main_height_rpc_move(int c, char *v[])
 {
 	if (c < 8) {
 		fprintf(stderr, "usage:\n\t"
-				"%s rpca  Ha heightA mskA  rpcb Hb  outheightB outmskB"
-				//0    1   2   3      4    5      6       7        8      
+            "transfer the height map A (and mask A) from the image geometry given by rpca and Ha to the\n\t"
+            "geometry given by rpcb and Hb. Optionally indicate the output image size setting NX and NY\n\t"
+				"%s rpca  Ha heightA mskA  rpcb Hb  outheightB outmskB  NX  NY"
+				//0    1   2   3      4    5      6       7        8     9  10
 				"\n", *v);
 		return EXIT_FAILURE;
 	}
+
+
+
+   //read the parameters
+   struct rpc rpca[1];
+   struct rpc rpcb[1]; 
 	double Ha[3][3], Hb[3][3];
-   read_matrix(Ha,v[2]);
-   read_matrix(Hb,v[6]);
-	struct rpc rpca[1]; read_rpc_file_xml(rpca, v[1]);
-	struct rpc rpcb[1]; read_rpc_file_xml(rpcb, v[5]);
-
+   float *heightA, *mskA;
    int nx,ny,nch;
-   float *mskA    = iio_read_image_float_split(v[4], &nx, &ny, &nch);
-   float *heightA = iio_read_image_float_split(v[3], &nx, &ny, &nch);
+   char *f_outheightB=NULL;
+   char *f_outmskB=NULL;
+   int outnx,outny;
 
-   float *outmskB = calloc(nx*ny,sizeof(*outmskB));
-   float *outheightB = calloc(nx*ny,sizeof(*outheightB));
+   int i = 1;
+   read_rpc_file_xml(rpca, v[i]);                              i++; //1
+   read_matrix(Ha,v[i]);                                       i++; //2
+   heightA = iio_read_image_float_split(v[i], &nx, &ny, &nch); i++; //3
+   mskA = iio_read_image_float_split(v[i], &nx, &ny, &nch);    i++; //4
+   read_rpc_file_xml(rpcb, v[i]);                              i++; //5
+   read_matrix(Hb,v[i]);                                       i++; //6
+   f_outheightB = v[i];                                        i++; //7
+   f_outmskB    = v[i];                                        i++; //8
+   outnx = (c>i)? atoi(v[i]): nx;                                 i++; //9
+   outny = (c>i)? atoi(v[i]): ny;                                 i++; //10
+
+
+
+   float *outmskB = calloc(outnx*outny,sizeof(*outmskB));
+   float *outheightB = calloc(outnx*outny,sizeof(*outheightB));
 
    double det;
    double invHa[3][3];
@@ -127,7 +133,7 @@ static int main_height_rpc_move(int c, char *v[])
 
 
    int x,y;
-   for(y=0;y<ny*nx;y++){
+   for(y=0;y<outny*outnx;y++){
       outmskB[y] = 0;   // initialize (non visible)
       outheightB[y] = -1./0.; // initialize (infinity)
    }
@@ -150,8 +156,8 @@ static int main_height_rpc_move(int c, char *v[])
 
             p1[0] = round(p1[0]);
             p1[1] = round(p1[1]);
-            if(p1[0]>=0 && p1[0]<nx && p1[1]>=0 && p1[1]<ny){
-               int pos_p1 = (int)(p1[0] + nx*p1[1]);
+            if(p1[0]>=0 && p1[0]<outnx && p1[1]>=0 && p1[1]<outny){
+               int pos_p1 = (int)(p1[0] + outnx*p1[1]);
                outheightB[pos_p1] = max(hA , outheightB[pos_p1]);
                outmskB[pos_p1] = 1;
             }
@@ -162,8 +168,8 @@ static int main_height_rpc_move(int c, char *v[])
 
 
    // save re-projected disparity and mask 
-   iio_save_image_float_vec(v[7], outheightB, nx,ny, 1);
-   iio_save_image_float_vec(v[8], outmskB, nx,ny, 1);
+   iio_save_image_float_vec(f_outheightB, outheightB, outnx,outny, 1);
+   iio_save_image_float_vec(f_outmskB, outmskB, outnx,outny, 1);
 
 
 	return 0;
