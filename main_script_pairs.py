@@ -79,7 +79,7 @@ except ImportError:
   pass
 
 
-
+# input files
 im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
 im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
 im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
@@ -87,6 +87,7 @@ prev1 = 'pleiades_data/images/%s/prev01.tif' % (img_name)
 rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
 rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
 
+# output files
 rect1 = '/tmp/%s1.tif' % (exp_name)
 rect2 = '/tmp/%s2.tif' % (exp_name)
 hom1  = '/tmp/%s_hom1' % (exp_name)
@@ -99,6 +100,7 @@ mask    = '/tmp/%s_mask.png'   % (exp_name)
 cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
 height  = '/tmp/%s_height.tif' % (exp_name)
 rpc_err = '/tmp/%s_rpc_err.tif'% (exp_name)
+subsampling_file = '/tmp/%s_subsampling.txt' % (exp_name)
 
 
 def main():
@@ -113,10 +115,11 @@ def main():
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
-    ## 0.5 copy the rpcs to the output directory
+    ## 0.5 copy the rpcs to the output directory, and save the subsampling factor
     from shutil import copyfile
     copyfile(rpc1,outrpc1)
     copyfile(rpc2,outrpc2)
+    np.savetxt(subsampling_file, np.array([global_params.subsampling_factor]))
 
     # ATTENTION if subsampling_factor is set the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
@@ -134,7 +137,7 @@ def main():
 #    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
 #        'hirschmuller08', disp_min, disp_max, extra_params='3')
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        'hirschmuller08', disp_min, disp_max)
+        'hirschmuller08_laplacian', disp_min, disp_max)
 
 
     ## 3. triangulation
@@ -155,7 +158,7 @@ def main():
     print "meshlab %s" % (cloud)
 
     ### cleanup
-    for name in common.garbage:
-        common.run('rm ' + name)
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
 
 if __name__ == '__main__': main()
