@@ -50,10 +50,10 @@ exp_name = 'manhattan'
 #img_name = 'uy1'
 #exp_name = 'campo'
 ## FULL ROI
-##x = 4500
-##y = 12000
-##w = 8000
-##h = 11000
+##x = 5500
+##y = 13000
+##w = 7000
+##h = 10000
 ## portion inside ROI
 #x = 5500
 #y = 25000
@@ -91,6 +91,8 @@ rect1 = '/tmp/%s1.tif' % (exp_name)
 rect2 = '/tmp/%s2.tif' % (exp_name)
 hom1  = '/tmp/%s_hom1' % (exp_name)
 hom2  = '/tmp/%s_hom2' % (exp_name)
+outrpc1 = '/tmp/%s_rpc1.xml' % (exp_name)
+outrpc2 = '/tmp/%s_rpc2.xml' % (exp_name)
 rect1_color = '/tmp/%s1_color.tif' % (exp_name)
 disp    = '/tmp/%s_disp.pgm'   % (exp_name)
 mask    = '/tmp/%s_mask.png'   % (exp_name)
@@ -111,6 +113,11 @@ def main():
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
+    ## 0.5 copy the rpcs to the output directory
+    from shutil import copyfile
+    copyfile(rpc1,outrpc1)
+    copyfile(rpc2,outrpc2)
+
     # ATTENTION if subsampling_factor is set the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
     # this fact
@@ -124,6 +131,8 @@ def main():
     np.savetxt(hom2, H2)
 
     ## 2. block-matching
+#    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+#        'hirschmuller08', disp_min, disp_max, extra_params='3')
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         'hirschmuller08', disp_min, disp_max)
 
