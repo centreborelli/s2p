@@ -50,7 +50,7 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
         a 1D numpy array containing the list of computed heights.
     """
     n = len(x1)
-    h0 = np.zeros(shape=(n, 1))
+    h0 = np.zeros(n)
     p2 = np.vstack([x2, y2]).T
     HSTEP = 1
     for i in range(100):
@@ -61,16 +61,16 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
 
         a = r1 - r0
         b = p2 - r0
-        # implements:   h0inc = dot(a,b) / dot(a,a)
-        h0inc = np.diag(np.dot(a, b.T)) / np.diag(np.dot(a, a.T))
-        # implements:   q = r0 + h0inc * a
+        # implements:   h0_inc = dot(a,b) / dot(a,a)
+        h0_inc = np.diag(np.dot(a, b.T)) / np.diag(np.dot(a, a.T))
+        # implements:   q = r0 + h0_inc * a
         q = r0 + np.dot(np.diag(h0_inc), a)
         # implements: err = sqrt( dot(q-p2,q-p2) )
         tmp = q-p2
         err =  np.sqrt(np.diag(np.dot(tmp, tmp.T)))
-        h0 += h0inc*HSTEP
-        # implements: if fabs(h0inc) < 0.0001:
-        if np.max(np.fabs(h0inc)) < 0.001:
+        h0 += h0_inc*HSTEP
+        # implements: if fabs(h0_inc) < 0.0001:
+        if np.max(np.fabs(h0_inc)) < 0.001:
             break
 
     return (h0, err)
