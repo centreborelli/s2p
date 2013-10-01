@@ -24,16 +24,12 @@ def evaluation(im1, im2, rpc1, rpc2, x, y, w, h):
     matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
 
     # compute the pointing error for each match
-    n = np.shape(matches)[0]
-    e = np.zeros((n, 1))
     x1 = matches[:, 0]
     y1 = matches[:, 1]
     x2 = matches[:, 2]
     y2 = matches[:, 3]
-    for i in range(n):
-        e[i] = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i],
-            y2[i])[1]
-    print "max, mean, min pointing error, from %d points:" % (n)
+    e = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)[1]
+    print "max, mean, min pointing error, from %d points:" % (len(matches))
     print np.max(e), np.mean(e), np.min(e)
 
     # return the highest one
@@ -118,15 +114,11 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
         paper formula (1).
     """
     # compute the altitudes from the matches without correction
-    n = np.shape(matches)[0]
-    h0 = np.zeros((n, 1))
     x1 = matches[:, 0]
     y1 = matches[:, 1]
     x2 = matches[:, 2]
     y2 = matches[:, 3]
-    for i in range(n):
-        h0[i] = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i],
-            y2[i])[0]
+    h0 = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)[0]
 
     # transform the coordinates of points in the second image according to
     # matrix A, built from vector v
@@ -136,11 +128,10 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
     y2 = p2[:, 1]
 
     # compute the cost
-    cost = 0
-    for i in range(n):
-        h, e = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i], y2[i])
-        cost += e
-        cost += alpha * (h - h0[i])**2
+    h, e = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)
+    cost = np.sum((h - h0)**2)
+    cost *= alpha
+    cost += np.sum(e)
 
     print cost
     return cost
