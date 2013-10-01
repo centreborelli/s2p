@@ -30,8 +30,9 @@ def tmpfile(ext=''):
     The path of the created file is added to the garbage list to allow cleaning
     at the end of the pipeline.
     """
-    out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = '/tmp')[1]
+    fd, out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = '/tmp')
     garbage.append(out)
+    os.close(fd)           # http://www.logilab.org/blogentry/17873
     return out
 
 
