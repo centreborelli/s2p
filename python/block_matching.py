@@ -51,7 +51,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         #    LRdiff: maximum difference between left and right disparity maps
 
     if (algo == 'hirschmuller08_laplacian'):
-        bm_binary = hirschmuller08
+        bm_binary = hirschmuller08_laplacian
         common.run("%s %s %s %s %s %d %d %s" %(bm_binary, im1, im2, out_disp,
             out_mask, disp_min, disp_max, extra_params))
         # extra_params: regionRadius(3) P1(default) P2(default) LRdiff(1)
