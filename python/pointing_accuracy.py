@@ -24,16 +24,12 @@ def evaluation(im1, im2, rpc1, rpc2, x, y, w, h):
     matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
 
     # compute the pointing error for each match
-    n = np.shape(matches)[0]
-    e = np.zeros((n, 1))
     x1 = matches[:, 0]
     y1 = matches[:, 1]
     x2 = matches[:, 2]
     y2 = matches[:, 3]
-    for i in range(n):
-        e[i] = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i],
-            y2[i])[1]
-    print "max, mean, min pointing error, from %d points:" % (n)
+    e = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)[1]
+    print "max, mean, min pointing error, from %d points:" % (len(matches))
     print np.max(e), np.mean(e), np.min(e)
 
     # return the highest one
@@ -62,9 +58,12 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # filter outliers with ransac
     # the binary is from Enric's imscript
+    if len(matches) < 7:
+        raise Exception("less than 7 matches")
     matches_file = common.tmpfile('.txt')
-    inliers_file = common.tmpfile('.txt')
     np.savetxt(matches_file, matches)
+
+    inliers_file = common.tmpfile('.txt')
     common.run("ransac fmn 1000 1 7 %s < %s" % (inliers_file, matches_file))
     inliers = np.loadtxt(inliers_file)
     if not inliers.size:
@@ -115,15 +114,11 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
         paper formula (1).
     """
     # compute the altitudes from the matches without correction
-    n = np.shape(matches)[0]
-    h0 = np.zeros((n, 1))
     x1 = matches[:, 0]
     y1 = matches[:, 1]
     x2 = matches[:, 2]
     y2 = matches[:, 3]
-    for i in range(n):
-        h0[i] = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i],
-            y2[i])[0]
+    h0 = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)[0]
 
     # transform the coordinates of points in the second image according to
     # matrix A, built from vector v
@@ -133,12 +128,11 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
     y2 = p2[:, 1]
 
     # compute the cost
-    cost = 0
-    for i in range(n):
-        h, e = rpc_utils.compute_height(rpc1, rpc2, x1[i], y1[i], x2[i], y2[i])
-        cost += e
-        cost += alpha * (h - h0[i])**2
-    
+    h, e = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)
+    cost = np.sum((h - h0)**2)
+    cost *= alpha
+    cost += np.sum(e)
+
     print cost
     return cost
 
@@ -164,6 +158,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, a=1000):
     """
     w = rpc1.lastCol
     h = rpc1.lastRow
+    out = np.zeros(shape = (1, 4))
 
     # if roi size is too big wrt image size, take a smaller roi size
     if (min(h, w) < 4*a):
@@ -172,37 +167,62 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, a=1000):
     # central zone
     x = round((w-a)/2)
     y = round((h-a)/2)
-    matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+    try:
+        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+        out = np.vstack((out, matches))
+    except Exception as e:
+        print "no matches in the central zone"
+        print e
 
     # corner zones
     x = round((1*w - 2*a)/4)
     y = round((1*h - 2*a)/4)
-    matches = np.vstack((matches, filtered_sift_matches_roi(im1, im2, rpc1,
-        rpc2, x, y, a, a)))
+    try:
+        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+        out = np.vstack((out, matches))
+    except Exception as e:
+        print "no matches in the corner 1"
+        print e
 
     x = round((3*w - 2*a)/4)
     y = round((1*h - 2*a)/4)
-    matches = np.vstack((matches, filtered_sift_matches_roi(im1, im2, rpc1,
-        rpc2, x, y, a, a)))
+    try:
+        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+        out = np.vstack((out, matches))
+    except Exception as e:
+        print "no matches in the corner 2"
+        print e
 
     x = round((1*w - 2*a)/4)
     y = round((3*h - 2*a)/4)
-    matches = np.vstack((matches, filtered_sift_matches_roi(im1, im2, rpc1,
-        rpc2, x, y, a, a)))
+    try:
+        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+        out = np.vstack((out, matches))
+    except Exception as e:
+        print "no matches in the corner 3"
+        print e
 
     x = round((3*w - 2*a)/4)
     y = round((3*h - 2*a)/4)
-    matches = np.vstack((matches, filtered_sift_matches_roi(im1, im2, rpc1,
-        rpc2, x, y, a, a)))
+    try:
+        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+        out = np.vstack((out, matches))
+    except Exception as e:
+        print "no matches in the corner 4"
+        print e
 
-    return matches
-
+    # return the full list of matches, only if there are enough
+    if len(out) < 7:
+        raise Exception("not enough matches")
+    else:
+        return out[1:, :]
 
 
 
 def optimize_pair(im1, im2, rpc1, rpc2):
 
     matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2)
+    print "running optimization using %d matches" % len(matches)
 
     from scipy.optimize import fmin_bfgs
     v0 = np.zeros((1, 3))

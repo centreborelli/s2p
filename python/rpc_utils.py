@@ -15,46 +15,62 @@ def print_distance_between_vectors(u, v, msg):
 
 def find_corresponding_point(model_a, model_b, x, y, z):
     """
-    find corresponding point using projection model, which can be a projection
-    matrix or a rpc.
-    x,y is the position of a pixel in image a, and z the altitude of the
-    corresponding 3D point. This function returns (xp,yp,z), where xp,yp is the
-    projection of the 3D point in image b
+    Finds corresponding points in the second image, given the heights.
+
+    Arguments:
+        model_a, model_b: two instances of the rpc_model.RPCModel class, or of
+            the projective_model.ProjModel class 
+        x, y, z: three 1D numpy arrrays, of the same length. x, y are the
+        coordinates of pixels in the image, and z contains the altitudes of the
+        corresponding 3D point. 
+        
+    Returns:
+        xp, yp, z: three 1D numpy arrrays, of the same length as the input. xp,
+            yp contains the coordinates of the projection of the 3D point in image
+            b.
     """
     t1, t2, t3 = model_a.direct_estimate(x, y, z)
     xp, yp, zp = model_b.inverse_estimate(t1, t2, z)
     return (xp, yp, z)
 
 
-def compute_height(model_a, model_b, x, y, xp, yp):
+def compute_height(model_a, model_b, x1, y1, x2, y2):
     """
-    compute the height of a point given its location inside two images, using
-    rpc functions or projection model
+    Computes the height of a point given its location inside two images.
+
+    Arguments:
+        model_a, model_b: two instances of the rpc_model.RPCModel class, or of
+            the projective_model.ProjModel class 
+        x1, y1: two 1D numpy arrrays, of the same length, containing the
+            coordinates of points in the first image.
+        x2, y2: two 2D numpy arrrays, of the same length, containing the
+            coordinates of points in the second image.
+        
+    Returns:
+        a 1D numpy array containing the list of computed heights.
     """
-    h0 = 0
-    p1 = np.array([x, y])
-    p2 = np.array([xp, yp])
+    n = len(x1)
+    h0 = np.zeros(n)
+    p2 = np.vstack([x2, y2]).T
     HSTEP = 1
     for i in range(100):
-        tx, ty, tz = find_corresponding_point(model_a, model_b, p1[0], p1[1], h0)
-        r0 = np.array([tx,ty])
-        tx, ty, tz = find_corresponding_point(model_a, model_b, p1[0], p1[1], h0+HSTEP)
-        r1 = np.array([tx,ty])
+        tx, ty, tz = find_corresponding_point(model_a, model_b, x1, y1, h0)
+        r0 = np.vstack([tx,ty]).T
+        tx, ty, tz = find_corresponding_point(model_a, model_b, x1, y1, h0+HSTEP)
+        r1 = np.vstack([tx,ty]).T
 
         a = r1 - r0
         b = p2 - r0
-        # implements:   h0inc = dot(a,b) / dot(a,a)
-        h0inc = (a[0]*b[0] + a[1]*b[1]) / (a[0]*a[0]+a[1]*a[1])
-        # implements:   q = r0 + h0inc * a
-        q = r0
-        q[0] = q[0] + h0inc * a[0]
-        q[1] = q[1] + h0inc * a[1]
+        # implements:   h0_inc = dot(a,b) / dot(a,a)
+        h0_inc = np.diag(np.dot(a, b.T)) / np.diag(np.dot(a, a.T))
+        # implements:   q = r0 + h0_inc * a
+        q = r0 + np.dot(np.diag(h0_inc), a)
         # implements: err = sqrt( dot(q-p2,q-p2) )
         tmp = q-p2
-        err =  np.sqrt(tmp[0]*tmp[0] + tmp[1]*tmp[1])
-        h0 += h0inc*HSTEP
-        # implements: if fabs(h0inc) < 0.0001:
-        if np.max(np.fabs(h0inc)) < 0.001:
+        err =  np.sqrt(np.diag(np.dot(tmp, tmp.T)))
+        h0 += h0_inc*HSTEP
+        # implements: if fabs(h0_inc) < 0.0001:
+        if np.max(np.fabs(h0_inc)) < 0.001:
             break
 
     return (h0, err)
