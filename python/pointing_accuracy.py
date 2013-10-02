@@ -72,13 +72,14 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     return inliers
 
 
-def euclidean_transform_matrix(theta, a, b):
+def euclidean_transform_matrix(theta, a, b, s=0):
     """
     Build the matrix of an euclidean transform in homogeneous coordinates.
 
     Arguments:
         theta: angle of the rotation
         a, b: coordinates of the vector of the translation
+        s: horizontal shear parameter
 
     Returns:
         A numpy 3x3 matrix, representing the euclidean transform (rotation
@@ -92,7 +93,9 @@ def euclidean_transform_matrix(theta, a, b):
     T = np.eye(3)
     T[0, 2] = a
     T[1, 2] = b
-    return np.dot(T, R)
+    S = np.eye(3)
+    S[0, 1] = s
+    return np.dot(np.dot(T, R), S)
 
 
 def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
@@ -100,7 +103,7 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
     Objective function to minimize in order to correct the pointing error.
 
     Arguments:
-        v: vector of size 3, containing the 3 parameters of the euclidean
+        v: vector of size 4, containing the 4 parameters of the euclidean
             transformation we are looking for.
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
         matches: 2D numpy array containing a list of matches. Each line
@@ -122,7 +125,7 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
 
     # transform the coordinates of points in the second image according to
     # matrix A, built from vector v
-    A = euclidean_transform_matrix(v[0], v[1], v[2])
+    A = euclidean_transform_matrix(v[0], v[1], v[2], v[3])
     p2 = common.points_apply_homography(A, matches[:, 2:4])
     x2 = p2[:, 0]
     y2 = p2[:, 1]
@@ -226,7 +229,7 @@ def optimize_pair(im1, im2, rpc1, rpc2, matches=None):
 
     from scipy.optimize import fmin_bfgs
     print "running optimization using %d matches" % len(matches)
-    v0 = np.zeros((1, 3))
-    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=50,
+    v0 = np.zeros((1, 4))
+    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=30,
         retall=True)
     return v
