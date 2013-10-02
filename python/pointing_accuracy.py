@@ -219,13 +219,14 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, a=1000):
 
 
 
-def optimize_pair(im1, im2, rpc1, rpc2):
+def optimize_pair(im1, im2, rpc1, rpc2, matches=None):
 
-    matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2)
-    print "running optimization using %d matches" % len(matches)
+    if matches is None:
+        matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2)
 
     from scipy.optimize import fmin_bfgs
+    print "running optimization using %d matches" % len(matches)
     v0 = np.zeros((1, 3))
-    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=5,
+    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=50,
         retall=True)
     return v

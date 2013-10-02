@@ -263,16 +263,16 @@ def update_minmax_range_extrapolating_registration_affinity(matches, H1, H2,w_ro
     xx2 = np.array([0,w_roi,0,w_roi])
     yy2 = np.array([0,0,h_roi,h_roi])
 
-    # compute the max and min disparity values (according to 
-    # the estimated model) at the ROI corners 
+    # compute the max and min disparity values (according to
+    # the estimated model) at the ROI corners
     roi_disparities_by_the_affine_model = (xx2*t + yy2*s + dx) - xx2
     maxb = np.max(roi_disparities_by_the_affine_model)
     minb = np.min(roi_disparities_by_the_affine_model)
     #print minb,maxb
 
     # compute the rage with the extract min and max disparities
-    dispx_min = np.floor(minb + np.min(x2 - x1)) 
-    dispx_max = np.ceil(maxb + np.max(x2 - x1)) 
+    dispx_min = np.floor(minb + np.min(x2 - x1))
+    dispx_max = np.ceil(maxb + np.max(x2 - x1))
 
     # add 20% security margin
     if (dispx_min < 0):
@@ -287,7 +287,7 @@ def update_minmax_range_extrapolating_registration_affinity(matches, H1, H2,w_ro
     return dispx_min, dispx_max
 
 
-def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
+def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
     """
     Computes rectifying homographies for a ROI in a pair of Pleiades images.
 
@@ -297,6 +297,9 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
         x, y, w, h: four integers definig the rectangular ROI in the first image.
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
+        A (optional): 3x3 numpy array containing the pointing error correction
+            for im2. This matrix is usually estimated with the pointing_accuracy
+            module.
 
     Returns:
         H1, H2: Two 3x3 matrices representing the rectifying homographies to be applied
@@ -307,18 +310,26 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
     # in brief: use 8-pts normalized algo to estimate F, then use loop-zhang to
     # estimate rectifying homographies.
 
-    # the matching points are translated to be centered in 0, in order to deal
-    # with coordinates ranging from -1000 to 1000, and decrease imprecision
-    # effects of the loop-zhang rectification. These effects may become very
-    # important (~ 10 pixels error) when using coordinates around 20000.
     print "step 1: find matches, and center them ------------------------------"
     try:
         from python.global_params import n_gcp_per_axis as n
     except ImportError:
         n = 5
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, n)
-    p1, T1 = center_2d_points(rpc_matches[:, 0:2])
-    p2, T2 = center_2d_points(rpc_matches[:, 2:4])
+    p1 = rpc_matches[:, 0:2]
+    p2 = rpc_matches[:, 2:4]
+
+    if A is not None:
+        print "applying pointing error correction"
+        # correct coordinates of points in im2, according to A
+        p2 = common.points_apply_homography(np.linalg.inv(A), p2)
+
+    # the matching points are translated to be centered in 0, in order to deal
+    # with coordinates ranging from -1000 to 1000, and decrease imprecision
+    # effects of the loop-zhang rectification. These effects may become very
+    # important (~ 10 pixels error) when using coordinates around 20000.
+    p1, T1 = center_2d_points(p1)
+    p2, T2 = center_2d_points(p2)
 
     print "step 2: estimate F (8-points algorithm) ----------------------------"
     F = estimation.fundamental_matrix(np.hstack([p1, p2]))
@@ -333,9 +344,9 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # for debug
     print "min, max, mean rectification error on rpc matches ------------------"
-    tmp = common.points_apply_homography(H1, rpc_matches[:, 0:2])
+    tmp = common.points_apply_homography(H1, p1)
     y1 = tmp[:, 1]
-    tmp = common.points_apply_homography(H2, rpc_matches[:, 2:4])
+    tmp = common.points_apply_homography(H2, p2)
     y2 = tmp[:, 1]
     err = np.abs(y1 - y2)
     print np.min(err), np.max(err), np.mean(err)
@@ -372,13 +383,13 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h):
         sys.exit()
 
     H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2)
-
-    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(sift_matches, H1, H2,w,h)
+    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(sift_matches,
+        H1, H2, w, h)
 
     return H1, H2, disp_m, disp_M
 
 
-def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
+def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
     """
     Rectify a ROI in a pair of Pleiades images.
 
@@ -389,6 +400,9 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
         out1, out2: paths to the output crops
+        A (optional): 3x3 numpy array containing the pointing error correction
+            for im2. This matrix is usually estimated with the pointing_accuracy
+            module.
 
         This function uses the parameter subsampling_factor from the global_params module.
         If the factor z > 1 then the output images will be subsampled by a factor z.
@@ -407,8 +421,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
 
     # compute rectifying homographies
     H1, H2, disp_min, disp_max = compute_rectification_homographies(im1, im2,
-                                                        rpc1, rpc2, x, y, w, h)
-
+        rpc1, rpc2, x, y, w, h, A)
 
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
@@ -423,16 +436,14 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
     try:
         from python.global_params import subsampling_factor
     except ImportError:
-        subsampling_factor=1
-
+        subsampling_factor = 1
 
     # apply homographies and do the crops
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, subsampling_factor)
     homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, subsampling_factor)
 
-
     #  If subsampling_factor the homographies are altered to reflect the zoom
-    if not subsampling_factor==1:
+    if subsampling_factor != 1:
         from math import floor, ceil
         # update the H1 and H2 to reflect the zoom
         Z = np.eye(3);
@@ -442,7 +453,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2):
         H2 = np.dot(Z, H2)
         disp_min = floor(disp_min/subsampling_factor)
         disp_max = ceil(disp_max/subsampling_factor)
-
 
     return H1, H2, disp_min, disp_max
 
