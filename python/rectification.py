@@ -328,11 +328,11 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     # with coordinates ranging from -1000 to 1000, and decrease imprecision
     # effects of the loop-zhang rectification. These effects may become very
     # important (~ 10 pixels error) when using coordinates around 20000.
-    p1, T1 = center_2d_points(p1)
-    p2, T2 = center_2d_points(p2)
+    pp1, T1 = center_2d_points(p1)
+    pp2, T2 = center_2d_points(p2)
 
     print "step 2: estimate F (8-points algorithm) ----------------------------"
-    F = estimation.fundamental_matrix(np.hstack([p1, p2]))
+    F = estimation.fundamental_matrix(np.hstack([pp1, pp2]))
 #    print evaluation.fundamental_matrix(F, np.hstack([p1, p2])
 
     print "step 3: compute rectifying homographies (loop-zhang algorithm) -----"
