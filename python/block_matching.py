@@ -18,6 +18,9 @@ hirschmuller08_laplacian = '%s/../3rdparty/stereo_hirschmuller_2008/callSGBM_lap
 msmw = '%s/../3rdparty/msmw/build/libstereo/iip_stereo_correlation_multi_win2' % (
     os.path.dirname( __file__))
 
+tvl1 = '%s/../3rdparty/tvl1flow_3/callTVL1.sh' % (
+    os.path.dirname( __file__))
+
 def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max, extra_params=''):
     """
     Runs a block-matching binary on a pair of stereo-rectified images.
@@ -58,6 +61,11 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         #    regionRadius: radius of the window
         #    P1, P2 : regularization parameters
         #    LRdiff: maximum difference between left and right disparity maps
+
+    if (algo == 'tvl1'):
+        bm_binary = tvl1
+        common.run("%s %s %s %s %s" %(bm_binary, im1, im2, out_disp,
+            out_mask))
 
     elif (algo == 'msmw'):
         bm_binary = msmw

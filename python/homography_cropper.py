@@ -61,15 +61,24 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
     Z[0,0] = Z[1,1] = 1.0/subsampling_factor
     H = np.dot(Z,H)
 
-    w = w/subsampling_factor
-    h = h/subsampling_factor
 
-    # Since the objective is to compute a zoomed out homographic application
-    # to save computations we zoom out the image before applying the homography
-    # and then update H accordingly
-    if subsampling_factor != 1:
+    w = int(w/subsampling_factor)
+    h = int(h/subsampling_factor)
+    
+
+    # Since the objective is to commpute a zoomed out homographic application
+    # to save computations we zoom out the image before applying the homography 
+    # and then update H accordingly 
+    if not subsampling_factor == 1:
+        # the DCT zoom is NOT SAFE, when the input image size is not a multiple of the zoom factor
+        tmpw, tmph = common.image_size(tmp)
+        tmpw, tmph = int(tmpw/subsampling_factor), int(tmph/subsampling_factor)
+        tmp  = common.image_crop(tmp, 0,0,tmpw*subsampling_factor,tmph*subsampling_factor)
         # zoom out the input image
-        tmp = common.image_safe_zoom_fft(tmp, subsampling_factor)
+        tmp = common.image_safe_zoom_fft(tmp , subsampling_factor)
+
+        # TODO DCT IS STILL NOT SAFE THE position 0,0 is translated half pixel ! 
+
         # update H
         Z = np.eye(3)
         Z[0, 0] = Z[1, 1] = 1.0*subsampling_factor
