@@ -185,7 +185,6 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
         A = np.vstack((y2, y2*0+1)).T
         b = x1 - x2
         z = np.linalg.lstsq(A, b)[0]
-        print z
         s = z[0]
         b = z[1]
         H2 = np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)

@@ -6,7 +6,7 @@ import rpc_utils
 import common
 
 
-def evaluation(im1, im2, rpc1, rpc2, x, y, w, h):
+def evaluation(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
     """
     Measures the maximal pointing error on a Pleiades' pair of images.
 
@@ -16,18 +16,26 @@ def evaluation(im1, im2, rpc1, rpc2, x, y, w, h):
         x, y, w, h: four integers definig the rectangular ROI in the first image.
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
+        A (optional): 3x3 numpy array containing the pointing error correction
+            for im2.
 
     Returns:
         the highest pointing error, in the direction orthogonal to the epipolar
         lines. This error is measured in pixels.
     """
     matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    p1 = matches[:, 0:2]
+    p2 = matches[:, 2:4]
+
+    # apply pointing correction matrix, if available
+    if A is not None:
+        p2 = common.points_apply_homography(A, p2)
 
     # compute the pointing error for each match
-    x1 = matches[:, 0]
-    y1 = matches[:, 1]
-    x2 = matches[:, 2]
-    y2 = matches[:, 3]
+    x1 = p1[:, 0]
+    y1 = p1[:, 1]
+    x2 = p2[:, 0]
+    y2 = p2[:, 1]
     e = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)[1]
     print "max, mean, min pointing error, from %d points:" % (len(matches))
     print np.max(e), np.mean(e), np.min(e)
