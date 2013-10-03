@@ -31,7 +31,7 @@ for dataset in images/*
                     # preview
                     dir_path=`dirname $image`
                     abs_path=$pleiades_dir/$dir_path/PREVIEW_*.JPG
-                    link_name=`printf prev%02d.tif $i`
+                    link_name=`printf prev%02d.jpg $i`
                     ln -sf $abs_path $dataset/$link_name
             done
         fi
@@ -49,7 +49,7 @@ for dataset in images/*
                     # preview
                     dir_path=`dirname $image`
                     abs_path=$pleiades_dir/$dir_path/PREVIEW_*.JPG
-                    link_name=`printf prev%02d_color.tif $i`
+                    link_name=`printf prev%02d_color.jpg $i`
                     ln -sf $abs_path $dataset/$link_name
             done
         fi
