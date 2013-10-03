@@ -49,7 +49,7 @@ exp_name = 'manhattan'
 
 #img_name = 'uy1'
 #exp_name = 'campo'
-## FULL ROI
+## FULL ROI UY1
 ##x = 5500
 ##y = 13000
 ##w = 7000
@@ -60,11 +60,12 @@ exp_name = 'manhattan'
 #w = 1500
 #h = 1500
 
-#x = 7000
-#y = 25000
-#w = 2000
-#h = 2000
 
+#img_name = 'montevideo'
+#exp_name = 'pza_independencia'
+#x, y, w, h = 13025, 26801, 2112, 1496
+#exp_name = 'fing_msmw'
+#x, y, w, h = 19845, 29178, 1700, 1700
 
 
 ## Try to import the global parameters module
@@ -136,8 +137,10 @@ def main():
     ## 2. block-matching
 #    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
 #        'hirschmuller08', disp_min, disp_max, extra_params='3')
+ #   block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+ #       'hirschmuller08_laplacian', disp_min, disp_max)
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        'hirschmuller08_laplacian', disp_min, disp_max)
+        'tvl1', disp_min, disp_max)
 
 
     ## 3. triangulation
