@@ -139,18 +139,24 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
     cost *= alpha
     cost += np.sum(e)
 
-    print cost
+    #print cost
     return cost
 
 
-def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, a=1000):
+def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
+        prev1=None, a=1000):
     """
     Computes a list of sift matches between two full Pleiades images.
 
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        a: length of the squared ROIs used to extract sift points
+        flag: 'automatic' or 'interactive', to decide if the five zones used to
+            search keypoints are queried interactively or chosen automatically
+        prev1 (optional): path to the jpg preview image of im1 (used in case of
+        interactive mode)
+        a: length of the squared ROIs used to extract sift points, in the case
+            of automatic mode
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -166,56 +172,68 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, a=1000):
     h = rpc1.lastRow
     out = np.zeros(shape = (1, 4))
 
-    # if roi size is too big wrt image size, take a smaller roi size
-    if (min(h, w) < 4*a):
-        a = round(min(h, w)/4)
+    if flag == 'automatic':
+        # if roi size is too big wrt image size, take a smaller roi size
+        if (min(h, w) < 4*a):
+            a = round(min(h, w)/4)
 
-    # central zone
-    x = round((w-a)/2)
-    y = round((h-a)/2)
-    try:
-        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
-        out = np.vstack((out, matches))
-    except Exception as e:
-        print "no matches in the central zone"
-        print e
+        # central zone
+        x = round((w-a)/2)
+        y = round((h-a)/2)
+        try:
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            out = np.vstack((out, matches))
+        except Exception as e:
+            print "no matches in the central zone"
+            print e
 
-    # corner zones
-    x = round((1*w - 2*a)/4)
-    y = round((1*h - 2*a)/4)
-    try:
-        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
-        out = np.vstack((out, matches))
-    except Exception as e:
-        print "no matches in the corner 1"
-        print e
+        # corner zones
+        x = round((1*w - 2*a)/4)
+        y = round((1*h - 2*a)/4)
+        try:
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            out = np.vstack((out, matches))
+        except Exception as e:
+            print "no matches in the corner 1"
+            print e
 
-    x = round((3*w - 2*a)/4)
-    y = round((1*h - 2*a)/4)
-    try:
-        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
-        out = np.vstack((out, matches))
-    except Exception as e:
-        print "no matches in the corner 2"
-        print e
+        x = round((3*w - 2*a)/4)
+        y = round((1*h - 2*a)/4)
+        try:
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            out = np.vstack((out, matches))
+        except Exception as e:
+            print "no matches in the corner 2"
+            print e
 
-    x = round((1*w - 2*a)/4)
-    y = round((3*h - 2*a)/4)
-    try:
-        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
-        out = np.vstack((out, matches))
-    except Exception as e:
-        print "no matches in the corner 3"
-        print e
+        x = round((1*w - 2*a)/4)
+        y = round((3*h - 2*a)/4)
+        try:
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            out = np.vstack((out, matches))
+        except Exception as e:
+            print "no matches in the corner 3"
+            print e
 
-    x = round((3*w - 2*a)/4)
-    y = round((3*h - 2*a)/4)
-    try:
-        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
-        out = np.vstack((out, matches))
-    except Exception as e:
-        print "no matches in the corner 4"
-        print e
+        x = round((3*w - 2*a)/4)
+        y = round((3*h - 2*a)/4)
+        try:
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            out = np.vstack((out, matches))
+        except Exception as e:
+            print "no matches in the corner 4"
+            print e
+
+    if flag == 'interactive':
+        for i in range(5):
+            x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
+            try:
+                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+                out = np.vstack((out, matches))
+            except Exception as e:
+                print "no matches in the selected roi"
+                print e
+
 
     # return the full list of matches, only if there are enough
     if len(out) < 7:
@@ -225,14 +243,30 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, a=1000):
 
 
 
-def optimize_pair(im1, im2, rpc1, rpc2, matches=None):
+def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
+    """
+    Args:
+        im1, im2: paths to the two Pleiades images (usually jp2 or tif)
+        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        prev1 (optional): path to the jpg preview image of im1 (used in case of
+            interactive mode in the matches computation)
+        matches (optional): numpy 4xN array containing a list of matches
+            between the two images. If it is not provided the matches are
+            computed.
+
+    Returns:
+        a 3x3 matrix representing the planar transformation to apply to im2 in
+        order to correct the pointing error.
+    """
 
     if matches is None:
-        matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2)
+        matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2,
+            'interactive', prev1)
 
     from scipy.optimize import fmin_bfgs
     print "running optimization using %d matches" % len(matches)
     v0 = np.zeros((1, 4))
     v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=30,
-        retall=True)
-    return v
+        retall=True)[0]
+
+    return euclidean_transform_matrix(v)

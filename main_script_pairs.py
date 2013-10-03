@@ -2,6 +2,7 @@
 
 import numpy as np
 from python import common
+from python import rpc_model
 from python import rectification
 from python import block_matching
 from python import triangulation
@@ -34,15 +35,15 @@ from python import triangulation
 #w = 1000
 #h = 1000
 
-#img_name = 'mera'
-#exp_name = 'crete'
-#x = 11127
-#y = 28545
-#w = 1886
-#h = 1755
+img_name = 'mera'
+exp_name = 'crete'
+x = 11127
+y = 28545
+w = 1886
+h = 1755
 
-img_name = 'mont_blanc'
-exp_name = 'montblanc'
+#img_name = 'mont_blanc'
+#exp_name = 'montblanc'
 
 #img_name = 'new_york'
 #exp_name = 'manhattan'
@@ -121,8 +122,8 @@ def main():
 
     ## 0.5 copy the rpcs to the output directory, and save the subsampling factor
     from shutil import copyfile
-    copyfile(rpc1,outrpc1)
-    copyfile(rpc2,outrpc2)
+    copyfile(rpc1, outrpc1)
+    copyfile(rpc2, outrpc2)
     np.savetxt(subsampling_file, np.array([global_params.subsampling_factor]))
 
     # ATTENTION if subsampling_factor is set the rectified images will be

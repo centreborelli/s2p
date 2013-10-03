@@ -439,7 +439,8 @@ def get_roi_coordinates(rpc, preview):
     Get the coordinates of a desired ROI in a Pleiades image from user's clicks.
 
     Args:
-        rpc: path to the rpc xml file of the Pleiades image.
+        rpc: an instance of the rpc_model.RPCModel class, or the path to the
+            xml file containing the RPC coefficients.
         preview: path to the preview image file associated to the Pleiades
             image.
 
@@ -451,8 +452,15 @@ def get_roi_coordinates(rpc, preview):
     A preview image is displayed, on which the user selects a rectangular
     region.
     """
+
+    # if 'rpc' is the path to a file, open it and read it, else go on
+    try:
+        with open(rpc):
+            rpc = rpc_model.RPCModel(rpc)
+    except TypeError:
+        pass
+
     # read preview/full images dimensions
-    rpc = rpc_model.RPCModel(rpc);
     nc = int(rpc.lastCol)
     nr = int(rpc.lastRow)
     nc_preview, nr_preview = image_size(preview)
