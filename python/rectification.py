@@ -185,7 +185,6 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
         A = np.vstack((y2, y2*0+1)).T
         b = x1 - x2
         z = np.linalg.lstsq(A, b)[0]
-        print z
         s = z[0]
         b = z[1]
         H2 = np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
@@ -333,10 +332,8 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
 
     print "step 2: estimate F (8-points algorithm) ----------------------------"
     F = estimation.fundamental_matrix(np.hstack([pp1, pp2]))
-#    print evaluation.fundamental_matrix(F, np.hstack([p1, p2])
 
     print "step 3: compute rectifying homographies (loop-zhang algorithm) -----"
-    # why does loop-zhang need the size of input images ?
     H1, H2 = estimation.loop_zhang(F, w, h)
     # compose with previous translations to get H1, H2 in the big images frame
     H1 = np.dot(H1, T1)
