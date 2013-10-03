@@ -41,8 +41,11 @@ from python import triangulation
 #w = 1886
 #h = 1755
 
-img_name = 'new_york'
-exp_name = 'manhattan'
+img_name = 'mont_blanc'
+exp_name = 'montblanc'
+
+#img_name = 'new_york'
+#exp_name = 'manhattan'
 
 #img_name = 'ubaye'
 #exp_name = 'pic02'
@@ -84,6 +87,7 @@ im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
 im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
 im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
 prev1 = 'pleiades_data/images/%s/prev01.tif' % (img_name)
+pointing = 'pleiades_data/images/%s/pointing_correction.txt' % (img_name)
 rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
 rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
 
@@ -126,8 +130,16 @@ def main():
     # this fact
 
     ## 1. rectification
-    H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1, rpc2,
-        x, y, w, h, rect1, rect2)
+    # If the pointing correction matrix is available, then use it. If not
+    # proceed without correction
+    try:
+        with open(pointing):
+            A = np.loadtxt(pointing)
+            H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2,
+                rpc1, rpc2, x, y, w, h, rect1, rect2, A)
+    except IOError:
+        H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1,
+            rpc2, x, y, w, h, rect1, rect2)
 
     # save homographies to tmp files
     np.savetxt(hom1, H1)
@@ -153,12 +165,13 @@ def main():
         print 'no color image available for this dataset.'
         triangulation.compute_point_cloud(common.image_qauto(rect1), height, rpc1, hom1, cloud)
 
-    # display results
-    print "v %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
-    print "meshlab %s" % (cloud)
-
     ### cleanup
     while common.garbage:
         common.run('rm ' + common.garbage.pop())
+
+
+    # display results
+    print "v %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
+    print "meshlab %s" % (cloud)
 
 if __name__ == '__main__': main()

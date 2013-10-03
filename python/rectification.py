@@ -333,10 +333,8 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
 
     print "step 2: estimate F (8-points algorithm) ----------------------------"
     F = estimation.fundamental_matrix(np.hstack([pp1, pp2]))
-#    print evaluation.fundamental_matrix(F, np.hstack([p1, p2])
 
     print "step 3: compute rectifying homographies (loop-zhang algorithm) -----"
-    # why does loop-zhang need the size of input images ?
     H1, H2 = estimation.loop_zhang(F, w, h)
     # compose with previous translations to get H1, H2 in the big images frame
     H1 = np.dot(H1, T1)
