@@ -3,7 +3,9 @@
 import numpy as np
 import rectification
 import rpc_utils
+import rpc_model
 import common
+import os
 
 
 def evaluation(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
@@ -159,10 +161,11 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        flag: 'automatic' or 'interactive', to decide if the five zones used to
-            search keypoints are queried interactively or chosen automatically
+        flag: 'automatic', 'interactive' or 'load', to decide if the five zones
+            used to search keypoints are queried interactively, chosen
+            automatically, or loaded from the file 'pointing_correction_rois.txt'.
         prev1 (optional): path to the jpg preview image of im1 (used in case of
-        interactive mode)
+            interactive mode)
         a: length of the squared ROIs used to extract sift points, in the case
             of automatic mode
 
@@ -242,6 +245,19 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
                 print "no matches in the selected roi"
                 print e
 
+    if flag == 'load':
+        im = os.path.dirname(im1)
+        fname = os.path.join(im, 'pointing_correction_rois.txt')
+        rois = np.loadtxt(fname)
+        for i in xrange(len(rois)):
+            x, y, w, h = rois[i, :]
+            try:
+                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+                out = np.vstack((out, matches))
+            except Exception as e:
+                print "no matches in the selected roi"
+                print e
+
 
     # return the full list of matches, only if there are enough
     if len(out) < 7:
@@ -249,10 +265,50 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
     else:
         return out[1:, :]
 
+def query_rois_save_to_file(im, n=5):
+    """
+    Save coordinates of the ROIs to use for pointing correction of a dataset.
+
+    Args:
+        im: path to the folder containing the Pleiades images. Be careful, the
+            path should not end by a '/'
+        n: number of ROIs to query
+
+    Returns:
+        nothing. It saves the (x, y, w, h) of each ROI in a txt file named
+        pointing_correction_rois.txt, one per line
+    """
+    rpc  = '%s/../rpc/%s/rpc01.xml' % (os.path.dirname(im), os.path.basename(im))
+    prev = os.path.join(im, 'prev01.jpg')
+    filename = os.path.join(im, 'pointing_correction_rois.txt')
+
+    out = np.zeros((n, 4))
+    for i in range(n):
+        x, y, w, h = common.get_roi_coordinates(rpc, prev)
+        out[i, :] = x, y, w, h
+
+    np.savetxt(filename, out, '%d')
+
+def query_rois_all_datasets(data):
+    """
+    Run the query_rois_save_to_file function on all the datasets found in data.
+
+    Args:
+        data: path to the folder containing all the Pleiades datasets
+
+    Returns:
+        nothing. For each dataset, it saves the (x, y, w, h) of each ROI in a
+        txt file named dataset/pointing_correction_rois.txt, one per line
+    """
+    for f in os.listdir(data):
+        query_rois_save_to_file(os.path.join(data, f))
+
 
 
 def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     """
+    Runs the pointing correction on a pair of Pleiades images.
+
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
@@ -269,7 +325,7 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
 
     if matches is None:
         matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2,
-            'interactive', prev1)
+            'load', prev1)
 
     from scipy.optimize import fmin_bfgs
     print "running optimization using %d matches" % len(matches)
@@ -278,3 +334,28 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
         retall=True)[0]
 
     return euclidean_transform_matrix(v)
+
+
+def optimize_pair_all_datasets(data):
+    """
+    Run the optimize_pair function on all the datasets found in data.
+
+    Args:
+        data: path to the folder containing all the Pleiades datasets
+
+    Returns:
+        nothing. For each dataset, it saves the computed correction matrix in a
+        txt file named dataset/pointing_correction_matrix.txt.
+    """
+    for f in os.listdir(data):
+        dataset = os.path.join(data, f)
+        im1  = os.path.join(dataset, 'im01.tif')
+        im2  = os.path.join(dataset, 'im02.tif')
+        rpc1 = '%s/../rpc/%s/rpc01.xml' % (data, f)
+        rpc2 = '%s/../rpc/%s/rpc02.xml' % (data, f)
+        rpc1 = rpc_model.RPCModel(rpc1)
+        rpc2 = rpc_model.RPCModel(rpc2)
+
+        out = os.path.join(dataset, 'pointing_correction_matrix.txt')
+        A = optimize_pair(im1, im2, rpc1, rpc2)
+        np.savetxt(out, A)
