@@ -149,7 +149,7 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
     cost *= alpha
     cost += np.sum(e)
 
-    #print cost
+    print cost
     return cost
 
 
@@ -326,6 +326,11 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     if matches is None:
         matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2,
             'load', prev1)
+
+    # Don't use too many matches to keep the evaluation time of 'cost_function' reasonable
+    if len(matches) > 1000:
+        ind = np.linspace(0, len(matches), 1000, False)
+        matches = matches[ind.astype(int), :]
 
     from scipy.optimize import fmin_bfgs
     print "running optimization using %d matches" % len(matches)
