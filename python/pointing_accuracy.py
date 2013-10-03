@@ -72,29 +72,32 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     return inliers
 
 
-def euclidean_transform_matrix(theta, a, b, s=0):
+def euclidean_transform_matrix(v):
     """
     Build the matrix of an euclidean transform in homogeneous coordinates.
 
     Arguments:
-        theta: angle of the rotation
-        a, b: coordinates of the vector of the translation
-        s: horizontal shear parameter
+        v: numpy 1D array, of length 3 or 4, containing the parameters of the
+            planar transform. These parameters are:
+            v[0]: angle of the rotation
+            v[1]: x coordinate of the vector of the translation
+            v[2]: y coordinate of the vector of the translation
+            v[3]: horizontal shear parameter
 
     Returns:
         A numpy 3x3 matrix, representing the euclidean transform (rotation
         followed by translation) in homogeneous coordinates.
     """
     R = np.eye(3)
-    R[0, 0] =  np.cos(theta)
-    R[0, 1] =  np.sin(theta)
-    R[1, 0] = -np.sin(theta)
-    R[1, 1] =  np.cos(theta)
+    R[0, 0] =  np.cos(v[0])
+    R[0, 1] =  np.sin(v[0])
+    R[1, 0] = -np.sin(v[0])
+    R[1, 1] =  np.cos(v[0])
     T = np.eye(3)
-    T[0, 2] = a
-    T[1, 2] = b
+    T[0, 2] = v[1]
+    T[1, 2] = v[2]
     S = np.eye(3)
-    S[0, 1] = s
+    S[0, 1] = v[3]
     return np.dot(np.dot(T, R), S)
 
 
@@ -125,7 +128,7 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
 
     # transform the coordinates of points in the second image according to
     # matrix A, built from vector v
-    A = euclidean_transform_matrix(v[0], v[1], v[2], v[3])
+    A = euclidean_transform_matrix(v)
     p2 = common.points_apply_homography(A, matches[:, 2:4])
     x2 = p2[:, 0]
     y2 = p2[:, 1]
