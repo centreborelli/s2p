@@ -154,7 +154,7 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
 
 
 def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
-        prev1=None, a=1000):
+        prev1=None, a=1000, outfile=None):
     """
     Computes a list of sift matches between two full Pleiades images.
 
@@ -168,6 +168,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
             interactive mode)
         a: length of the squared ROIs used to extract sift points, in the case
             of automatic mode
+        outfile (optional): path to a txt where to save the list of matches.
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -259,10 +260,12 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
                 print e
 
 
-    # return the full list of matches, only if there are enough
+    # save and return the full list of matches, only if there are enough
     if len(out) < 7:
         raise Exception("not enough matches")
     else:
+        if outfile is not None:
+            np.savetxt(outfile, out[1:, :])
         return out[1:, :]
 
 def query_rois_save_to_file(im, n=5):
@@ -303,7 +306,30 @@ def query_rois_all_datasets(data):
     for f in os.listdir(data):
         query_rois_save_to_file(os.path.join(data, f))
 
+def save_sift_matches_all_datasets(data):
+    """
+    Run the filtered_sift_matches_full_img function on all the datasets.
 
+    Args:
+        data: path to the folder containing all the Pleiades datasets
+
+    Returns:
+        nothing. For each dataset, it saves the list of sift matches computed
+        between images 1 and 2, according to the ROIs defined in the
+        corresponding file.
+    """
+    for f in os.listdir(data):
+        dataset = os.path.join(data, f)
+        im1  = os.path.join(dataset, 'im01.tif')
+        im2  = os.path.join(dataset, 'im02.tif')
+        rpc1 = '%s/../rpc/%s/rpc01.xml' % (data, f)
+        rpc2 = '%s/../rpc/%s/rpc02.xml' % (data, f)
+        rpc1 = rpc_model.RPCModel(rpc1)
+        rpc2 = rpc_model.RPCModel(rpc2)
+        fname = os.path.join(dataset, 'sift_matches.txt')
+        print fname
+        m = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, 'load', None,
+            1000, fname)
 
 def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     """
@@ -360,7 +386,8 @@ def optimize_pair_all_datasets(data):
         rpc2 = '%s/../rpc/%s/rpc02.xml' % (data, f)
         rpc1 = rpc_model.RPCModel(rpc1)
         rpc2 = rpc_model.RPCModel(rpc2)
-
+        matches_file = os.path.join(dataset, 'sift_matches.txt')
+        matches = np.loadtxt(matches_file)
         out = os.path.join(dataset, 'pointing_correction_matrix.txt')
-        A = optimize_pair(im1, im2, rpc1, rpc2)
+        A = optimize_pair(im1, im2, rpc1, rpc2, None, matches)
         np.savetxt(out, A)
