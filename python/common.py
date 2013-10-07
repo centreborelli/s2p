@@ -9,7 +9,8 @@ import rpc_model
 
 # add the bin folder to system path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-bin_dir = '%s/../bin' % current_dir
+parent_dir = os.path.dirname(current_dir)
+bin_dir = os.path.join(parent_dir, 'bin')
 os.environ['PATH'] += os.pathsep
 os.environ['PATH'] += bin_dir
 
@@ -388,8 +389,9 @@ def run_binary_on_list_of_points(points, binary, option=None):
         a numpy array containing all the output points, one per line.
     """
     # run the binary
-    np.savetxt('/tmp/pts', points, '%.18f')
-    p1 = subprocess.Popen(['cat', '/tmp/pts'], stdout = subprocess.PIPE)
+    pts_file = tmpfile('.txt')
+    np.savetxt(pts_file, points, '%.18f')
+    p1 = subprocess.Popen(['cat', pts_file], stdout = subprocess.PIPE)
     if option:
         p2 = subprocess.Popen([binary, option], stdin = p1.stdout, stdout =
             subprocess.PIPE)

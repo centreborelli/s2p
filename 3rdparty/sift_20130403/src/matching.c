@@ -130,21 +130,21 @@ int main(int argc, char **argv){
     /** OUTPUT ***************************************************************/
     print_pairs(matches);
     
-    /** EXTRA OUTPUT */
-    if(verbose==1){
-        save_kyptPr_extra(matches, n_hist*n_hist*n_ori, n_bins, "OUTmatches.txt");
-        save_kyptPr_extra(pairs, n_hist*n_hist*n_ori, n_bins, "OUTpairsAll.txt"); 
-        save_kypt_lst_extra(keys1Matching, n_hist*n_hist*n_ori,n_bins, "OUTkeys1Matching.txt");
-        save_kypt_lst_extra(keys2Matching, n_hist*n_hist*n_ori,n_bins, "OUTkeys2Matching.txt");
-        save_kypt_lst_extra(keys1NotMatch, n_hist*n_hist*n_ori,n_bins, "OUTkeys1NotMatching.txt");
-        // TODO -- AVOID duplicates
-        save_kypt_lst_description(keys1Matching, n_hist*n_hist*n_ori, "matching_keys_im0.txt");
-        save_kypt_lst_description(keys2Matching, n_hist*n_hist*n_ori, "matching_keys_im1.txt");        
-        
-    }else{
-        save_kypt_lst_description(keys1Matching, n_hist*n_hist*n_ori, "matching_keys_im0.txt");
-        save_kypt_lst_description(keys2Matching, n_hist*n_hist*n_ori, "matching_keys_im1.txt");
-    }
+//    /** EXTRA OUTPUT */
+//    if(verbose==1){
+//        save_kyptPr_extra(matches, n_hist*n_hist*n_ori, n_bins, "OUTmatches.txt");
+//        save_kyptPr_extra(pairs, n_hist*n_hist*n_ori, n_bins, "OUTpairsAll.txt"); 
+//        save_kypt_lst_extra(keys1Matching, n_hist*n_hist*n_ori,n_bins, "OUTkeys1Matching.txt");
+//        save_kypt_lst_extra(keys2Matching, n_hist*n_hist*n_ori,n_bins, "OUTkeys2Matching.txt");
+//        save_kypt_lst_extra(keys1NotMatch, n_hist*n_hist*n_ori,n_bins, "OUTkeys1NotMatching.txt");
+//        // TODO -- AVOID duplicates
+//        save_kypt_lst_description(keys1Matching, n_hist*n_hist*n_ori, "matching_keys_im0.txt");
+//        save_kypt_lst_description(keys2Matching, n_hist*n_hist*n_ori, "matching_keys_im1.txt");        
+//        
+//    }else{
+//        save_kypt_lst_description(keys1Matching, n_hist*n_hist*n_ori, "matching_keys_im0.txt");
+//        save_kypt_lst_description(keys2Matching, n_hist*n_hist*n_ori, "matching_keys_im1.txt");
+//    }
     
     
     
