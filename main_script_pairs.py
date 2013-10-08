@@ -7,115 +7,53 @@ from python import rectification
 from python import block_matching
 from python import triangulation
 
-#img_name = 'lenclio'
-#exp_name = 'tournon'
-#x = 15700
-#y = 16400
-#w = 1000
-#h = 1000
-
-#img_name = 'toulouse'
-#exp_name = 'blagnac'
-#x = 6000
-#y = 6000
-#w = 1000
-#h = 1000
-
-#img_name = 'calanques'
-#exp_name = 'collines'
-#x = 6600
-#y = 28800
-#w = 1000
-#h = 1000
-
-#img_name = 'cannes'
-#exp_name = 'theoule_sur_mer'
-#x = 5100
-#y = 32300
-#w = 1000
-#h = 1000
-
-img_name = 'mera'
-exp_name = 'crete'
-x = 11127
-y = 28545
-w = 1886
-h = 1755
-
-#img_name = 'mont_blanc'
-#exp_name = 'montblanc'
-
-#img_name = 'new_york'
-#exp_name = 'manhattan'
-
-#img_name = 'ubaye'
-#exp_name = 'pic02'
-
-#img_name = 'uy1'
-#exp_name = 'campo'
-## FULL ROI UY1
-##x = 5500
-##y = 13000
-##w = 7000
-##h = 10000
-## portion inside ROI
-#x = 5500
-#y = 25000
-#w = 1500
-#h = 1500
 
 
-#img_name = 'montevideo'
-#exp_name = 'pza_independencia'
-#x, y, w, h = 13025, 26801, 2112, 1496
-#exp_name = 'fing_msmw'
-#x, y, w, h = 19845, 29178, 1700, 1700
+def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None):
 
 
-## Try to import the global parameters module
-#  it permits to pass values between different modules
-try:
-   from python import global_params
+    ## Try to import the global parameters module
+    #  it permits to pass values between different modules
+    try:
+       from python import global_params
+    
+       global_params.subsampling_factor=2
+       global_params.subsampling_factor_registration=4
+    
+    except ImportError:
+      pass
+    
+    
+    # input files
+    im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
+    im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
+    im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
+    prev1 = 'pleiades_data/images/%s/prev01.tif' % (img_name)
+    pointing = 'pleiades_data/images/%s/pointing_correction.txt' % (img_name)
+    rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
+    rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
+    
+    # output files
+    rect1 = '/tmp/%s1.tif' % (exp_name)
+    rect2 = '/tmp/%s2.tif' % (exp_name)
+    hom1  = '/tmp/%s_hom1.txt' % (exp_name)
+    hom2  = '/tmp/%s_hom2.txt' % (exp_name)
+    outrpc1 = '/tmp/%s_rpc1.xml' % (exp_name)
+    outrpc2 = '/tmp/%s_rpc2.xml' % (exp_name)
+    rect1_color = '/tmp/%s1_color.tif' % (exp_name)
+    disp    = '/tmp/%s_disp.pgm'   % (exp_name)
+    mask    = '/tmp/%s_mask.png'   % (exp_name)
+    cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
+    height  = '/tmp/%s_height.tif' % (exp_name)
+    rpc_err = '/tmp/%s_rpc_err.tif'% (exp_name)
+    subsampling_file = '/tmp/%s_subsampling.txt' % (exp_name)
 
-   global_params.subsampling_factor=2
-   global_params.subsampling_factor_registration=4
 
-except ImportError:
-  pass
-
-
-# input files
-im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
-im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
-im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
-prev1 = 'pleiades_data/images/%s/prev01.tif' % (img_name)
-pointing = 'pleiades_data/images/%s/pointing_correction.txt' % (img_name)
-rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
-rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
-
-# output files
-rect1 = '/tmp/%s1.tif' % (exp_name)
-rect2 = '/tmp/%s2.tif' % (exp_name)
-hom1  = '/tmp/%s_hom1.txt' % (exp_name)
-hom2  = '/tmp/%s_hom2.txt' % (exp_name)
-outrpc1 = '/tmp/%s_rpc1.xml' % (exp_name)
-outrpc2 = '/tmp/%s_rpc2.xml' % (exp_name)
-rect1_color = '/tmp/%s1_color.tif' % (exp_name)
-disp    = '/tmp/%s_disp.pgm'   % (exp_name)
-mask    = '/tmp/%s_mask.png'   % (exp_name)
-cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
-height  = '/tmp/%s_height.tif' % (exp_name)
-rpc_err = '/tmp/%s_rpc_err.tif'% (exp_name)
-subsampling_file = '/tmp/%s_subsampling.txt' % (exp_name)
-
-
-def main():
     """
     Launches the s2p stereo pipeline on a pair of Pleiades images
     """
     ## 0. select ROI
     try:
-        global x, y, w, h
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
     except NameError:
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
@@ -150,8 +88,8 @@ def main():
     ## 2. block-matching
 #    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
 #        'hirschmuller08', disp_min, disp_max, extra_params='3')
- #   block_matching.compute_disparity_map(rect1, rect2, disp, mask,
- #       'hirschmuller08_laplacian', disp_min, disp_max)
+#    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+#        'hirschmuller08_laplacian', disp_min, disp_max)
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         'tvl1', disp_min, disp_max)
 
@@ -178,4 +116,77 @@ def main():
     print "v %s %s %s %s %s %s" % (rect1, rect2, rect1_color, disp, mask, height)
     print "meshlab %s" % (cloud)
 
-if __name__ == '__main__': main()
+
+
+
+
+
+
+if __name__ == '__main__': 
+
+#   img_name = 'lenclio'
+#   exp_name = 'tournon'
+#   x = 15700
+#   y = 16400
+#   w = 1000
+#   h = 1000
+#   
+#   img_name = 'toulouse'
+#   exp_name = 'blagnac'
+#   x = 6000
+#   y = 6000
+#   w = 1000
+#   h = 1000
+#   
+#   img_name = 'calanques'
+#   exp_name = 'collines'
+#   x = 6600
+#   y = 28800
+#   w = 1000
+#   h = 1000
+#   
+#   img_name = 'cannes'
+#   exp_name = 'theoule_sur_mer'
+#   x = 5100
+#   y = 32300
+#   w = 1000
+#   h = 1000
+#   
+    img_name = 'mera'
+    exp_name = 'crete'
+    x = 11127
+    y = 28545
+    w = 1886
+    h = 1755
+#   
+#   img_name = 'new_york'
+#   exp_name = 'manhattan'
+#   
+#   img_name = 'ubaye'
+#   exp_name = 'pic02'
+#   
+#   img_name = 'uy1'
+#   exp_name = 'campo'
+#   # FULL ROI
+#   #x = 5500
+#   #y = 13000
+#   #w = 7000
+#   #h = 10000
+#   # portion inside ROI
+#   x = 5500
+#   y = 25000
+#   w = 1500
+#   h = 1500
+
+
+    img_name = 'montevideo'
+    exp_name = 'pza_independencia'
+    x, y, w, h = 13025, 26801, 2112, 1496
+    exp_name = 'fing_msmw'
+    x, y, w, h = 19845, 29178, 1700, 1700
+
+
+    # call main
+    main(img_name, exp_name, x, y, w, h)
+
+
