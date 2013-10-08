@@ -375,7 +375,7 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     from scipy.optimize import fmin_bfgs
     print "running optimization using %d matches" % len(matches)
     v0 = np.zeros((1, 4))
-    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=20, callback=print_params)[0]
+    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=10, callback=print_params)
     # default values are:
     # fmin_bfgs(f, x0, fprime=None, args=(), gtol=1e-05, norm=inf,
     # epsilon=1.4901161193847656e-08, maxiter=None, full_output=0, disp=1,
@@ -415,5 +415,5 @@ def optimize_pair_all_datasets(data):
                 print f
                 A = optimize_pair(im1, im2, rpc1, rpc2, None, matches)
                 np.savetxt(out, A)
-        except Exception:
-                pass
+        except Exception as e:
+                print e
