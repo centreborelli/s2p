@@ -10,6 +10,10 @@ n_gcp_per_axis = 5
 epipolar_thresh = 2
 
 
+# matching parameters #  'tvl1','msmw', 'hirschmuller08', hirschmuller08_laplacian'
+matching_algorithm = 'tvl1'
+
+
 
 # bunch not used yet
 ##############################

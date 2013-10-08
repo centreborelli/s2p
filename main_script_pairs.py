@@ -9,7 +9,7 @@ from python import triangulation
 
 
 
-def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None):
+def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None, reference_image_id=1, secondary_image_id=2):
 
 
     ## Try to import the global parameters module
@@ -19,28 +19,31 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None):
     
        global_params.subsampling_factor=2
        global_params.subsampling_factor_registration=4
+
+       # select matching algorithm:  'tvl1','msmw', 'hirschmuller08', hirschmuller08_laplacian'
+       global_params.matching_algorithm='tvl1'
     
     except ImportError:
       pass
     
     
     # input files
-    im1 = 'pleiades_data/images/%s/im01.tif' % (img_name)
-    im2 = 'pleiades_data/images/%s/im02.tif' % (img_name)
-    im1_color = 'pleiades_data/images/%s/im01_color.tif' % (img_name)
-    prev1 = 'pleiades_data/images/%s/prev01.tif' % (img_name)
+    im1 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, reference_image_id)
+    im2 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, secondary_image_id)
+    im1_color = 'pleiades_data/images/%s/im%02d_color.tif' % (img_name, reference_image_id)
+    prev1 = 'pleiades_data/images/%s/prev%02d.tif' % (img_name, reference_image_id)
     pointing = 'pleiades_data/images/%s/pointing_correction.txt' % (img_name)
-    rpc1 = 'pleiades_data/rpc/%s/rpc01.xml' % (img_name)
-    rpc2 = 'pleiades_data/rpc/%s/rpc02.xml' % (img_name)
+    rpc1 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
+    rpc2 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, secondary_image_id)
     
     # output files
-    rect1 = '/tmp/%s1.tif' % (exp_name)
-    rect2 = '/tmp/%s2.tif' % (exp_name)
-    hom1  = '/tmp/%s_hom1.txt' % (exp_name)
-    hom2  = '/tmp/%s_hom2.txt' % (exp_name)
-    outrpc1 = '/tmp/%s_rpc1.xml' % (exp_name)
-    outrpc2 = '/tmp/%s_rpc2.xml' % (exp_name)
-    rect1_color = '/tmp/%s1_color.tif' % (exp_name)
+    rect1 = '/tmp/%s%d.tif' % (exp_name, reference_image_id)
+    rect2 = '/tmp/%s%d.tif' % (exp_name, secondary_image_id)
+    hom1  = '/tmp/%s_hom%d.txt' % (exp_name, reference_image_id)
+    hom2  = '/tmp/%s_hom%d.txt' % (exp_name, secondary_image_id)
+    outrpc1 = '/tmp/%s_rpc%d.xml' % (exp_name, reference_image_id)
+    outrpc2 = '/tmp/%s_rpc%d.xml' % (exp_name, secondary_image_id)
+    rect1_color = '/tmp/%s%d_color.tif' % (exp_name, reference_image_id)
     disp    = '/tmp/%s_disp.pgm'   % (exp_name)
     mask    = '/tmp/%s_mask.png'   % (exp_name)
     cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
@@ -88,10 +91,8 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None):
     ## 2. block-matching
 #    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
 #        'hirschmuller08', disp_min, disp_max, extra_params='3')
-#    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-#        'hirschmuller08_laplacian', disp_min, disp_max)
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        'tvl1', disp_min, disp_max)
+        global_params.matching_algorithm, disp_min, disp_max)
 
 
     ## 3. triangulation
@@ -182,11 +183,16 @@ if __name__ == '__main__':
     img_name = 'montevideo'
     exp_name = 'pza_independencia'
     x, y, w, h = 13025, 26801, 2112, 1496
-    exp_name = 'fing_msmw'
+    exp_name = 'fing_tvl1'
     x, y, w, h = 19845, 29178, 1700, 1700
 
-
-    # call main
+    # main call: STEREO PAIR
     main(img_name, exp_name, x, y, w, h)
+
+    # main call: TRISTEREO
+#    exp_name = 'fing_tvl1_21'
+#    main(img_name, exp_name, x, y, w, h, 2, 1)
+#    exp_name = 'fing_tvl1_23'
+#    main(img_name, exp_name, x, y, w, h, 2, 3)
 
 
