@@ -149,7 +149,7 @@ def cost_function(v, rpc1, rpc2, matches, alpha=0.01):
     cost *= alpha
     cost += np.sum(e)
 
-    print cost
+    #print cost
     return cost
 
 
@@ -331,6 +331,20 @@ def save_sift_matches_all_datasets(data):
         m = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, 'load', None,
             1000, fname)
 
+
+def print_params(v):
+    """
+    Display the pointing correction parameters.
+
+    Args:
+        v: 1D numpy array of length 4
+
+    This function is called by the fmin_bfgs optimization function at each
+    iteration, to display the current values of the parameters.
+    """
+    print 'rotation: %.3e, translation: (%.3e, %.3e), horizontal shear: %.3e' %(v[0],
+        v[1], v[2], v[3])
+
 def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     """
     Runs the pointing correction on a pair of Pleiades images.
@@ -361,8 +375,11 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     from scipy.optimize import fmin_bfgs
     print "running optimization using %d matches" % len(matches)
     v0 = np.zeros((1, 4))
-    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=30,
-        retall=True)[0]
+    v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=20, callback=print_params)[0]
+    # default values are:
+    # fmin_bfgs(f, x0, fprime=None, args=(), gtol=1e-05, norm=inf,
+    # epsilon=1.4901161193847656e-08, maxiter=None, full_output=0, disp=1,
+    # retall=0, callback=None)
 
     return euclidean_transform_matrix(v)
 
@@ -377,6 +394,10 @@ def optimize_pair_all_datasets(data):
     Returns:
         nothing. For each dataset, it saves the computed correction matrix in a
         txt file named dataset/pointing_correction_matrix.txt.
+
+    It uses precomputed matches, stored in dataset/sift_matches.txt. These
+    matches are usually computed with the save_sift_matches_all_datasets
+    function.
     """
     for f in os.listdir(data):
         dataset = os.path.join(data, f)
@@ -387,7 +408,12 @@ def optimize_pair_all_datasets(data):
         rpc1 = rpc_model.RPCModel(rpc1)
         rpc2 = rpc_model.RPCModel(rpc2)
         matches_file = os.path.join(dataset, 'sift_matches.txt')
-        matches = np.loadtxt(matches_file)
-        out = os.path.join(dataset, 'pointing_correction_matrix.txt')
-        A = optimize_pair(im1, im2, rpc1, rpc2, None, matches)
-        np.savetxt(out, A)
+        try:
+            with open(matches_file, 'r'):
+                matches = np.loadtxt(matches_file)
+                out = os.path.join(dataset, 'pointing_correction_matrix.txt')
+                print f
+                A = optimize_pair(im1, im2, rpc1, rpc2, None, matches)
+                np.savetxt(out, A)
+        except Exception:
+                pass
