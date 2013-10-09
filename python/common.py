@@ -217,7 +217,7 @@ def rgbi_to_rgb(im):
         output rgb image
     """
     out = tmpfile('.tif')
-    run('plambda %s "x[0] x[1] 0.6 * x[3] 0.4 * + x[2] join3" | iion - %s'%(im,
+    run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" | iion - %s'%(im,
                                                                            out))
     return out
 
