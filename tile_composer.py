@@ -1,4 +1,4 @@
-from main_script_pairs2 import main
+from main_script_pairs import main
 from python import common
 
 img_name = 'uy1'
