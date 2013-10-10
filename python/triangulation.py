@@ -39,14 +39,22 @@ def transfer_height_map(height, msk, H, rpc, x, y, w, h, zoom, out_height,
         out_height: path to the output height map
         out_msk: path to the output mask
     """
+    # write the matrix associated to crop
     A = common.matrix_translation(-x, -y)
     f = 1.0/zoom
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
     H_crop = common.tmpfile('.txt')
     np.savetxt(H_crop, A)
+
+    # run the height_rpc_move binary
+    tmp_h = common.tmpfile('.tif')
     common.run("height_rpc_move %s %s %s %s %s %s %s %s %d %d" % (rpc, H,
-        height, msk, rpc, H_crop, out_height, out_msk, w*f, h*f))
+        height, msk, rpc, H_crop, tmp_h, out_msk, w*f, h*f))
+
+    # replace the -inf with nan
+    # implements: if isinf(x) then nan, else x
+    common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
     return
 
 
