@@ -1,3 +1,42 @@
+import numpy as np
+import common
+import piio
+
+def register_heights(im1, im2):
+    """
+    Affine registration of heights.
+    Args:
+        im1: first height map
+        im2: second height map, to be registered on the first one
+
+    Returns
+        path to the registered second height map
+    """
+    # we search the (a, b) vector that minimizes the following sum (over
+    # all the pixels):
+    \sum (im1[i] - (a*im2[i]+b))^2
+
+    # first read the images and store them as numpy 1D arrays, removing all the
+    # nans and inf
+    i1 = piio.read(im1).ravel() #np.ravel() gives a 1D view
+    i2 = piio.read(im2).ravel()
+    ind = np.logical_and(np.isfinite(i1), np.isfinite(i2))
+    h1 = i1[ind]
+    h2 = i2[ind]
+
+    # it is a least squares minimization problem
+    A = np.vstack((h2, h2*0+1)).T
+    b = h1
+    z = np.linalg.lstsq(A, b)[0]
+    a = z[0]
+    b = z[1]
+
+    # apply the affine transform and return the modified im2
+    out = common.tmpfile('.tif')
+    common.run('plambda %s "x %f * %f +" > %s' % (im2, a, b, out))
+    return out
+
+
 def merge(im1, im2, thresh, out):
     """
     Args:
