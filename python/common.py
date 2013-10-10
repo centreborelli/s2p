@@ -137,12 +137,12 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
 def image_safe_zoom_fft(im, f):
     """
     zooms im by a factor: f∈[0,1] for zoom in, f∈[1 +inf] for zoom out
-    It works with the fft representation of the symmetrized im thus it 
+    It works with the fft representation of the symmetrized im thus it
     controls the Gibbs artifacts.
-    In case of zoom out it filters the image before truncating the 
+    In case of zoom out it filters the image before truncating the
     spectrum, for zoom in it performs a zero padding.
     Because of the discrete frequency representation the zero padding/
-    truncation may yield a final zoom factor that differs from the 
+    truncation may yield a final zoom factor that differs from the
     desired one, particularly for small source or target images.
     """
     out = tmpfile('.tif')
