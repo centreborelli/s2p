@@ -18,7 +18,7 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None, reference
        from python import global_params
     
        global_params.subsampling_factor=2
-       global_params.subsampling_factor_registration=4
+       global_params.subsampling_factor_registration=2
 
        # select matching algorithm:  'tvl1','msmw', 'hirschmuller08', hirschmuller08_laplacian'
        global_params.matching_algorithm='tvl1'
@@ -58,7 +58,7 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None, reference
     ## 0. select ROI
     try:
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except NameError:
+    except (NameError,TypeError):
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
@@ -186,8 +186,16 @@ if __name__ == '__main__':
     exp_name = 'fing_tvl1'
     x, y, w, h = 19845, 29178, 1700, 1700
 
-    # main call: STEREO PAIR
-    main(img_name, exp_name, x, y, w, h)
+
+    img_name = 'new_york'
+    exp_name = 'manhattan'
+
+
+    # main call: STEREO PAIR WITHOUT ROI
+    main(img_name, exp_name)
+
+#    # main call: STEREO PAIR WITH ROI
+#    main(img_name, exp_name, x, y, w, h)
 
     # main call: TRISTEREO
 #    exp_name = 'fing_tvl1_21'
