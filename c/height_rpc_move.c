@@ -99,8 +99,8 @@ static int main_height_rpc_move(int c, char *v[])
 
    //read the parameters
    struct rpc rpca[1];
-   struct rpc rpcb[1]; 
-	double Ha[3][3], Hb[3][3];
+   struct rpc rpcb[1];
+   double Ha[3][3], Hb[3][3];
    float *heightA, *mskA;
    int nx,ny,nch;
    char *f_outheightB=NULL;
@@ -116,8 +116,8 @@ static int main_height_rpc_move(int c, char *v[])
    read_matrix(Hb,v[i]);                                       i++; //6
    f_outheightB = v[i];                                        i++; //7
    f_outmskB    = v[i];                                        i++; //8
-   outnx = (c>i)? atoi(v[i]): nx;                                 i++; //9
-   outny = (c>i)? atoi(v[i]): ny;                                 i++; //10
+   outnx = (c>i)? atoi(v[i]): nx;                              i++; //9
+   outny = (c>i)? atoi(v[i]): ny;                              i++; //10
 
 
 
@@ -142,7 +142,7 @@ static int main_height_rpc_move(int c, char *v[])
          int pos = x + nx*y;
          if (  mskA[pos] > 0) {
             double hA = heightA[pos];
-            double p0[3] = {x,y,1}; 
+            double p0[3] = {x,y,1};
             double p1[3], q0[3], q1[3];
 
             applyHom(q0,invHa,p0);
@@ -167,7 +167,7 @@ static int main_height_rpc_move(int c, char *v[])
    }
 
 
-   // save re-projected disparity and mask 
+   // save re-projected disparity and mask
    iio_save_image_float_vec(f_outheightB, outheightB, outnx,outny, 1);
    iio_save_image_float_vec(f_outmskB, outmskB, outnx,outny, 1);
 

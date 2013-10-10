@@ -20,6 +20,36 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err):
     return
 
 
+def transfer_height_map(height, msk, H, rpc, x, y, w, h, zoom, out_height,
+    out_msk):
+    """
+    Transfer the heights computed on the rectified grid to the original
+    Pleiades image grid.
+
+    Args:
+        height: path to the input height map (on the rectified grid)
+        msk: path to the associated mask
+        H: path to the file containing the rectifying homography matrix
+        rpc: path to the xml file
+        x, y, w, h: four integers defining the rectangular ROI in the original
+            image.  (x, y) is the top-left corner, and (w, h) are the dimensions of
+            the rectangle.
+        zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
+            map
+        out_height: path to the output height map
+        out_msk: path to the output mask
+    """
+    A = common.matrix_translation(-x, -y)
+    f = 1.0/zoom
+    Z = np.diag([f, f, 1])
+    A = np.dot(Z, A)
+    H_crop = common.tmpfile('.txt')
+    np.savetxt(H_crop, A)
+    common.run("height_rpc_move %s %s %s %s %s %s %s %s %d %d" % (rpc, H,
+        height, msk, rpc, H_crop, out_height, out_msk, w*f, h*f))
+    return
+
+
 def colorize(crop_panchro, im_color, H, out_colorized):
     """
     Colorizes a Pleiades gray crop using low-resolution color information.
