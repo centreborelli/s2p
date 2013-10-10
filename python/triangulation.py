@@ -50,12 +50,7 @@ def transfer_height_map(height, msk, H, rpc, x, y, w, h, zoom, out_height,
     # run the height_rpc_move binary
     tmp_h = common.tmpfile('.tif')
     common.run("height_rpc_move %s %s %s %s %s %s %s %s %d %d" % (rpc, H,
-        height, msk, rpc, H_crop, tmp_h, out_msk, w*f, h*f))
-
-    # replace the -inf with nan
-    # implements: if isinf(x) then nan, else x
-    common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
-    return
+        height, msk, rpc, H_crop, out_height, out_msk, w*f, h*f))
 
 
 def colorize(crop_panchro, im_color, H, out_colorized):
@@ -108,6 +103,14 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud):
             homography
         cloud: path to the output points cloud (ply format)
     """
+
+    # replace the -inf with nan in the heights map, because colormesh filter
+    # out nans but not infs
+    tmp_h = common.tmpfile('.tif')
+    # implements: if isinf(x) then nan, else x
+    common.run('plambda %s "x isinf nan x if" > %s' % (heights, tmp_h))
+    return
+
     common.run("colormesh %s %s %s %s %s" % (crop_colorized, heights, rpc, H,
         cloud))
     return
