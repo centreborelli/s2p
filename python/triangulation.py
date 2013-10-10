@@ -109,7 +109,6 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud):
     tmp_h = common.tmpfile('.tif')
     # implements: if isinf(x) then nan, else x
     common.run('plambda %s "x isinf nan x if" > %s' % (heights, tmp_h))
-    return
 
     common.run("colormesh %s %s %s %s %s" % (crop_colorized, heights, rpc, H,
         cloud))
