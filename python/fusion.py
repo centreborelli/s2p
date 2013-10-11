@@ -2,28 +2,10 @@ import numpy as np
 import common
 import piio
 
-def apply_median_filter(im, w, n):
-    """
-    Applies median filter.
-
-    Args:
-        im: path to the input image
-        w: window size
-        n: number of repetitions
-
-    Returns:
-        path to the filtered image
-    """
-    out = common.tmpfile('.tif')
-    common.run('cp %s %s' % (im, out))
-    for i in xrange(n):
-        common.run('morphoop %s median %d %s' % (out, w, out))
-    return out
-
-
 def register_heights(im1, im2):
     """
     Affine registration of heights.
+
     Args:
         im1: first height map
         im2: second height map, to be registered on the first one
@@ -37,8 +19,10 @@ def register_heights(im1, im2):
 
     # morphological operations on the two heights maps to fill interpolation
     # holes and remove high frequencies
-    im1_low_freq = apply_median_filter(im1, 3, 5)
-    im2_low_freq = apply_median_filter(im2, 3, 5)
+#    im1_low_freq = apply_median_filter(im1, 3, 5)
+#    im2_low_freq = apply_median_filter(im2, 3, 5)
+    im1_low_freq = common.image_safe_zoom_fft(im1, 4)
+    im2_low_freq = common.image_safe_zoom_fft(im2, 4)
 
     # first read the images and store them as numpy 1D arrays, removing all the
     # nans and inf

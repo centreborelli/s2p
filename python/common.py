@@ -174,6 +174,26 @@ def image_apply_homography(out, im, H, w, h):
     return
 
 
+def median_filter(im, w, n):
+    """
+    Applies median filter.
+
+    Args:
+        im: path to the input image
+        w: window size
+        n: number of repetitions
+
+    Returns:
+        path to the filtered image
+    """
+    out = tmpfile('.tif')
+    run('cp %s %s' % (im, out))
+    for i in xrange(n):
+        run('morphoop %s median %d %s' % (out, w, out))
+    return out
+
+
+
 def image_qauto(im):
     """
     Uniform requantization between between min and max intensity.
