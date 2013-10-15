@@ -176,7 +176,7 @@ def image_apply_homography(out, im, H, w, h):
 
 def image_qauto(im):
     """
-    Uniform requantization between between min and max intensity.
+    Uniform requantization between min and max intensity.
 
     Args:
         im: path to input image
@@ -360,6 +360,7 @@ def image_crop_LARGE(im, x, y, w, h):
        return image_crop_TIFF(im, x, y, w, h)
     else:
        print "image_crop_LARGE: the input image must be tif or tiff"
+       return image_crop(im, x, y, w, h)
 
 
 def image_pleiades_unsharpening_mtf():

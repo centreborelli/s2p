@@ -64,7 +64,7 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     The returned matches are the inliers of an epipolar model found with ransac.
     """
     # get sift matches
-    matches = rectification.matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
+    matches = rectification.matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
 
     # filter outliers with ransac
     # the binary is from Enric's imscript
