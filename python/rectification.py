@@ -49,7 +49,7 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig the rectangular ROI in the first image.
+        x, y, w, h: four integers defining the rectangular ROI in the first image.
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
 
