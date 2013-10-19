@@ -242,10 +242,10 @@ if __name__ == '__main__':
 #
     img_name = 'toulouse'
     exp_name = 'prison'
-    x = 20300
-    y = 19600
-    w = 600
-    h = 600
+    x = 20320
+    y = 17840
+    w = 500
+    h = 500
 #
 #   img_name = 'calanques'
 #   exp_name = 'collines'
@@ -295,11 +295,11 @@ if __name__ == '__main__':
 #    x, y, w, h = 19845, 29178, 1700, 1700
 
     # main call: STEREO PAIR
-    height_map = process_pair(img_name, exp_name, x, y, w, h)
-    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-    reference_image_id=1):
+#    height_map = process_pair(img_name, exp_name, x, y, w, h)
+#    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
+#    reference_image_id=1)
 
     # main call: TRISTEREO
     height_map = process_triplet(img_name, exp_name, x, y, w, h)
     generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-    reference_image_id=2):
+    reference_image_id=2)
