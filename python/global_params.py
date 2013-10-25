@@ -1,6 +1,6 @@
-subsampling_factor = 4
+subsampling_factor = 1
 # register using subsampled image
-subsampling_factor_registration = 4
+subsampling_factor_registration = 1
 
 # other parameters
 sift_match_thresh = 0.6

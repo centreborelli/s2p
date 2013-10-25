@@ -7,6 +7,7 @@ import rpc_model
 import rpc_utils
 import estimation
 import evaluation
+import visualisation
 import common
 
 
@@ -200,7 +201,6 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     if (flag == 'none'):
         t = 0
 
-
     # correct H2 with a translation
     H2 = np.dot(common.matrix_translation(-t, 0), H2)
     x2 = x2 - t
@@ -225,7 +225,7 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
 
     # for debug, print the vertical disparities. Should be zero.
     print "Residual vertical disparities: min, max, mean. Should be zero ------"
-    print np.min(y2 - y1), np.max(y2 - y1), np.mean(y1 - y2)
+    print np.min(y2 - y1), np.max(y2 - y1), np.mean(y2 - y1)
     return H2, dispx_min, dispx_max
 
 
@@ -315,6 +315,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     except ImportError:
         n = 5
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, n)
+    #visualisation.plot_matches_pleiades(im1, im2, rpc_matches)
     p1 = rpc_matches[:, 0:2]
     p2 = rpc_matches[:, 2:4]
 
@@ -361,6 +362,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     print "step 5: horizontal registration ------------------------------------"
     try:
         sift_matches = matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
+        visualisation.plot_matches_pleiades(im1, im2, sift_matches)
     except Exception:
         print 'something failed with sift matches'
         sys.exit()
@@ -368,11 +370,12 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     # filter sift matches with the known fundamental matrix
     F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
     try:
-        from python.global_params import epipolar_thresh
+        from global_params import epipolar_thresh
     except ImportError:
         epipolar_thresh = 2.0
     sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
         epipolar_thresh)
+    visualisation.plot_matches_pleiades(im1, im2, sift_matches)
     if not len(sift_matches):
         print """all the sift matches have been discarded by the epipolar
         constraint. This is probably due to the pointing error. Try with a

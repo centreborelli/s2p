@@ -123,9 +123,9 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
         height_unrect, mask_unrect)
 
     ## cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
-
+#    while common.garbage:
+#        common.run('rm ' + common.garbage.pop())
+#
     ## display results
     print "v %s %s %s %s" % (rect1, rect2, disp, mask)
 
@@ -177,6 +177,10 @@ def process_triplet(img_name=None, exp_name=None, x=None, y=None, w=None,
     h = '/tmp/%s_height_merged.tif' % (exp_name)
     fusion.merge(h_left, h_right, 5, h)
 
+    # cleanup
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
+
     return h
 
 
@@ -226,9 +230,12 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
         triangulation.compute_point_cloud(common.image_qauto(crop),
             height_map, rpc, trans, cloud)
 
+#    # cleanup
+#    while common.garbage:
+#        common.run('rm ' + common.garbage.pop())
+
     print "v %s %s %s" % (crop, crop_color, height_map)
     print "meshlab %s" % (cloud)
-
 
 
 if __name__ == '__main__':
@@ -242,13 +249,13 @@ if __name__ == '__main__':
 #
     img_name = 'toulouse'
     exp_name = 'prison'
-    x = 20320
-    y = 17840
+    x = 20240
+    y = 18560
     w = 500
     h = 500
-#
-#   img_name = 'calanques'
-#   exp_name = 'collines'
+
+#    img_name = 'calanques'
+#    exp_name = 'collines'
 #   x = 6600
 #   y = 28800
 #   w = 1000
@@ -295,11 +302,11 @@ if __name__ == '__main__':
 #    x, y, w, h = 19845, 29178, 1700, 1700
 
     # main call: STEREO PAIR
-#    height_map = process_pair(img_name, exp_name, x, y, w, h)
-#    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-#    reference_image_id=1)
+    height_map = process_pair(img_name, exp_name, x, y, w, h, 2, 1)
+    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
+        reference_image_id=2)
 
     # main call: TRISTEREO
-    height_map = process_triplet(img_name, exp_name, x, y, w, h)
-    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-    reference_image_id=2)
+#    height_map = process_triplet(img_name, exp_name, x, y, w, h)
+#    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
+#        reference_image_id=2)
