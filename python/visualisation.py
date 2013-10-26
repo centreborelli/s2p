@@ -9,7 +9,7 @@ def plot_line(im, x1, y1, x2, y2, colour):
     Args:
         im: 3D numpy array containing the image values. It may be stored as
             uint8 or float32.
-        x1, y1, x2, y2: coordinates of the line endpoints
+        x1, y1, x2, y2: integer coordinates of the line endpoints
         colour: list of length 3 giving the colour used for the plotted line
             (ie [r, g, b])
 
@@ -17,9 +17,6 @@ def plot_line(im, x1, y1, x2, y2, colour):
         a copy of the input numpy array, with the plotted lines on it. It means
         that the intensities of pixels located on the plotted line are changed.
     """
-    # convert endpoints to int
-    x1, y1, x2, y2 = np.round(x1), np.round(y1), np.round(x2), np.round(y2)
-
     # colour points of the line pixel by pixel. Loop over x or y, depending on
     # the biggest dimension.
     if np.abs(x2 - x1) >= np.abs(y2 - y1):
@@ -65,8 +62,8 @@ def plot_matches(im1, im2, matches):
     out[:h2, w1:w] = img2
 
     # define colors, according to min/max intensity values
-    out_min = min(np.min(img1), np.min(img2))
-    out_max = max(np.max(img1), np.max(img2))
+    out_min = min(np.nanmin(img1), np.nanmin(img2))
+    out_max = max(np.nanmax(img1), np.nanmax(img2))
     green = [out_min, out_max, out_min]
     blue = [out_min, out_min, out_max]
 
@@ -76,6 +73,8 @@ def plot_matches(im1, im2, matches):
         y1 = matches[i, 1]
         x2 = matches[i, 2] + w1
         y2 = matches[i, 3]
+        # convert endpoints to int (nn interpolation)
+        x1, y1, x2, y2 = np.round([x1, y1, x2, y2])
         plot_line(out, x1, y1, x2, y2, blue)
         out[y1, x1] = green
         out[y2, x2] = green
@@ -110,15 +109,16 @@ def plot_matches_pleiades(im1, im2, matches):
     y2 = np.min(matches[:, 3])
     h2 = np.max(matches[:, 3]) - y2
 
-    # add 20 pixels offset
-    x1 -= 20
-    y1 -= 20
-    x2 -= 20
-    y2 -= 20
-    w1 += 40
-    h1 += 40
-    w2 += 40
-    h2 += 40
+    # add 20 pixels offset and round. The image_crop_TIFF function will round
+    # off the coordinates before it does the crops.
+    x1 -= 20; x1 = np.round(x1)
+    y1 -= 20; y1 = np.round(y1)
+    x2 -= 20; x2 = np.round(x2)
+    y2 -= 20; y2 = np.round(y2)
+    w1 += 40; w1 = np.round(w1)
+    h1 += 40; h1 = np.round(h1)
+    w2 += 40; w2 = np.round(w2)
+    h2 += 40; h2 = np.round(h2)
 
     # do the crops
     crop1 = common.image_crop_TIFF(im1, x1, y1, w1, h1)

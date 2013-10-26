@@ -7,7 +7,7 @@ sift_match_thresh = 0.6
 disp_range_extra_margin = 0.2
 # number of ground control points per axis in matches from rpc generation
 n_gcp_per_axis = 5
-epipolar_thresh = 2
+epipolar_thresh = 0.1
 
 # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08', hirschmuller08_laplacian'
 matching_algorithm = 'tvl1'

@@ -179,6 +179,10 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     x2 = pt2[:, 0]
     y2 = pt2[:, 1]
 
+    # for debug, print the vertical disparities. Should be zero.
+    print "Residual vertical disparities: max, min, mean. Should be zero ------"
+    print np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1)
+
     # shear correction
     # we search the (s, b) vector that minimises \sum (x1 - (x2+s*y2+b))^2
     # it is a least squares minimisation problem
@@ -223,9 +227,6 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     else:
         dispx_max = (1-d) * dispx_max
 
-    # for debug, print the vertical disparities. Should be zero.
-    print "Residual vertical disparities: min, max, mean. Should be zero ------"
-    print np.min(y2 - y1), np.max(y2 - y1), np.mean(y2 - y1)
     return H2, dispx_min, dispx_max
 
 
@@ -341,13 +342,13 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     H2 = np.dot(H2, T2)
 
     # for debug
-    print "min, max, mean rectification error on rpc matches ------------------"
+    print "max, min, mean rectification error on rpc matches ------------------"
     tmp = common.points_apply_homography(H1, p1)
     y1 = tmp[:, 1]
     tmp = common.points_apply_homography(H2, p2)
     y2 = tmp[:, 1]
     err = np.abs(y1 - y2)
-    print np.min(err), np.max(err), np.mean(err)
+    print np.max(err), np.min(err), np.mean(err)
 
     print "step 4: pull back top-left corner of the ROI in the origin ---------"
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
@@ -376,6 +377,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
         epipolar_thresh)
     visualisation.plot_matches_pleiades(im1, im2, sift_matches)
+    print 'remaining sift matches', len(sift_matches)
     if not len(sift_matches):
         print """all the sift matches have been discarded by the epipolar
         constraint. This is probably due to the pointing error. Try with a
@@ -386,7 +388,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(sift_matches,
         H1, H2, w, h)
 
-    return H1, H2, disp_m, disp_M
+    return H1, H2, disp_m, disp_M, sift_matches
 
 
 def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
@@ -420,7 +422,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
     rpc2 = rpc_model.RPCModel(rpc2)
 
     # compute rectifying homographies
-    H1, H2, disp_min, disp_max = compute_rectification_homographies(im1, im2,
+    H1, H2, disp_min, disp_max, matches = compute_rectification_homographies(im1, im2,
         rpc1, rpc2, x, y, w, h, A)
 
     # compute output images size
@@ -441,6 +443,13 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
     # apply homographies and do the crops
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, subsampling_factor)
     homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, subsampling_factor)
+
+    # plot the matches
+    # transform the matches according to the homographies
+    pt1 = common.points_apply_homography(H1, matches[:, 0:2])
+    pt2 = common.points_apply_homography(H2, matches[:, 2:4])
+    to_show = visualisation.plot_matches(out1, out2, np.hstack((pt1, pt2)))
+    common.run('v %s' % to_show)
 
     #  If subsampling_factor the homographies are altered to reflect the zoom
     if subsampling_factor != 1:
