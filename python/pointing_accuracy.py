@@ -5,10 +5,12 @@ import rectification
 import rpc_utils
 import rpc_model
 import common
+import estimation
+import evaluation
 import os
 
 
-def evaluation(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
+def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
     """
     Measures the maximal pointing error on a Pleiades' pair of images.
 
@@ -44,6 +46,42 @@ def evaluation(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
 
     # return the highest one
     return np.max(np.abs(e))
+
+
+def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
+    """
+    Measures the maximal pointing error on a Pleiades' pair of images.
+
+    Args:
+        im1, im2: paths to the two Pleiades images (usually jp2 or tif)
+        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        x, y, w, h: four integers definig the rectangular ROI in the first image.
+            (x, y) is the top-left corner, and (w, h) are the dimensions of the
+            rectangle.
+        A (optional): 3x3 numpy array containing the pointing error correction
+            for im2.
+
+    Returns:
+        the highest pointing error, in the direction orthogonal to the epipolar
+        lines. This error is measured in pixels, and computed from an
+        approximated fundamental matrix.
+    """
+    matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    p1 = matches[:, 0:2]
+    p2 = matches[:, 2:4]
+
+    # apply pointing correction matrix, if available
+    if A is not None:
+        p2 = common.points_apply_homography(A, p2)
+
+    # estimate the fundamental matrix between the two views
+    rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
+    rpc_p1 = rpc_matches[:, 0:2]
+    rpc_p2 = rpc_matches[:, 2:4]
+    F = estimation.fundamental_matrix(np.hstack([rpc_p1, rpc_p2]))
+
+    # compute the highest pointing error
+    return evaluation.fundamental_matrix(F, matches)
 
 
 def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):

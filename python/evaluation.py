@@ -53,6 +53,7 @@ def fundamental_matrix(F, matches):
         d1 = distance_point_to_line(x, l)
         d2 = distance_point_to_line(xx, ll)
         d = max(d1, d2)
+#        print d # for debug only
         if (d > d_max):
             d_max = d
     return d_max

@@ -68,6 +68,8 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
         # implements: err = sqrt( dot(q-p2,q-p2) )
         tmp = q-p2
         err =  np.sqrt(np.diag(np.dot(tmp, tmp.T)))
+#       print np.arctan2(tmp[:, 1], tmp[:, 0]) # for debug
+#       print err # for debug
         h0 += h0_inc*HSTEP
         # implements: if fabs(h0_inc) < 0.0001:
         if np.max(np.fabs(h0_inc)) < 0.001:
