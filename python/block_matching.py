@@ -2,24 +2,24 @@
 
 import os
 import numpy as np
-from python import common
+import common
 
 
 # define paths of various bm binaries
-hirschmuller02 = '%s/../3rdparty/stereo_hirschmuller_2002/subpix.sh' % (
-    os.path.dirname( __file__))
+hirschmuller02 = '.%s/../3rdparty/stereo_hirschmuller_2002/subpix.sh' % (
+    os.path.dirname(__file__))
 
-hirschmuller08 = '%s/../3rdparty/stereo_hirschmuller_2008/callSGBM.sh' % (
-    os.path.dirname( __file__))
+hirschmuller08 = '.%s/../3rdparty/stereo_hirschmuller_2008/callSGBM.sh' % (
+    os.path.dirname(__file__))
 
-hirschmuller08_laplacian = '%s/../3rdparty/stereo_hirschmuller_2008/callSGBM_lap.sh' % (
-    os.path.dirname( __file__))
+hirschmuller08_laplacian = '.%s/../3rdparty/stereo_hirschmuller_2008/callSGBM_lap.sh' % (
+    os.path.dirname(__file__))
 
-msmw = '%s/../3rdparty/msmw/build/libstereo/iip_stereo_correlation_multi_win2' % (
-    os.path.dirname( __file__))
+msmw = '.%s/../3rdparty/msmw/build/libstereo/iip_stereo_correlation_multi_win2' % (
+    os.path.dirname(__file__))
 
-tvl1 = '%s/../3rdparty/tvl1flow_3/callTVL1.sh' % (
-    os.path.dirname( __file__))
+tvl1 = '.%s/../3rdparty/tvl1flow_3/callTVL1.sh' % (
+    os.path.dirname(__file__))
 
 def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max, extra_params=''):
     """
