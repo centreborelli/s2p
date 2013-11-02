@@ -124,8 +124,9 @@ float getsample_constant(float *x, int w, int h, int pd, int i, int j, int l)
 	return x[(i+j*w)*pd + l];
 }
 
-#ifdef _STRING_H
-#ifdef _STDLIB_H
+// test for inclusion of stdlib.h and string.h
+#if defined(EXIT_SUCCESS)
+#if defined(_STRING_H) || defined(_STRING_H_)
 static getsample_operator get_sample_operator(getsample_operator o)
 {
 	char *option = getenv("GETPIXEL"), *endptr;
@@ -148,8 +149,8 @@ static getsample_operator get_sample_operator(getsample_operator o)
 	}
 	return getsample_0;
 }
-#endif//_STDLIB_H
 #endif//_STRING_H
+#endif//EXIT_SUCCESS
 
 
 inline
