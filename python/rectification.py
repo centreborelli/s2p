@@ -376,8 +376,8 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
         epipolar_thresh = 2.0
     sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
         epipolar_thresh)
-    visualisation.plot_matches_pleiades(im1, im2, sift_matches)
     print 'remaining sift matches', len(sift_matches)
+    visualisation.plot_matches_pleiades(im1, im2, sift_matches)
     if not len(sift_matches):
         print """all the sift matches have been discarded by the epipolar
         constraint. This is probably due to the pointing error. Try with a
@@ -391,7 +391,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     return H1, H2, disp_m, disp_M, sift_matches
 
 
-def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
+def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc'):
     """
     Rectify a ROI in a pair of Pleiades images.
 
@@ -405,6 +405,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2. This matrix is usually estimated with the pointing_accuracy
             module.
+        flag (default: 'rpc'): option to decide wether to use rpc of sift
+            matches for the fundamental matrix estimation.
 
         This function uses the parameter subsampling_factor from the global_params module.
         If the factor z > 1 then the output images will be subsampled by a factor z.
@@ -422,8 +424,12 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
     rpc2 = rpc_model.RPCModel(rpc2)
 
     # compute rectifying homographies
-    H1, H2, disp_min, disp_max, matches = compute_rectification_homographies(im1, im2,
-        rpc1, rpc2, x, y, w, h, A)
+    if flag == 'rpc':
+        H1, H2, disp_min, disp_max, matches = compute_rectification_homographies(im1, im2,
+            rpc1, rpc2, x, y, w, h, A)
+    else:
+        H1, H2, disp_min, disp_max, matches = compute_rectification_homographies_from_sift(im1, im2,
+            rpc1, rpc2, x, y, w, h)
 
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
@@ -464,6 +470,70 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
         disp_max = ceil(disp_max/subsampling_factor)
 
     return H1, H2, disp_min, disp_max
+
+
+def compute_rectification_homographies_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
+    """
+    Computes rectifying homographies for a ROI in a pair of Pleiades images.
+
+    Args:
+        im1, im2: paths to the two Pleiades images (usually jp2 or tif)
+        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        x, y, w, h: four integers definig the rectangular ROI in the first image.
+            (x, y) is the top-left corner, and (w, h) are the dimensions of the
+            rectangle.
+
+    Returns:
+        H1, H2: Two 3x3 matrices representing the rectifying homographies to be applied
+            to the two images.
+        disp_min, disp_max: horizontal disparity range, computed on a set of
+            sift matches
+    """
+    # in brief: use ransac to estimate F from a set of sift matches, then use
+    # loop-zhang to estimate rectifying homographies.
+
+    matches = matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
+    #visualisation.plot_matches_pleiades(im1, im2, matches)
+    p1 = matches[:, 0:2]
+    p2 = matches[:, 2:4]
+
+    # the matching points are translated to be centered in 0, in order to deal
+    # with coordinates ranging from -1000 to 1000, and decrease imprecision
+    # effects of the loop-zhang rectification. These effects may become very
+    # important (~ 10 pixels error) when using coordinates around 20000.
+    pp1, T1 = center_2d_points(p1)
+    pp2, T2 = center_2d_points(p2)
+
+    F = estimation.fundamental_matrix_ransac(np.hstack([pp1, pp2]))
+    H1, H2 = estimation.loop_zhang(F, w, h)
+
+    # compose with previous translations to get H1, H2 in the big images frame
+    H1 = np.dot(H1, T1)
+    H2 = np.dot(H2, T2)
+
+    # for debug
+    print "max, min, mean rectification error on sift matches ------------------"
+    tmp = common.points_apply_homography(H1, p1)
+    y1 = tmp[:, 1]
+    tmp = common.points_apply_homography(H2, p2)
+    y2 = tmp[:, 1]
+    err = np.abs(y1 - y2)
+    print np.max(err), np.min(err), np.mean(err)
+
+    # pull back top-left corner of the ROI in the origin
+    roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
+    pts = common.points_apply_homography(H1, roi)
+    x0, y0 = common.bounding_box2D(pts)[0:2]
+    T = common.matrix_translation(-x0, -y0)
+    H1 = np.dot(T, H1)
+    H2 = np.dot(T, H2)
+
+    # add an horizontal translation to H2 to center the disparity range around
+    H2, disp_m, disp_M = register_horizontally(matches, H1, H2)
+    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(matches,
+        H1, H2, w, h)
+
+    return H1, H2, disp_m, disp_M, matches
 
 
 def main():
