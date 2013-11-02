@@ -20,46 +20,43 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err):
     return
 
 
-def transfer_height_map(height, msk, H, rpc, x, y, w, h, zoom, out_height,
-    out_msk):
+def transfer_map(in_map, ref_crop, hom, x, y, zoom, out_map):
     """
     Transfer the heights computed on the rectified grid to the original
     Pleiades image grid.
 
     Args:
-        height: path to the input height map (on the rectified grid)
-        msk: path to the associated mask
-        H: path to the file containing the rectifying homography matrix
-        rpc: path to the xml file
-        x, y, w, h: four integers defining the rectangular ROI in the original
-            image.  (x, y) is the top-left corner, and (w, h) are the dimensions of
-            the rectangle.
+        in_map: path to the input map, usually a height map or a mask, sampled
+            on the rectified grid
+        ref_crop: path to the reference crop sampled on the original grid
+        hom: path to the file containing the rectifying homography matrix
+        x, y: two integers defining the top-left corner of the rectangular ROI
+            in the original image.
         zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
             map
-        out_height: path to the output height map
-        out_msk: path to the output mask
+        out_map: path to the output map
     """
-    # write the matrix associated to crop
-    A = common.matrix_translation(-x, -y)
-    f = 1.0/zoom
-    Z = np.diag([f, f, 1])
-    A = np.dot(Z, A)
-    H_crop = common.tmpfile('.txt')
-    np.savetxt(H_crop, A)
+    # write the inverse of the resampling transform matrix. In brief it is:
+    # hom * translation * zoom
+    # This matrix transports the coordinates of the original croopped and
+    # zoomed grid (the one desired for out_height) to the rectified cropped and
+    # zoomed grid (the one we have for height)
+    Z = np.diag([zoom, zoom, 1])
+    A = common.matrix_translation(x, y)
+    H = np.loadtxt(hom)
+    H = np.dot(H, np.dot(A, Z))
 
-    # run the height_rpc_move binary
-    tmp_h = common.tmpfile('.tif')
-    common.run("height_rpc_move %s %s %s %s %s %s %s %s %d %d" % (rpc, H,
-        height, msk, rpc, H_crop, tmp_h, out_msk, w*f, h*f))
-
-    # fill the small holes (1 pix) with a median filtering
-    # it works only with inf (not nans. see morphoop binary)
-    tmp_h = common.median_filter(tmp_h, 3, 1)
+    # apply the homography
+    # write the 9 coefficients of the homography to a string, then call synflow
+    # to produce the flow, then backflow to apply it
+    hij = ' '.join(['%r' % num for num in H.flatten()])
+    common.run('synflow hom "%s" %s /dev/null - | BILINEAR=1 backflow - %s %s' % (
+        hij, ref_crop, in_map, out_map))
 
     # replace the -inf with nan in the heights map, because colormesh filter
     # out nans but not infs
     # implements: if isinf(x) then nan, else x
-    common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
+    #common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
 
 
 
