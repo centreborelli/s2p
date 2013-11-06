@@ -19,11 +19,11 @@ def find_corresponding_point(model_a, model_b, x, y, z):
 
     Arguments:
         model_a, model_b: two instances of the rpc_model.RPCModel class, or of
-            the projective_model.ProjModel class 
+            the projective_model.ProjModel class
         x, y, z: three 1D numpy arrrays, of the same length. x, y are the
         coordinates of pixels in the image, and z contains the altitudes of the
-        corresponding 3D point. 
-        
+        corresponding 3D point.
+
     Returns:
         xp, yp, z: three 1D numpy arrrays, of the same length as the input. xp,
             yp contains the coordinates of the projection of the 3D point in image
@@ -34,18 +34,19 @@ def find_corresponding_point(model_a, model_b, x, y, z):
     return (xp, yp, z)
 
 
+
 def compute_height(model_a, model_b, x1, y1, x2, y2):
     """
     Computes the height of a point given its location inside two images.
 
     Arguments:
         model_a, model_b: two instances of the rpc_model.RPCModel class, or of
-            the projective_model.ProjModel class 
+            the projective_model.ProjModel class
         x1, y1: two 1D numpy arrrays, of the same length, containing the
             coordinates of points in the first image.
         x2, y2: two 2D numpy arrrays, of the same length, containing the
             coordinates of points in the second image.
-        
+
     Returns:
         a 1D numpy array containing the list of computed heights.
     """
@@ -63,6 +64,10 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
         b = p2 - r0
         # implements:   h0_inc = dot(a,b) / dot(a,a)
         h0_inc = np.diag(np.dot(a, b.T)) / np.diag(np.dot(a, a.T))
+#        if np.any(np.isnan(h0_inc)):
+#            print x1, y1, x2, y2
+#            print a
+#            return h0, h0*0
         # implements:   q = r0 + h0_inc * a
         q = r0 + np.dot(np.diag(h0_inc), a)
         # implements: err = sqrt( dot(q-p2,q-p2) )
@@ -330,13 +335,43 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
     return lon, lat, alt
 
 
+def corresponding_roi(rpc1, rpc2, x, y, w, h):
+    """
+    Uses RPC functions to determine the region of im2 associated to the
+    specified ROI of im1.
+
+    Args:
+        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the first view. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
+
+    Returns:
+        four integers defining a ROI in the second view. This ROI is supposed
+        to contain the projections of the 3D points that are visible in the
+        input ROI.
+    """
+    m, M = altitude_range(rpc1, x, y, w, h)
+
+    # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
+    a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
+    b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
+    c = np.array([m, M,   m,   M,   m,   M,   m,   M])
+
+    # corresponding points in im2
+    xx, yy = find_corresponding_point(rpc1, rpc2, a, b, c)[0:2]
+
+    # return coordinates of the bounding box in im2
+    return common.bounding_box2D(np.vstack([xx, yy]).T)
+
+
 def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
     """
     Uses RPC functions to generate matches between two Pleiades images.
 
     Args:
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
+        x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the first view. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle. In the first view, the matches
             will be located in that ROI.
@@ -359,7 +394,7 @@ def world_to_image_correspondences_from_rpc(rpc, x, y, w, h, n):
 
     Args:
         rpc: an instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
+        x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle. The correspondences
             will be located in that ROI.

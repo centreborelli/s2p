@@ -65,18 +65,8 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
             The coordinate system is that of the big images.
             If no sift matches are found, then an exception is raised.
     """
-    m, M = rpc_utils.altitude_range(rpc1, x, y, w, h)
-
-    # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
-    a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
-    b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
-    c = np.array([m, M,   m,   M,   m,   M,   m,   M])
-
-    # corresponding points in im2
-    xx, yy = rpc_utils.find_corresponding_point(rpc1, rpc2, a, b, c)[0:2]
-    # bounding box in im2
-    x2, y2, w2, h2 = common.bounding_box2D(np.vstack([xx, yy]).T)
     x1, y1, w1, h1 = x, y, w, h
+    x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x, y, w, h)
 
     # do crops, to apply sift on reasonably sized images
     crop1 = common.image_crop_LARGE(im1, x1, y1, w1, h1)
