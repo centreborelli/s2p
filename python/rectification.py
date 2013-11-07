@@ -67,6 +67,8 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     """
     x1, y1, w1, h1 = x, y, w, h
     x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x, y, w, h)
+    x2, y2 = np.floor([x2, y2])
+    w2, h2 = np.ceil([w2, h2])
 
     # do crops, to apply sift on reasonably sized images
     crop1 = common.image_crop_LARGE(im1, x1, y1, w1, h1)

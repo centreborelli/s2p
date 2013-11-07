@@ -355,7 +355,7 @@ def image_crop_TIFF(im, x, y, w, h):
     The crop is made with the gdal_translate binary, from gdal library.
     """
     if (int(x) != x or int(y) != y):
-        print 'Warning: image_crop_LARGE will round the coordinates of your crop'
+        print 'Warning: image_crop_TIFF will round the coordinates of your crop'
 
     tmp = tmpfile('.tif')
     out = tmpfile('.tif')
