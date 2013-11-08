@@ -2,6 +2,8 @@
 
 import numpy as np
 from python import common
+from python import rpc_model
+from python import pointing_accuracy
 from python import rectification
 from python import block_matching
 from python import triangulation
@@ -55,7 +57,6 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     rpc1 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
     rpc2 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, secondary_image_id)
     prev1 = 'pleiades_data/images/%s/prev%02d.jpg' % (img_name, reference_image_id)
-    pointing = 'pleiades_data/images/%s/pointing_correction_%02d_%02d.txt' % (img_name, reference_image_id, secondary_image_id)
 
     # output files
     rect1 = '/tmp/%s%d.tif' % (exp_name, reference_image_id)
@@ -71,6 +72,8 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     height_unrect  = '/tmp/%s_height_unrect.tif' % (exp_name)
     mask_unrect    = '/tmp/%s_mask_unrect.png'   % (exp_name)
     subsampling_file = '/tmp/%s_subsampling.txt' % (exp_name)
+    pointing = '/tmp/%s_pointing_correction_%02d_%02d.txt' % (exp_name,
+        reference_image_id, secondary_image_id)
 
 
     ## select ROI
@@ -80,52 +83,56 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
-    ## copy the rpcs to the output directory, and save the subsampling factor
+    ## correct pointing error - no subsampling!
+    tmp = global_params.subsampling_factor_registration
+    global_params.subsampling_factor_registration = 1
+
+    r1 = rpc_model.RPCModel(rpc1)
+    r2 = rpc_model.RPCModel(rpc2)
+    m = pointing_accuracy.filtered_sift_matches_roi(im1, im2, r1, r2, x, y, w, h)
+    A = pointing_accuracy.optimize_pair(im1, im2, r1, r2, None, m)
+
+    global_params.subsampling_factor_registration = tmp
+
+    ## copy the rpcs to the output directory, save the subsampling factor and
+    # the pointing correction matrix
     copyfile(rpc1, outrpc1)
     copyfile(rpc2, outrpc2)
+    np.savetxt(pointing, A)
     np.savetxt(subsampling_file, np.array([global_params.subsampling_factor]))
+
+    ## rectification
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1,
+        rpc2, x, y, w, h, rect1, rect2, A)
 
     # ATTENTION if subsampling_factor is set the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
     # this fact
-
-    ## rectification
-    # If the pointing correction matrix is available, then use it. If not
-    # proceed without correction
-    try:
-        with open(pointing):
-            A = np.loadtxt(pointing)
-            H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2,
-                rpc1, rpc2, x, y, w, h, rect1, rect2, A)
-    except IOError:
-        H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1,
-            rpc2, x, y, w, h, rect1, rect2)
 
     # save homographies to tmp files
     np.savetxt(hom1, H1)
     np.savetxt(hom2, H2)
 
     ## block-matching
-#    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-#        'hirschmuller08', disp_min, disp_max, extra_params='3')
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
 
 
     ## triangulation
-    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask, height,
-        rpc_err)
+    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask,
+        height, rpc_err)
     try:
         zoom = global_params.subsampling_factor
     except NameError:
         zoom = 1
-    triangulation.transfer_height_map(height, mask, hom1, rpc1, x, y, w, h, zoom,
-        height_unrect, mask_unrect)
+    ref_crop = common.image_crop_TIFF(im1, x, y, w, h)
+    triangulation.transfer_map(height, ref_crop, hom1, x, y, zoom, height_unrect)
+    triangulation.transfer_map(mask, ref_crop, hom1, x, y, zoom, mask_unrect)
 
     ## cleanup
-#    while common.garbage:
-#        common.run('rm ' + common.garbage.pop())
-#
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
+
     ## display results
     print "v %s %s %s %s" % (rect1, rect2, disp, mask)
 
@@ -175,7 +182,7 @@ def process_triplet(img_name=None, exp_name=None, x=None, y=None, w=None,
 
     # merge the two height maps
     h = '/tmp/%s_height_merged.tif' % (exp_name)
-    fusion.merge(h_left, h_right, 5, h)
+    fusion.merge(h_left, h_right, 3, h)
 
     # cleanup
     while common.garbage:
@@ -230,9 +237,9 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
         triangulation.compute_point_cloud(common.image_qauto(crop),
             height_map, rpc, trans, cloud)
 
-#    # cleanup
-#    while common.garbage:
-#        common.run('rm ' + common.garbage.pop())
+    # cleanup
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
 
     print "v %s %s %s" % (crop, crop_color, height_map)
     print "meshlab %s" % (cloud)
@@ -240,19 +247,12 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
 
 if __name__ == '__main__':
 
-#   img_name = 'lenclio'
-#   exp_name = 'tournon'
-#   x = 15700
-#   y = 16400
-#   w = 1000
-#   h = 1000
-#
     img_name = 'toulouse'
     exp_name = 'prison'
-    x = 20240
-    y = 18560
-    w = 500
-    h = 500
+    x = 20380
+    y = 18600
+    w = 320
+    h = 300
 
 #    img_name = 'calanques'
 #    exp_name = 'collines'
@@ -302,11 +302,11 @@ if __name__ == '__main__':
 #    x, y, w, h = 19845, 29178, 1700, 1700
 
     # main call: STEREO PAIR
-    height_map = process_pair(img_name, exp_name, x, y, w, h, 2, 1)
-    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-        reference_image_id=2)
-
-    # main call: TRISTEREO
-#    height_map = process_triplet(img_name, exp_name, x, y, w, h)
+#    height_map = process_pair(img_name, exp_name, x, y, w, h, 2, 1)
 #    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
 #        reference_image_id=2)
+
+    # main call: TRISTEREO
+    height_map = process_triplet(img_name, exp_name, x, y, w, h)
+    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
+        reference_image_id=2)

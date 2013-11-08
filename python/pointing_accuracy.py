@@ -489,17 +489,15 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
 
     from scipy.optimize import fmin_bfgs
     from scipy.optimize import fmin_l_bfgs_b
-    from scipy.optimize import fmin
     print "running optimization using %d matches" % len(matches)
     v0 = np.zeros((1, 4))
     #v = fmin_bfgs(cost_function_linear, v0, args=(rpc1, rpc2, matches), epsilon=0.01, maxiter=10, callback=print_params)
-    #v = fmin_bfgs(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=10, callback=print_params)
     v, min_val, debug = fmin_l_bfgs_b(cost_function, v0, args=(rpc1, rpc2, matches),
             approx_grad=True,
             factr=1,
             bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)],
             maxiter=50, callback=print_params, disp=True)
-    #v = fmin(cost_function, v0, args=(rpc1, rpc2, matches), maxiter=50, callback=print_params, disp=True)
+
     # default values are:
     # fmin_bfgs(f, x0, fprime=None, args=(), gtol=1e-05, norm=inf,
     # epsilon=1.4901161193847656e-08, maxiter=None, full_output=0, disp=1,
