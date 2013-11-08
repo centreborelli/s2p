@@ -40,9 +40,14 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
 
     # crop a piece of the big input image, to which the homography will be
     # applied
+    # warning: as the crop uses integer coordinates, be careful to round off
+    # (x0, y0) before modifying the homograpy. You want the crop and the
+    # translation representing it do exactly the same thing.
     pts = [[0, 0], [w, 0], [w, h], [0, h]]
     inv_H_pts = common.points_apply_homography(np.linalg.inv(H), pts)
     x0, y0, w0, h0 = common.bounding_box2D(inv_H_pts)
+    x0, y0 = np.floor([x0, y0])
+    w0, h0 = np.ceil([w0, h0])
     tmp = common.image_crop_LARGE(im_in, x0, y0, w0, h0)
 
     # compensate the homography with the translation induced by the preliminary

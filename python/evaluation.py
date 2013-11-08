@@ -53,10 +53,40 @@ def fundamental_matrix(F, matches):
         d1 = distance_point_to_line(x, l)
         d2 = distance_point_to_line(xx, ll)
         d = max(d1, d2)
+#        print d # for debug only
         if (d > d_max):
             d_max = d
     return d_max
 
+def fundamental_matrix_L1(F, matches):
+    """
+    Evaluates the precision of a fundamental matrix against a set of point
+    correspondences.
+
+    Arguments:
+        F: fundamental matrix
+        matches: 2D array of size Nx4 containing a list of pairs of matching
+            points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
+            the point in the first view while (x2, y2) is the matching point in
+            the second view.
+
+    Returns:
+        the sum of symmetric residual error, ie the sum over all the
+        matches of the following quantity:
+                    max( d(x_i, F^Tx'_i), d(x'_i, Fx_i) ),
+        where we use the notations of Hartley and Zisserman
+    """
+    d_sum = 0
+    for i in range(len(matches)):
+        x  = np.array([matches[i, 0], matches[i, 1], 1])
+        xx = np.array([matches[i, 2], matches[i, 3], 1])
+        l = np.dot(F.T, xx)
+        ll  = np.dot(F, x)
+        d1 = distance_point_to_line(x, l)
+        d2 = distance_point_to_line(xx, ll)
+        d = max(d1, d2)
+        d_sum += d
+    return d_sum
 
 def camera_matrix(P, X, x):
     """

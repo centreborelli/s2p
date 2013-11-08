@@ -1,5 +1,7 @@
 all:
 	mkdir -p ../bin
+	cc -o ../bin/backflow -std=c99 -g -O3 -DNDEBUG iio.c backflow.c -lpng -ltiff -ljpeg
+	cc -o ../bin/synflow -std=c99 -g -O3 -DNDEBUG iio.c synflow.c -lpng -ltiff -ljpeg
 	cc -o ../bin/imprintf -std=c99 -g -O3 -DNDEBUG iio.c imprintf.c -lpng -ltiff -ljpeg
 	cc -o ../bin/plambda -std=c99 -g -O3 -DNDEBUG iio.c plambda.c -lpng -ltiff -ljpeg
 	cc -o ../bin/iion -std=c99 -g -O3 -DNDEBUG iio.c iion.c -lpng -ltiff -ljpeg
@@ -15,8 +17,8 @@ all:
 	cc -o ../bin/disp_to_h -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c rpc.c disp_to_h.c -lpng -ltiff -ljpeg
 	cc -o ../bin/colormesh -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c rpc.c colormesh.c -lpng -ltiff -ljpeg
 	cc -o ../bin/height_rpc_move -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c rpc.c height_rpc_move.c -lpng -ltiff -ljpeg
-	cc -o ../bin/veco -std=c99 -g -O3 -DNDEBUG iio.c veco.c -lpng -ltiff -ljpeg 
-	cc -o ../bin/morphoop -std=c99 -g -O3 -DNDEBUG iio.c morphoop.c -lpng -ltiff -ljpeg 
+	cc -o ../bin/veco -std=c99 -g -O3 -DNDEBUG iio.c veco.c -lpng -ltiff -ljpeg
+	cc -o ../bin/morphoop -std=c99 -g -O3 -DNDEBUG iio.c morphoop.c -lpng -ltiff -ljpeg
 	mkdir -p ../bin/monasse_refactored_build
 	cd ../bin/monasse_refactored_build; cmake ../../c/monasse_refactored; make
 	cp ../bin/monasse_refactored_build/bin/homography ../bin

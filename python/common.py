@@ -137,12 +137,12 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
 def image_safe_zoom_fft(im, f):
     """
     zooms im by a factor: f∈[0,1] for zoom in, f∈[1 +inf] for zoom out
-    It works with the fft representation of the symmetrized im thus it 
+    It works with the fft representation of the symmetrized im thus it
     controls the Gibbs artifacts.
-    In case of zoom out it filters the image before truncating the 
+    In case of zoom out it filters the image before truncating the
     spectrum, for zoom in it performs a zero padding.
     Because of the discrete frequency representation the zero padding/
-    truncation may yield a final zoom factor that differs from the 
+    truncation may yield a final zoom factor that differs from the
     desired one, particularly for small source or target images.
     """
     out = tmpfile('.tif')
@@ -150,6 +150,26 @@ def image_safe_zoom_fft(im, f):
     # FFT doesn't play nice with infinite values, so we remove them
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
     return out
+
+def image_zoom_out_morpho(im, f):
+    """
+    Image zoom out by morphological operation (median).
+
+    Args:
+        im: path to the input image
+        f: zoom out factor. It has to be a positive integer
+
+    Returns:
+        path to the output image
+    """
+    if (f != np.floor(f)):
+        print 'image_zoom_out_morpho: zoom factor has to be integer'
+        sys.exit()
+
+    out = tmpfile('.tif')
+    run('downsa e %d %s %s' % (f, im, out))
+    return out
+
 
 def image_apply_homography(out, im, H, w, h):
     """
@@ -172,6 +192,26 @@ def image_apply_homography(out, im, H, w, h):
     out_png = tmpfile('.png')
     run("homography %s %s %s %s 0 %d %d" % (im, Hf, out_png, out, w, h))
     return
+
+
+def median_filter(im, w, n):
+    """
+    Applies median filter.
+
+    Args:
+        im: path to the input image
+        w: window size
+        n: number of repetitions
+
+    Returns:
+        path to the filtered image
+    """
+    out = tmpfile('.tif')
+    run('cp %s %s' % (im, out))
+    for i in xrange(n):
+        run('morphoop %s median %d %s' % (out, w, out))
+    return out
+
 
 
 def image_qauto(im):
@@ -334,6 +374,9 @@ def image_crop_TIFF(im, x, y, w, h):
 
     The crop is made with the gdal_translate binary, from gdal library.
     """
+    if (int(x) != x or int(y) != y):
+        print 'Warning: image_crop_TIFF will round the coordinates of your crop'
+
     tmp = tmpfile('.tif')
     out = tmpfile('.tif')
 
@@ -356,6 +399,8 @@ def image_crop_TIFF(im, x, y, w, h):
 
 
 def image_crop_LARGE(im, x, y, w, h):
+    if (int(x) != x or int(y) != y):
+        print 'Warning: image_crop_LARGE will round the coordinates of your crop'
     if im.lower().endswith('tif') or im.lower().endswith('tiff'):
        return image_crop_TIFF(im, x, y, w, h)
     else:
