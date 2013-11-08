@@ -183,7 +183,7 @@ def fundamental_matrix(matches):
     return F
 
 
-def fundamental_matrix_ransac(matches):
+def fundamental_matrix_ransac(matches, precision=1.0):
     """
     Estimates the fundamental matrix given a set of point correspondences
     between two images, using ransac.
@@ -193,6 +193,8 @@ def fundamental_matrix_ransac(matches):
             points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
             the point in the first view while (x2, y2) is the matching point in
             the second view.
+        precision: optional parameter indicating the maximum error 
+            allowed for counting the inliers 
 
     Returns:
         the estimated fundamental matrix
@@ -208,11 +210,11 @@ def fundamental_matrix_ransac(matches):
     inliers = common.tmpfile('.txt')
     Ffile = common.tmpfile('.txt')
     common.run("""
-        ransac fmn 1000 1 7 %s < %s |
+        ransac fmn 1000 %f 7 %s < %s |
         grep parameters |
         awk \'{ print "[ " $3 " " $4 " " $5 " ; " $6 " " $7 " " $8 " ; " $9 " " $10 " " $11 " ] " }\' |
         tail -1 > %s
-        """ % (inliers, matchfile, Ffile) )
+        """ % (precision, inliers, matchfile, Ffile) )
     common.matrix_write(Ffile, (common.matrix_read(Ffile, 3, 3)).transpose())
     return common.matrix_read(Ffile, 3, 3)
 

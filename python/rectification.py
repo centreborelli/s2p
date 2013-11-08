@@ -42,7 +42,49 @@ def center_2d_points(pts):
     return np.vstack([new_x, new_y]).T, T
 
 
-def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
+
+def matches_from_sift(im1, im2):
+    """
+    Computes a list of sift matches between two images.
+
+    Args:
+        im1, im2: paths to the two images (usually jp2 or tif)
+
+        This function uses the parameter subsampling_factor_registration
+        from the global_params module. If factor > 1 then the registration
+        is performed over subsampled images, but the resulting keypoints
+        are then scaled back to conceal the subsampling
+
+    Returns:
+        matches: 2D numpy array containing a list of matches. Each line
+            contains one pair of points, ordered as x1 y1 x2 y2.
+            The coordinate system is that of the big images.
+            If no sift matches are found, then an exception is raised.
+    """
+    ## Try to import the global parameters module
+    #  it permits to pass values between different modules
+    try:
+        from global_params import subsampling_factor_registration
+        if subsampling_factor_registration != 1:
+            im1 = common.image_safe_zoom_fft(im1, subsampling_factor_registration)
+            im2 = common.image_safe_zoom_fft(im2, subsampling_factor_registration)
+    except ImportError:
+        subsampling_factor_registration = 1
+
+
+    # apply sift, then transport keypoints coordinates in the big images frame
+    kpts1 = common.image_sift_keypoints(im1, '')
+    kpts2 = common.image_sift_keypoints(im2, '')
+    try:
+        from global_params import sift_match_thresh
+    except ImportError:
+        sift_match_thresh = 0.6
+    matches = common.sift_keypoints_match(kpts1, kpts2, 1, sift_match_thresh)
+    # compensate coordinates for the crop and the zoom
+    return matches*subsampling_factor_registration
+
+
+def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     """
     Computes a list of sift matches between two Pleiades images.
 
@@ -75,33 +117,19 @@ def matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     T1 = common.matrix_translation(x1, y1)
     T2 = common.matrix_translation(x2, y2)
 
-    ## Try to import the global parameters module
-    #  it permits to pass values between different modules
-    try:
-        from global_params import subsampling_factor_registration
-        if subsampling_factor_registration != 1:
-            crop1 = common.image_safe_zoom_fft(crop1, subsampling_factor_registration)
-            crop2 = common.image_safe_zoom_fft(crop2, subsampling_factor_registration)
-    except ImportError:
-        subsampling_factor_registration = 1
+    # call sift matches for the images
+    matches = matches_from_sift(crop1, crop2)
 
-
-    # apply sift, then transport keypoints coordinates in the big images frame
-    kpts1 = common.image_sift_keypoints(crop1, '')
-    kpts2 = common.image_sift_keypoints(crop2, '')
-    try:
-        from global_params import sift_match_thresh
-    except ImportError:
-        sift_match_thresh = 0.6
-    matches = common.sift_keypoints_match(kpts1, kpts2, 1, sift_match_thresh)
     if matches.size:
         # compensate coordinates for the crop and the zoom
-        pts1 = common.points_apply_homography(T1, matches[:, 0:2]*subsampling_factor_registration)
-        pts2 = common.points_apply_homography(T2, matches[:, 2:4]*subsampling_factor_registration)
+        pts1 = common.points_apply_homography(T1, matches[:, 0:2])
+        pts2 = common.points_apply_homography(T2, matches[:, 2:4])
 
         return np.hstack([pts1, pts2])
     else:
         raise Exception("no sift matches")
+
+
 
 
 def filter_matches_epipolar_constraint(F, matches, thresh):
@@ -354,7 +382,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     # the origin, if sift matches are available
     print "step 5: horizontal registration ------------------------------------"
     try:
-        sift_matches = matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
+        sift_matches = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     except Exception:
         print 'something failed with sift matches'
         sys.exit()

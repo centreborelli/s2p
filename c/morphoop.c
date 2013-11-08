@@ -139,8 +139,10 @@ void morphoop(float *ptrI, int nc, int nr,  float *ptrS, int se_nc, int se_nr, i
          int i=0;
          for (k = kmin; k <= kmax; k++) // rows
             for (l = lmin; l <= lmax; l++)    // columns
-               if(ptrS[se_nc*(k-kmin) + (l-lmin)])
-                  pdata[i++] = ptrI[ p_sym(nc, nr, (m + l), (n + k))];
+               if(ptrS[se_nc*(k-kmin) + (l-lmin)]) {
+                  float v = ptrI[ p_sym(nc, nr, (m + l), (n + k))];
+                  if (!isnan(v)) pdata[i++] = v;
+               }
 
          if(strcmp(operation,"min")==0) {
             S = op_min(pdata, i);
