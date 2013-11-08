@@ -7,7 +7,6 @@ import rpc_model
 import rpc_utils
 import estimation
 import evaluation
-import visualisation
 import common
 
 
@@ -222,10 +221,12 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     return H2, dispx_min, dispx_max
 
 
-def update_minmax_range_extrapolating_registration_affinity(matches, H1, H2,w_roi,h_roi):
+def update_minmax_range_extrapolating_registration_affinity(matches, H1,
+        H2, w_roi, h_roi):
     """
-    Update the disparity range considering the extrapolation of the affine registration 
-    transformation. Extrapolate until the boundary of the region of interest
+    Update the disparity range considering the extrapolation of the affine
+    registration transformation. Extrapolate until the boundary of the region
+    of interest.
 
     Args:
         matches: list of pairs of 2D points, stored as a Nx4 numpy array
@@ -244,7 +245,7 @@ def update_minmax_range_extrapolating_registration_affinity(matches, H1, H2,w_ro
     y2 = pt2[:, 1]
 
     # estimate an affine transformation (tilt, shear and bias)
-    # from the matched keypoints 
+    # from the matched keypoints
     A = np.vstack((x2, y2, y2*0+1)).T
 #    A = x2[:, np.newaxis]
     b = x1
@@ -294,8 +295,8 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
             module.
 
     Returns:
-        H1, H2: Two 3x3 matrices representing the rectifying homographies to be applied
-            to the two images.
+        H1, H2: Two 3x3 matrices representing the rectifying homographies to be
+            applied to the two images.
         disp_min, disp_max: horizontal disparity range, computed on a set of
             sift matches
     """
@@ -308,7 +309,6 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     except ImportError:
         n = 5
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, n)
-    #visualisation.plot_matches_pleiades(im1, im2, rpc_matches)
     p1 = rpc_matches[:, 0:2]
     p2 = rpc_matches[:, 2:4]
 
@@ -355,13 +355,12 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     print "step 5: horizontal registration ------------------------------------"
     try:
         sift_matches = matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
-        visualisation.plot_matches_pleiades(im1, im2, sift_matches)
     except Exception:
         print 'something failed with sift matches'
         sys.exit()
 
     # filter sift matches with the known fundamental matrix
-    F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
+    F = np.dot(T2.T, F.dot(T1)) # convert F for big images coordinate frame
     try:
         from global_params import epipolar_thresh
     except ImportError:
@@ -369,7 +368,6 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
         epipolar_thresh)
     print 'remaining sift matches', len(sift_matches)
-    visualisation.plot_matches_pleiades(im1, im2, sift_matches)
     if not len(sift_matches):
         print """all the sift matches have been discarded by the epipolar
         constraint. This is probably due to the pointing error. Try with a
@@ -380,7 +378,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(sift_matches,
         H1, H2, w, h)
 
-    return H1, H2, disp_m, disp_M, sift_matches
+    return H1, H2, disp_m, disp_M
 
 
 def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc'):
@@ -400,9 +398,10 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc
         flag (default: 'rpc'): option to decide wether to use rpc of sift
             matches for the fundamental matrix estimation.
 
-        This function uses the parameter subsampling_factor from the global_params module.
-        If the factor z > 1 then the output images will be subsampled by a factor z.
-        The output matrices H1, H2, and the ranges are also updated accordingly:
+        This function uses the parameter subsampling_factor from the
+        global_params module.  If the factor z > 1 then the output images will
+        be subsampled by a factor z.  The output matrices H1, H2, and the
+        ranges are also updated accordingly:
         Hi = Z*Hi   with Z = diag(1/z,1/z,1)   and
         disp_min = disp_min/z  (resp _max)
 
@@ -417,11 +416,11 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc
 
     # compute rectifying homographies
     if flag == 'rpc':
-        H1, H2, disp_min, disp_max, matches = compute_rectification_homographies(im1, im2,
-            rpc1, rpc2, x, y, w, h, A)
+        H1, H2, disp_min, disp_max = compute_rectification_homographies(im1,
+            im2, rpc1, rpc2, x, y, w, h, A)
     else:
-        H1, H2, disp_min, disp_max, matches = compute_rectification_homographies_from_sift(im1, im2,
-            rpc1, rpc2, x, y, w, h)
+        H1, H2, disp_min, disp_max = compute_rectification_homographies_sift(
+            im1, im2, rpc1, rpc2, x, y, w, h)
 
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
@@ -442,13 +441,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, subsampling_factor)
     homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, subsampling_factor)
 
-    # plot the matches
-    # transform the matches according to the homographies
-    pt1 = common.points_apply_homography(H1, matches[:, 0:2])
-    pt2 = common.points_apply_homography(H2, matches[:, 2:4])
-    to_show = visualisation.plot_matches(out1, out2, np.hstack((pt1, pt2)))
-    common.run('v %s' % to_show)
-
     #  If subsampling_factor the homographies are altered to reflect the zoom
     if subsampling_factor != 1:
         from math import floor, ceil
@@ -464,7 +456,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc
     return H1, H2, disp_min, disp_max
 
 
-def compute_rectification_homographies_from_sift(im1, im2, rpc1, rpc2, x, y, w, h):
+def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     """
     Computes rectifying homographies for a ROI in a pair of Pleiades images.
 
@@ -485,7 +477,6 @@ def compute_rectification_homographies_from_sift(im1, im2, rpc1, rpc2, x, y, w, 
     # loop-zhang to estimate rectifying homographies.
 
     matches = matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
-    #visualisation.plot_matches_pleiades(im1, im2, matches)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
 
@@ -525,7 +516,7 @@ def compute_rectification_homographies_from_sift(im1, im2, rpc1, rpc2, x, y, w, 
     disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(matches,
         H1, H2, w, h)
 
-    return H1, H2, disp_m, disp_M, matches
+    return H1, H2, disp_m, disp_M
 
 
 def main():
