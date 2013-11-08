@@ -13,16 +13,9 @@ def register_heights(im1, im2):
     Returns
         path to the registered second height map
     """
-    # we search the (u, v) vector that minimizes the following sum (over
-    # all the pixels):
-    #\sum (im1[i] - (u*im2[i]+v))^2
-
-    # morphological operations on the two heights maps to fill interpolation
-    # holes and remove high frequencies
-#    im1_low_freq = apply_median_filter(im1, 3, 5)
-#    im2_low_freq = apply_median_filter(im2, 3, 5)
-    im1_low_freq = common.image_safe_zoom_fft(im1, 4)
-    im2_low_freq = common.image_safe_zoom_fft(im2, 4)
+    # remove high frequencies with a morphological zoom out
+    im1_low_freq = common.image_zoom_out_morpho(im1, 4)
+    im2_low_freq = common.image_zoom_out_morpho(im2, 4)
 
     # first read the images and store them as numpy 1D arrays, removing all the
     # nans and inf
@@ -30,20 +23,32 @@ def register_heights(im1, im2):
     i2 = piio.read(im2_low_freq).ravel()
     ind = np.logical_and(np.isfinite(i1), np.isfinite(i2))
     h1 = i1[ind]
-    print np.shape(i1)
-    print np.shape(h1)
     h2 = i2[ind]
 
-    # it is a least squares minimization problem
-    A = np.vstack((h2, h2*0+1)).T
-    b = h1
-    z = np.linalg.lstsq(A, b)[0]
-    u = z[0]
-    v = z[1]
+    # for debug
+    print np.shape(i1)
+    print np.shape(h1)
 
-    # apply the affine transform and return the modified im2
+#    # 1st option: affine
+#    # we search the (u, v) vector that minimizes the following sum (over
+#    # all the pixels):
+#    #\sum (im1[i] - (u*im2[i]+v))^2
+#    # it is a least squares minimization problem
+#    A = np.vstack((h2, h2*0+1)).T
+#    b = h1
+#    z = np.linalg.lstsq(A, b)[0]
+#    u = z[0]
+#    v = z[1]
+#
+#    # apply the affine transform and return the modified im2
+#    out = common.tmpfile('.tif')
+#    common.run('plambda %s "x %f * %f +" > %s' % (im2, u, v, out))
+
+    # 2nd option: translation only
+    v = np.mean(h1 - h2)
     out = common.tmpfile('.tif')
-    common.run('plambda %s "x %f * %f +" > %s' % (im2, u, v, out))
+    common.run('plambda %s "x %f +" > %s' % (im2, v, out))
+
     return out
 
 
@@ -72,4 +77,7 @@ def merge(im1, im2, thresh, out):
     #     return nan
     #   return x
     # return y
-    common.run('plambda %s %s "x isfinite y isfinite x y - fabs %f < x y + 2 / nan if x if y if" > %s' % (im1, im2, thresh, out))
+    common.run("""
+        plambda %s %s "x isfinite y isfinite x y - fabs %f < x y + 2 / nan if x
+        if y if" > %s
+        """ % ( im1, im2, thresh, out))

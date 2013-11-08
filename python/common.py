@@ -151,6 +151,26 @@ def image_safe_zoom_fft(im, f):
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
     return out
 
+def image_zoom_out_morpho(im, f):
+    """
+    Image zoom out by morphological operation (median).
+
+    Args:
+        im: path to the input image
+        f: zoom out factor. It has to be a positive integer
+
+    Returns:
+        path to the output image
+    """
+    if (f != np.floor(f)):
+        print 'image_zoom_out_morpho: zoom factor has to be integer'
+        sys.exit()
+
+    out = tmpfile('.tif')
+    run('downsa e %d %s %s' % (f, im, out))
+    return out
+
+
 def image_apply_homography(out, im, H, w, h):
     """
     Applies an homography to an image.
