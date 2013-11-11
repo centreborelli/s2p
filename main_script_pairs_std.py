@@ -100,6 +100,7 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
 
+    print "MISSING TRIANGULATION FOR PROJECTIVE MATRICES: Hartley 12.2 or 12.5"
     exit(0)
 
     ## 3. triangulation
@@ -109,8 +110,9 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
         zoom = global_params.subsampling_factor
     except NameError:
         zoom = 1
-    triangulation.transfer_height_map(height, mask, hom1, rpc1, x, y, w, h, zoom,
-        height_unrect, mask_unrect)
+    ref_crop = common.image_crop_TIFF(im1, x, y, w, h)
+    triangulation.transfer_map(height, ref_crop, hom1, x, y, zoom, height_unrect)
+    triangulation.transfer_map(mask, ref_crop, hom1, x, y, zoom, mask_unrect)
 
     ## 4. colorize and generate point cloud
     crop1 = common.image_crop_TIFF(im1, x, y, w, h)
