@@ -512,9 +512,25 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
     except ImportError:
         subsampling_factor = 1
 
-    # apply homographies and do the crops
+    # apply homographies and do the crops 
+    # THIS STEP IS HERE TO PRODUCE THE MASKS WHERE THE IMAGE IS KNOWN
+    # SURE THIS IS A CRAPPY WAY TO DO THIS, WE SHOULD DEFINITIVELY DO IT 
+    # SIMULTANEOUSLY WITH THE HOMOGRAPHIC TRANSFORMATION
+    msk1 = common.tmpfile('.png')
+    msk2 = common.tmpfile('.png')
+    common.run('plambda %s "x 255" | iion - %s'%(im1, msk1))
+    common.run('plambda %s "x 255" | iion - %s'%(im2, msk2))
+    homography_cropper.crop_and_apply_homography(msk1, msk1, H1, w0, h0, subsampling_factor)
+    homography_cropper.crop_and_apply_homography(msk2, msk2, H2, w0, h0, subsampling_factor)
+    # FINALLY : apply homographies and do the crops of the images
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, subsampling_factor)
     homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, subsampling_factor)
+    # COMBINE THE MASK TO REMOVE THE POINTS THAT FALL OUTSIDE THE IMAGE
+    common.run('plambda %s %s "x 200 > y nan if" | iion - %s'%(msk1, out1, out1))
+    common.run('plambda %s %s "x 200 > y nan if" | iion - %s'%(msk2, out2, out2))
+
+#    This also does the job but when subsampling_factor != 1 it fails (segfault: homography)
+#    TODO: FIX homography, maybe code a new one
 #    common.image_apply_homography(out1, im1, H1, w0, h0)
 #    common.image_apply_homography(out2, im2, H2, w0, h0)
 

@@ -43,7 +43,7 @@ bb=$(basename "$b")
 b_extension="${bb##*.}"
 b_name="${bb%.*}"
 if [ $a_extension == "tif" ]; then
-    thresholds=`qauto $a /tmp/$a_name.png 2>&1 |  cut -f2 -d=`
+    thresholds=`plambda $a "x isnan 0 x if" | qauto - /tmp/$a_name.png 2>&1 |  cut -f2 -d=`
     a=/tmp/$a_name.png
     # use the same threshods for the second image
     qeasy $thresholds $b /tmp/$b_name.png
@@ -53,4 +53,5 @@ fi
 #usage: ./build/SGBM im1 im2 out [mindisp(0) maxdisp(64) SADwindow(1) P1(0) P2(0) LRdiff(1)]
 echo "$rel_path_script/build/SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr"
 $rel_path_script/build/SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr
-plambda $disp "x isnan 0 255 if" | iion - $mask
+# the points are either unmatched or not present in the original image $1, we remove both
+plambda $disp $1 "x isnan y isnan or 0 255 if" | iion - $mask
