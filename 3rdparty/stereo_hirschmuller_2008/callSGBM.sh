@@ -53,5 +53,5 @@ fi
 #usage: ./build/SGBM im1 im2 out [mindisp(0) maxdisp(64) SADwindow(1) P1(0) P2(0) LRdiff(1)]
 echo "$rel_path_script/build/SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr"
 $rel_path_script/build/SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr
-# the points are either unmatched or not present in the original image $1, we remove both
-plambda $disp $1 "x isnan y isnan or 0 255 if" | iion - $mask
+# the points are either unmatched or not present in the original images $1/$2, we remove these points
+plambda $disp "x 0 join " | backflow - $2 | plambda $disp $1 - "x isnan y isnan z isnan or or 0 255 if" | iion - $mask
