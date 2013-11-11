@@ -22,8 +22,8 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     try:
        from python import global_params
     
-       global_params.subsampling_factor=1
-       global_params.subsampling_factor_registration=1
+       global_params.subsampling_factor=4
+       global_params.subsampling_factor_registration=4
 
        # select matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
        # hirschmuller08_laplacian'
@@ -89,7 +89,6 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, 
         rpc1,rpc2, x, y, w, h, rect1, rect2)
 
-    exit(0)
 
     # save homographies to tmp files
     np.savetxt(hom1, H1)
@@ -101,6 +100,7 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
 
+    exit(0)
 
     ## 3. triangulation
     triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask, height,
