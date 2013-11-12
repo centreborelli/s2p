@@ -7,30 +7,83 @@ from python import rectification_std as rectification
 from python import block_matching
 from python import triangulation
 
+# import the global parameters module
+# it permits to pass values between different modules
+try:
+    from python import global_params
+
+    # zoom factor (determines outputs' resolution)
+    global_params.subsampling_factor=4
+
+    # zoom factor used when searching for sift matches
+    global_params.subsampling_factor_registration=4
+
+    # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
+    # hirschmuller08_laplacian'
+    global_params.matching_algorithm='hirschmuller08'
+
+except ImportError:
+    pass
 
 #### DIFFERENCES: 
 # NO SRTM 
 # NO RPC
 
 
+def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
+    reference_image_id=1):
+    """
+    Args:
+        img_name: name of the dataset, located in the 'pleiades_data/images'
+            directory
+        exp_name: string used to identify the experiment
+        x, y, w, h: four integers defining the rectangular ROI in the original
+            panchro image. (x, y) is the top-left corner, and (w, h) are the
+            dimensions of the rectangle.
+        height_map: path to the height_map, produced by the process_pair of
+            process_triplet function
+        reference_image_id: id (1, 2 or 3) of the image used as the reference
+            image. The height map has been resampled on its grid.
+    """
+
+
+    rpc = 'data/%s/%04d.png.P' % (img_name, reference_image_id)
+    im = 'data/%s/%04d.png' % (img_name, reference_image_id)
+    im_color = 'data/%s/%04d.png' % (img_name, reference_image_id)   
+    crop   = '/tmp/%s_roi_ref%02d.tif' % (exp_name, reference_image_id)
+    crop_color = '/tmp/%s_roi_color_ref%02d.tif' % (exp_name, reference_image_id)
+    cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
+
+
+    # read the zoom value
+    zoom = global_params.subsampling_factor
+
+    # colorize, then generate point cloud
+    tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
+    tmp_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
+    common.run('cp %s %s' % (tmp_crop, crop))
+    A = common.matrix_translation(-x, -y)
+    f = 1.0/zoom
+    Z = np.diag([f, f, 1])
+    A = np.dot(Z, A)
+    trans = common.tmpfile('.txt')
+    np.savetxt(trans, A)
+    triangulation.compute_point_cloud(common.image_qauto(crop),
+            height_map, rpc, trans, cloud)
+
+    # cleanup
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
+
+    print "v %s %s %s" % (crop, crop_color, height_map)
+    print "meshlab %s" % (cloud)
+
+
+
+
+
 def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     reference_image_id=1, secondary_image_id=2):
-
-
-    ## Try to import the global parameters module
-    #  it permits to pass values between different modules
-    try:
-       from python import global_params
-    
-       global_params.subsampling_factor=4
-       global_params.subsampling_factor_registration=4
-
-       # select matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
-       # hirschmuller08_laplacian'
-       global_params.matching_algorithm='hirschmuller08'
-
-    except ImportError:
-      pass
 
 
     # input files
@@ -100,12 +153,12 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
 
-    print "MISSING TRIANGULATION FOR PROJECTIVE MATRICES: Hartley 12.2 or 12.5"
-    exit(0)
+    print "TRIANGULATION FOR PROJECTIVE MATRICES IS IMPLEMENTED IN PYTHON (THIS IS SLOW): Hartley 12.2 or 12.5"
 
     ## 3. triangulation
-    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask, height,
-          rpc_err)                                                                       ### GF: THIS SHOULD BE REPLACED
+    from python import disp_to_h_projective as triangulate_proj
+    triangulate_proj.compute_height_map(rpc1,rpc2,hom1,hom2,disp,mask, height, rpc_err)
+
     try:
         zoom = global_params.subsampling_factor
     except NameError:
@@ -114,12 +167,19 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     triangulation.transfer_map(height, ref_crop, hom1, x, y, zoom, height_unrect)
     triangulation.transfer_map(mask, ref_crop, hom1, x, y, zoom, mask_unrect)
 
+
     ## 4. colorize and generate point cloud
-    crop1 = common.image_crop_TIFF(im1, x, y, w, h)
-    trans1 = common.tmpfile('.txt')
-    np.savetxt(trans1, common.matrix_translation(-x, -y))
-    triangulation.compute_point_cloud(common.image_qauto(crop1),
-        height_unrect, rpc1, trans1, cloud)
+    exit(0)
+    generate_cloud(img_name, exp_name, x, y, w, h, height_unrect)
+
+    exit(0)
+
+#    crop1 = common.image_crop_TIFF(im1, x, y, w, h)
+#    trans1 = common.tmpfile('.txt')
+#    np.savetxt(trans1, common.matrix_translation(-x, -y))
+#
+#    triangulation.compute_point_cloud(common.image_qauto(crop1),
+#        height_unrect, rpc1, trans1, cloud)
 
     ### cleanup
     while common.garbage:
