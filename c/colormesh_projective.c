@@ -11,15 +11,14 @@
 
 #include "fail.c"
 
-#include "rpc.h"
 #include "read_matrix.c"
 
 
 static void apply_3x3(double y[3], double H[3][3], double x[3])
 {
-	y[0] = H[0][0]*x[0] + H[0][1]*x[1] + H[0][2];
-	y[1] = H[1][0]*x[0] + H[1][1]*x[1] + H[1][2];
-	y[2] = H[2][0]*x[0] + H[2][1]*x[1] + H[2][2];
+	y[0] = H[0][0]*x[0] + H[0][1]*x[1] + H[0][2]*x[2];
+	y[1] = H[1][0]*x[0] + H[1][1]*x[1] + H[1][2]*x[2];
+	y[2] = H[2][0]*x[0] + H[2][1]*x[1] + H[2][2]*x[2];
 }
 
 static void apply_homography(double y[2], double H[3][3], double x[2])
@@ -70,6 +69,9 @@ static void getxyz(double xyz[3], double P[3][4], int i, int j, double mu)
    xyz[2] = mu * ixx[2] - iP4[2];
 //   printf("%f %f %f\n", xyz[0], xyz[1],xyz[2]);
 }
+
+
+
 
 void write_ply_header(FILE* f, int npoints) {
     fprintf(f, "ply\n");

@@ -178,6 +178,8 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     ## 3. triangulation
     from python import disp_to_h_projective as triangulate_proj
     triangulate_proj.compute_height_map(rpc1,rpc2,hom1,hom2,disp,mask, height, rpc_err)
+#    common.run("disp_to_h_projective %s %s %s %s %s %s %s %s" % (rpc1, rpc2, hom1, hom2,
+#        disp, mask, height, rpc_err))
 
     try:
         zoom = global_params.subsampling_factor
