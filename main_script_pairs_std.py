@@ -13,10 +13,10 @@ try:
     from python import global_params
 
     # zoom factor (determines outputs' resolution)
-    global_params.subsampling_factor=4
+    global_params.subsampling_factor=2
 
     # zoom factor used when searching for sift matches
-    global_params.subsampling_factor_registration=4
+    global_params.subsampling_factor_registration=2
 
     # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
     # hirschmuller08_laplacian'
@@ -29,6 +29,21 @@ except ImportError:
 # NO SRTM 
 # NO RPC
 
+def compute_point_cloud(crop_colorized, heights, P, H, cloud):
+    """
+    Computes a color point cloud from a height map.
+
+    Args:
+        crop_colorized: path to the colorized rectified crop
+        heights: height map. Its size is the same as the crop_color image
+        P: path to file containing projection matrix 
+        H: path to the file containing the coefficients of the rectifying
+            homography
+        cloud: path to the output points cloud (ply format)
+    """
+    common.run("colormesh_projective %s %s %s %s %s" % (crop_colorized, heights, P, H,
+        cloud))
+    return
 
 def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
     reference_image_id=1):
@@ -55,6 +70,7 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
     cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
 
 
+
     # read the zoom value
     zoom = global_params.subsampling_factor
 
@@ -68,8 +84,12 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
     A = np.dot(Z, A)
     trans = common.tmpfile('.txt')
     np.savetxt(trans, A)
-    triangulation.compute_point_cloud(common.image_qauto(crop),
-            height_map, rpc, trans, cloud)
+    
+#    compute_point_cloud(common.image_qauto(crop),
+#            height_map, rpc, trans, cloud)
+    sz = common.image_size(crop)
+    compute_point_cloud(common.image_qauto(crop),
+          common.image_crop(height_map,0,0,sz[0],sz[1]) , rpc, trans, cloud)
 
     # cleanup
     while common.garbage:
@@ -169,27 +189,20 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
 
 
     ## 4. colorize and generate point cloud
-    exit(0)
-    generate_cloud(img_name, exp_name, x, y, w, h, height_unrect)
+    print (img_name, exp_name, x, y, w, h, height_unrect)
+    generate_cloud(img_name, exp_name, x, y, w, h, height_unrect, reference_image_id)
 
-    exit(0)
 
-#    crop1 = common.image_crop_TIFF(im1, x, y, w, h)
-#    trans1 = common.tmpfile('.txt')
-#    np.savetxt(trans1, common.matrix_translation(-x, -y))
-#
-#    triangulation.compute_point_cloud(common.image_qauto(crop1),
-#        height_unrect, rpc1, trans1, cloud)
 
     ### cleanup
     while common.garbage:
         common.run('rm ' + common.garbage.pop())
 
 
-    # display results
-    print "v %s %s %s %s" % (rect1, rect2, disp, mask)
-    print "v %s %s %s %s" % (crop1, crop1_color, height_unrect, mask_unrect)
-    print "meshlab %s" % (cloud)
+#    # display results
+#    print "v %s %s %s %s" % (rect1, rect2, disp, mask)
+#    print "v %s %s %s %s" % (crop1, crop1_color, height_unrect, mask_unrect)
+#    print "meshlab %s" % (cloud)
 
 
 
@@ -204,7 +217,7 @@ if __name__ == '__main__':
 
     # main call: TRISTEREO
     img_name = 'fountain324'
-#    exp_name = '32'
-#    main(img_name, exp_name, reference_image_id=3, secondary_image_id=2)
+    exp_name = '32'
+    main(img_name, exp_name, reference_image_id=3, secondary_image_id=2)
     exp_name = '34'
     main(img_name, exp_name, reference_image_id=3, secondary_image_id=4)

@@ -22,6 +22,39 @@ static void *freadwhole_f (FILE *f, long *on)
    return t;
 }
 
+int read_matrix_3x4(double H[3][4], char* name)
+{
+   // read the file
+   long number_of_bytes;
+   FILE* f = fopen(name,"r");
+   char* tmpstr = (char*) freadwhole_f(f, &number_of_bytes);
+   fclose(f);
+
+   // all of this just to add a wimzy space in front of the string
+   char str[number_of_bytes+2];
+   strcpy(str," ");
+   strncat(str, tmpstr, number_of_bytes+1);
+   free(tmpstr);
+
+   // read the 12 fileds of the matrix
+   char* ff=str;
+   int rr=0, r=0, nc=0;
+   double* HH = (double*) H;
+   while(rr++ < 12) {
+      // %*[][ \n\t\r,:;] excludes: '[' ']' ':' ';' '.' 'space' '\t' '\n' '\r'
+      // %n: number of read characters
+      r += sscanf(ff,"%*[][ (){}\n\t\r,:;]%lf%n", &HH[r],&nc); ff += nc;
+   }
+
+   // fail if the number entries is not 12
+   if(r!=12) {
+      fprintf(stderr, "Expecting 12 numbers in \"%s\", %d found\n", name, r);
+      abort();
+      return 0;
+   }
+
+   return 1;
+}
 
 int read_matrix(double H[3][3], char* name)
 {
