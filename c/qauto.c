@@ -16,11 +16,17 @@ static int compare_floats(const void *a, const void *b)
 static void get_rminmax(float *rmin, float *rmax, float *x, int n, int rb)
 {
 	float *tx = xmalloc(n*sizeof*tx);
+	int N = 0;
 	for (int i = 0; i < n; i++)
-		tx[i] = x[i];
-	qsort(tx, n, sizeof*tx, compare_floats);
+		if (!isnan(x[i]))
+			tx[N++] = x[i];
+	if (rb >= N/2) {
+		fprintf(stderr, "too many NANs");
+		abort();
+	}
+	qsort(tx, N, sizeof*tx, compare_floats);
 	*rmin = tx[rb];
-	*rmax = tx[n-1-rb];
+	*rmax = tx[N-1-rb];
 	free(tx);
 }
 
