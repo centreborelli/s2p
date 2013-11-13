@@ -173,13 +173,12 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
 
-    print "TRIANGULATION FOR PROJECTIVE MATRICES IS IMPLEMENTED IN PYTHON (THIS IS SLOW): Hartley 12.2 or 12.5"
 
-    ## 3. triangulation
-    from python import disp_to_h_projective as triangulate_proj
-    triangulate_proj.compute_height_map(rpc1,rpc2,hom1,hom2,disp,mask, height, rpc_err)
-#    common.run("disp_to_h_projective %s %s %s %s %s %s %s %s" % (rpc1, rpc2, hom1, hom2,
-#        disp, mask, height, rpc_err))
+    ## 3. triangulation FOR PROJECTIVE MATRICES DLT algorithm Hartley chapter 12.2 or 12.5
+#    from python import disp_to_h_projective as triangulate_proj
+#    triangulate_proj.compute_height_map(rpc1,rpc2,hom1,hom2,disp,mask, height, rpc_err)
+    common.run("disp_to_h_projective %s %s %s %s %s %s %s %s" % (rpc1, rpc2, hom1, hom2,
+        disp, mask, height, rpc_err))
 
     try:
         zoom = global_params.subsampling_factor
@@ -223,3 +222,5 @@ if __name__ == '__main__':
     main(img_name, exp_name, reference_image_id=3, secondary_image_id=2)
     exp_name = '34'
     main(img_name, exp_name, reference_image_id=3, secondary_image_id=4)
+#    exp_name = '35'
+#    main(img_name, exp_name, reference_image_id=3, secondary_image_id=5)

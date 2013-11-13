@@ -19,6 +19,7 @@ def triangulate_DLT(P1,P2,X1,X2):
     
     #solve
     U, s, V  = np.linalg.svd(A)
+    # the returned s is sorder in descending order and V is transposed 
     X3D = V[3,:]/V[3,3]
 
     # compute the distance of the projected point
