@@ -144,6 +144,8 @@ def image_safe_zoom_fft(im, f):
     truncation may yield a final zoom factor that differs from the
     desired one, particularly for small source or target images.
     """
+    if f == 1:
+        return im
     out = tmpfile('.tif')
     sz = image_size(im)
     # FFT doesn't play nice with infinite values, so we remove them

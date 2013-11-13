@@ -39,11 +39,11 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
             directory
         exp_name: string used to identify the experiment
         x, y, w, h: four integers defining the rectangular ROI in the reference
-            image.  (x, y) is the top-left corner, and (w, h) are the dimensions of
-            the rectangle.
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
         reference_image_id: id (1, 2 or 3 for the tristereo datasets, and 1 or
-            2 for the bistereo datasets) of the image used as the reference image
-            of the pair
+            2 for the bistereo datasets) of the image used as the reference
+            image of the pair
         secondary_image_id: id of the image used as the secondary image of the
             pair
 
@@ -125,7 +125,8 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
         zoom = global_params.subsampling_factor
     except NameError:
         zoom = 1
-    ref_crop = common.image_crop_TIFF(im1, x, y, w, h)
+    tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
+    ref_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
     triangulation.transfer_map(height, ref_crop, hom1, x, y, zoom, height_unrect)
     triangulation.transfer_map(mask, ref_crop, hom1, x, y, zoom, mask_unrect)
 
@@ -201,7 +202,7 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
         x, y, w, h: four integers defining the rectangular ROI in the original
             panchro image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
-        height_map: path to the height_map, produced by the process_pair of
+        height_map: path to the height_map, produced by the process_pair or
             process_triplet function
         reference_image_id: id (1, 2 or 3) of the image used as the reference
             image. The height map has been resampled on its grid.
