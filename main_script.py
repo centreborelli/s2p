@@ -16,10 +16,10 @@ try:
     from python import global_params
 
     # zoom factor (determines outputs' resolution)
-    global_params.subsampling_factor=1
+    global_params.subsampling_factor=4
 
     # zoom factor used when searching for sift matches
-    global_params.subsampling_factor_registration=1
+    global_params.subsampling_factor_registration=2
 
     # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
     # hirschmuller08_laplacian'
@@ -218,19 +218,21 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
     # read the zoom value
     zoom = global_params.subsampling_factor
 
-    # colorize, then generate point cloud
-    tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
-    tmp_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
-    common.run('cp %s %s' % (tmp_crop, crop))
+    # build the matrix of the zoom + translation transformation
     A = common.matrix_translation(-x, -y)
     f = 1.0/zoom
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
     trans = common.tmpfile('.txt')
     np.savetxt(trans, A)
+
+    # colorize, then generate point cloud
+    tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
+    tmp_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
+    common.run('cp %s %s' % (tmp_crop, crop))
     try:
         with open(im_color):
-            triangulation.colorize(crop, im_color, trans, crop_color)
+            triangulation.colorize(crop, im_color, x, y, zoom, crop_color)
             triangulation.compute_point_cloud(crop_color, height_map, rpc,
                 trans, cloud)
     except IOError:
@@ -243,7 +245,7 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
         common.run('rm ' + common.garbage.pop())
 
     print "v %s %s %s" % (crop, crop_color, height_map)
-    print "meshlab %s" % (cloud)
+    print "open %s" % (cloud)
 
 
 if __name__ == '__main__':
@@ -255,6 +257,11 @@ if __name__ == '__main__':
     w = 320
     h = 300
 
+#    w = 700
+#    h = 700
+#
+#    exp_name = 'aeroport'
+#    x, y, w, h = 9197, 9630, 1892, 1847
 #    img_name = 'calanques'
 #    exp_name = 'collines'
 #   x = 6600
@@ -269,18 +276,22 @@ if __name__ == '__main__':
 #   w = 1000
 #   h = 1000
 #
-#   img_name = 'mera'
-#   exp_name = 'crete'
-#   x = 11127
-#   y = 28545
-#   w = 1886
-#   h = 1755
+#    img_name = 'mera'
+#    exp_name = 'crete'
+#    x = 11127
+#    y = 28545
+#    w = 800
+#    h = 800
 #
 #   img_name = 'new_york'
 #   exp_name = 'manhattan'
 #
-#   img_name = 'ubaye'
-#   exp_name = 'pic'
+#    img_name = 'ubaye'
+#    exp_name = 'pic'
+#    x = 11127
+#    y = 13545
+#    w = 800
+#    h = 800
 #
 #   img_name = 'uy1'
 #   exp_name = 'campo'
@@ -303,11 +314,11 @@ if __name__ == '__main__':
 #    x, y, w, h = 19845, 29178, 1700, 1700
 
     # main call: STEREO PAIR
-#    height_map = process_pair(img_name, exp_name, x, y, w, h, 2, 1)
-#    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-#        reference_image_id=2)
-
-    # main call: TRISTEREO
-    height_map = process_triplet(img_name, exp_name, x, y, w, h)
+    height_map = process_pair(img_name, exp_name, x, y, w, h, 2, 1)
     generate_cloud(img_name, exp_name, x, y, w, h, height_map,
         reference_image_id=2)
+
+    # main call: TRISTEREO
+#    height_map = process_triplet(img_name, exp_name, x, y, w, h)
+#    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
+#        reference_image_id=2)
