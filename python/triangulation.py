@@ -60,29 +60,33 @@ def transfer_map(in_map, ref_crop, hom, x, y, zoom, out_map):
 
 
 
-def colorize(crop_panchro, im_color, H, out_colorized):
+def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     """
     Colorizes a Pleiades gray crop using low-resolution color information.
 
     Args:
-        crop_panchro: path to the panchro (ie gray) rectified crop
+        crop_panchro: path to the panchro (ie gray) crop
         im_color: path to the full color image (tiff or jp2)
-        H: path to the file containing the coefficients of the rectifying
-            homography, that was used to generate crop_panchro
+        x, y: coordinates of the top-left corner of crop_panchro, in the full
+            Pleiade image frame.
+        zoom: subsampling zoom-factor that was used to generate crop_panchro
         out_colorized: path to the output file
     """
-    # 1. Get a rectified and zoomed crop from the color image. It has to be
-    # sampled on exactly the same grid as the panchro rectified crop. To do
-    # that we compose the rectifying homography with a 4x zoom (because color
-    # pleiades images have 4x lower resolution).
-    # There is also a small horizontal translation (4 pixels at the panchro
-    # resolution)
-    H = np.loadtxt(H)
-    H_zoom = np.array([[4, 0, -4], [0, 4, 0], [0, 0, 1]])
-    H = np.dot(H, H_zoom)
+    # 1. Get a translated and zoomed crop from the color image. It has to be
+    # sampled on exactly the same grid as the panchro crop.
+    # To do that we compose the translation + zoom transformation with a 4x
+    # zoom (because color pleiades images have 4x lower resolution).  There is
+    # also a small horizontal translation (4 pixels at the panchro resolution)
+    # The resulting transformation is the composition of:
+    #   translation (-1 - x/4, -y/4)
+    #   zoom 4/z
     w, h = common.image_size(crop_panchro)
-    crop_ms = common.tmpfile('.tif')
-    homography_cropper.crop_and_apply_homography(crop_ms, im_color, H, w, h)
+    ww = np.ceil(w * zoom / 4.0)
+    hh = np.ceil(h * zoom / 4.0)
+    xx = np.floor(1 + x / 4.0)
+    yy = np.floor(y / 4.0)
+    crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
+    crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
