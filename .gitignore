@@ -1,9 +1,13 @@
 *.pyc
 *.o
 *.a
-bin
-3rdparty/GeographicLib-1.32/tools
 .DS_Store
+3rdparty/GeographicLib-1.32/tools
 pleiades_data/images/*/*.tif
 pleiades_data/images/*/*.jpg
+bin
 build
+data
+experiments
+python/iterate.dat
+3rdparty/stereo_hirschmuller_2008/testdata/
