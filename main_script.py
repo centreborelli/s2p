@@ -31,7 +31,7 @@ except ImportError:
 
 
 def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
-    reference_image_id=1, secondary_image_id=2):
+    reference_image_id=1, secondary_image_id=2, A_global=None):
     """
     Computes a height map from a Pair of Pleiades images.
 
@@ -47,6 +47,8 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
             image of the pair
         secondary_image_id: id of the image used as the secondary image of the
             pair
+        A_global (optional): global pointing correction matrix, used for
+            triangulation (but not for stereo-rectification)
 
     Returns:
         path to the height map, resampled on the grid of the reference image.
@@ -83,6 +85,8 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
     ## correct pointing error - no subsampling!
+    # TODO: replace this block with a call to the
+    # pointing_accuracy.compute_correction method
     tmp = global_params.subsampling_factor_registration
     global_params.subsampling_factor_registration = 1
 
@@ -113,8 +117,13 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
         global_params.matching_algorithm, disp_min, disp_max)
 
     ## triangulation
-    triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
-        height, rpc_err, A)
+    if A_global is not None:
+        triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
+                height, rpc_err, A_global)
+    else:
+        triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
+                height, rpc_err, A)
+
     try:
         zoom = global_params.subsampling_factor
     except NameError:
