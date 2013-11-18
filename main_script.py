@@ -16,20 +16,21 @@ try:
     from python import global_params
 
     # zoom factor (determines outputs' resolution)
-    global_params.subsampling_factor=4
+    global_params.subsampling_factor=1
 
     # zoom factor used when searching for sift matches
-    global_params.subsampling_factor_registration=2
+    global_params.subsampling_factor_registration=1
 
     # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
     # hirschmuller08_laplacian'
     global_params.matching_algorithm='hirschmuller08'
+#    global_params.matching_algorithm='msmw'
 
 except ImportError:
     pass
 
 
-def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
+def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
     reference_image_id=1, secondary_image_id=2):
     """
     Computes a height map from a Pair of Pleiades images.
@@ -61,8 +62,6 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     # output files
     rect1 = '/tmp/%s%d.tif' % (exp_name, reference_image_id)
     rect2 = '/tmp/%s%d.tif' % (exp_name, secondary_image_id)
-    hom1  = '/tmp/%s_hom%d.txt' % (exp_name, reference_image_id)
-    hom2  = '/tmp/%s_hom%d.txt' % (exp_name, secondary_image_id)
     outrpc1 = '/tmp/%s_rpc%d.xml' % (exp_name, reference_image_id)
     outrpc2 = '/tmp/%s_rpc%d.xml' % (exp_name, secondary_image_id)
     disp    = '/tmp/%s_disp.pgm'   % (exp_name)
@@ -101,34 +100,29 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     np.savetxt(pointing, A)
     np.savetxt(subsampling_file, np.array([global_params.subsampling_factor]))
 
-    ## rectification
-    H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1,
-        rpc2, x, y, w, h, rect1, rect2, A)
-
     # ATTENTION if subsampling_factor is set the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
     # this fact
 
-    # save homographies to tmp files
-    np.savetxt(hom1, H1)
-    np.savetxt(hom2, H2)
+    ## rectification
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1,
+        rpc2, x, y, w, h, rect1, rect2, A)
 
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
 
-
     ## triangulation
-    triangulation.compute_height_map(rpc1, rpc2, hom1, hom2, disp, mask,
-        height, rpc_err)
+    triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
+        height, rpc_err, A)
     try:
         zoom = global_params.subsampling_factor
     except NameError:
         zoom = 1
     tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
     ref_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
-    triangulation.transfer_map(height, ref_crop, hom1, x, y, zoom, height_unrect)
-    triangulation.transfer_map(mask, ref_crop, hom1, x, y, zoom, mask_unrect)
+    triangulation.transfer_map(height, ref_crop, H1, x, y, zoom, height_unrect)
+    triangulation.transfer_map(mask, ref_crop, H1, x, y, zoom, mask_unrect)
 
     ## cleanup
     while common.garbage:
@@ -140,8 +134,8 @@ def process_pair(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     return height_unrect
 
 
-def process_triplet(img_name=None, exp_name=None, x=None, y=None, w=None,
-    h=None, reference_image_id=2, left_image_id=1, right_image_id=3):
+def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
+    reference_image_id=2, left_image_id=1, right_image_id=3):
     """
     Computes a height map from three Pleiades images.
 

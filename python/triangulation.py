@@ -4,23 +4,33 @@ import numpy as np
 import common
 import homography_cropper
 
-def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err):
+def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     """
     Computes a height map from a disparity map, using rpc.
 
     Args:
         rpc1, rpc2: paths to the xml files
-        H1, H2: paths to the files containing the homography matrices
+        H1, H2: two 3x3 numpy arrays defining the rectifying homographies
         disp, mask: paths to the diparity and mask maps
         height: path to the output height map
         rpc_err: path to the output rpc_error of triangulation
+        A (optional): pointing correction matrix for im2
     """
-    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, H2,
+    # save homographies to files
+    hom1 = common.tmpfile('.txt')
+    hom2 = common.tmpfile('.txt')
+    np.savetxt(hom1, H1)
+    if A is not None:
+        np.savetxt(hom2, H2.dot(np.linalg.inv(A)))
+    else:
+        np.savetxt(hom2, H2)
+
+    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, hom1, hom2,
         disp, mask, height, rpc_err))
     return
 
 
-def transfer_map(in_map, ref_crop, hom, x, y, zoom, out_map):
+def transfer_map(in_map, ref_crop, H, x, y, zoom, out_map):
     """
     Transfer the heights computed on the rectified grid to the original
     Pleiades image grid.
@@ -29,7 +39,7 @@ def transfer_map(in_map, ref_crop, hom, x, y, zoom, out_map):
         in_map: path to the input map, usually a height map or a mask, sampled
             on the rectified grid
         ref_crop: path to the reference crop sampled on the original grid
-        hom: path to the file containing the rectifying homography matrix
+        H: numpy 3x3 array containing the rectifying homography
         x, y: two integers defining the top-left corner of the rectangular ROI
             in the original image.
         zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
@@ -37,19 +47,18 @@ def transfer_map(in_map, ref_crop, hom, x, y, zoom, out_map):
         out_map: path to the output map
     """
     # write the inverse of the resampling transform matrix. In brief it is:
-    # hom * translation * zoom
+    # homography * translation * zoom
     # This matrix transports the coordinates of the original croopped and
     # zoomed grid (the one desired for out_height) to the rectified cropped and
     # zoomed grid (the one we have for height)
     Z = np.diag([zoom, zoom, 1])
     A = common.matrix_translation(x, y)
-    H = np.loadtxt(hom)
-    H = np.dot(H, np.dot(A, Z))
+    HH = np.dot(H, np.dot(A, Z))
 
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow
     # to produce the flow, then backflow to apply it
-    hij = ' '.join(['%r' % num for num in H.flatten()])
+    hij = ' '.join(['%r' % num for num in HH.flatten()])
     common.run('synflow hom "%s" %s /dev/null - | BILINEAR=1 backflow - %s %s' % (
         hij, ref_crop, in_map, out_map))
 
