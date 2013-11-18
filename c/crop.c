@@ -12,7 +12,7 @@ int main (int argc, char **argv)
     int h = 1;
 
     /* parameter parsing - parameters*/
-    if (argc<3)
+    if (argc < 3)
     {
         fprintf(stderr, "too few parameters\n");
         fprintf(stderr, "crop an image of size WxH with X0,Y0 (integers) as\
@@ -22,24 +22,24 @@ int main (int argc, char **argv)
         return 1;
     }
 
-    if (argc>=4) x0 = atoi (argv[3]);
-    if (argc>=5) y0 = atoi (argv[4]);
-    if (argc>=6) w  = atoi (argv[5]);
-    if (argc>=7) h  = atoi (argv[6]);
+    if (argc >= 4) x0 = atoi (argv[3]);
+    if (argc >= 5) y0 = atoi (argv[4]);
+    if (argc >= 6) w  = atoi (argv[5]);
+    if (argc >= 7) h  = atoi (argv[6]);
     assert (w>0 && h>0);
 
-    int nc,nr,nch;
+    int nc, nr, nch;
     float *in = iio_read_image_float_vec(argv[1], &nc, &nr, &nch);
 
     float *out = malloc(w*h*nch*sizeof*out);
 
     // set default
-    for (int y=0;y<w*h*nch;y++) out[y]=0;
+    for (int y=0; y < w*h*nch; y++) out[y] = NAN;
 
     // copy
-    for (int y=y0; y<y0+h; y++)
-        for (int x=x0; x<x0+w; x++)
-            for (int c=0; c<nch; c++)
+    for (int y = y0; y < y0 + h; y++)
+        for (int x = x0; x < x0 + w; x++)
+            for (int c = 0; c < nch; c++)
             {
                 if (x>=0 && y>=0 && x<nc && y<nr)
                     out[c + ( (x-x0) + (y-y0)*w )*nch] = in[c+(x+y*nc)*nch];
