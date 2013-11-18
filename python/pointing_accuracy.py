@@ -8,6 +8,7 @@ import common
 import estimation
 import evaluation
 import visualisation
+import global_params
 import os
 
 
@@ -82,7 +83,7 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
     F = estimation.fundamental_matrix(rpc_matches)
 
     # compute the mean displacement from epipolar lines
-    d_sum = 0 
+    d_sum = 0
     print len(p1)
     for i in range(len(p1)):
         x  = np.array([p1[i, 0], p1[i, 1], 1])
@@ -268,8 +269,9 @@ def cost_function_linear(v, rpc1, rpc2, matches):
 
     return evaluation.fundamental_matrix_L1(F, np.hstack([matches[:, 0:2], p2]))
 
+
 def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
-        prev1=None, a=1000, outfile=None):
+        prev1=None, a=1000, x=None, y=None, w=None, h=None, outfile=None):
     """
     Computes a list of sift matches between two full Pleiades images.
 
@@ -281,8 +283,10 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
             automatically, or loaded from the file 'pointing_correction_rois.txt'.
         prev1 (optional): path to the jpg preview image of im1 (used in case of
             interactive mode)
-        a: length of the squared ROIs used to extract sift points, in the case
+        a: length of the squared tiles used to extract sift points, in the case
             of automatic mode
+        x, y, w, h (optional): use a big ROI and extract the five tiles from
+            there instead of from the full image.
         outfile (optional): path to a txt where to save the list of matches.
 
     Returns:
@@ -295,8 +299,14 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
     center, and four in the corners. The matches are consistent with an
     epipolar model in each of the zones.
     """
-    w = rpc1.lastCol
-    h = rpc1.lastRow
+    # if no big ROI is defined, use the full image
+    if x is None:
+        x = 0
+        y = 0
+        w = rpc1.lastCol
+        h = rpc1.lastRow
+
+    # initialize output array
     out = np.zeros(shape = (1, 4))
 
     if flag == 'automatic':
@@ -305,47 +315,47 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
             a = round(min(h, w)/4)
 
         # central zone
-        x = round((w-a)/2)
-        y = round((h-a)/2)
+        x0 = round((w-a)/2) + x
+        y0 = round((h-a)/2) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the central zone"
             print e
 
         # corner zones
-        x = round((1*w - 2*a)/4)
-        y = round((1*h - 2*a)/4)
+        x0 = round((1*w - 2*a)/4) + x
+        y0 = round((1*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 1"
             print e
 
-        x = round((3*w - 2*a)/4)
-        y = round((1*h - 2*a)/4)
+        x0 = round((3*w - 2*a)/4) + x
+        y0 = round((1*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 2"
             print e
 
-        x = round((1*w - 2*a)/4)
-        y = round((3*h - 2*a)/4)
+        x0 = round((1*w - 2*a)/4) + x
+        y0 = round((3*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 3"
             print e
 
-        x = round((3*w - 2*a)/4)
-        y = round((3*h - 2*a)/4)
+        x0 = round((3*w - 2*a)/4) + x
+        y0 = round((3*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 4"
@@ -444,7 +454,7 @@ def save_sift_matches_all_datasets(data):
         fname = os.path.join(dataset, 'sift_matches.txt')
         print fname
         m = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, 'load', None,
-            1000, fname)
+            1000, None, None, None, None, fname)
 
 
 def print_params(v):
@@ -539,3 +549,50 @@ def optimize_pair_all_datasets(data):
                 np.savetxt(out, A)
         except Exception as e:
                 print e
+
+def compute_correction(img_name, exp_name, x, y, w, h, reference_image_id=1,
+        secondary_image_id=2):
+    """
+    Computes pointing correction matrix for specific ROI
+
+    Args:
+        img_name: name of the dataset, located in the 'pleiades_data/images'
+            directory
+        exp_name: string used to identify the experiment
+        x, y, w, h: four integers defining the rectangular ROI in the reference
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle. The ROI may be as big as you want. If bigger than
+            1 Mpix, only five crops will be used to compute sift matches.
+        reference_image_id: id (1, 2 or 3 for the tristereo datasets, and 1 or
+            2 for the bistereo datasets) of the image used as the reference
+            image of the pair
+        secondary_image_id: id of the image used as the secondary image of the
+            pair
+
+    Returns:
+        a 3x3 matrix representing the planar transformation to apply to im2 in
+        order to correct the pointing error.
+    """
+    # input files
+    im1 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, reference_image_id)
+    im2 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, secondary_image_id)
+    rpc1 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
+    rpc2 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, secondary_image_id)
+    r1 = rpc_model.RPCModel(rpc1)
+    r2 = rpc_model.RPCModel(rpc2)
+
+    ## correct pointing error - no subsampling!
+    tmp = global_params.subsampling_factor_registration
+    global_params.subsampling_factor_registration = 1
+
+    if w*h < 1e6:
+        m = pointing_accuracy.filtered_sift_matches_roi(im1, im2, r1, r2, x, y,
+                w, h)
+    else:
+        m = pointing_accuracy.filtered_sift_matches_full_img(im1, im2, r1, r2,
+                'automatic', None, 1000, x, y, w, h)
+
+    global_params.subsampling_factor_registration = tmp
+
+    A = pointing_accuracy.optimize_pair(im1, im2, r1, r2, None, m)
+    return A
