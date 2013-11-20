@@ -8,26 +8,8 @@ from python import rectification
 from python import block_matching
 from python import triangulation
 from python import fusion
+from python import global_params
 from shutil import copyfile
-
-# import the global parameters module
-# it permits to pass values between different modules
-try:
-    from python import global_params
-
-    # zoom factor (determines outputs' resolution)
-    global_params.subsampling_factor=1
-
-    # zoom factor used when searching for sift matches
-    global_params.subsampling_factor_registration=1
-
-    # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
-    # hirschmuller08_laplacian'
-    global_params.matching_algorithm='hirschmuller08'
-#    global_params.matching_algorithm='msmw'
-
-except ImportError:
-    pass
 
 
 def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
