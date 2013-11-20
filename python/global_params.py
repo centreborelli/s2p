@@ -10,7 +10,7 @@ n_gcp_per_axis = 5
 epipolar_thresh = 0.5
 
 # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08', hirschmuller08_laplacian'
-matching_algorithm = 'tvl1'
+matching_algorithm = 'hirschmuller08'
 
 
 
