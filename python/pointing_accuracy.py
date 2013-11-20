@@ -586,13 +586,13 @@ def compute_correction(img_name, exp_name, x, y, w, h, reference_image_id=1,
     global_params.subsampling_factor_registration = 1
 
     if w*h < 1e6:
-        m = pointing_accuracy.filtered_sift_matches_roi(im1, im2, r1, r2, x, y,
+        m = filtered_sift_matches_roi(im1, im2, r1, r2, x, y,
                 w, h)
     else:
-        m = pointing_accuracy.filtered_sift_matches_full_img(im1, im2, r1, r2,
+        m = filtered_sift_matches_full_img(im1, im2, r1, r2,
                 'automatic', None, 1000, x, y, w, h)
 
     global_params.subsampling_factor_registration = tmp
 
-    A = pointing_accuracy.optimize_pair(im1, im2, r1, r2, None, m)
+    A = optimize_pair(im1, im2, r1, r2, None, m)
     return A
