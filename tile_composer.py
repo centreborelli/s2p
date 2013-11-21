@@ -4,6 +4,7 @@ from python import pointing_accuracy
 from python import global_params
 import main_script
 import numpy as np
+from multiprocessing import Process
 
 img_name = 'uy1'
 exp_name = 'campo1'
@@ -66,13 +67,28 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
     A = pointing_accuracy.compute_correction(img_name, exp_name, x, y, w, h,
         reference_image_id, secondary_image_id)
 
-    # generate the tiles
+    # generate the tiles - parallelized
+    processes = []
     for i in np.arange(x, x + w, tile_w - overlap):
         for j in np.arange(y, y + h, tile_h - overlap):
             print i, j
             tile_exp = '%s_%d_%d' % (exp_name, i, j)
-            height = main_script.process_pair(img_name, tile_exp, i, j, tile_w,
-                tile_h, reference_image_id, secondary_image_id, A)
+            p = Process(target=main_script.process_pair, args=(img_name,
+                tile_exp, i, j, tile_w, tile_h, reference_image_id,
+                secondary_image_id, A))
+            p.start()
+            processes.append(p)
+
+    # prepare the tiles for composition
+    # reverse the list of launched processes to access the processes with pop
+    # method
+    processes.reverse()
+    for i in np.arange(x, x + w, tile_w - overlap):
+        for j in np.arange(y, y + h, tile_h - overlap):
+            p = processes.pop()
+            p.join()
+            tile_exp = '%s_%d_%d' % (exp_name, i, j)
+            height = '%s/%s_height_unrect.tif' % (exp_dir, tile_exp)
             # weird usage of 'crop' with negative coordinates, to do
             # 'anti-crop' (ie pasting a small image onto a bigger image
             # of nans)
