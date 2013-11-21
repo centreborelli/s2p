@@ -115,9 +115,9 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
     triangulation.transfer_map(height, ref_crop, H1, x, y, zoom, height_unrect)
     triangulation.transfer_map(mask, ref_crop, H1, x, y, zoom, mask_unrect)
 
-    ## cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+#    ## cleanup
+#    while common.garbage:
+#        common.run('rm ' + common.garbage.pop())
 
     ## display results
     print "v %s %s %s %s" % (rect1, rect2, disp, mask)

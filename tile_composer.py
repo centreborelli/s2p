@@ -103,6 +103,10 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
     common.run('veco med %s/%s_*_height_to_compose.tif | iion - %s' % (exp_dir,
         exp_name, out))
 
+    # cleanup
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
+
     return out
 
 
