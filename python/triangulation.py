@@ -90,12 +90,19 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     #   translation (-1 - x/4, -y/4)
     #   zoom 4/z
     w, h = common.image_size(crop_panchro)
-    ww = np.ceil(w * zoom / 4.0)
-    hh = np.ceil(h * zoom / 4.0)
-    xx = np.floor(1 + x / 4.0)
+    xx = np.floor(x / 4.0) + 1
     yy = np.floor(y / 4.0)
+    ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
+    hh = np.ceil((y + h * zoom) / 4.0) - yy
     crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
     crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
+
+    # crop the crop_ms image to remove the extra-pixels due to the integer crop
+    # followed by zoom
+    x0 = x - 4*(xx - 1)
+    y0 = y - 4*yy
+    crop_ms = common.image_crop(crop_ms, x0, y0, w, h)
+    assert(common.image_size(crop_panchro) == common.image_size(crop_ms))
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
