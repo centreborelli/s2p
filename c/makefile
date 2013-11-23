@@ -1,6 +1,6 @@
 all:
 	mkdir -p ../bin
-	cc -o ../bin/ransac -std=c99 -g -O3 -DNDEBUG ransac.c
+	cc -o ../bin/ransac -std=c99 -g -O3 -DNDEBUG ransac.c -lm
 	cc -o ../bin/downsa -std=c99 -g -O3 -DNDEBUG iio.c downsa.c -lpng -ltiff -ljpeg
 	cc -o ../bin/backflow -std=c99 -g -O3 -DNDEBUG iio.c backflow.c -lpng -ltiff -ljpeg
 	cc -o ../bin/synflow -std=c99 -g -O3 -DNDEBUG iio.c synflow.c -lpng -ltiff -ljpeg
