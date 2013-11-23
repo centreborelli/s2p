@@ -497,21 +497,24 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
 #        ind = np.linspace(0, len(matches), 1000, False)
 #        matches = matches[ind.astype(int), :]
 
-    from scipy.optimize import fmin_bfgs
     from scipy.optimize import fmin_l_bfgs_b
     print "running optimization using %d matches" % len(matches)
-    v0 = np.zeros((1, 4))
-    #v = fmin_bfgs(cost_function_linear, v0, args=(rpc1, rpc2, matches), epsilon=0.01, maxiter=10, callback=print_params)
-    v, min_val, debug = fmin_l_bfgs_b(cost_function, v0, args=(rpc1, rpc2, matches),
+    v0 = np.zeros(4)
+    v, min_val, debug = fmin_l_bfgs_b(
+            cost_function,
+            v0,
+            args=(rpc1, rpc2, matches),
             approx_grad=True,
             factr=1,
             bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)],
-            maxiter=50, callback=print_params, disp=True)
+            #maxiter=50,
+            #callback=print_params,
+            disp=True)
 
     # default values are:
-    # fmin_bfgs(f, x0, fprime=None, args=(), gtol=1e-05, norm=inf,
-    # epsilon=1.4901161193847656e-08, maxiter=None, full_output=0, disp=1,
-    # retall=0, callback=None)
+    # fmin_l_bfgs_b(func, x0, fprime=None, args=(), approx_grad=0, bounds=None,
+    # m=10, factr=10000000.0, pgtol=1e-05, epsilon=1e-08, iprint=-1,
+    # maxfun=15000, disp=None)
     print v, min_val, debug
     return euclidean_transform_matrix(v)
 
