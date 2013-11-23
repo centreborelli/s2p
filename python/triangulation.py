@@ -99,7 +99,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
-    x0 = x - 4*(xx - 1)
+    x0 = x - 4*xx
     y0 = y - 4*yy
     crop_ms = common.image_crop(crop_ms, x0, y0, w, h)
     assert(common.image_size(crop_panchro) == common.image_size(crop_ms))
