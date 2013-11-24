@@ -170,7 +170,8 @@ def euclidean_transform_matrix(v):
     T[1, 2] = v[2]
     S = np.eye(3)
     S[0, 1] = v[3]
-    return np.linalg.inv(C).dot(T).dot(R).dot(S).dot(C)
+    #return np.linalg.inv(C).dot(T).dot(R).dot(S).dot(C)
+    return np.dot(np.dot(np.dot(np.dot(np.linalg.inv(C), T), R), S), C)
 
 
 def cost_function(v, *args):
@@ -506,10 +507,10 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
             args=(rpc1, rpc2, matches),
             approx_grad=True,
             factr=1,
-            bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)],
+            bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)])
             #maxiter=50,
             #callback=print_params,
-            disp=True)
+            #disp=True)
 
     # default values are:
     # fmin_l_bfgs_b(func, x0, fprime=None, args=(), approx_grad=0, bounds=None,

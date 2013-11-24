@@ -21,7 +21,7 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     hom2 = common.tmpfile('.txt')
     np.savetxt(hom1, H1)
     if A is not None:
-        np.savetxt(hom2, H2.dot(np.linalg.inv(A)))
+        np.savetxt(hom2, np.dot(H2, np.linalg.inv(A)))
     else:
         np.savetxt(hom2, H2)
 

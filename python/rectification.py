@@ -388,7 +388,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
         sys.exit()
 
     # filter sift matches with the known fundamental matrix
-    F = np.dot(T2.T, F.dot(T1)) # convert F for big images coordinate frame
+    F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
     try:
         from global_params import epipolar_thresh
     except ImportError:
