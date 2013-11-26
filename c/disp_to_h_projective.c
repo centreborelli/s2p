@@ -187,7 +187,7 @@ int main_disp_to_h(int c, char *v[])
 
                 // distance to the projective plane. Equation 6.15 (Hartley)
                 double M[3][3], detM; 
-                for (int i=0;i<3;i++) for (int j=0;j<3;j++) M[i][j] = P[i][j];
+                for (int i=0;i<3;i++) for (int j=0;j<3;j++) M[i][j] = Pa[i][j];
                 DETERMINANT_3X3(detM,M);
                 h = ( detM>0 ? 1:-1 ) * ( (Pa[2][0]*X3D[0] + Pa[2][1]*X3D[1] + Pa[2][2]*X3D[2] + Pa[2][3]*X3D[3]) / X3D[3] ) ;
 
