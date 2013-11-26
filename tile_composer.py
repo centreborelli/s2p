@@ -5,6 +5,7 @@ from python import global_params
 import main_script
 import numpy as np
 from multiprocessing import Process
+from multiprocessing import cpu_count
 
 img_name = 'uy1'
 exp_name = 'campo1'
@@ -23,7 +24,24 @@ tile_w=2000
 tile_h=2000
 overlap=100
 
-exp_dir = '/tmp'
+N = (3 * cpu_count()) / 4
+
+def wait_processes(processes, n):
+    """
+    Wait until processes terminate.
+
+    More precisely, wait until the number of running processes of the input
+    list becomes less than the specified number.
+
+    Args:
+        processes: list of Process objects
+        n: max number of running processes we want
+    """
+    while len(processes) > n:
+        for p in processes:
+            if not p.is_alive():
+                processes.remove(p)
+    return
 
 def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
         overlap=100, reference_image_id=1, secondary_image_id=2):
@@ -49,6 +67,10 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
     Returns:
         path to the height map, resampled on the grid of the reference image.
     """
+    # create a directory for the experiment
+    #exp_dir = '/tmp/%s' % exp_name
+    exp_dir = '/tmp/'
+
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problemes.
@@ -69,9 +91,11 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
 
     # generate the tiles - parallelized
     processes = []
+    print np.arange(x, x + w, tile_w - overlap)
+    print np.arange(y, y + h, tile_h - overlap)
     for i in np.arange(x, x + w, tile_w - overlap):
         for j in np.arange(y, y + h, tile_h - overlap):
-            print i, j
+            wait_processes(processes, N-1)
             tile_exp = '%s_%d_%d' % (exp_name, i, j)
             p = Process(target=main_script.process_pair, args=(img_name,
                 tile_exp, i, j, tile_w, tile_h, reference_image_id,
@@ -79,14 +103,14 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
             p.start()
             processes.append(p)
 
-    # prepare the tiles for composition
-    # reverse the list of launched processes to access the processes with pop
-    # method
-    processes.reverse()
+    # wait for all the processes to terminate
+    wait_processes(processes, 0)
+
+    # tiles composition
+    out = '%s/%s_height_full.tif' % (exp_dir, exp_name)
+    common.run('plambda zero:%dx%d "nan" > %s' % (w, h, out))
     for i in np.arange(x, x + w, tile_w - overlap):
         for j in np.arange(y, y + h, tile_h - overlap):
-            p = processes.pop()
-            p.join()
             tile_exp = '%s_%d_%d' % (exp_name, i, j)
             height = '%s/%s_height_unrect.tif' % (exp_dir, tile_exp)
             # weird usage of 'crop' with negative coordinates, to do
@@ -97,11 +121,10 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
             # the above divisions should give integer results, as x, y, w, h,
             # tile_w, tile_h and overlap have been modified in order to be
             # multiples of the zoom factor.
+            # paste the tile onto the full output image
+            common.run('veco med %s %s/%s_height_to_compose.tif | iion - %s' % (out,
+                exp_dir, tile_exp, out))
 
-    # compose the tiles
-    out = '%s/%s_height_full.tif' % (exp_dir, exp_name)
-    common.run('veco med %s/%s_*_height_to_compose.tif | iion - %s' % (exp_dir,
-        exp_name, out))
 
     # cleanup
     while common.garbage:
@@ -156,7 +179,7 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
         tile_h, overlap, reference_image_id, right_image_id)
 
     # merge the two height maps
-    h = '%s/%s_height_merged.tif' % (exp_dir, exp_name)
+    h = '%s/%s_merged_height.tif' % (exp_dir, exp_name)
     fusion.merge(h_left, h_right, 3, h)
 
     return h
