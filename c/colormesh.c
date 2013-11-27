@@ -22,7 +22,7 @@ static void mercator(double m[2], double x[2])
 	m[1] = R * log( ( 1 + sin(x[1]*deg) ) / cos(x[1]*deg) );
 }
 
-static void getxyz(double xyz[3], struct rpc *r, int i, int j, double h)
+static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
 {
 	double tmp[2];
 	eval_rpc(tmp, r, i, j, h);
