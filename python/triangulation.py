@@ -123,11 +123,13 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud):
     Computes a color point cloud from a height map.
 
     Args:
-        crop_colorized: path to the colorized rectified crop
-        heights: height map. Its size is the same as the crop_color image
+        crop_colorized: path to a colorized crop of a Pleiades image
+        heights: height map, sampled on the same grid as the crop_colorized
+            image. In particular, its size is the same as crop_colorized.
         rpc: path to xml file containing RPC data for the current Pleiade image
-        H: path to the file containing the coefficients of the rectifying
-            homography
+        H: path to the file containing the coefficients of the homography
+            transforming the coordinates system of the original full size image
+            into the coordinates system of the crop we are dealing with.
         cloud: path to the output points cloud (ply format)
     """
     common.run("colormesh %s %s %s %s %s" % (crop_colorized, heights, rpc, H,

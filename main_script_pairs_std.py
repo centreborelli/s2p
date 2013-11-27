@@ -13,14 +13,17 @@ try:
     from python import global_params
 
     # zoom factor (determines outputs' resolution)
-    global_params.subsampling_factor=2
+    global_params.subsampling_factor=1
 
     # zoom factor used when searching for sift matches
-    global_params.subsampling_factor_registration=2
+    global_params.subsampling_factor_registration=1
 
     # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
     # hirschmuller08_laplacian'
     global_params.matching_algorithm='hirschmuller08'
+
+    # don't use pleiades unsharpening filter
+    global_params.use_pleiades_unsharpening = False
 
 except ImportError:
     pass
@@ -185,8 +188,8 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     except NameError:
         zoom = 1
     ref_crop = common.image_crop_TIFF(im1, x, y, w, h)
-    triangulation.transfer_map(height, ref_crop, hom1, x, y, zoom, height_unrect)
-    triangulation.transfer_map(mask, ref_crop, hom1, x, y, zoom, mask_unrect)
+    triangulation.transfer_map(height, ref_crop, H1, x, y, zoom, height_unrect)
+    triangulation.transfer_map(mask, ref_crop, H1, x, y, zoom, mask_unrect)
 
 
     ## 4. colorize and generate point cloud
@@ -222,5 +225,9 @@ if __name__ == '__main__':
     main(img_name, exp_name, reference_image_id=3, secondary_image_id=2)
     exp_name = '34'
     main(img_name, exp_name, reference_image_id=3, secondary_image_id=4)
+    exp_name = '54'
+    main(img_name, exp_name, reference_image_id=5, secondary_image_id=4)
+    exp_name = '56'
+    main(img_name, exp_name, reference_image_id=5, secondary_image_id=6)
 #    exp_name = '35'
 #    main(img_name, exp_name, reference_image_id=3, secondary_image_id=5)
