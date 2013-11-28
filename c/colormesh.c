@@ -27,6 +27,7 @@ static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
     double tmp[2];
     eval_rpc(tmp, r, i, j, h);
     mercator(xyz, tmp);
+//    eval_rpc(xyz, r, i, j, h);
     xyz[2] = h;
 }
 
@@ -90,12 +91,18 @@ SMART_PARAMETER_SILENT(IJMESHFAC, 2)
 
 int main(int c, char *v[])
 {
-    if (c != 6) {
+    if (c != 6 & c != 8) {
         fprintf(stderr, "usage:\n\t"
-                "%s colors heights rpc Hfile.txt out.ply\n", *v);
-        //       0    1      2       3   4        5
+                "%s colors heights rpc Hfile.txt out.ply [x0 y0]\n", *v);
+        //       0    1      2       3   4        5       6  7
         return 1;
     }
+
+    // x0 and y0 are meant to allow the user to choose the origin in the
+    // mercator coordinates system, in order to avoid visualisation problems
+    // due to huge values of the coordinates (for which float precision is
+    // often not enough)
+
     char *fname_colors = v[1];
     char *fname_heights = v[2];
     char *fname_rpc = v[3];
@@ -103,6 +110,9 @@ int main(int c, char *v[])
     read_matrix(H, v[4]);
     FILE *out = fopen(v[5], "w");
     invert_homography(invH, H);
+
+    int x0 = c == 8 ? atoi(v[6]) : 0;
+    int y0 = c == 8 ? atoi(v[7]) : 0;
 
     int w, h, pd, ww, hh;
     uint8_t *colors = iio_read_image_uint8_vec(fname_colors, &w, &h, &pd);
@@ -137,9 +147,9 @@ int main(int c, char *v[])
 
             // convert the pixel local coordinates (ie in the crop) to the
             // full image coordinates, then to mercator coordinates through
-            // the rpc_eval direct estimation function normals (ie unit 3D
+            // the rpc_eval direct estimation function. Normals (ie unit 3D
             // vector pointing in the direction of the camera) are saved
-            // together with the coordinates of the 3D points
+            // together with the coordinates of the 3D points.
             double xy[2] = {i, j}, pq[2];
             apply_homography(pq, invH, xy);
             double xyz[3] = {pq[1], pq[0], IJMESHFAC() * height[j][i]};
@@ -152,6 +162,11 @@ int main(int c, char *v[])
                 nrm[1] = tmp[1] - xyz[1];
                 nrm[2] = tmp[2] - xyz[2];
                 normalize_vector_3d(nrm);
+
+                // translate the x, y coordinates, to avoid
+                // visualisation problems
+                xyz[0] -= x0;
+                xyz[1] -= y0;
             }
 
             // print the voxel in the ply output file

@@ -178,7 +178,7 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
 
 
 def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-    reference_image_id=1):
+    reference_image_id=1, merc_x=0, merc_y=0):
     """
     Args:
         img_name: name of the dataset, located in the 'pleiades_data/images'
@@ -191,6 +191,8 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
             process_triplet function
         reference_image_id: id (1, 2 or 3) of the image used as the reference
             image. The height map has been resampled on its grid.
+        merc_{x,y}: mercator coordinates of the point we want to use as
+            origin in the local coordinate system of the computed cloud
     """
 
     rpc = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
@@ -219,15 +221,15 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
         with open(im_color):
             triangulation.colorize(crop, im_color, x, y, zoom, crop_color)
             triangulation.compute_point_cloud(crop_color, height_map, rpc,
-                trans, cloud)
+                trans, cloud, merc_x, merc_y)
     except IOError:
         print 'no color image available for this dataset.'
         triangulation.compute_point_cloud(common.image_qauto(crop),
-            height_map, rpc, trans, cloud)
+            height_map, rpc, trans, cloud, merc_x, merc_y)
 
     # cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+#    while common.garbage:
+#        common.run('rm ' + common.garbage.pop())
 
     print "v %s %s %s" % (crop, crop_color, height_map)
     print "open %s" % (cloud)
