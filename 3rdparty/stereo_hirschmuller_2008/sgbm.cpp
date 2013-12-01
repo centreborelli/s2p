@@ -109,6 +109,11 @@ int main(int c, char** v)
     int P2      = (c>i) ? atoi(v[i]) : 32*nch*SADwin*SADwin; i++;
     int LRdiff  = (c>i) ? atoi(v[i]) : 1;  i++;
 
+
+    if (mindisp>=maxdisp){
+        fprintf(stderr, "\terror: mindisp(%d) > maxdisp(%d)\n", mindisp, maxdisp); 
+        exit(1);
+    }
     // prepare the StereoSGBM object
     // the number of disparities has to be a multiple of 16
     StereoSGBM sgbm;
