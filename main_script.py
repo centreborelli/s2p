@@ -16,7 +16,7 @@ from shutil import copyfile
 def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
     reference_image_id=1, secondary_image_id=2, A_global=None):
     """
-    Computes a height map from a Pair of Pleiades images.
+    Computes a height map from a pair of Pleiades images.
 
     Args:
         img_name: name of the dataset, located in the 'pleiades_data/images'
@@ -45,18 +45,20 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
     prev1 = 'pleiades_data/images/%s/prev%02d.jpg' % (img_name, reference_image_id)
 
     # output files
-    rect1 = '/tmp/%s%d.tif' % (exp_name, reference_image_id)
-    rect2 = '/tmp/%s%d.tif' % (exp_name, secondary_image_id)
-    outrpc1 = '/tmp/%s_rpc%d.xml' % (exp_name, reference_image_id)
-    outrpc2 = '/tmp/%s_rpc%d.xml' % (exp_name, secondary_image_id)
-    disp    = '/tmp/%s_disp.pgm'   % (exp_name)
-    mask    = '/tmp/%s_mask.png'   % (exp_name)
-    height  = '/tmp/%s_height.tif' % (exp_name)
-    rpc_err = '/tmp/%s_rpc_err.tif'% (exp_name)
-    height_unrect  = '/tmp/%s_height_unrect.tif' % (exp_name)
-    mask_unrect    = '/tmp/%s_mask_unrect.png'   % (exp_name)
-    subsampling_file = '/tmp/%s_subsampling.txt' % (exp_name)
-    pointing = '/tmp/%s_pointing_correction_%02d_%02d.txt' % (exp_name,
+    out_dir = '/tmp/%s' % exp_name
+    common.run('mkdir %s' % out_dir)
+    rect1 = '%s/%d.tif' % (out_dir, reference_image_id)
+    rect2 = '%s/%d.tif' % (out_dir, secondary_image_id)
+    outrpc1 = '%s/rpc%d.xml' % (out_dir, reference_image_id)
+    outrpc2 = '%s/rpc%d.xml' % (out_dir, secondary_image_id)
+    disp    = '%s/disp.pgm'   % (out_dir)
+    mask    = '%s/mask.png'   % (out_dir)
+    height  = '%s/height.tif' % (out_dir)
+    rpc_err = '%s/rpc_err.tif'% (out_dir)
+    height_unrect  = '%s/height_unrect.tif' % (out_dir)
+    mask_unrect    = '%s/mask_unrect.png'   % (out_dir)
+    subsampling_file = '%s/subsampling.txt' % (out_dir)
+    pointing = '%s/pointing_correction_%02d_%02d.txt' % (out_dir,
         reference_image_id, secondary_image_id)
 
 
@@ -68,17 +70,8 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
     ## correct pointing error - no subsampling!
-    # TODO: replace this block with a call to the
-    # pointing_accuracy.compute_correction method
-    tmp = global_params.subsampling_factor_registration
-    global_params.subsampling_factor_registration = 1
-
-    r1 = rpc_model.RPCModel(rpc1)
-    r2 = rpc_model.RPCModel(rpc2)
-    m = pointing_accuracy.filtered_sift_matches_roi(im1, im2, r1, r2, x, y, w, h)
-    A = pointing_accuracy.optimize_pair(im1, im2, r1, r2, None, m)
-
-    global_params.subsampling_factor_registration = tmp
+    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
+        reference_image_id, secondary_image_id)
 
     ## copy the rpcs to the output directory, save the subsampling factor and
     # the pointing correction matrix
@@ -168,7 +161,8 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
         reference_image_id, right_image_id)
 
     # merge the two height maps
-    h = '/tmp/%s_height_merged.tif' % (exp_name)
+    common.run('mkdir /tmp/%s' % exp_name)
+    h = '/tmp/%s/merged_height.tif' % (exp_name)
     fusion.merge(h_left, h_right, 3, h)
 
     # cleanup
@@ -199,9 +193,9 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
     rpc = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
     im = 'pleiades_data/images/%s/im%02d.tif' % (img_name, reference_image_id)
     im_color = 'pleiades_data/images/%s/im%02d_color.tif' % (img_name, reference_image_id)
-    crop   = '/tmp/%s_roi_ref%02d.tif' % (exp_name, reference_image_id)
-    crop_color = '/tmp/%s_roi_color_ref%02d.tif' % (exp_name, reference_image_id)
-    cloud   = '/tmp/%s_cloud.ply'  % (exp_name)
+    crop   = '/tmp/%s/roi_ref%02d.tif' % (exp_name, reference_image_id)
+    crop_color = '/tmp/%s/roi_color_ref%02d.tif' % (exp_name, reference_image_id)
+    cloud   = '/tmp/%s/cloud.ply'  % (exp_name)
 
     # read the zoom value
     zoom = global_params.subsampling_factor
@@ -308,11 +302,11 @@ if __name__ == '__main__':
 #    x, y, w, h = 19845, 29178, 1700, 1700
 
     # main call: STEREO PAIR
-    height_map = process_pair(img_name, exp_name, x, y, w, h, 2, 1)
-    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-        reference_image_id=2)
-
-    # main call: TRISTEREO
-#    height_map = process_triplet(img_name, exp_name, x, y, w, h)
+#    height_map = process_pair(img_name, exp_name, x, y, w, h, 2, 1)
 #    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
 #        reference_image_id=2)
+
+    # main call: TRISTEREO
+    height_map = process_triplet(img_name, exp_name, x, y, w, h)
+    generate_cloud(img_name, exp_name, x, y, w, h, height_map,
+        reference_image_id=2)
