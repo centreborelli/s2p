@@ -14,7 +14,8 @@ from shutil import copyfile
 
 
 def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
-    reference_image_id=1, secondary_image_id=2, A_global=None):
+        reference_image_id=1, secondary_image_id=2, work_dir='/tmp',
+        A_global=None):
     """
     Computes a height map from a pair of Pleiades images.
 
@@ -30,6 +31,8 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
             image of the pair
         secondary_image_id: id of the image used as the secondary image of the
             pair
+        work_dir (optional): directory in which the directory containing the
+            results will be written
         A_global (optional): global pointing correction matrix, used for
             triangulation (but not for stereo-rectification)
 
@@ -45,7 +48,7 @@ def process_pair(img_name, exp_name, x=None, y=None, w=None, h=None,
     prev1 = 'pleiades_data/images/%s/prev%02d.jpg' % (img_name, reference_image_id)
 
     # output files
-    out_dir = '/tmp/%s' % exp_name
+    out_dir = '%s/%s' % (work_dir, exp_name)
     common.run('mkdir %s' % out_dir)
     rect1 = '%s/%d.tif' % (out_dir, reference_image_id)
     rect2 = '%s/%d.tif' % (out_dir, secondary_image_id)
@@ -151,18 +154,20 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
         x, y, w, h = common.get_roi_coordinates(rpc, prev)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
+    exp_dir = '/tmp/%s' % exp_name
+    common.run('mkdir %s' % exp_dir)
+
     # process the two pairs
     exp_name_left = '%s_left' % exp_name
     h_left = process_pair(img_name, exp_name_left, x, y, w, h,
-        reference_image_id, left_image_id)
+        reference_image_id, left_image_id, exp_dir)
 
     exp_name_right = '%s_right' % exp_name
     h_right = process_pair(img_name, exp_name_right, x, y, w, h,
-        reference_image_id, right_image_id)
+        reference_image_id, right_image_id, exp_dir)
 
     # merge the two height maps
-    common.run('mkdir /tmp/%s' % exp_name)
-    h = '/tmp/%s/merged_height.tif' % (exp_name)
+    h = '%s/merged_height.tif' % (exp_dir)
     fusion.merge(h_left, h_right, 3, h)
 
     # cleanup
