@@ -8,6 +8,7 @@ from python import rectification
 from python import block_matching
 from python import triangulation
 from python import fusion
+from python import geographiclib
 from python import global_params
 from shutil import copyfile
 
@@ -178,7 +179,7 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
 
 
 def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-    reference_image_id=1, merc_x=0, merc_y=0):
+    reference_image_id=1, merc_x=None, merc_y=None):
     """
     Args:
         img_name: name of the dataset, located in the 'pleiades_data/images'
@@ -212,6 +213,12 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
     A = np.dot(Z, A)
     trans = common.tmpfile('.txt')
     np.savetxt(trans, A)
+
+    # compute mercator offset
+    if merc_x is None:
+        lat = rpc_model.RPCModel(rpc).firstLat
+        lon = rpc_model.RPCModel(rpc).firstLon
+        merc_x, merc_y = geographiclib.geodetic_to_mercator(lat, lon)
 
     # colorize, then generate point cloud
     tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
