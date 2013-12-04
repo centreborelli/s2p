@@ -46,6 +46,27 @@ def geocentric_to_geodetic(x, y, z):
     return out[:, 0], out[:, 1], out[:, 2]
 
 
+def geodetic_to_mercator(lat, lon, ref_lon=0):
+    """
+    Converts WGS84 ellipsoidal coordinates to mercator coordinates, using a
+    reference longitude.
+
+    Args:
+        lat: latitude, in degrees between -90 and 90
+        lon: longitude, between -180 and 180
+        ref_lon (optional, default 0): reference longitude, in degrees
+
+    Returns:
+        x, y: the mercator coordinates of the input point
+    """
+    r = 6378.1 * 1000 
+    c = 2 * np.pi / 360.0
+    x = r * (lon - ref_lon) * c
+    y = r * np.log( (1 + np.sin(lat*c)) / np.cos(lat*c))
+    return x, y
+
+
+
 def geoid_above_ellipsoid(lat, lon):
     """
     Computes the height, in meters, of the EGM96 geoid above the WGS84 ellipsoid.

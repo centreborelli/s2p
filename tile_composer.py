@@ -86,7 +86,7 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
         overlap = z * np.floor(overlap / z)
 
     # compute global pointing correction (on the whole ROI)
-    A = pointing_accuracy.compute_correction(img_name, exp_name, x, y, w, h,
+    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
         reference_image_id, secondary_image_id)
 
     # generate the tiles - parallelized
@@ -99,7 +99,7 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
             tile_exp = '%s_%d_%d' % (exp_name, i, j)
             p = Process(target=main_script.process_pair, args=(img_name,
                 tile_exp, i, j, tile_w, tile_h, reference_image_id,
-                secondary_image_id, A))
+                secondary_image_id, exp_dir, A))
             p.start()
             processes.append(p)
 
@@ -112,17 +112,17 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
     for i in np.arange(x, x + w, tile_w - overlap):
         for j in np.arange(y, y + h, tile_h - overlap):
             tile_exp = '%s_%d_%d' % (exp_name, i, j)
-            height = '%s/%s_height_unrect.tif' % (exp_dir, tile_exp)
+            height = '%s/%s/height_unrect.tif' % (exp_dir, tile_exp)
             # weird usage of 'crop' with negative coordinates, to do
             # 'anti-crop' (ie pasting a small image onto a bigger image
             # of nans)
-            common.run('crop %s %s/%s_height_to_compose.tif %d %d %d %d' % (height,
+            common.run('crop %s %s/%s/height_to_compose.tif %d %d %d %d' % (height,
                 exp_dir, tile_exp, (x-i)/z, (y-j)/z, w/z, h/z))
             # the above divisions should give integer results, as x, y, w, h,
             # tile_w, tile_h and overlap have been modified in order to be
             # multiples of the zoom factor.
             # paste the tile onto the full output image
-            common.run('veco med %s %s/%s_height_to_compose.tif | iion - %s' % (out,
+            common.run('veco med %s %s/%s/height_to_compose.tif | iion - %s' % (out,
                 exp_dir, tile_exp, out))
 
 
@@ -179,7 +179,7 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
         tile_h, overlap, reference_image_id, right_image_id)
 
     # merge the two height maps
-    h = '%s/%s_merged_height.tif' % (exp_dir, exp_name)
+    h = '/tmp/%s_merged_height.tif' % (exp_dir, exp_name)
     fusion.merge(h_left, h_right, 3, h)
 
     return h
