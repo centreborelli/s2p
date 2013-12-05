@@ -392,6 +392,8 @@ def image_crop_TIFF(im, x, y, w, h):
                  Pleiades full images"""
         sys.exit()
 
+    return out
+
 
 def image_crop_LARGE(im, x, y, w, h):
     if (int(x) != x or int(y) != y):
