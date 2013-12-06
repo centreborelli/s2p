@@ -73,7 +73,7 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problemes.
+    # to avoid bad registration of tiles due to rounding problems.
     z = global_params.subsampling_factor
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
@@ -95,16 +95,18 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
     print np.arange(y, y + h, tile_h - overlap)
     for i in np.arange(x, x + w, tile_w - overlap):
         for j in np.arange(y, y + h, tile_h - overlap):
-            wait_processes(processes, N-1)
+#            wait_processes(processes, N-1)
             tile_exp = '%s_%d_%d' % (exp_name, i, j)
-            p = Process(target=main_script.process_pair, args=(img_name,
-                tile_exp, i, j, tile_w, tile_h, reference_image_id,
-                secondary_image_id, exp_dir, A))
-            p.start()
-            processes.append(p)
+#            p = Process(target=main_script.process_pair, args=(img_name,
+#                tile_exp, i, j, tile_w, tile_h, reference_image_id,
+#                secondary_image_id, exp_dir, A))
+#            p.start()
+#            processes.append(p)
+            main_script.process_pair(img_name, tile_exp, i, j, tile_w, tile_h,
+                    reference_image_id, secondary_image_id, exp_dir, A)
 
     # wait for all the processes to terminate
-    wait_processes(processes, 0)
+#    wait_processes(processes, 0)
 
     # tiles composition
     out = '%s/%s_height_full.tif' % (exp_dir, exp_name)
@@ -179,7 +181,7 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
         tile_h, overlap, reference_image_id, right_image_id)
 
     # merge the two height maps
-    h = '/tmp/%s_merged_height.tif' % (exp_dir, exp_name)
+    h = '/tmp/%s_merged_height.tif' % exp_name
     fusion.merge(h_left, h_right, 3, h)
 
     return h
