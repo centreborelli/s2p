@@ -269,7 +269,8 @@ def altitude_range(rpc, x, y, w, h):
         return altitude_range_coarse(rpc)
 
     # offset srtm heights with the geoid - ellipsoid difference
-    geoid = common.run_binary_on_list_of_points(ellipsoid_points, 'GeoidEval')
+    geoid = common.run_binary_on_list_of_points(ellipsoid_points,
+            'GeoidEval')[:, 0]
     h = geoid + srtm
 
     # extract extrema (and add a +-100m security margin)

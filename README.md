@@ -9,13 +9,19 @@ binaries written in C.
 
 ## Usage
 
-The pipeline is implemented in the file `main_script_pairs.py`. Its parameters
+The pipeline is implemented in the files `main_script.py` and
+`tile_composer.py`. The `tile_composer.py` module is used to produce elevation
+models of big regions (ie bigger than 2000 x 2000 pixels). It cuts the region
+of interest in several tiles, and pass them to the `main_script.py` module. For
+small region, you can use the `main_script.py` module directly. Its parameters
 (paths to Pleiades data, definition of a region of interest, paths for output
 data), are defined at the beginning of that file. To launch it, simply run:
 
-    ./main_script_pairs.py
+    ./main_script.py
 
-
+Alternatively you can import the module in a python session, and run the
+functions `main_script.process_pair` or `main_script.process_triplet` from
+there.
 
 ## Dependencies
 
@@ -42,9 +48,10 @@ the provided makefiles. For example, for GeographicLib, do:
     make
     sudo make install
 
-Since we use GeographicLib to evaluate geoid heights we must also install the geoids data files by running the script:
+Since we use GeographicLib to evaluate geoid heights we must also install the
+geoids data files by running the script:
 
-    3rdparty/GeographicLib-1.32/tools/geographiclib-get-geoids.sh 
+    3rdparty/GeographicLib-1.32/tools/geographiclib-get-geoids.sh
 
 
 
@@ -59,19 +66,21 @@ For SGBM (Semi-Global Block-Matching), do:
 This binary uses OpenCV implementation of Hirschmuller Semi-Global Matching.
 You must have OpenCV 2.4.x installed on your system to compile it.
 
+    git clone https://github.com/Itseez/opencv.git
+    cd opencv
+    git checkout 2.4
+    mkdir build_2.4
+    cd build_2.4
+    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=~/local ..
+    make
+
 For sift, do:
 
     cd 3rdparty/sift_20130403
     make
-    cp bin/matching ../../bin
 
-In addition, the following binaries must be available on your system:
-
-    gdal_translate
-    tiffcp
-    java
-
-You can install them through a package manager.
+In addition, the `gdal_translate` binary is needed, and can be installed
+through your favourite package manager.
 
 
 ## Pleiades data

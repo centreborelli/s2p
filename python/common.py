@@ -373,30 +373,26 @@ def image_crop_TIFF(im, x, y, w, h):
     Returns:
         path to cropped tif image
 
-    The crop is made with the gdal_translate binary, from gdal library.
+    The crop is made with the gdal_translate binary, from gdal library. We
+    tried to use tiffcrop but it fails.
     """
     if (int(x) != x or int(y) != y):
         print 'Warning: image_crop_TIFF will round the coordinates of your crop'
 
-    tmp = tmpfile('.tif')
     out = tmpfile('.tif')
 
     try:
         with open(im, 'r'):
-            # do the crop with gdal_translate
-            run('gdal_translate -srcwin %d %d %d %d %s %s' % (x, y, w, h,
-                shellquote(im), shellquote(tmp)))
-
-            # remove GeoTiff tags
-            run('tiffcp %s %s 2> /dev/null' % (tmp, out))
-            return out
+            # do the crop with gdal_translate, with option to remove any GDAL or GeoTIFF tag
+            run('gdal_translate -co profile=baseline -srcwin %d %d %d %d %s %s' % (x,
+                y, w, h, shellquote(im), shellquote(out)))
 
     except IOError:
         print """image_crop_TIFF: input image not found! Verify your paths to
                  Pleiades full images"""
         sys.exit()
 
-    # Remark: with tiffcrop it fails:
+    return out
 
 
 def image_crop_LARGE(im, x, y, w, h):
