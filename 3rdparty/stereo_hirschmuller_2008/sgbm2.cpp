@@ -166,7 +166,7 @@ Mat sgbm_stereo_slice(Mat &u1, Mat &u2, int mindisp, int maxdisp, int SADwin, in
 
    //// TODO TUNE THESE PARAMETERS FOR SGBM
    //
-   int MIN_SLICEH = 300;   // SLICE HEIGHT
+   int MIN_SLICEH = 100;   // SLICE HEIGHT
    int h = 100;            // OVERLAP HEIGHT (2x)
    int sliceh = fmax(2 * h, MIN_SLICEH);
    int halfh_up = h / 2;
@@ -258,7 +258,7 @@ int main(int c, char** v)
 
     // left right test
     Mat LRmask (disp.rows, disp.cols, DataType<float>::type);
-    stereoLRRL(disp, disp2, &LRmask, LRdiff);
+    stereoLRRL(disp, disp2, &LRmask, 2);
 
     // convert back the disparities to our convention before saving
     float *odisp = (float*) malloc(disp.rows*disp.cols*sizeof(float));
