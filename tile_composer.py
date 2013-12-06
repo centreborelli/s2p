@@ -1,5 +1,8 @@
 from python import common
 from python import fusion
+from python import rpc_model
+from python import geographiclib
+from python import triangulation
 from python import pointing_accuracy
 from python import global_params
 import main_script
@@ -239,8 +242,7 @@ def generate_cloud(out_dir, img_name, ref_img_id, x, y, w, h, height_map,
 
     # colorize, then generate point cloud
     tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
-    tmp_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
-    common.run('cp %s %s' % (tmp_crop, crop))
+    common.image_safe_zoom_fft(tmp_crop, zoom, crop)
     try:
         with open(im_color):
             triangulation.colorize(crop, im_color, x, y, zoom, crop_color)

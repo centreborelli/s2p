@@ -133,7 +133,7 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
     return out
 
-def image_safe_zoom_fft(im, f):
+def image_safe_zoom_fft(im, f, out=None):
     """
     zooms im by a factor: f∈[0,1] for zoom in, f∈[1 +inf] for zoom out
     It works with the fft representation of the symmetrized im thus it
@@ -146,7 +146,10 @@ def image_safe_zoom_fft(im, f):
     """
     if f == 1:
         return im
-    out = tmpfile('.tif')
+
+    if out is None:
+        out = tmpfile('.tif')
+    
     sz = image_size(im)
     # FFT doesn't play nice with infinite values, so we remove them
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
@@ -360,7 +363,7 @@ def bounding_box2D(pts):
     return x, y, w, h
 
 
-def image_crop_TIFF(im, x, y, w, h):
+def image_crop_TIFF(im, x, y, w, h, out=None):
     """
     Crops tif images.
 
@@ -369,6 +372,7 @@ def image_crop_TIFF(im, x, y, w, h):
         x, y, w, h: four integers definig the rectangular crop in the image.
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
+        out (optional): path to the output crop
 
     Returns:
         path to cropped tif image
@@ -379,7 +383,8 @@ def image_crop_TIFF(im, x, y, w, h):
     if (int(x) != x or int(y) != y):
         print 'Warning: image_crop_TIFF will round the coordinates of your crop'
 
-    out = tmpfile('.tif')
+    if out is None:
+        out = tmpfile('.tif')
 
     try:
         with open(im, 'r'):
