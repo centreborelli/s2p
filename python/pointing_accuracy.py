@@ -587,7 +587,7 @@ def compute_correction(img_name, x, y, w, h, reference_image_id=1,
     tmp = global_params.subsampling_factor_registration
     global_params.subsampling_factor_registration = 1
 
-    if w*h < 1e6:
+    if w*h < 2e6:
         m = filtered_sift_matches_roi(im1, im2, r1, r2, x, y,
                 w, h)
     else:
