@@ -23,8 +23,6 @@ Alternatively you can import the module in a python session, and run the
 functions `main_script.process_pair` or `main_script.process_triplet` from
 there.
 
-
-
 ## Dependencies
 
 Some python functions of the S2P modules rely on external binaries. Most of
@@ -67,6 +65,14 @@ For SGBM (Semi-Global Block-Matching), do:
 
 This binary uses OpenCV implementation of Hirschmuller Semi-Global Matching.
 You must have OpenCV 2.4.x installed on your system to compile it.
+
+    git clone https://github.com/Itseez/opencv.git
+    cd opencv
+    git checkout 2.4
+    mkdir build_2.4
+    cd build_2.4
+    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=~/local ..
+    make
 
 For sift, do:
 
