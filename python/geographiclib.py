@@ -59,7 +59,7 @@ def geodetic_to_mercator(lat, lon, ref_lon=0):
     Returns:
         x, y: the mercator coordinates of the input point
     """
-    r = 6378.1 * 1000 
+    r = 6378.1 * 1000
     c = 2 * np.pi / 360.0
     x = r * (lon - ref_lon) * c
     y = r * np.log( (1 + np.sin(lat*c)) / np.cos(lat*c))
