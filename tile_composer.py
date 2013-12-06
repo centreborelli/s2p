@@ -184,4 +184,73 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
     h = '/tmp/%s_merged_height.tif' % exp_name
     fusion.merge(h_left, h_right, 3, h)
 
+    # cleanup
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
+
     return h
+
+
+def generate_cloud(out_dir, img_name, ref_img_id, x, y, w, h, height_map,
+        merc_x=None, merc_y=None):
+    """
+    Args:
+        out_dir: output directory. The file cloud.ply will be written there
+        img_name: name of the dataset, located in the 'pleiades_data/images'
+            directory
+        ref_img_id: id (1, 2 or 3) of the image used as the reference
+            image. The height map has been resampled on its grid.
+        x, y, w, h: four integers defining the rectangular ROI in the original
+            panchro image. (x, y) is the top-left corner, and (w, h) are the
+            dimensions of the rectangle.
+        height_map: path to the height_map, produced by the process_pair or
+            process_triplet function
+        merc_{x,y}: mercator coordinates of the point we want to use as
+            origin in the local coordinate system of the computed cloud
+    """
+
+    # needed input files
+    rpc = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, ref_img_id)
+    im = 'pleiades_data/images/%s/im%02d.tif' % (img_name, ref_img_id)
+    im_color = 'pleiades_data/images/%s/im%02d_color.tif' % (img_name, ref_img_id)
+
+    # output files
+    common.run('mkdir -p %s' % out_dir)
+    crop   = '%s/roi_ref%02d.tif' % (out_dir, ref_img_id)
+    crop_color = '%s/roi_color_ref%02d.tif' % (out_dir, ref_img_id)
+    cloud   = '%s/cloud.ply'  % (out_dir)
+
+    # read the zoom value
+    zoom = global_params.subsampling_factor
+
+    # build the matrix of the zoom + translation transformation
+    A = common.matrix_translation(-x, -y)
+    f = 1.0/zoom
+    Z = np.diag([f, f, 1])
+    A = np.dot(Z, A)
+    trans = common.tmpfile('.txt')
+    np.savetxt(trans, A)
+
+    # compute mercator offset
+    if merc_x is None:
+        lat = rpc_model.RPCModel(rpc).firstLat
+        lon = rpc_model.RPCModel(rpc).firstLon
+        merc_x, merc_y = geographiclib.geodetic_to_mercator(lat, lon)
+
+    # colorize, then generate point cloud
+    tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
+    tmp_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
+    common.run('cp %s %s' % (tmp_crop, crop))
+    try:
+        with open(im_color):
+            triangulation.colorize(crop, im_color, x, y, zoom, crop_color)
+    except IOError:
+        print 'no color image available for this dataset.'
+        crop_color = common.image_qauto(crop)
+
+    triangulation.compute_point_cloud(crop_color, height_map, rpc, trans,
+        cloud, merc_x, merc_y)
+
+    # cleanup
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
