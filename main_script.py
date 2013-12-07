@@ -194,7 +194,7 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
         merc_{x,y}: mercator coordinates of the point we want to use as
             origin in the local coordinate system of the computed cloud
     """
-
+    common.run('mkdir /tmp/%s' % exp_name)
     rpc = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
     im = 'pleiades_data/images/%s/im%02d.tif' % (img_name, reference_image_id)
     im_color = 'pleiades_data/images/%s/im%02d_color.tif' % (img_name, reference_image_id)
