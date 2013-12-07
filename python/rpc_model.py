@@ -165,6 +165,45 @@ class RPCModel:
         lin = cLin*self.linScale + self.linOff
         return col, lin, alt
 
+
+#    # sorry this function is not ready yet
+#    def direct_estimate_iterative(self, col, lin, alt, return_normalized=False):
+#        cCol = (col - self.colOff) / self.colScale
+#        cLin = (lin - self.linOff) / self.linScale
+#        cAlt = (alt - self.altOff) / self.altScale
+#
+#        ### PSEUDOCODE 
+#
+#        # compute a first approximation of lon, lat using the coordinates of the image 
+#        # corners to deduce the approximate position on the ground of the pixel
+#        # alt is known, just verify if it's within the bounds
+#        lon0,lat0 <--- appriximate using the corners
+#        X0 = inverse_estimate(self,lon0,lat0,alt);
+#
+#        Xtarget = col,lin
+#        while abs(X0 - Xtarget) > 0.00001 #
+#           # build a base on the image
+#           X1 = inverse_estimate(self,lon0+eps,lat0,alt);
+#           X2 = inverse_estimate(self,lon0,lat0+eps,alt);
+#   
+#           # project Xtarget on the base X1-X0,  X2-X0 
+#           p1,p2 = <Xtarget,X1-X0> (X1-X0),   <Xtarget,X2-X0> (X2-X0)
+#           
+#           # use the coefficients to copute an approximation of the point on the gound 
+#           # which in turn will give us the new X0
+#           (lon0,lat0) = (lon0,lat0) + (p1*eps, p2*eps)
+#           X0 = inverse_estimate(self,lon0,lat0,alt);
+#
+#
+#        lon = cLon*self.lonScale + self.lonOff
+#        lat = cLat*self.latScale + self.latOff
+#        if return_normalized:
+#           return cLon, cLat, cAlt
+#        return lon, lat, alt
+
+
+
+
     def __repr__(self):
         return '''
     ### Direct Model ###
