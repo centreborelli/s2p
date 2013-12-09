@@ -240,9 +240,14 @@ def generate_cloud(out_dir, img_name, ref_img_id, x, y, w, h, height_map,
         lon = rpc_model.RPCModel(rpc).firstLon
         merc_x, merc_y = geographiclib.geodetic_to_mercator(lat, lon)
 
+    # crop the ROI and zoom
+    if zoom == 1:
+        common.image_crop_TIFF(im, x, y, w, h, crop)
+    else:
+        tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
+        common.image_safe_zoom_fft(tmp_crop, zoom, crop)
+
     # colorize, then generate point cloud
-    tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
-    common.image_safe_zoom_fft(tmp_crop, zoom, crop)
     try:
         with open(im_color):
             triangulation.colorize(crop, im_color, x, y, zoom, crop_color)

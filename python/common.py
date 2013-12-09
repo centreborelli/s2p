@@ -149,7 +149,7 @@ def image_safe_zoom_fft(im, f, out=None):
 
     if out is None:
         out = tmpfile('.tif')
-    
+
     sz = image_size(im)
     # FFT doesn't play nice with infinite values, so we remove them
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
