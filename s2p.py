@@ -29,8 +29,6 @@ def wait_processes(processes, n):
                 processes.remove(p)
     return
 
-
-
 def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
         x=None, y=None, w=None, h=None, A_global=None):
     """
@@ -79,14 +77,24 @@ def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
         x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
+    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
+    # ensure that the coordinates of the ROI are multiples of the zoom factor
+    z = global_params.subsampling_factor
+    assert(z > 0 and z == np.floor(z))
+    if (z != 1):
+        x = z * np.floor(x / z)
+        y = z * np.floor(y / z)
+        w = z * np.ceil(w / z)
+        h = z * np.ceil(h / z)
+
     ## correct pointing error
-    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
-        ref_img_id, sec_img_id)
+    A = pointing_accuracy.compute_correction(img_name, x, y, w, h, ref_img_id,
+        sec_img_id)
 
     ## save the subsampling factor and
     # the pointing correction matrix
     np.savetxt(pointing, A)
-    np.savetxt(subsampling, np.array([global_params.subsampling_factor]))
+    np.savetxt(subsampling, np.array([z]))
 
     # ATTENTION if subsampling_factor is set the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
@@ -102,21 +110,10 @@ def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
 
     ## triangulation
     if A_global is not None:
-        triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
-                height, rpc_err, A_global)
-    else:
-        triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
-                height, rpc_err, A)
-
-    try:
-        zoom = global_params.subsampling_factor
-    except NameError:
-        zoom = 1
-        #TODO: remove this extra crop that due only to interface of the synflow
-        #binary
-    tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
-    ref_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
-    triangulation.transfer_map(height, ref_crop, H1, x, y, zoom, height_unrect)
+        A = A_global
+    triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
+        rpc_err, A)
+    triangulation.transfer_map(height, H1, x, y, w, h, z, height_unrect)
 
     return height_unrect
 
