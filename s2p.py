@@ -1,33 +1,16 @@
 from python import common
-from python import fusion
 from python import rpc_model
 from python import geographiclib
-from python import triangulation
 from python import pointing_accuracy
+from python import rectification
+from python import block_matching
+from python import triangulation
+from python import fusion
 from python import global_params
-import main_script
+import multiprocessing
 import numpy as np
-from multiprocessing import Process
-from multiprocessing import cpu_count
 
-img_name = 'uy1'
-exp_name = 'campo1'
-
-canvas_x = 5500
-canvas_y = 13000
-canvas_w = 7000
-canvas_h = 10000
-
-canvas_x = 5500
-canvas_y = 13000
-canvas_w = 3500
-canvas_h = 3500
-
-tile_w=2000
-tile_h=2000
-overlap=100
-
-N = (3 * cpu_count()) / 4
+N = multiprocessing.cpu_count()
 
 def wait_processes(processes, n):
     """
@@ -46,33 +29,132 @@ def wait_processes(processes, n):
                 processes.remove(p)
     return
 
-def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
-        overlap=100, reference_image_id=1, secondary_image_id=2):
+
+
+def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
+        x=None, y=None, w=None, h=None, A_global=None):
     """
-    Computes a height map from a Pair of Pleiades images, using tiles.
+    Computes a height map from a Pair of Pleiades images, without tiling
 
     Args:
+        out_dir: path to the output directory
         img_name: name of the dataset, located in the 'pleiades_data/images'
             directory
-        exp_name: string used to identify the experiment
+        ref_img_id: index of the image used as the reference image of the pair
+        sec_img_id: id of the image used as the secondary image of the pair
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle. The ROI may be as big as you want, as it will be
-            cutted into small tiles for processing.
-        tile_w, tile_h: dimensions of the tiles
-        overlap: width of overlapping bands between tiles
-        reference_image_id: id (1, 2 or 3 for the tristereo datasets, and 1 or
-            2 for the bistereo datasets) of the image used as the reference
-            image of the pair
-        secondary_image_id: id of the image used as the secondary image of the
-            pair
+            of the rectangle.
+        A_global (optional): global pointing correction matrix, used for
+            triangulation (but not for stereo-rectification)
 
     Returns:
         path to the height map, resampled on the grid of the reference image.
     """
     # create a directory for the experiment
-    #exp_dir = '/tmp/%s' % exp_name
-    exp_dir = '/tmp/'
+    common.run('mkdir -p %s' % out_dir)
+
+    # input files
+    im1 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, ref_img_id)
+    im2 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, sec_img_id)
+    rpc1 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, ref_img_id)
+    rpc2 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, sec_img_id)
+    prev1 = 'pleiades_data/images/%s/prev%02d.jpg' % (img_name, ref_img_id)
+
+    # output files
+    rect1 = '%s/rectified_ref.tif' % (out_dir)
+    rect2 = '%s/rectified_sec.tif' % (out_dir)
+    disp    = '%s/rectified_disp.pgm'   % (out_dir)
+    mask    = '%s/rectified_mask.png'   % (out_dir)
+    height  = '%s/rectified_height.tif' % (out_dir)
+    rpc_err = '%s/rpc_err.tif'% (out_dir)
+    height_unrect  = '%s/height.tif' % (out_dir)
+    subsampling = '%s/subsampling.txt' % (out_dir)
+    pointing = '%s/pointing_%02d_%02d.txt' % (out_dir, ref_img_id, sec_img_id)
+
+    ## select ROI
+    try:
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+    except TypeError:
+        x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+
+    ## correct pointing error
+    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
+        ref_img_id, sec_img_id)
+
+    ## save the subsampling factor and
+    # the pointing correction matrix
+    np.savetxt(pointing, A)
+    np.savetxt(subsampling, np.array([global_params.subsampling_factor]))
+
+    # ATTENTION if subsampling_factor is set the rectified images will be
+    # smaller, and the homography matrices and disparity range will reflect
+    # this fact
+
+    ## rectification
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1,
+        rpc2, x, y, w, h, rect1, rect2, A)
+
+    ## block-matching
+    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+        global_params.matching_algorithm, disp_min, disp_max)
+
+    ## triangulation
+    if A_global is not None:
+        triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
+                height, rpc_err, A_global)
+    else:
+        triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
+                height, rpc_err, A)
+
+    try:
+        zoom = global_params.subsampling_factor
+    except NameError:
+        zoom = 1
+        #TODO: remove this extra crop that due only to interface of the synflow
+        #binary
+    tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
+    ref_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
+    triangulation.transfer_map(height, ref_crop, H1, x, y, zoom, height_unrect)
+
+    return height_unrect
+
+
+
+def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
+        w=None, h=None, tw=1000, th=1000, ov=100):
+    """
+    Computes a height map from a Pair of Pleiades images, using tiles.
+
+    Args:
+        out_dir: path to the output directory
+        img_name: name of the dataset, located in the 'pleiades_data/images'
+            directory
+        ref_img_id: id (1, 2 or 3) of the image used as the reference image of
+            the pair
+        sec_img_id: id of the image used as the secondary image of the
+            pair
+        x, y, w, h: four integers defining the rectangular ROI in the reference
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle. The ROI may be as big as you want, as it will be
+            cutted into small tiles for processing.
+        tw, th: dimensions of the tiles
+        ov: width of overlapping bands between tiles
+
+    Returns:
+        path to the height map, resampled on the grid of the reference image.
+    """
+    # create a directory for the experiment
+    common.run('mkdir -p %s' % out_dir)
+
+    # compute global pointing correction (on the whole ROI)
+    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
+        ref_img_id, sec_img_id)
+
+    #TODO: automatically compute optimal size for tiles, according to number of cores
+    # a tile should not be smaller than 300x300 (we could run in the situation
+    # were no sift points are found in the image)
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
@@ -84,86 +166,84 @@ def process_pair(img_name, exp_name, x, y, w, h, tile_w=1000, tile_h=1000,
         y = z * np.floor(y / z)
         w = z * np.ceil(w / z)
         h = z * np.ceil(h / z)
-        tile_w = z * np.floor(tile_w / z)
-        tile_h = z * np.floor(tile_h / z)
-        overlap = z * np.floor(overlap / z)
+        tw = z * np.floor(tw / z)
+        th = z * np.floor(th / z)
+        ov= z * np.floor(ov / z)
 
-    # compute global pointing correction (on the whole ROI)
-    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
-        reference_image_id, secondary_image_id)
 
-    # generate the tiles - parallelized
+    # generate the tiles - #TODO: parallelize
     processes = []
-    print np.arange(x, x + w, tile_w - overlap)
-    print np.arange(y, y + h, tile_h - overlap)
-    for i in np.arange(x, x + w, tile_w - overlap):
-        for j in np.arange(y, y + h, tile_h - overlap):
+    for i in np.arange(x, x + w, tw - ov):
+        for j in np.arange(y, y + h, th - ov):
 #            wait_processes(processes, N-1)
-            tile_exp = '%s_%d_%d' % (exp_name, i, j)
-#            p = Process(target=main_script.process_pair, args=(img_name,
+            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
+#            p = multiprocessing.Process(target=main_script.process_pair, args=(img_name,
 #                tile_exp, i, j, tile_w, tile_h, reference_image_id,
 #                secondary_image_id, exp_dir, A))
 #            p.start()
 #            processes.append(p)
-            main_script.process_pair(img_name, tile_exp, i, j, tile_w, tile_h,
-                    reference_image_id, secondary_image_id, exp_dir, A)
+            process_pair_single_tile(tile_dir, img_name, ref_img_id,
+                    sec_img_id, i, j, tw, th, A)
 
     # wait for all the processes to terminate
 #    wait_processes(processes, 0)
 
     # tiles composition
-    out = '%s/%s_height_full.tif' % (exp_dir, exp_name)
+    #TODO: use gdal vrt
+    out = '%s/height.tif' % out_dir
     common.run('plambda zero:%dx%d "nan" > %s' % (w, h, out))
-    for i in np.arange(x, x + w, tile_w - overlap):
-        for j in np.arange(y, y + h, tile_h - overlap):
-            tile_exp = '%s_%d_%d' % (exp_name, i, j)
-            height = '%s/%s/height_unrect.tif' % (exp_dir, tile_exp)
+    for i in np.arange(x, x + w, tw - ov):
+        for j in np.arange(y, y + h, th - ov):
+            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
+            height = '%s/height.tif' % tile_dir
             # weird usage of 'crop' with negative coordinates, to do
             # 'anti-crop' (ie pasting a small image onto a bigger image
             # of nans)
-            common.run('crop %s %s/%s/height_to_compose.tif %d %d %d %d' % (height,
-                exp_dir, tile_exp, (x-i)/z, (y-j)/z, w/z, h/z))
+            common.run('crop %s %s/height_to_compose.tif %d %d %d %d' % (height,
+                tile_dir, (x-i)/z, (y-j)/z, w/z, h/z))
             # the above divisions should give integer results, as x, y, w, h,
-            # tile_w, tile_h and overlap have been modified in order to be
-            # multiples of the zoom factor.
+            # tw, th and ov have been modified in order to be multiples of the
+            # zoom factor.
             # paste the tile onto the full output image
-            common.run('veco med %s %s/%s/height_to_compose.tif | iion - %s' % (out,
-                exp_dir, tile_exp, out))
-
+            common.run('veco med %s %s/height_to_compose.tif | iion - %s' % (out,
+                tile_dir, out))
 
     # cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+#    while common.garbage:
+#        common.run('rm ' + common.garbage.pop())
 
     return out
 
 
-def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
-        tile_w=1000, tile_h=1000, overlap=100, reference_image_id=2,
-        left_image_id=1, right_image_id=3):
+def process_triplet(out_dir, img_name, ref_img_id=2, left_img_id=1,
+        right_img_id=3, x=None, y=None, w=None, h=None, thresh=3, tile_w=1000,
+        tile_h=1000, overlap=100):
     """
     Computes a height map from three Pleiades images.
 
     Args:
+        out_dir: path to the output directory
         img_name: name of the dataset, located in the 'pleiades_data/images'
             directory
-        exp_name: string used to identify the experiment
+        ref_img_id: id (1, 2 or 3) of the image used as the reference image of
+            the triplet
+        left_img_id: id of the image used as the secondary image of the first
+            pair.
+        right_img_id: id of the image used as the secondary image of the second
+            pair.
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want, as it will be
             cutted into small tiles for processing.
+        thresh: threshold used for the fusion algorithm, in meters.
         tile_w, tile_h: dimensions of the tiles
         overlap: width of overlapping bands between tiles
-        reference_image_id: id (1, 2 or 3) of the image used as the reference
-            image of the triplet
-        left_image_id: id of the image used as the secondary image of the first
-            pair.
-        right_image_id: id of the image used as the secondary image of the
-            second pair.
 
     Returns:
         path to the height map, resampled on the grid of the reference image.
     """
+    # create a directory for the experiment
+    common.run('mkdir -p %s' % out_dir)
 
     # select ROI
     try:
@@ -175,17 +255,17 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
     # process the two pairs
-    exp_name_left = '%s_left' % exp_name
-    h_left = process_pair(img_name, exp_name_left, x, y, w, h, tile_w, tile_h,
-        overlap, reference_image_id, left_image_id)
+    out_dir_left = '%s/left' % out_dir
+    h_left = process_pair(out_dir_left, img_name, ref_img_id, left_img_id, x,
+            y, w, h, tile_w, tile_h, overlap)
 
-    exp_name_right = '%s_right' % exp_name
-    h_right = process_pair(img_name, exp_name_right, x, y, w, h, tile_w,
-        tile_h, overlap, reference_image_id, right_image_id)
+    out_dir_right = '%s/right' % out_dir
+    h_right = process_pair(out_dir_right, img_name, ref_img_id, right_img_id, x,
+            y, w, h, tile_w, tile_h, overlap)
 
     # merge the two height maps
-    h = '/tmp/%s_merged_height.tif' % exp_name
-    fusion.merge(h_left, h_right, 3, h)
+    h = '%s/height_fusion.tif' % out_dir
+    fusion.merge(h_left, h_right, thresh, h)
 
     # cleanup
     while common.garbage:
