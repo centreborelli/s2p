@@ -12,6 +12,8 @@ epipolar_thresh = 0.5
 # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08', hirschmuller08_laplacian'
 matching_algorithm = 'hirschmuller08'
 
+use_pleiades_unsharpening = True
+
 
 
 # bunch not used yet

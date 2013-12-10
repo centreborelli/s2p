@@ -554,7 +554,7 @@ def optimize_pair_all_datasets(data):
         except Exception as e:
                 print e
 
-def compute_correction(img_name, exp_name, x, y, w, h, reference_image_id=1,
+def compute_correction(img_name, x, y, w, h, reference_image_id=1,
         secondary_image_id=2):
     """
     Computes pointing correction matrix for specific ROI
@@ -562,7 +562,6 @@ def compute_correction(img_name, exp_name, x, y, w, h, reference_image_id=1,
     Args:
         img_name: name of the dataset, located in the 'pleiades_data/images'
             directory
-        exp_name: string used to identify the experiment
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want. If bigger than
@@ -589,7 +588,7 @@ def compute_correction(img_name, exp_name, x, y, w, h, reference_image_id=1,
     tmp = global_params.subsampling_factor_registration
     global_params.subsampling_factor_registration = 1
 
-    if w*h < 1e6:
+    if w*h < 2e6:
         m = filtered_sift_matches_roi(im1, im2, r1, r2, x, y,
                 w, h)
     else:

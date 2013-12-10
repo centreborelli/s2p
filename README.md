@@ -7,21 +7,30 @@ elevation models from tristereo sets (three images).
 The main language is Python, although several operations are handled by
 binaries written in C.
 
+The pipeline is implemented in the file `s2p.py`. The `s2p` module can be
+used to produce elevation models and 3D point clouds of arbitrarily large
+regions of interest. If needed, it cuts the region of interest in several
+small tiles and process them in parallel.
+
 ## Usage
 
-The pipeline is implemented in the file `main_script_pairs.py`. Its parameters
-(paths to Pleiades data, definition of a region of interest, paths for output
-data), are defined at the beginning of that file. To launch it, simply run:
+Import the `s2p` module in a python session, and run the functions
+`process_pair` or `process_triplet`, depending on the kind of dataset you have
+(stereo pair or triplet)
 
-    ./main_script_pairs.py
+    python
+    >>> import s2p
+    >>> s2p.process_pair('s2p_test', 'toulouse', 2, 1, 16000, 12000, 300, 300)
 
+See the docstrings of the functions `process_pair` and `process_triplet` for a
+complete description of their arguments.
 
+## Installation
 
-## Dependencies
-
-Some python functions of the S2P modules rely on external binaries. Most of
-these binaries were written on purpose for the needs of the pipeline, and their
-source code is provided here in the `c` folder.
+All the python modules are located in the `python` folder.  Some python
+functions of these modules rely on external binaries. Most of these binaries
+were written on purpose for the needs of the pipeline, and their source code is
+provided here in the `c` folder.
 
 ### S2P binaries
 
@@ -30,7 +39,7 @@ The source code is in the `c` folder. To compile it:
     cd c
     make
 
-This will create a `bin` directory containing all the S2P binaries.
+This will create a `bin` directory containing all the s2p binaries.
 
 ### 3rd party binaries
 
@@ -42,9 +51,10 @@ the provided makefiles. For example, for GeographicLib, do:
     make
     sudo make install
 
-Since we use GeographicLib to evaluate geoid heights we must also install the geoids data files by running the script:
+Since we use GeographicLib to evaluate geoid heights we must also install the
+geoids data files by running the script:
 
-    3rdparty/GeographicLib-1.32/tools/geographiclib-get-geoids.sh 
+    3rdparty/GeographicLib-1.32/tools/geographiclib-get-geoids.sh
 
 
 
@@ -59,19 +69,21 @@ For SGBM (Semi-Global Block-Matching), do:
 This binary uses OpenCV implementation of Hirschmuller Semi-Global Matching.
 You must have OpenCV 2.4.x installed on your system to compile it.
 
+    git clone https://github.com/Itseez/opencv.git
+    cd opencv
+    git checkout 2.4
+    mkdir build_2.4
+    cd build_2.4
+    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=~/local ..
+    make
+
 For sift, do:
 
     cd 3rdparty/sift_20130403
     make
-    cp bin/matching ../../bin
 
-In addition, the following binaries must be available on your system:
-
-    gdal_translate
-    tiffcp
-    java
-
-You can install them through a package manager.
+In addition, the `gdal_translate` binary is needed, and can be installed
+through your favourite package manager.
 
 
 ## Pleiades data

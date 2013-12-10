@@ -30,7 +30,7 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     return
 
 
-def transfer_map(in_map, ref_crop, H, x, y, zoom, out_map):
+def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     """
     Transfer the heights computed on the rectified grid to the original
     Pleiades image grid.
@@ -38,10 +38,10 @@ def transfer_map(in_map, ref_crop, H, x, y, zoom, out_map):
     Args:
         in_map: path to the input map, usually a height map or a mask, sampled
             on the rectified grid
-        ref_crop: path to the reference crop sampled on the original grid
         H: numpy 3x3 array containing the rectifying homography
-        x, y: two integers defining the top-left corner of the rectangular ROI
-            in the original image.
+        x, y, w, h: four integers defining the rectangular ROI in the original 
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
         zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
             map
         out_map: path to the output map
@@ -58,9 +58,13 @@ def transfer_map(in_map, ref_crop, H, x, y, zoom, out_map):
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow
     # to produce the flow, then backflow to apply it
+    # zero:256x256 is the iio way to create a 256x256 image with zeros everywhere
     hij = ' '.join(['%r' % num for num in HH.flatten()])
-    common.run('synflow hom "%s" %s /dev/null - | BILINEAR=1 backflow - %s %s' % (
-        hij, ref_crop, in_map, out_map))
+    common.run('synflow hom "%s" zero:%dx%d /dev/null - | BILINEAR=1 backflow - %s %s' % (
+        hij, w/zoom, h/zoom, in_map, out_map))
+
+    # w and h, provided by the s2p.process_pair_single_tile function, are
+    # always multiples of zoom.
 
     # replace the -inf with nan in the heights map, because colormesh filter
     # out nans but not infs
@@ -118,18 +122,24 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
 
 
 
-def compute_point_cloud(crop_colorized, heights, rpc, H, cloud):
+def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, merc_x=0,
+        merc_y=0):
     """
     Computes a color point cloud from a height map.
 
     Args:
-        crop_colorized: path to the colorized rectified crop
-        heights: height map. Its size is the same as the crop_color image
+        crop_colorized: path to a colorized crop of a Pleiades image
+        heights: height map, sampled on the same grid as the crop_colorized
+            image. In particular, its size is the same as crop_colorized.
         rpc: path to xml file containing RPC data for the current Pleiade image
-        H: path to the file containing the coefficients of the rectifying
-            homography
+        H: path to the file containing the coefficients of the homography
+            transforming the coordinates system of the original full size image
+            into the coordinates system of the crop we are dealing with.
         cloud: path to the output points cloud (ply format)
+            merc_{x,y} (optional, default 0): mercator coordinates of the point
+            we want to use as origin in the local coordinate system of the
+            computed cloud
     """
-    common.run("colormesh %s %s %s %s %s" % (crop_colorized, heights, rpc, H,
-        cloud))
+    common.run("colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
+        rpc, H, cloud, merc_x, merc_y))
     return

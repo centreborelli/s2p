@@ -1,0 +1,1 @@
+wget --http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/ASCII/srtm_54_07.zip

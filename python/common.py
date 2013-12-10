@@ -48,6 +48,24 @@ def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
 
 
+def wait_processes(processes, n):
+    """
+    Wait until processes terminate.
+
+    More precisely, wait until the number of running processes of the input
+    list becomes less than the specified number.
+
+    Args:
+        processes: list of Process objects
+        n: max number of running processes we want
+    """
+    while len(processes) > n:
+        for p in processes:
+            if not p.is_alive():
+                processes.remove(p)
+    return
+
+
 def matrix_write(filename, H):
     """
     Writes a 3x3 matrix in a file using the matlab format.
@@ -133,7 +151,7 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
     return out
 
-def image_safe_zoom_fft(im, f):
+def image_safe_zoom_fft(im, f, out=None):
     """
     zooms im by a factor: f∈[0,1] for zoom in, f∈[1 +inf] for zoom out
     It works with the fft representation of the symmetrized im thus it
@@ -146,7 +164,10 @@ def image_safe_zoom_fft(im, f):
     """
     if f == 1:
         return im
-    out = tmpfile('.tif')
+
+    if out is None:
+        out = tmpfile('.tif')
+
     sz = image_size(im)
     # FFT doesn't play nice with infinite values, so we remove them
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
@@ -360,7 +381,7 @@ def bounding_box2D(pts):
     return x, y, w, h
 
 
-def image_crop_TIFF(im, x, y, w, h):
+def image_crop_TIFF(im, x, y, w, h, out=None):
     """
     Crops tif images.
 
@@ -369,34 +390,32 @@ def image_crop_TIFF(im, x, y, w, h):
         x, y, w, h: four integers definig the rectangular crop in the image.
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
+        out (optional): path to the output crop
 
     Returns:
         path to cropped tif image
 
-    The crop is made with the gdal_translate binary, from gdal library.
+    The crop is made with the gdal_translate binary, from gdal library. We
+    tried to use tiffcrop but it fails.
     """
     if (int(x) != x or int(y) != y):
         print 'Warning: image_crop_TIFF will round the coordinates of your crop'
 
-    tmp = tmpfile('.tif')
-    out = tmpfile('.tif')
+    if out is None:
+        out = tmpfile('.tif')
 
     try:
         with open(im, 'r'):
-            # do the crop with gdal_translate
-            run('gdal_translate -srcwin %d %d %d %d %s %s' % (x, y, w, h,
-                shellquote(im), shellquote(tmp)))
-
-            # remove GeoTiff tags
-            run('tiffcp %s %s 2> /dev/null' % (tmp, out))
-            return out
+            # do the crop with gdal_translate, with option to remove any GDAL or GeoTIFF tag
+            run('gdal_translate -co profile=baseline -srcwin %d %d %d %d %s %s' % (x,
+                y, w, h, shellquote(im), shellquote(out)))
 
     except IOError:
         print """image_crop_TIFF: input image not found! Verify your paths to
                  Pleiades full images"""
         sys.exit()
 
-    # Remark: with tiffcrop it fails:
+    return out
 
 
 def image_crop_LARGE(im, x, y, w, h):
