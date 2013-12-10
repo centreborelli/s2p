@@ -5,6 +5,7 @@ from python import pointing_accuracy
 from python import rectification
 from python import block_matching
 from python import triangulation
+from python import tile_composer
 from python import fusion
 from python import global_params
 import multiprocessing
@@ -170,10 +171,12 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
 
     # generate the tiles - #TODO: parallelize
     processes = []
-    for i in np.arange(x, x + w, tw - ov):
-        for j in np.arange(y, y + h, th - ov):
+    tiles = []
+    for j in np.arange(y, y + h, th - ov):
+        for i in np.arange(x, x + w, tw - ov):
 #            wait_processes(processes, N-1)
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
+            tiles.append('%s/height.tif' % tile_dir)
 #            p = multiprocessing.Process(target=main_script.process_pair, args=(img_name,
 #                tile_exp, i, j, tile_w, tile_h, reference_image_id,
 #                secondary_image_id, exp_dir, A))
@@ -186,24 +189,8 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
 #    wait_processes(processes, 0)
 
     # tiles composition
-    #TODO: use gdal vrt
     out = '%s/height.tif' % out_dir
-    common.run('plambda zero:%dx%d "nan" > %s' % (w, h, out))
-    for i in np.arange(x, x + w, tw - ov):
-        for j in np.arange(y, y + h, th - ov):
-            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
-            height = '%s/height.tif' % tile_dir
-            # weird usage of 'crop' with negative coordinates, to do
-            # 'anti-crop' (ie pasting a small image onto a bigger image
-            # of nans)
-            common.run('crop %s %s/height_to_compose.tif %d %d %d %d' % (height,
-                tile_dir, (x-i)/z, (y-j)/z, w/z, h/z))
-            # the above divisions should give integer results, as x, y, w, h,
-            # tw, th and ov have been modified in order to be multiples of the
-            # zoom factor.
-            # paste the tile onto the full output image
-            common.run('veco med %s %s/height_to_compose.tif | iion - %s' % (out,
-                tile_dir, out))
+    tile_composer.mosaic(out, w, h, ov, tiles)
 
     # cleanup
 #    while common.garbage:
