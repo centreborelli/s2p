@@ -169,8 +169,8 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
     # process the tiles
     processes = []
     tiles = []
-    for j in np.arange(y, y + h, th - ov):
-        for i in np.arange(x, x + w, tw - ov):
+    for j in np.arange(y, y + h - ov, th - ov):
+        for i in np.arange(x, x + w - ov, tw - ov):
             common.wait_processes(processes, N-1)
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             tiles.append('%s/height.tif' % tile_dir)

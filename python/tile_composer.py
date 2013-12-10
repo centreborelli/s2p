@@ -17,8 +17,8 @@ def mosaic(fout, w, h, ov, list_tiles):
     """
     N = len(list_tiles)
     tw, th = common.image_size(list_tiles[0])
-    ntx = np.ceil(w / (tw - ov)).astype(int)
-    nty = np.ceil(h / (th - ov)).astype(int)
+    ntx = np.ceil((w - ov) / (tw - ov)).astype(int)
+    nty = np.ceil((h - ov) / (th - ov)).astype(int)
     assert(ntx * nty == N)
 
     out = np.zeros([h, w])

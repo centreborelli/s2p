@@ -7,27 +7,30 @@ elevation models from tristereo sets (three images).
 The main language is Python, although several operations are handled by
 binaries written in C.
 
+The pipeline is implemented in the file `s2p.py`. The `s2p` module can be
+used to produce elevation models and 3D point clouds of arbitrarily large
+regions of interest. If needed, it cuts the region of interest in several
+small tiles and process them in parallel.
+
 ## Usage
 
-The pipeline is implemented in the files `main_script.py` and
-`tile_composer.py`. The `tile_composer.py` module is used to produce elevation
-models of big regions (ie bigger than 2000 x 2000 pixels). It cuts the region
-of interest in several tiles, and pass them to the `main_script.py` module. For
-small region, you can use the `main_script.py` module directly. Its parameters
-(paths to Pleiades data, definition of a region of interest, paths for output
-data), are defined at the beginning of that file. To launch it, simply run:
+Import `s2p` the module in a python session, and run the functions
+`process_pair` or `process_triplet`, depending on the kind of dataset you have
+(stereo pair or triplet)
 
-    ./main_script.py
+    python
+    >>> import s2p
+    >>> s2p.process_pair('s2p_test', 'toulouse', 2, 1, 16000, 12000, 300, 300)
 
-Alternatively you can import the module in a python session, and run the
-functions `main_script.process_pair` or `main_script.process_triplet` from
-there.
+See the docstrings of the functions `process_pair` and `process_triplet` for a
+complete description of their arguments.
 
-## Dependencies
+## Installation
 
-Some python functions of the S2P modules rely on external binaries. Most of
-these binaries were written on purpose for the needs of the pipeline, and their
-source code is provided here in the `c` folder.
+All the python modules are located in the `python` folder.  Some python
+functions of these modules rely on external binaries. Most of these binaries
+were written on purpose for the needs of the pipeline, and their source code is
+provided here in the `c` folder.
 
 ### S2P binaries
 
@@ -36,7 +39,7 @@ The source code is in the `c` folder. To compile it:
     cd c
     make
 
-This will create a `bin` directory containing all the S2P binaries.
+This will create a `bin` directory containing all the s2p binaries.
 
 ### 3rd party binaries
 
