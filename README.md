@@ -14,7 +14,7 @@ small tiles and process them in parallel.
 
 ## Usage
 
-Import `s2p` the module in a python session, and run the functions
+Import the `s2p` module in a python session, and run the functions
 `process_pair` or `process_triplet`, depending on the kind of dataset you have
 (stereo pair or triplet)
 
