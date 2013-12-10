@@ -13,23 +13,6 @@ import numpy as np
 
 N = multiprocessing.cpu_count()
 
-def wait_processes(processes, n):
-    """
-    Wait until processes terminate.
-
-    More precisely, wait until the number of running processes of the input
-    list becomes less than the specified number.
-
-    Args:
-        processes: list of Process objects
-        n: max number of running processes we want
-    """
-    while len(processes) > n:
-        for p in processes:
-            if not p.is_alive():
-                processes.remove(p)
-    return
-
 def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
         x=None, y=None, w=None, h=None, A_global=None):
     """
@@ -121,7 +104,7 @@ def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
 
 
 def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
-        w=None, h=None, tw=1000, th=1000, ov=100):
+        w=None, h=None, tw=None, th=None, ov=None):
     """
     Computes a height map from a Pair of Pleiades images, using tiles.
 
@@ -146,14 +129,6 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
-    # compute global pointing correction (on the whole ROI)
-    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
-        ref_img_id, sec_img_id)
-
-    #TODO: automatically compute optimal size for tiles, according to number of cores
-    # a tile should not be smaller than 300x300 (we could run in the situation
-    # were no sift points are found in the image)
-
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
@@ -164,37 +139,59 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
         y = z * np.floor(y / z)
         w = z * np.ceil(w / z)
         h = z * np.ceil(h / z)
+
+    # compute global pointing correction (on the whole ROI)
+    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
+        ref_img_id, sec_img_id)
+
+    # automatically compute optimal size for tiles
+    # TODO: impose the constraint that ntx*nty is inferior to or equal to a
+    # multiple of the number of cores
+    if tw is None and th is None and ov is None:
+        ov = z * np.ceil(50 / z)
+        tw = 300
+        th = 300
+        while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
+            tw += 1
+        while (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
+            th += 1
+    ntx = np.ceil((w - ov) / (tw - ov))
+    nty = np.ceil((h - ov) / (th - ov))
+    # ensure that the coordinates of each tile are multiples of the zoom factor
+    if (z != 1):
+        ov = z * np.floor(ov / z)
         tw = z * np.floor(tw / z)
         th = z * np.floor(th / z)
-        ov= z * np.floor(ov / z)
+    print 'tiles size is tw, th = (%d, %d)' % (tw, th)
+    print 'number of tiles is %d, %d' % (ntx, nty)
+    print 'total number of tiles is %d' % (ntx * nty)
 
-
-    # generate the tiles - #TODO: parallelize
+    # process the tiles
     processes = []
     tiles = []
     for j in np.arange(y, y + h, th - ov):
         for i in np.arange(x, x + w, tw - ov):
-#            wait_processes(processes, N-1)
+            common.wait_processes(processes, N-1)
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             tiles.append('%s/height.tif' % tile_dir)
-#            p = multiprocessing.Process(target=main_script.process_pair, args=(img_name,
-#                tile_exp, i, j, tile_w, tile_h, reference_image_id,
-#                secondary_image_id, exp_dir, A))
-#            p.start()
-#            processes.append(p)
-            process_pair_single_tile(tile_dir, img_name, ref_img_id,
-                    sec_img_id, i, j, tw, th, A)
+            p = multiprocessing.Process(target=process_pair_single_tile,
+                args=(tile_dir, img_name, ref_img_id, sec_img_id, i, j, tw,
+                th, A))
+            p.start()
+            processes.append(p)
+#            process_pair_single_tile(tile_dir, img_name, ref_img_id,
+#                    sec_img_id, i, j, tw, th, A)
 
     # wait for all the processes to terminate
-#    wait_processes(processes, 0)
+    common.wait_processes(processes, 0)
 
     # tiles composition
     out = '%s/height.tif' % out_dir
     tile_composer.mosaic(out, w, h, ov, tiles)
 
     # cleanup
-#    while common.garbage:
-#        common.run('rm ' + common.garbage.pop())
+    while common.garbage:
+        common.run('rm ' + common.garbage.pop())
 
     return out
 

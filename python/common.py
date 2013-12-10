@@ -48,6 +48,24 @@ def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
 
 
+def wait_processes(processes, n):
+    """
+    Wait until processes terminate.
+
+    More precisely, wait until the number of running processes of the input
+    list becomes less than the specified number.
+
+    Args:
+        processes: list of Process objects
+        n: max number of running processes we want
+    """
+    while len(processes) > n:
+        for p in processes:
+            if not p.is_alive():
+                processes.remove(p)
+    return
+
+
 def matrix_write(filename, H):
     """
     Writes a 3x3 matrix in a file using the matlab format.
