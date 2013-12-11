@@ -16,14 +16,17 @@ small tiles and process them in parallel.
 
 Import the `s2p` module in a python session, and run the functions
 `process_pair` or `process_triplet`, depending on the kind of dataset you have
-(stereo pair or triplet)
+(stereo pair or triplet), to generate a digital elevation model (DEM). You can
+then generate a 3D point cloud from this DEM using the function
+`generate_cloud`.
 
     python
     >>> import s2p
-    >>> s2p.process_pair('s2p_test', 'toulouse', 2, 1, 16000, 12000, 300, 300)
+    >>> dem = s2p.process_pair('s2p_test', 'toulouse', 2, 1, 16000, 12000, 300, 300)
+    >>> s2p.generate_cloud('s2p_test', 'toulouse', 2, 16000, 12000, 300, 300, dem)
 
-See the docstrings of the functions `process_pair` and `process_triplet` for a
-complete description of their arguments.
+See the docstrings of the functions `process_pair`, `process_triplet` and
+`generate_cloud` for a complete description of their arguments.
 
 ## Installation
 
@@ -112,6 +115,23 @@ on your system, or available through your package manager. If not, do:
 
     cd 3rdparty/sift_20130403
     make
+
+#### piio
+
+    cd 3rdparty
+    git clone https://github.com/mnhrdt/iio.git
+    cd piio_packaged
+    python setup.py install --prefix=~/local
+    export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
+
+#### numpy >= 1.6.1
+
+    cd 3rdparty
+    wget http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1.tar.gz
+    tar xzf numpy-1.6.1.tar.gz
+    cd numpy-1.6.1
+    python setup.py build --fcompiler=gnu95 <!---check the README.txt of numpy for the compiler options-->
+    python setup.py install --prefix=~/local/
 
 
 ## Pleiades data
