@@ -7,27 +7,33 @@ elevation models from tristereo sets (three images).
 The main language is Python, although several operations are handled by
 binaries written in C.
 
+The pipeline is implemented in the file `s2p.py`. The `s2p` module can be
+used to produce elevation models and 3D point clouds of arbitrarily large
+regions of interest. If needed, it cuts the region of interest in several
+small tiles and process them in parallel.
+
 ## Usage
 
-The pipeline is implemented in the files `main_script.py` and
-`tile_composer.py`. The `tile_composer.py` module is used to produce elevation
-models of big regions (ie bigger than 2000 x 2000 pixels). It cuts the region
-of interest in several tiles, and pass them to the `main_script.py` module. For
-small region, you can use the `main_script.py` module directly. Its parameters
-(paths to Pleiades data, definition of a region of interest, paths for output
-data), are defined at the beginning of that file. To launch it, simply run:
+Import the `s2p` module in a python session, and run the functions
+`process_pair` or `process_triplet`, depending on the kind of dataset you have
+(stereo pair or triplet), to generate a digital elevation model (DEM). You can
+then generate a 3D point cloud from this DEM using the function
+`generate_cloud`.
 
-    ./main_script.py
+    python
+    >>> import s2p
+    >>> dem = s2p.process_pair('s2p_test', 'toulouse', 2, 1, 16000, 12000, 300, 300)
+    >>> s2p.generate_cloud('s2p_test', 'toulouse', 2, 16000, 12000, 300, 300, dem)
 
-Alternatively you can import the module in a python session, and run the
-functions `main_script.process_pair` or `main_script.process_triplet` from
-there.
+See the docstrings of the functions `process_pair`, `process_triplet` and
+`generate_cloud` for a complete description of their arguments.
 
-## Dependencies
+## Installation
 
-Some python functions of the S2P modules rely on external binaries. Most of
-these binaries were written on purpose for the needs of the pipeline, and their
-source code is provided here in the `c` folder.
+All the python modules are located in the `python` folder.  Some python
+functions of these modules rely on external binaries. Most of these binaries
+were written on purpose for the needs of the pipeline, and their source code is
+provided here in the `c` folder.
 
 ### S2P binaries
 
@@ -36,51 +42,96 @@ The source code is in the `c` folder. To compile it:
     cd c
     make
 
-This will create a `bin` directory containing all the S2P binaries.
+This will create a `bin` directory containing all the s2p binaries.
 
 ### 3rd party binaries
 
 A few other binaries are 3rd party. Their source code is located in the
-`3rdparty` directory. You must compile them before launching the script, using
-the provided makefiles. For example, for GeographicLib, do:
+`3rdparty` directory. You must compile and install them before launching the
+script, using the provided makefiles. Here are the instuctions to install them
+in a local folder, without root privileges. First create a local folder:
+
+    mkdir ~/local
+
+If you want to use a different path, do the appropriate changes in the
+following instructions.
+
+#### GeographicLib
 
     cd 3rdparty/GeographicLib-1.32
-    make
-    sudo make install
-
-Since we use GeographicLib to evaluate geoid heights we must also install the
-geoids data files by running the script:
-
-    3rdparty/GeographicLib-1.32/tools/geographiclib-get-geoids.sh
-
-
-
-For SGBM (Semi-Global Block-Matching), do:
-
-    cd 3rdparty/stereo_hirschmuller_2008
     mkdir build
     cd build
-    cmake ..
+    cmake -D CMAKE_INSTALL_PREFIX=~/local -D GEOGRAPHICLIB_DATA=~/local/share/GeographicLib ..
     make
+    make install
 
-This binary uses OpenCV implementation of Hirschmuller Semi-Global Matching.
-You must have OpenCV 2.4.x installed on your system to compile it.
+Since we use GeographicLib to evaluate geoid heights we must also install the
+geoids data files by running the following script, which has been configured by
+cmake:
+
+    ~/local/sbin/geographiclib-get-geoids
+
+#### SGBM (Semi-Global Block-Matching)
+
+It is a wrapper around the OpenCV implementation of semi-global block-matching,
+which is a variant of Hirschmuller famous semi-global matching (SGM). You must
+first compile and install a few OpenCV modules:
 
     git clone https://github.com/Itseez/opencv.git
     cd opencv
     git checkout 2.4
-    mkdir build_2.4
-    cd build_2.4
-    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=~/local ..
+    mkdir build
+    cd build
+    cmake -D CMAKE_INSTALL_PREFIX=~/local -D CMAKE_BUILD_TYPE=RELEASE -D BUILD_opencv_ml=OFF -D BUILD_opencv_objdetect=OFF -D BUILD_opencv_video=OFF -D BUILD_opencv_photo=OFF -D BUILD_opencv_nonfree=OFF -D BUILD_opencv_java=OFF -D BUILD_opencv_ts=OFF ..
+    make
+    make install
+
+Please note the importance of compiling the code of the 2.4 branch, and not the
+master branch, since the OpenCV API may change and break the compatibility with
+our wrapper.
+
+Now you can compile the SGBM wrapper:
+
+    cd 3rdparty/stereo_hirschmuller_2008
+    mkdir build
+    cd build
+    cmake -D CMAKE_PREFIX_PATH=~/local ..
     make
 
-For sift, do:
+#### GDAL
+
+In addition, the `gdal_translate` binary is needed, and is probably already installed
+on your system, or available through your package manager. If not, do:
+
+    cd 3rdparty
+    wget http://download.osgeo.org/gdal/1.10.1/gdal-1.10.1.tar.gz
+    tar xzf gdal-1.10.1.tar.gz
+    cd gdal-1.10.1
+    ./configure --prefix=~/local
+    make
+    make install
+
+#### Sift
 
     cd 3rdparty/sift_20130403
     make
 
-In addition, the `gdal_translate` binary is needed, and can be installed
-through your favourite package manager.
+#### piio
+
+    cd 3rdparty
+    git clone https://github.com/mnhrdt/iio.git
+    cd piio_packaged
+    python setup.py install --prefix=~/local
+    export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
+
+#### numpy >= 1.6.1
+
+    cd 3rdparty
+    wget http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1.tar.gz
+    tar xzf numpy-1.6.1.tar.gz
+    cd numpy-1.6.1
+    python setup.py build --fcompiler=gnu95 <!---check the README.txt of numpy for the compiler options-->
+    python setup.py install --prefix=~/local/
 
 
 ## Pleiades data

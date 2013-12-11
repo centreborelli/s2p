@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.3)
 
 PROJECT( SGBM )
 
-FIND_PACKAGE( OpenCV REQUIRED )
+FIND_PACKAGE(OpenCV REQUIRED core highgui calib3d)
 FIND_PACKAGE(PNG)
 FIND_PACKAGE(JPEG)
 FIND_PACKAGE(TIFF)

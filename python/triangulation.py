@@ -30,7 +30,7 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     return
 
 
-def transfer_map(in_map, ref_crop, H, x, y, zoom, out_map):
+def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     """
     Transfer the heights computed on the rectified grid to the original
     Pleiades image grid.
@@ -38,10 +38,10 @@ def transfer_map(in_map, ref_crop, H, x, y, zoom, out_map):
     Args:
         in_map: path to the input map, usually a height map or a mask, sampled
             on the rectified grid
-        ref_crop: path to the reference crop sampled on the original grid
         H: numpy 3x3 array containing the rectifying homography
-        x, y: two integers defining the top-left corner of the rectangular ROI
-            in the original image.
+        x, y, w, h: four integers defining the rectangular ROI in the original 
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
         zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
             map
         out_map: path to the output map
@@ -58,9 +58,13 @@ def transfer_map(in_map, ref_crop, H, x, y, zoom, out_map):
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow
     # to produce the flow, then backflow to apply it
+    # zero:256x256 is the iio way to create a 256x256 image with zeros everywhere
     hij = ' '.join(['%r' % num for num in HH.flatten()])
-    common.run('synflow hom "%s" %s /dev/null - | BILINEAR=1 backflow - %s %s' % (
-        hij, ref_crop, in_map, out_map))
+    common.run('synflow hom "%s" zero:%dx%d /dev/null - | BILINEAR=1 backflow - %s %s' % (
+        hij, w/zoom, h/zoom, in_map, out_map))
+
+    # w and h, provided by the s2p.process_pair_single_tile function, are
+    # always multiples of zoom.
 
     # replace the -inf with nan in the heights map, because colormesh filter
     # out nans but not infs

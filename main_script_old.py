@@ -177,69 +177,6 @@ def process_triplet(img_name, exp_name, x=None, y=None, w=None, h=None,
     return h
 
 
-def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
-    reference_image_id=1, merc_x=None, merc_y=None):
-    """
-    Args:
-        img_name: name of the dataset, located in the 'pleiades_data/images'
-            directory
-        exp_name: string used to identify the experiment
-        x, y, w, h: four integers defining the rectangular ROI in the original
-            panchro image. (x, y) is the top-left corner, and (w, h) are the
-            dimensions of the rectangle.
-        height_map: path to the height_map, produced by the process_pair or
-            process_triplet function
-        reference_image_id: id (1, 2 or 3) of the image used as the reference
-            image. The height map has been resampled on its grid.
-        merc_{x,y}: mercator coordinates of the point we want to use as
-            origin in the local coordinate system of the computed cloud
-    """
-    common.run('mkdir /tmp/%s' % exp_name)
-    rpc = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
-    im = 'pleiades_data/images/%s/im%02d.tif' % (img_name, reference_image_id)
-    im_color = 'pleiades_data/images/%s/im%02d_color.tif' % (img_name, reference_image_id)
-    crop   = '/tmp/%s/roi_ref%02d.tif' % (exp_name, reference_image_id)
-    crop_color = '/tmp/%s/roi_color_ref%02d.tif' % (exp_name, reference_image_id)
-    cloud   = '/tmp/%s/cloud.ply'  % (exp_name)
-
-    # read the zoom value
-    zoom = global_params.subsampling_factor
-
-    # build the matrix of the zoom + translation transformation
-    A = common.matrix_translation(-x, -y)
-    f = 1.0/zoom
-    Z = np.diag([f, f, 1])
-    A = np.dot(Z, A)
-    trans = common.tmpfile('.txt')
-    np.savetxt(trans, A)
-
-    # compute mercator offset
-    if merc_x is None:
-        lat = rpc_model.RPCModel(rpc).firstLat
-        lon = rpc_model.RPCModel(rpc).firstLon
-        merc_x, merc_y = geographiclib.geodetic_to_mercator(lat, lon)
-
-    # colorize, then generate point cloud
-    tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
-    tmp_crop = common.image_safe_zoom_fft(tmp_crop, zoom)
-    common.run('cp %s %s' % (tmp_crop, crop))
-    try:
-        with open(im_color):
-            triangulation.colorize(crop, im_color, x, y, zoom, crop_color)
-            triangulation.compute_point_cloud(crop_color, height_map, rpc,
-                trans, cloud, merc_x, merc_y)
-    except IOError:
-        print 'no color image available for this dataset.'
-        triangulation.compute_point_cloud(common.image_qauto(crop),
-            height_map, rpc, trans, cloud, merc_x, merc_y)
-
-    # cleanup
-#    while common.garbage:
-#        common.run('rm ' + common.garbage.pop())
-
-    print "v %s %s %s" % (crop, crop_color, height_map)
-    print "open %s" % (cloud)
-
 
 if __name__ == '__main__':
 
@@ -299,6 +236,10 @@ if __name__ == '__main__':
 #   w = 1500
 #   h = 1500
 
+# canvas_x = 5500
+# canvas_y = 13000
+# canvas_w = 3500
+# canvas_h = 3500
 
 #    img_name = 'montevideo'
 #    exp_name = 'pza_independencia'
