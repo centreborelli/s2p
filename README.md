@@ -44,46 +44,74 @@ This will create a `bin` directory containing all the s2p binaries.
 ### 3rd party binaries
 
 A few other binaries are 3rd party. Their source code is located in the
-`3rdparty` directory. You must compile them before launching the script, using
-the provided makefiles. For example, for GeographicLib, do:
+`3rdparty` directory. You must compile and install them before launching the
+script, using the provided makefiles. Here are the instuctions to install them
+in a local folder, without root privileges. First create a local folder:
+
+    mkdir ~/local
+
+If you want to use a different path, do the appropriate changes in the
+following instructions.
+
+#### GeographicLib
 
     cd 3rdparty/GeographicLib-1.32
-    make
-    sudo make install
-
-Since we use GeographicLib to evaluate geoid heights we must also install the
-geoids data files by running the script:
-
-    3rdparty/GeographicLib-1.32/tools/geographiclib-get-geoids.sh
-
-
-
-For SGBM (Semi-Global Block-Matching), do:
-
-    cd 3rdparty/stereo_hirschmuller_2008
     mkdir build
     cd build
-    cmake ..
+    cmake -D CMAKE_INSTALL_PREFIX=~/local -D GEOGRAPHICLIB_DATA=~/local/share/GeographicLib ..
     make
+    make install
 
-This binary uses OpenCV implementation of Hirschmuller Semi-Global Matching.
-You must have OpenCV 2.4.x installed on your system to compile it.
+Since we use GeographicLib to evaluate geoid heights we must also install the
+geoids data files by running the following script, which has been configured by
+cmake:
+
+    ~/local/sbin/geographiclib-get-geoids
+
+#### SGBM (Semi-Global Block-Matching)
+
+It is a wrapper around the OpenCV implementation of semi-global block-matching,
+which is a variant of Hirschmuller famous semi-global matching (SGM). You must
+first compile and install a few OpenCV modules:
 
     git clone https://github.com/Itseez/opencv.git
     cd opencv
     git checkout 2.4
-    mkdir build_2.4
-    cd build_2.4
-    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=~/local ..
+    mkdir build
+    cd build
+    cmake -D CMAKE_INSTALL_PREFIX=~/local -D CMAKE_BUILD_TYPE=RELEASE -D BUILD_opencv_ml=OFF -D BUILD_opencv_objdetect=OFF -D BUILD_opencv_video=OFF -D BUILD_opencv_photo=OFF -D BUILD_opencv_nonfree=OFF -D BUILD_opencv_java=OFF -D BUILD_opencv_ts=OFF ..
+    make
+    make install
+
+Please note the importance of compiling the code of the 2.4 branch, and not the
+master branch, since the OpenCV API may change and break the compatibility with
+our wrapper.
+
+Now you can compile the SGBM wrapper:
+
+    cd 3rdparty/stereo_hirschmuller_2008
+    mkdir build
+    cd build
+    cmake -D CMAKE_PREFIX_PATH=~/local ..
     make
 
-For sift, do:
+#### GDAL
+
+In addition, the `gdal_translate` binary is needed, and is probably already installed
+on your system, or available through your package manager. If not, do:
+
+    cd 3rdparty
+    wget http://download.osgeo.org/gdal/1.10.1/gdal-1.10.1.tar.gz
+    tar xzf gdal-1.10.1.tar.gz
+    cd gdal-1.10.1
+    ./configure --prefix=~/local
+    make
+    make install
+
+#### Sift
 
     cd 3rdparty/sift_20130403
     make
-
-In addition, the `gdal_translate` binary is needed, and can be installed
-through your favourite package manager.
 
 
 ## Pleiades data
