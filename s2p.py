@@ -197,8 +197,8 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
 
 
 def process_triplet(out_dir, img_name, ref_img_id=2, left_img_id=1,
-        right_img_id=3, x=None, y=None, w=None, h=None, thresh=3, tile_w=1000,
-        tile_h=1000, overlap=100):
+        right_img_id=3, x=None, y=None, w=None, h=None, thresh=3, tile_w=None,
+        tile_h=None, overlap=None):
     """
     Computes a height map from three Pleiades images.
 

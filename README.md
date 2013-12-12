@@ -22,8 +22,8 @@ then generate a 3D point cloud from this DEM using the function
 
     python
     >>> import s2p
-    >>> dem = s2p.process_pair('s2p_test', 'toulouse', 2, 1, 16000, 12000, 300, 300)
-    >>> s2p.generate_cloud('s2p_test', 'toulouse', 2, 16000, 12000, 300, 300, dem)
+    >>> dem = s2p.process_triplet('test', 'toulouse', 2, 1, 3, 25150, 24250, 300, 300, 3)
+    >>> s2p.generate_cloud('test', 'toulouse', 2, 25150, 24250, 300, 300, dem)
 
 See the docstrings of the functions `process_pair`, `process_triplet` and
 `generate_cloud` for a complete description of their arguments.
