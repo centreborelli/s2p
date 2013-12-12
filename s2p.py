@@ -322,3 +322,30 @@ def generate_cloud(out_dir, img_name, ref_img_id, x, y, w, h, height_map,
     # cleanup
     while common.garbage:
         common.run('rm ' + common.garbage.pop())
+
+
+if __name__ == '__main__':
+
+    if len(sys.argv) == 2:
+      config  = sys.argv[1]
+    else:
+      print """
+      Incorrect syntax, use:
+        > %s config.json
+
+        Launches the s2p pipeline. All the parameters, paths to input and
+        output files, are defined in the json configuration file.
+      """ % sys.argv[0]
+      sys.exit(1)
+
+    # parse the json configuration file
+    import json
+    f = open(config)
+    cfg = json.load(f)
+    f.close()
+
+    # launch the two functions
+    if len(cfg['data']) == 3:
+        dem = process_triplet(out_dir, img_name, ref_img_id=2, left_img_id=1,
+            right_img_id=3, x, y, w, h, thresh=3)
+    generate_cloud(out_dir, img_name, ref_img_id, x, y, w, h, dem)
