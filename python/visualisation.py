@@ -1,3 +1,5 @@
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+
 import numpy as np
 import common
 import piio

@@ -1,3 +1,6 @@
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+
 import numpy as np
 
 def distance_point_to_line(x, l):

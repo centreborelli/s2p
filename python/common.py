@@ -1,3 +1,6 @@
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+
 # This Python file uses the following encoding: utf-8
 import numpy as np
 import os

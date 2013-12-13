@@ -1,3 +1,6 @@
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+
 #!/usr/bin/env python
 
 import numpy as np
@@ -554,33 +557,27 @@ def optimize_pair_all_datasets(data):
         except Exception as e:
                 print e
 
-def compute_correction(img_name, x, y, w, h, reference_image_id=1,
-        secondary_image_id=2):
+def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h):
     """
     Computes pointing correction matrix for specific ROI
 
     Args:
-        img_name: name of the dataset, located in the 'pleiades_data/images'
-            directory
+        img1: path to the reference image.
+        rpc1: paths to the xml file containing the rpc coefficients of the
+            reference image
+        img2: path to the secondary image.
+        rpc2: paths to the xml file containing the rpc coefficients of the
+            secondary image
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want. If bigger than
             1 Mpix, only five crops will be used to compute sift matches.
-        reference_image_id: id (1, 2 or 3 for the tristereo datasets, and 1 or
-            2 for the bistereo datasets) of the image used as the reference
-            image of the pair
-        secondary_image_id: id of the image used as the secondary image of the
-            pair
 
     Returns:
-        a 3x3 matrix representing the planar transformation to apply to im2 in
+        a 3x3 matrix representing the planar transformation to apply to img2 in
         order to correct the pointing error.
     """
-    # input files
-    im1 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, reference_image_id)
-    im2 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, secondary_image_id)
-    rpc1 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
-    rpc2 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, secondary_image_id)
+    # read rpcs
     r1 = rpc_model.RPCModel(rpc1)
     r2 = rpc_model.RPCModel(rpc2)
 
@@ -589,13 +586,12 @@ def compute_correction(img_name, x, y, w, h, reference_image_id=1,
     global_params.subsampling_factor_registration = 1
 
     if w*h < 2e6:
-        m = filtered_sift_matches_roi(im1, im2, r1, r2, x, y,
-                w, h)
+        m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h)
     else:
-        m = filtered_sift_matches_full_img(im1, im2, r1, r2,
-                'automatic', None, 1000, x, y, w, h)
+        m = filtered_sift_matches_full_img(img1, img2, r1, r2, 'automatic',
+                None, 1000, x, y, w, h)
 
     global_params.subsampling_factor_registration = tmp
 
-    A = optimize_pair(im1, im2, r1, r2, None, m)
+    A = optimize_pair(img1, img2, r1, r2, None, m)
     return A
