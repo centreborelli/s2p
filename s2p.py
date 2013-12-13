@@ -229,7 +229,6 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     try:
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
     except TypeError:
-        prev = 'pleiades_data/images/%s/prev%02d.jpg' % (img_name, reference_image_id)
         x, y, w, h = common.get_roi_coordinates(rpc1, prv1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
@@ -351,7 +350,7 @@ if __name__ == '__main__':
     y = cfg['roi']['y']
     w = cfg['roi']['w']
     h = cfg['roi']['h']
-    out_dir = cfg['out_dir']
+    out_dir = str(cfg['out_dir'])
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     clr1 = cfg['images'][0]['clr']
