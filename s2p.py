@@ -1,8 +1,8 @@
+#!/usr/bin/env python
+
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 # Copyright (C) 2013, Enric Meinhardt Llopis <enric.meinhardt@cmla.ens-cachan.fr>
-
-#!/usr/bin/env python2.7
 
 from python import common
 from python import rpc_model
