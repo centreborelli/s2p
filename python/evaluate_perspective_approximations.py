@@ -1,3 +1,6 @@
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+
 import sys
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D

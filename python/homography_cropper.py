@@ -1,3 +1,6 @@
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+
 #!/usr/bin/env python
 
 import numpy as np
