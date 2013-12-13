@@ -1,0 +1,26 @@
+{
+  "out_dir" : "test",
+  "images" : [
+    { "img" : "pleiades_data/images/toulouse/im02.tif",
+      "rpc" : "pleiades_data/rpc/toulouse/rpc02.xml",
+      "clr" : "pleiades_data/images/toulouse/im02_color.tif" },
+    { "img" : "pleiades_data/images/toulouse/im01.tif",
+      "rpc" : "pleiades_data/rpc/toulouse/rpc01.xml" },
+    { "img" : "pleiades_data/images/toulouse/im03.tif",
+      "rpc" : "pleiades_data/rpc/toulouse/rpc03.xml" }
+    ],
+  "roi" : {
+    "x" : 25150,
+    "y" : 24250,
+    "w" : 300,
+    "h" : 300
+    },
+  "matching_algorithm" : "hirschmuller08",
+  "subsampling_factor" : 1,
+  "subsampling_factor_registration" : 1,
+  "sift_match_thresh" : 0.4,
+  "disp_range_extra_margin" : 0.2,
+  "n_gcp_per_axis" : 5,
+  "epipolar_thresh" : 0.5,
+  "use_pleiades_unsharpening" : true
+}

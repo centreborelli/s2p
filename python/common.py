@@ -1,3 +1,6 @@
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+
 # This Python file uses the following encoding: utf-8
 import numpy as np
 import os
@@ -153,9 +156,9 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
 
 def image_safe_zoom_fft(im, f, out=None):
     """
-    zooms im by a factor: f∈[0,1] for zoom in, f∈[1 +inf] for zoom out
-    It works with the fft representation of the symmetrized im thus it
-    controls the Gibbs artifacts.
+    zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out. It
+    works with the fft representation of the symmetrized im thus it controls
+    the Gibbs artifacts.
     In case of zoom out it filters the image before truncating the
     spectrum, for zoom in it performs a zero padding.
     Because of the discrete frequency representation the zero padding/

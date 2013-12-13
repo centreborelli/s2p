@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+# Copyright (C) 2013, Enric Meinhardt Llopis <enric.meinhardt@cmla.ens-cachan.fr>
+
 from python import common
 from python import rpc_model
 from python import geographiclib
@@ -9,39 +15,36 @@ from python import tile_composer
 from python import fusion
 from python import global_params
 import multiprocessing
+import sys
 import numpy as np
 
 N = multiprocessing.cpu_count()
 
-def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
-        x=None, y=None, w=None, h=None, A_global=None):
+def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
+        w=None, h=None, A_global=None, prv1=None):
     """
     Computes a height map from a Pair of Pleiades images, without tiling
 
     Args:
         out_dir: path to the output directory
-        img_name: name of the dataset, located in the 'pleiades_data/images'
-            directory
-        ref_img_id: index of the image used as the reference image of the pair
-        sec_img_id: id of the image used as the secondary image of the pair
+        img1: path to the reference image.
+        rpc1: paths to the xml file containing the rpc coefficients of the
+            reference image
+        img2: path to the secondary image.
+        rpc2: paths to the xml file containing the rpc coefficients of the
+            secondary image
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
         A_global (optional): global pointing correction matrix, used for
             triangulation (but not for stereo-rectification)
+        prv1 (optional): path to a preview of the reference image
 
     Returns:
         path to the height map, resampled on the grid of the reference image.
     """
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
-
-    # input files
-    im1 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, ref_img_id)
-    im2 = 'pleiades_data/images/%s/im%02d.tif' % (img_name, sec_img_id)
-    rpc1 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, ref_img_id)
-    rpc2 = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, sec_img_id)
-    prev1 = 'pleiades_data/images/%s/prev%02d.jpg' % (img_name, ref_img_id)
 
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
@@ -50,15 +53,15 @@ def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
     mask    = '%s/rectified_mask.png'   % (out_dir)
     height  = '%s/rectified_height.tif' % (out_dir)
     rpc_err = '%s/rpc_err.tif'% (out_dir)
-    height_unrect  = '%s/height.tif' % (out_dir)
+    dem     = '%s/dem.tif' % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
-    pointing = '%s/pointing_%02d_%02d.txt' % (out_dir, ref_img_id, sec_img_id)
+    pointing = '%s/pointing.txt' % out_dir
 
     ## select ROI
     try:
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
     except TypeError:
-        x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
+        x, y, w, h = common.get_roi_coordinates(rpc1, prv1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
@@ -72,8 +75,8 @@ def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
         h = z * np.ceil(h / z)
 
     ## correct pointing error
-    A = pointing_accuracy.compute_correction(img_name, x, y, w, h, ref_img_id,
-        sec_img_id)
+    A = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w,
+            h)
 
     ## save the subsampling factor and
     # the pointing correction matrix
@@ -85,7 +88,7 @@ def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
     # this fact
 
     ## rectification
-    H1, H2, disp_min, disp_max = rectification.rectify_pair(im1, im2, rpc1,
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
         rpc2, x, y, w, h, rect1, rect2, A)
 
     ## block-matching
@@ -97,25 +100,24 @@ def process_pair_single_tile(out_dir, img_name, ref_img_id=1, sec_img_id=2,
         A = A_global
     triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
         rpc_err, A)
-    triangulation.transfer_map(height, H1, x, y, w, h, z, height_unrect)
+    triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
 
-    return height_unrect
+    return dem
 
 
-
-def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
-        w=None, h=None, tw=None, th=None, ov=None):
+def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
+        h=None, tw=None, th=None, ov=None):
     """
     Computes a height map from a Pair of Pleiades images, using tiles.
 
     Args:
         out_dir: path to the output directory
-        img_name: name of the dataset, located in the 'pleiades_data/images'
-            directory
-        ref_img_id: id (1, 2 or 3) of the image used as the reference image of
-            the pair
-        sec_img_id: id of the image used as the secondary image of the
-            pair
+        img1: path to the reference image.
+        rpc1: paths to the xml file containing the rpc coefficients of the
+            reference image
+        img2: path to the secondary image.
+        rpc2: paths to the xml file containing the rpc coefficients of the
+            secondary image
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want, as it will be
@@ -124,7 +126,8 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
         ov: width of overlapping bands between tiles
 
     Returns:
-        path to the height map, resampled on the grid of the reference image.
+        path to the digital elevation model (dem), resampled on the grid of the
+        reference image.
     """
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
@@ -141,8 +144,8 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
         h = z * np.ceil(h / z)
 
     # compute global pointing correction (on the whole ROI)
-    A = pointing_accuracy.compute_correction(img_name, x, y, w, h,
-        ref_img_id, sec_img_id)
+    A = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w,
+            h)
 
     # automatically compute optimal size for tiles
     # TODO: impose the constraint that ntx*nty is inferior to or equal to a
@@ -173,20 +176,17 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
         for i in np.arange(x, x + w - ov, tw - ov):
             common.wait_processes(processes, N-1)
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
-            tiles.append('%s/height.tif' % tile_dir)
+            tiles.append('%s/dem.tif' % tile_dir)
             p = multiprocessing.Process(target=process_pair_single_tile,
-                args=(tile_dir, img_name, ref_img_id, sec_img_id, i, j, tw,
-                th, A))
+                args=(tile_dir, img1, rpc1, img2, rpc2, i, j, tw, th, A))
             p.start()
             processes.append(p)
-#            process_pair_single_tile(tile_dir, img_name, ref_img_id,
-#                    sec_img_id, i, j, tw, th, A)
 
     # wait for all the processes to terminate
     common.wait_processes(processes, 0)
 
     # tiles composition
-    out = '%s/height.tif' % out_dir
+    out = '%s/dem.tif' % out_dir
     tile_composer.mosaic(out, w, h, ov, tiles)
 
     # cleanup
@@ -196,22 +196,23 @@ def process_pair(out_dir, img_name, ref_img_id=1, sec_img_id=2, x=None, y=None,
     return out
 
 
-def process_triplet(out_dir, img_name, ref_img_id=2, left_img_id=1,
-        right_img_id=3, x=None, y=None, w=None, h=None, thresh=3, tile_w=1000,
-        tile_h=1000, overlap=100):
+def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
+        y=None, w=None, h=None, thresh=3, tile_w=None, tile_h=None,
+        overlap=None, prv1=None):
     """
     Computes a height map from three Pleiades images.
 
     Args:
         out_dir: path to the output directory
-        img_name: name of the dataset, located in the 'pleiades_data/images'
-            directory
-        ref_img_id: id (1, 2 or 3) of the image used as the reference image of
-            the triplet
-        left_img_id: id of the image used as the secondary image of the first
-            pair.
-        right_img_id: id of the image used as the secondary image of the second
-            pair.
+        img1: path to the reference image.
+        rpc1: paths to the xml file containing the rpc coefficients of the
+            reference image
+        img2: path to the secondary image of the first pair
+        rpc2: paths to the xml file containing the rpc coefficients of the
+            secondary image of the first pair
+        img3: path to the secondary image of the second pair
+        rpc3: paths to the xml file containing the rpc coefficients of the
+            secondary image of the second pair
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want, as it will be
@@ -219,9 +220,11 @@ def process_triplet(out_dir, img_name, ref_img_id=2, left_img_id=1,
         thresh: threshold used for the fusion algorithm, in meters.
         tile_w, tile_h: dimensions of the tiles
         overlap: width of overlapping bands between tiles
+        prv1 (optional): path to a preview of the reference image
 
     Returns:
-        path to the height map, resampled on the grid of the reference image.
+        path to the digital elevaton model (dem), resampled on the grid of the
+        reference image.
     """
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
@@ -230,59 +233,50 @@ def process_triplet(out_dir, img_name, ref_img_id=2, left_img_id=1,
     try:
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
     except TypeError:
-        rpc = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, reference_image_id)
-        prev = 'pleiades_data/images/%s/prev%02d.jpg' % (img_name, reference_image_id)
-        x, y, w, h = common.get_roi_coordinates(rpc, prev)
+        x, y, w, h = common.get_roi_coordinates(rpc1, prv1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
-    h_left = process_pair(out_dir_left, img_name, ref_img_id, left_img_id, x,
-            y, w, h, tile_w, tile_h, overlap)
+    dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
+            tile_w, tile_h, overlap)
 
     out_dir_right = '%s/right' % out_dir
-    h_right = process_pair(out_dir_right, img_name, ref_img_id, right_img_id, x,
-            y, w, h, tile_w, tile_h, overlap)
+    dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
+            tile_w, tile_h, overlap)
 
-    # merge the two height maps
-    h = '%s/height_fusion.tif' % out_dir
-    fusion.merge(h_left, h_right, thresh, h)
+    # merge the two digital elevation models
+    dem = '%s/dem_fusion.tif' % out_dir
+    fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
     while common.garbage:
         common.run('rm ' + common.garbage.pop())
 
-    return h
+    return dem
 
 
-def generate_cloud(out_dir, img_name, ref_img_id, x, y, w, h, height_map,
-        merc_x=None, merc_y=None):
+def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
+        merc_y=None):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
-        img_name: name of the dataset, located in the 'pleiades_data/images'
-            directory
-        ref_img_id: id (1, 2 or 3) of the image used as the reference
-            image. The height map has been resampled on its grid.
+        img: path to the panchro image
+        rpc: path to the xml file containing rpc coefficients
+        clr: path to the xs (multispectral, ie color) image
         x, y, w, h: four integers defining the rectangular ROI in the original
             panchro image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
-        height_map: path to the height_map, produced by the process_pair or
-            process_triplet function
+        dem: path to the digital elevation model, produced by the process_pair
+            or process_triplet function
         merc_{x,y}: mercator coordinates of the point we want to use as
             origin in the local coordinate system of the computed cloud
     """
-
-    # needed input files
-    rpc = 'pleiades_data/rpc/%s/rpc%02d.xml' % (img_name, ref_img_id)
-    im = 'pleiades_data/images/%s/im%02d.tif' % (img_name, ref_img_id)
-    im_color = 'pleiades_data/images/%s/im%02d_color.tif' % (img_name, ref_img_id)
-
     # output files
     common.run('mkdir -p %s' % out_dir)
-    crop   = '%s/roi_ref%02d.tif' % (out_dir, ref_img_id)
-    crop_color = '%s/roi_color_ref%02d.tif' % (out_dir, ref_img_id)
-    cloud   = '%s/cloud.ply'  % (out_dir)
+    crop = '%s/roi_ref.tif' % out_dir
+    crop_color = '%s/roi_color_ref.tif' % out_dir
+    cloud = '%s/cloud.ply' % out_dir
 
     # read the zoom value
     zoom = global_params.subsampling_factor
@@ -297,28 +291,84 @@ def generate_cloud(out_dir, img_name, ref_img_id, x, y, w, h, height_map,
 
     # compute mercator offset
     if merc_x is None:
-        lat = rpc_model.RPCModel(rpc).firstLat
-        lon = rpc_model.RPCModel(rpc).firstLon
+        r = rpc_model.RPCModel(rpc)
+        lat = r.firstLat
+        lon = r.firstLon
         merc_x, merc_y = geographiclib.geodetic_to_mercator(lat, lon)
 
     # crop the ROI and zoom
     if zoom == 1:
-        common.image_crop_TIFF(im, x, y, w, h, crop)
+        common.image_crop_TIFF(img, x, y, w, h, crop)
     else:
-        tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
+        tmp_crop = common.image_crop_TIFF(img, x, y, w, h)
         common.image_safe_zoom_fft(tmp_crop, zoom, crop)
 
     # colorize, then generate point cloud
     try:
-        with open(im_color):
-            triangulation.colorize(crop, im_color, x, y, zoom, crop_color)
+        with open(clr):
+            triangulation.colorize(crop, clr, x, y, zoom, crop_color)
     except IOError:
         print 'no color image available for this dataset.'
         crop_color = common.image_qauto(crop)
 
-    triangulation.compute_point_cloud(crop_color, height_map, rpc, trans,
-        cloud, merc_x, merc_y)
+    triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
+            merc_x, merc_y)
 
     # cleanup
     while common.garbage:
         common.run('rm ' + common.garbage.pop())
+
+
+if __name__ == '__main__':
+
+    if len(sys.argv) == 2:
+      config  = sys.argv[1]
+    else:
+      print """
+      Incorrect syntax, use:
+        > %s config.json
+
+        Launches the s2p pipeline. All the parameters, paths to input and
+        output files, are defined in the json configuration file.
+      """ % sys.argv[0]
+      sys.exit(1)
+
+    # read the json configuration file
+    import json
+    f = open(config)
+    cfg = json.load(f)
+    f.close()
+
+    # fill the global_params module
+    global_params.subsampling_factor = cfg['subsampling_factor']
+    global_params.subsampling_factor_registration = cfg['subsampling_factor_registration']
+    global_params.sift_match_thresh = cfg['sift_match_thresh']
+    global_params.disp_range_extra_margin = cfg['disp_range_extra_margin']
+    global_params.n_gcp_per_axis = cfg['n_gcp_per_axis']
+    global_params.epipolar_thresh = cfg['epipolar_thresh']
+    global_params.matching_algorithm = cfg['matching_algorithm']
+    global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
+
+    # roi definition and output path
+    x = cfg['roi']['x']
+    y = cfg['roi']['y']
+    w = cfg['roi']['w']
+    h = cfg['roi']['h']
+    out_dir = str(cfg['out_dir'])
+    img1 = cfg['images'][0]['img']
+    rpc1 = cfg['images'][0]['rpc']
+    clr1 = cfg['images'][0]['clr']
+    img2 = cfg['images'][1]['img']
+    rpc2 = cfg['images'][1]['rpc']
+    img3 = cfg['images'][2]['img']
+    rpc3 = cfg['images'][2]['rpc']
+
+    # dem generation
+    if len(cfg['images']) == 3:
+        dem = process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x,
+                y, w, h, thresh=3)
+    else:
+        dem = process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h)
+
+    # point cloud generation
+    generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem)
