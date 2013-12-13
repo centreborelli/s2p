@@ -14,16 +14,23 @@ small tiles and process them in parallel.
 
 ## Usage
 
-Import the `s2p` module in a python session, and run the functions
+Run the binary `s2p.py` from a shell, with a json configuration file as unique
+argument:
+
+    $ ./s2p.py config.json
+
+All the parameters of the algorithm, paths to input and output data are stored
+in the json file. See the provided `config.json.example` file for an example.
+
+You can also import the `s2p` module in a python session, and run the functions
 `process_pair` or `process_triplet`, depending on the kind of dataset you have
-(stereo pair or triplet), to generate a digital elevation model (DEM). You can
-then generate a 3D point cloud from this DEM using the function
-`generate_cloud`.
+(stereo pair or triplet), to generate a digital elevation model (DEM), and then
+generate a 3D point cloud from this DEM using the function `generate_cloud`.
 
     python
     >>> import s2p
-    >>> dem = s2p.process_triplet('test', 'toulouse', 2, 1, 3, 25150, 24250, 300, 300, 3)
-    >>> s2p.generate_cloud('test', 'toulouse', 2, 25150, 24250, 300, 300, dem)
+    >>> dem = s2p.process_triplet('test', 'pan1.tif', 'rpc1.xml', 'pan2.tif', 'rpc2.xml', 'pan3.tif', 'rpc3.xml', 25150, 24250, 300, 300, 3)
+    >>> s2p.generate_cloud('test', 'pan1.tif', 'rpc1.xml', 'xs1.tif', 25150, 24250, 300, 300, dem)
 
 See the docstrings of the functions `process_pair`, `process_triplet` and
 `generate_cloud` for a complete description of their arguments.
