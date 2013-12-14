@@ -50,7 +50,7 @@ def register_heights(im1, im2):
     # 2nd option: translation only
     v = np.mean(h1 - h2)
     out = common.tmpfile('.tif')
-    common.run('plambda %s "x %f +" > %s' % (im2, v, out))
+    common.run('plambda %s "x %f +" -o %s' % (im2, v, out))
 
     return out
 
@@ -82,5 +82,5 @@ def merge(im1, im2, thresh, out):
     # return y
     common.run("""
         plambda %s %s "x isfinite y isfinite x y - fabs %f < x y + 2 / nan if x
-        if y if" > %s
+        if y if" -o %s
         """ % ( im1, im2, thresh, out))
