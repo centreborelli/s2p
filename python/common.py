@@ -331,14 +331,22 @@ def sift_keypoints_match(k1, k2, method, thresh):
             used value for the threshold is 0.6.
 
     Returns:
-        a numpy array containing the list of matches
+        a numpy 2D array containing the list of matches
 
     It uses Ives' matching binary, from the IPOL http://www.ipol.im/pub/pre/82/
     """
     matchfile = tmpfile('.txt')
     run("matching %s %s %d %f 4 8 36 > %s" % (k1, k2, method, thresh, matchfile))
     matches = np.loadtxt(matchfile)
-    # discard scale and orientation, then return
+    if matches.size == 0:
+        # no matches
+        return np.array([[]])
+    if len(matches.shape) == 1:
+        # only one match
+        # discard scale and orientation, then return
+        return matches[[0, 1, 4, 5]].reshape(1, 4)
+
+    # last case, 'matches' is already a 2D array
     return matches[:, [0, 1, 4, 5]]
 
 
