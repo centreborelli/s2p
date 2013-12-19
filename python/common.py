@@ -44,7 +44,7 @@ def run(cmd):
     Runs a shell command, and print it before running.
     """
     print cmd
-    subprocess.call(cmd, shell=True)
+    subprocess.call(cmd, shell=True, env=os.environ)
 
 
 def shellquote(s):
