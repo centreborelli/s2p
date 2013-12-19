@@ -145,12 +145,12 @@ on your system, or available through your package manager. If not, do:
    
 To make the 3rd party binaries available to the s2p system run the following script
 
-   cd bin
-   . copy_from_3rdparty.sh
+    cd bin
+    . copy_from_3rdparty.sh
 
 If GDAL or Geographic LIB was installed locally then also run:
 
-   cp ~/local/bin/{CartConvert,GeoidEval,gdal_translate} .
+    cp ~/local/bin/{CartConvert,GeoidEval,gdal_translate} .
 
 
 ## Pleiades data
