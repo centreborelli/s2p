@@ -447,7 +447,7 @@ def image_pleiades_unsharpening_mtf():
     resampled with a factor 1.4x. But in theory it should be adapted depending
     on the RESAMPLING_SPACING stored in the RPC xml files.
     """
-    return '%s/../pleiades_data/idata_0009_MTF_89x89.tif'%(os.path.dirname(
+    return '%s/idata_0009_MTF_89x89.tif'%(os.path.dirname(
                                                 os.path.abspath(__file__)))
 
 
