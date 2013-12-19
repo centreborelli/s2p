@@ -22,5 +22,6 @@
   "disp_range_extra_margin" : 0.2,
   "n_gcp_per_axis" : 5,
   "epipolar_thresh" : 0.5,
-  "use_pleiades_unsharpening" : true
+  "use_pleiades_unsharpening" : true,
+  "debug" : false
 }

@@ -141,6 +141,18 @@ on your system, or available through your package manager. If not, do:
     python setup.py install --prefix=~/local/
 
 
+### Copy 3rd party binaries into bin
+   
+To make the 3rd party binaries available to the s2p system run the following script
+
+   cd bin
+   . copy_from_3rdparty.sh
+
+If GDAL or Geographic LIB was installed locally then also run:
+
+   cp ~/local/bin/{CartConvert,GeoidEval,gdal_translate} .
+
+
 ## Pleiades data
 
 Several Pleiades stereoscopic datasets are available. We have pairs and

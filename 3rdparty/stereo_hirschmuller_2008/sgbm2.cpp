@@ -103,6 +103,11 @@ void paste(Mat &dest, Mat &overlay,
 
 
 Mat sgbm_stereo(Mat &u1, Mat &u2, int mindisp, int maxdisp, int SADwin, int P1, int P2, int LRdiff) {
+    // swap max and min
+    int tmp=-maxdisp;
+    maxdisp=-mindisp;
+    mindisp=tmp;
+
     // prepare the StereoSGBM object
     // the number of disparities has to be a multiple of 16
     StereoSGBM sgbm;
@@ -246,12 +251,17 @@ int main(int c, char** v)
     // opposite of what they call disparity.
     // the min and max disparities given as inputs of this binary follow our
     // convention, while in the code the disparities follow openCV convention.
-    int maxdisp = - ( (c>i) ? atoi(v[i]) : 0);   i++;
-    int mindisp = - ( (c>i) ? atoi(v[i]) : 64);  i++;
+    int mindisp = (c>i) ? atoi(v[i]) : 0;  i++;
+    int maxdisp = (c>i) ? atoi(v[i]) : 64; i++;
     int SADwin  = (c>i) ? atoi(v[i]) : 1;  i++;
     int P1      = (c>i) ? atoi(v[i]) :  8*nch*SADwin*SADwin; i++;
     int P2      = (c>i) ? atoi(v[i]) : 32*nch*SADwin*SADwin; i++;
     int LRdiff  = (c>i) ? atoi(v[i]) : 1;  i++;
+
+    if (mindisp>=maxdisp){
+        fprintf(stderr, "\terror: mindisp(%d) > maxdisp(%d)\n", mindisp, maxdisp); 
+        exit(1);
+    }
 
     Mat disp  = sgbm_stereo_slice(u1, u2, mindisp, maxdisp, SADwin, P1, P2, LRdiff );
     Mat disp2 = sgbm_stereo_slice(u2, u1, -maxdisp , -mindisp, SADwin, P1, P2, LRdiff );
