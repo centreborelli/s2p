@@ -170,6 +170,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     print 'total number of tiles is %d' % (ntx * nty)
 
     # process the tiles
+    # don't parallellize if in debug mode
     processes = []
     tiles = []
     for j in np.arange(y, y + h - ov, th - ov):
@@ -177,10 +178,14 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             common.wait_processes(processes, N-1)
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             tiles.append('%s/dem.tif' % tile_dir)
-            p = multiprocessing.Process(target=process_pair_single_tile,
-                args=(tile_dir, img1, rpc1, img2, rpc2, i, j, tw, th, A))
-            p.start()
-            processes.append(p)
+            if global_params.debug:
+                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
+                    j, tw, th, A)
+            else:
+                p = multiprocessing.Process(target=process_pair_single_tile,
+                    args=(tile_dir, img1, rpc1, img2, rpc2, i, j, tw, th, A))
+                p.start()
+                processes.append(p)
 
     # wait for all the processes to terminate
     common.wait_processes(processes, 0)
@@ -348,6 +353,7 @@ if __name__ == '__main__':
     global_params.epipolar_thresh = cfg['epipolar_thresh']
     global_params.matching_algorithm = cfg['matching_algorithm']
     global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
+    global_params.debug = cfg['debug']
 
     # roi definition and output path
     x = cfg['roi']['x']
@@ -360,15 +366,15 @@ if __name__ == '__main__':
     clr1 = cfg['images'][0]['clr']
     img2 = cfg['images'][1]['img']
     rpc2 = cfg['images'][1]['rpc']
-    img3 = cfg['images'][2]['img']
-    rpc3 = cfg['images'][2]['rpc']
 
     # dem generation
-    if len(cfg['images']) == 3:
+    if len(cfg['images']) == 2:
+        dem = process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h)
+    else:
+        img3 = cfg['images'][2]['img']
+        rpc3 = cfg['images'][2]['rpc']
         dem = process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x,
                 y, w, h, thresh=3)
-    else:
-        dem = process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h)
 
     # point cloud generation
     generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem)
