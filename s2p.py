@@ -147,17 +147,25 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     A = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w,
             h)
 
-    # automatically compute optimal size for tiles
+    # TODO: automatically compute optimal size for tiles
     # TODO: impose the constraint that ntx*nty is inferior to or equal to a
     # multiple of the number of cores
     if tw is None and th is None and ov is None:
-        ov = z * np.ceil(50 / z)
-        tw = 300
-        th = 300
-        while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
-            tw += 1
-        while (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
-            th += 1
+        ov = z * np.ceil(100 / z)
+        if w <= 1000:
+            tw = w
+        else:
+            tw = 1000
+            #TODO: modify tiles size to be close do a divisor of w
+            #while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
+            #    tw += 1
+        if h <= 1000:
+            th = h
+        else:
+            th = 1000
+            #TODO: modify tiles size to be close do a divisor of h
+            #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
+            #    th += 1
     ntx = np.ceil((w - ov) / (tw - ov))
     nty = np.ceil((h - ov) / (th - ov))
     # ensure that the coordinates of each tile are multiples of the zoom factor
