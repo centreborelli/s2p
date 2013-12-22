@@ -85,6 +85,32 @@ void write_ply_header(FILE* f, int npoints) {
     fprintf(f, "end_header\n");
 }
 
+
+unsigned char test_little_endian( void )
+{
+      int x=1;   return (*(char*)&(x)==1);
+}
+
+void write_ply_header_binary(FILE* f, int npoints) {
+    if ( ! test_little_endian() )  
+       for(int i=1;i<100;i++) 
+          printf("BINARY PLY NOT SUPPORTED ON BIG ENDIAN SYSTEMS!!\n");
+    fprintf(f, "ply\n");
+    fprintf(f, "format binary_little_endian 1.0\n");
+    fprintf(f, "comment created by S2P\n");
+    fprintf(f, "element vertex %d\n", npoints);
+    fprintf(f, "property float x\n");
+    fprintf(f, "property float y\n");
+    fprintf(f, "property float z\n");
+    fprintf(f, "property float nx\n");
+    fprintf(f, "property float ny\n");
+    fprintf(f, "property float nz\n");
+    fprintf(f, "property uchar red\n");
+    fprintf(f, "property uchar green\n");
+    fprintf(f, "property uchar blue\n");
+    fprintf(f, "end_header\n");
+}
+
 #include "smapa.h"
 SMART_PARAMETER_SILENT(IJMESH, 0)
 SMART_PARAMETER_SILENT(IJMESHFAC, 2)
@@ -97,6 +123,9 @@ int main(int c, char *v[])
         //       0    1      2       3   4        5       6  7
         return 1;
     }
+
+    // write a binary PLY
+    int binary = 1;
 
     // x0 and y0 are meant to allow the user to choose the origin in the
     // mercator coordinates system, in order to avoid visualisation problems
@@ -133,7 +162,10 @@ int main(int c, char *v[])
                 npoints++;
 
     // print header for ply file
-    write_ply_header(out, npoints);
+    if (binary)
+       write_ply_header_binary(out, npoints);
+    else
+       write_ply_header(out, npoints);
 
     // print points coordinates and values
     for (int j = 0; j < h; j++)
@@ -170,9 +202,18 @@ int main(int c, char *v[])
             }
 
             // print the voxel in the ply output file
-            fprintf(out, "%.16lf %.16lf %.16lf %.16lf %.16lf %.16lf %d %d %d\n",
+            if(binary) {
+               float X[3] = {xyz[0], xyz[1], xyz[2]};
+               float N[3] = {nrm[0], nrm[1], nrm[2]};
+               unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
+               fwrite(X, sizeof(float), 3, out);
+               fwrite(N, sizeof(float), 3, out);
+               fwrite(C, sizeof(unsigned char), 3, out);
+            } else {
+               fprintf(out, "%.16lf %.16lf %.16lf %.16lf %.16lf %.16lf %d %d %d\n",
                     xyz[0], xyz[1], xyz[2], nrm[0], nrm[1], nrm[2], rgb[0],
                     rgb[1], rgb[2]);
+            }
         }
 
     return 0;
