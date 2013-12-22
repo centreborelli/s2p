@@ -1,30 +1,157 @@
-all:
-	mkdir -p ../bin
-	cc -o ../bin/ransac -std=c99 -g -O3 -DNDEBUG ransac.c -lm
-	cc -o ../bin/downsa -std=c99 -g -O3 -DNDEBUG iio.c downsa.c -lpng -ltiff -ljpeg
-	cc -o ../bin/backflow -std=c99 -g -O3 -DNDEBUG iio.c backflow.c -lpng -ltiff -ljpeg
-	cc -o ../bin/synflow -std=c99 -g -O3 -DNDEBUG iio.c synflow.c -lpng -ltiff -ljpeg
-	cc -o ../bin/imprintf -std=c99 -g -O3 -DNDEBUG iio.c imprintf.c -lpng -ltiff -ljpeg
-	cc -o ../bin/plambda -std=c99 -g -O3 -DNDEBUG iio.c plambda.c -lpng -ltiff -ljpeg
-	cc -o ../bin/iion -std=c99 -g -O3 -DNDEBUG iio.c iion.c -lpng -ltiff -ljpeg
-	cc -o ../bin/qauto -std=c99 -g -O3 -DNDEBUG iio.c qauto.c -lpng -ltiff -ljpeg
-	cc -o ../bin/qeasy -std=c99 -g -O3 -DNDEBUG iio.c qeasy.c -lpng -ltiff -ljpeg
-	cc -o ../bin/gblur -std=c99 -g -O3 -DNDEBUG iio.c gblur.c -lpng -ltiff -ljpeg -lfftw3f
-	cc -o ../bin/crop -std=c99 -g -O3 -DNDEBUG iio.c crop.c -lpng -ltiff -ljpeg
-	cc -o ../bin/fftconvolve -std=c99 -g -O3 -DNDEBUG iio.c fftconvolve.c -lpng -ltiff -ljpeg -lfftw3f
-	cc -o ../bin/zoom_zeropadding -std=c99 -g -O3 -DNDEBUG iio.c zoom_zeropadding.c -lpng -ltiff -ljpeg -lfftw3f
-	cc -o ../bin/zoom_2d -std=c99 -g -O3 -DNDEBUG iio.c zoom_2d.c zoom_r2c.c -lpng -ltiff -ljpeg -lfftw3
-	cc -o ../bin/siftu -std=c99 -g -O3 -DNDEBUG siftu.c -lm
-	cc -o ../bin/srtm4 -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c -lm
-	cc -o ../bin/disp_to_h -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c rpc.c disp_to_h.c -lpng -ltiff -ljpeg
-	cc -o ../bin/colormesh -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c rpc.c colormesh.c -lpng -ltiff -ljpeg
-	cc -o ../bin/colormesh_projective -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c colormesh_projective.c -lpng -ltiff -ljpeg
-	cc -o ../bin/disp_to_h_projective -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c disp_to_h_projective.c -lpng -ltiff -ljpeg
-	cc -o ../bin/height_rpc_move -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c rpc.c height_rpc_move.c -lpng -ltiff -ljpeg
-	cc -o ../bin/veco -std=c99 -g -O3 -DNDEBUG iio.c veco.c -lpng -ltiff -ljpeg
-	cc -o ../bin/morphoop -std=c99 -g -O3 -DNDEBUG iio.c morphoop.c -lpng -ltiff -ljpeg
-	mkdir -p ../bin/monasse_refactored_build
+all: imscript monasse
+
+monasse: monasse_refactored build_dir
 	cd ../bin/monasse_refactored_build; cmake ../../c/monasse_refactored; make
 	cp ../bin/monasse_refactored_build/bin/homography ../bin
 	cp ../bin/monasse_refactored_build/bin/rectify_mindistortion ../bin
 	cp ../bin/monasse_refactored_build/bin/sift_keypoints ../bin
+
+build_dir:
+	mkdir -p ../bin/monasse_refactored_build
+
+imscript: bin_dir colormesh downsa backflow synflow imprintf plambda qauto qeasy crop disp_to_h colormesh_projective disp_to_h_projective height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d siftu srtm4 ransac
+
+bin_dir:
+	mkdir -p ../bin
+
+colormesh: iio.o rpc.o colormesh.o
+	cc iio.o rpc.o colormesh.o -lpng -ltiff -ljpeg -o ../bin/colormesh
+
+downsa: iio.o downsa.o
+	cc iio.o downsa.o -lpng -ltiff -ljpeg -o ../bin/downsa
+
+backflow: iio.o backflow.o
+	cc iio.o backflow.o -lpng -ltiff -ljpeg -o ../bin/backflow
+
+synflow: iio.o synflow.o
+	cc iio.o synflow.o -lpng -ltiff -ljpeg -o ../bin/synflow
+
+imprintf: iio.o imprintf.o
+	cc iio.o imprintf.o -lpng -ltiff -ljpeg -o ../bin/imprintf
+
+plambda: iio.o plambda.o
+	cc iio.o plambda.o -lpng -ltiff -ljpeg -o ../bin/plambda
+
+qauto: iio.o qauto.o
+	cc iio.o qauto.o -lpng -ltiff -ljpeg -o ../bin/qauto
+
+qeasy: iio.o qeasy.o
+	cc iio.o qeasy.o -lpng -ltiff -ljpeg -o ../bin/qeasy
+
+crop: iio.o crop.o
+	cc iio.o crop.o -lpng -ltiff -ljpeg -o ../bin/crop
+
+disp_to_h: iio.o rpc.o disp_to_h.o
+	cc iio.o rpc.o disp_to_h.o -lpng -ltiff -ljpeg -o ../bin/disp_to_h
+
+colormesh_projective: iio.o colormesh_projective.o
+	cc iio.o colormesh_projective.o -lpng -ltiff -ljpeg -o ../bin/colormesh_projective
+
+disp_to_h_projective: iio.o disp_to_h_projective.o
+	cc iio.o disp_to_h_projective.o -lpng -ltiff -ljpeg -o ../bin/disp_to_h_projective
+
+height_rpc_move: iio.o rpc.o height_rpc_move.o
+	cc iio.o rpc.o height_rpc_move.o -lpng -ltiff -ljpeg -o ../bin/height_rpc_move
+
+veco: iio.o veco.o
+	cc iio.o veco.o -lpng -ltiff -ljpeg -o ../bin/veco
+
+morphoop: iio.o morphoop.o
+	cc iio.o morphoop.o -lpng -ltiff -ljpeg -o ../bin/morphoop
+
+gblur: iio.o gblur.o
+	cc iio.o gblur.o -lpng -ltiff -ljpeg -lfftw3f -o ../bin/gblur
+
+fftconvolve: iio.o fftconvolve.o
+	cc iio.o fftconvolve.o -lpng -ltiff -ljpeg -lfftw3f -o ../bin/fftconvolve
+
+zoom_zeropadding: iio.o zoom_zeropadding.o
+	cc iio.o zoom_zeropadding.o -lpng -ltiff -ljpeg -lfftw3f -o ../bin/zoom_zeropadding
+
+zoom_2d: iio.o zoom_2d.o zoom_r2c.o
+	cc iio.o zoom_2d.o zoom_r2c.o -lpng -ltiff -ljpeg -lfftw3 -o ../bin/zoom_2d
+
+siftu: siftu.o
+	cc siftu.o -lm -o ../bin/siftu
+
+srtm4: srtm4.c
+	cc -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c -lm -o ../bin/srtm4
+
+ransac: ransac.o
+	cc ransac.o -lm -o ../bin/ransac
+
+iio.o: iio.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c
+
+rpc.o: rpc.c xfopen.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN rpc.c
+
+colormesh.o: colormesh.c iio.h fail.c rpc.h read_matrix.c smapa.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN colormesh.c
+
+downsa.o: downsa.c fragments.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN downsa.c
+
+backflow.o: backflow.c iio.h fail.c xmalloc.c getpixel.c smapa.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN backflow.c
+
+synflow.o: synflow.c iio.h fragments.c synflow_core.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN synflow.c
+
+imprintf.o: imprintf.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN imprintf.c
+
+plambda.o: plambda.c smapa.h fail.c xmalloc.c random.c parsenumbers.c colorcoords.c getpixel.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN plambda.c
+
+qauto.o: qauto.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN qauto.c
+
+qeasy.o: qeasy.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN qeasy.c
+
+crop.o: crop.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN crop.c
+
+disp_to_h.o: disp_to_h.c vvector.h iio.h rpc.h read_matrix.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN disp_to_h.c
+
+colormesh_projective.o: colormesh_projective.c iio.h fail.c read_matrix.c smapa.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN colormesh_projective.c
+
+disp_to_h_projective.o: disp_to_h_projective.c vvector.h iio.h svd.c read_matrix.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN disp_to_h_projective.c
+
+height_rpc_move.o: height_rpc_move.c vvector.h iio.h rpc.h read_matrix.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN height_rpc_move.c
+
+veco.o: veco.c iio.h fail.c xmalloc.c random.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN veco.c
+
+morphoop.o: morphoop.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN morphoop.c
+
+gblur.o: gblur.c iio.h fail.c xmalloc.c vvector.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN gblur.c
+
+fftconvolve.o: fftconvolve.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN fftconvolve.c
+
+zoom_zeropadding.o: zoom_zeropadding.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN zoom_zeropadding.c
+
+zoom_2d.o: zoom_2d.c iio.h zoom.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN zoom_2d.c
+
+zoom_r2c.o: zoom_r2c.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN zoom_r2c.c
+
+siftu.o: siftu.c siftie.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN siftu.c
+
+
+ransac.o: ransac.c fail.c xmalloc.c xfopen.c cmphomod.c ransac_cases.c parsenumbers.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN ransac.c
+
+clean:
+	rm *.o
