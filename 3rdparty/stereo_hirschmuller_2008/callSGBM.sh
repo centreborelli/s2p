@@ -43,11 +43,11 @@ bb=$(basename "$b")
 b_extension="${bb##*.}"
 b_name="${bb%.*}"
 if [ $a_extension == "tif" ]; then
-    thresholds=`plambda $a "x isnan 0 x if" | qauto - /tmp/$a_name.png 2>&1 |  cut -f2 -d=`
-    a=/tmp/$a_name.png
+    thresholds=`plambda $a "x isnan 0 x if" | qauto - $a.png 2>&1 |  cut -f2 -d=`
+    a=$a.png
     # use the same threshods for the second image
-    qeasy $thresholds $b /tmp/$b_name.png
-    b=/tmp/$b_name.png
+    qeasy $thresholds $b $b.png
+    b=$b.png
 fi
 
 #usage: ./build/SGBM im1 im2 out [mindisp(0) maxdisp(64) SADwindow(1) P1(0) P2(0) LRdiff(1)]
