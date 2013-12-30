@@ -19,11 +19,7 @@ from python import triangulation
 from python import tile_composer
 from python import fusion
 from python import global_params
-import multiprocessing
-import sys
-import numpy as np
 
-N = multiprocessing.cpu_count()
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         w=None, h=None, A_global=None, prv1=None):
@@ -48,6 +44,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     Returns:
         path to the height map, resampled on the grid of the reference image.
     """
+    # debug print
+    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
+
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
@@ -194,38 +193,30 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     else:
         A = None
 
+    # create pool with less workers than available cores
+    PROCESSES = int(0.75 * multiprocessing.cpu_count())
+    print 'Creating pool with %d processes\n' % PROCESSES
+    pool = multiprocessing.Pool(PROCESSES)
+    print 'pool = %s' % pool
+    print
+
     # process the tiles
     # don't parallellize if in debug mode
-    processes = []
-    #pool = multiprocessing.Pool(2, initializer=start_worker)
     tiles = []
-    results = []
     for j in np.arange(y, y + h - ov, th - ov):
         for i in np.arange(x, x + w - ov, tw - ov):
-        #    common.wait_processes(processes, N-1)
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             tiles.append('%s/dem.tif' % tile_dir)
             if global_params.debug:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
                     j, tw, th, A)
             else:
-                p = multiprocessing.Process(target=process_pair_single_tile,
-                    args=(tile_dir, img1, rpc1, img2, rpc2, i, j, tw, th, A))
-                processes.append(p)
-                p.start()
-               # result = pool.apply_async(process_pair_single_tile, args=(tile_dir,
-               #     img1, rpc1, img2, rpc2, i, j, tw, th, A))
-               # results.append(result)
-
-    print 'Number of processes: *****************************', len(processes)
+                pool.apply_async(process_pair_single_tile, args=(tile_dir,
+                    img1, rpc1, img2, rpc2, i, j, tw, th, A))
 
     # wait for all the processes to terminate
-    if not global_params.debug:
-        for p in processes:
-            p.join()
-    #common.wait_processes(processes, 0)
-    #pool.close()
-    #pool.join()
+    pool.close()
+    pool.join()
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
