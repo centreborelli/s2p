@@ -557,7 +557,7 @@ def optimize_pair_all_datasets(data):
         except Exception as e:
                 print e
 
-def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h):
+def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -572,6 +572,7 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h):
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want. If bigger than
             1 Mpix, only five crops will be used to compute sift matches.
+        out_dict (optional): dictionary in which to write the correction matrix
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to img2 in
@@ -594,4 +595,11 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h):
     global_params.subsampling_factor_registration = tmp
 
     A = optimize_pair(img1, img2, r1, r2, None, m)
+
+    # needed to recover output value when launching the function in a
+    # multiprocessing.Process object
+    if out_dict is not None:
+        out_dict['correction_matrix'] = A
+        print A
+
     return A

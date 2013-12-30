@@ -4,6 +4,11 @@
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 # Copyright (C) 2013, Enric Meinhardt Llopis <enric.meinhardt@cmla.ens-cachan.fr>
 
+import multiprocessing
+import sys
+import json
+import numpy as np
+
 from python import common
 from python import rpc_model
 from python import geographiclib
@@ -143,10 +148,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         w = z * np.ceil(w / z)
         h = z * np.ceil(h / z)
 
-    # compute global pointing correction (on the whole ROI)
-    A = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w,
-            h)
-
     # TODO: automatically compute optimal size for tiles
     # TODO: impose the constraint that ntx*nty is inferior to or equal to a
     # multiple of the number of cores
@@ -174,16 +175,34 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         tw = z * np.floor(tw / z)
         th = z * np.floor(th / z)
     print 'tiles size is tw, th = (%d, %d)' % (tw, th)
-    print 'number of tiles is %d, %d' % (ntx, nty)
+    print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
     print 'total number of tiles is %d' % (ntx * nty)
+
+    # if several tiles, compute global pointing correction (on the whole ROI)
+    if ntx * nty > 1:
+        # the global pointing correction is run in a subprocess. This is a
+        # workaround to a nasty bug affecting the Multiprocessing package when used
+        # with Numpy on osx, causing Python to 'quit unexpectedly':
+        # http://stackoverflow.com/questions/19705200/multiprocessing-with-numpy-makes-python-quit-unexpectedly-on-osx
+        manager = multiprocessing.Manager()
+        out_dict = manager.dict()
+        p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
+            args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
+        p.start()
+        p.join()
+        A = out_dict['correction_matrix']
+    else:
+        A = None
 
     # process the tiles
     # don't parallellize if in debug mode
     processes = []
+    #pool = multiprocessing.Pool(2, initializer=start_worker)
     tiles = []
+    results = []
     for j in np.arange(y, y + h - ov, th - ov):
         for i in np.arange(x, x + w - ov, tw - ov):
-            common.wait_processes(processes, N-1)
+        #    common.wait_processes(processes, N-1)
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             tiles.append('%s/dem.tif' % tile_dir)
             if global_params.debug:
@@ -192,11 +211,21 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             else:
                 p = multiprocessing.Process(target=process_pair_single_tile,
                     args=(tile_dir, img1, rpc1, img2, rpc2, i, j, tw, th, A))
-                p.start()
                 processes.append(p)
+                p.start()
+               # result = pool.apply_async(process_pair_single_tile, args=(tile_dir,
+               #     img1, rpc1, img2, rpc2, i, j, tw, th, A))
+               # results.append(result)
+
+    print 'Number of processes: *****************************', len(processes)
 
     # wait for all the processes to terminate
-    common.wait_processes(processes, 0)
+    if not global_params.debug:
+        for p in processes:
+            p.join()
+    #common.wait_processes(processes, 0)
+    #pool.close()
+    #pool.join()
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
@@ -347,7 +376,6 @@ if __name__ == '__main__':
       sys.exit(1)
 
     # read the json configuration file
-    import json
     f = open(config)
     cfg = json.load(f)
     f.close()
