@@ -44,11 +44,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     Returns:
         path to the height map, resampled on the grid of the reference image.
     """
-    # debug print
-    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
-
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
+
+    # redirect stdout to log file
+    fout = open('%s/stdout.log' % out_dir, 'w')
+    sys.stdout = fout
+
+    # debug print
+    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
 
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
@@ -105,6 +109,10 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
         rpc_err, A)
     triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
+
+    # close logs
+    sys.stdout = sys.__stdout__
+    fout.close()
 
     return dem
 
