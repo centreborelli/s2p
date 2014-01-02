@@ -1,10 +1,12 @@
+BINDIR = ../bin
+
 all: imscript monasse
 
-monasse: monasse_refactored build_dir
+monasse: build_dir
 	cd ../bin/monasse_refactored_build; cmake ../../c/monasse_refactored; make
-	cp ../bin/monasse_refactored_build/bin/homography ../bin
-	cp ../bin/monasse_refactored_build/bin/rectify_mindistortion ../bin
-	cp ../bin/monasse_refactored_build/bin/sift_keypoints ../bin
+	cp ../bin/monasse_refactored_build/bin/homography $(BINDIR)
+	cp ../bin/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
+	cp ../bin/monasse_refactored_build/bin/sift_keypoints $(BINDIR)
 
 build_dir:
 	mkdir -p ../bin/monasse_refactored_build
@@ -12,73 +14,73 @@ build_dir:
 imscript: bin_dir colormesh downsa backflow synflow imprintf plambda qauto qeasy crop disp_to_h colormesh_projective disp_to_h_projective height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d siftu srtm4 ransac
 
 bin_dir:
-	mkdir -p ../bin
+	mkdir -p $(BINDIR)
 
 colormesh: iio.o rpc.o colormesh.o
-	cc iio.o rpc.o colormesh.o -lpng -ltiff -ljpeg -o ../bin/colormesh
+	cc iio.o rpc.o colormesh.o -lpng -ltiff -ljpeg -o $(BINDIR)/colormesh
 
 downsa: iio.o downsa.o
-	cc iio.o downsa.o -lpng -ltiff -ljpeg -o ../bin/downsa
+	cc iio.o downsa.o -lpng -ltiff -ljpeg -o $(BINDIR)/downsa
 
 backflow: iio.o backflow.o
-	cc iio.o backflow.o -lpng -ltiff -ljpeg -o ../bin/backflow
+	cc iio.o backflow.o -lpng -ltiff -ljpeg -o $(BINDIR)/backflow
 
 synflow: iio.o synflow.o
-	cc iio.o synflow.o -lpng -ltiff -ljpeg -o ../bin/synflow
+	cc iio.o synflow.o -lpng -ltiff -ljpeg -o $(BINDIR)/synflow
 
 imprintf: iio.o imprintf.o
-	cc iio.o imprintf.o -lpng -ltiff -ljpeg -o ../bin/imprintf
+	cc iio.o imprintf.o -lpng -ltiff -ljpeg -o $(BINDIR)/imprintf
 
 plambda: iio.o plambda.o
-	cc iio.o plambda.o -lpng -ltiff -ljpeg -o ../bin/plambda
+	cc iio.o plambda.o -lpng -ltiff -ljpeg -o $(BINDIR)/plambda
 
 qauto: iio.o qauto.o
-	cc iio.o qauto.o -lpng -ltiff -ljpeg -o ../bin/qauto
+	cc iio.o qauto.o -lpng -ltiff -ljpeg -o $(BINDIR)/qauto
 
 qeasy: iio.o qeasy.o
-	cc iio.o qeasy.o -lpng -ltiff -ljpeg -o ../bin/qeasy
+	cc iio.o qeasy.o -lpng -ltiff -ljpeg -o $(BINDIR)/qeasy
 
 crop: iio.o crop.o
-	cc iio.o crop.o -lpng -ltiff -ljpeg -o ../bin/crop
+	cc iio.o crop.o -lpng -ltiff -ljpeg -o $(BINDIR)/crop
 
 disp_to_h: iio.o rpc.o disp_to_h.o
-	cc iio.o rpc.o disp_to_h.o -lpng -ltiff -ljpeg -o ../bin/disp_to_h
+	cc iio.o rpc.o disp_to_h.o -lpng -ltiff -ljpeg -o $(BINDIR)/disp_to_h
 
 colormesh_projective: iio.o colormesh_projective.o
-	cc iio.o colormesh_projective.o -lpng -ltiff -ljpeg -o ../bin/colormesh_projective
+	cc iio.o colormesh_projective.o -lpng -ltiff -ljpeg -o $(BINDIR)/colormesh_projective
 
 disp_to_h_projective: iio.o disp_to_h_projective.o
-	cc iio.o disp_to_h_projective.o -lpng -ltiff -ljpeg -o ../bin/disp_to_h_projective
+	cc iio.o disp_to_h_projective.o -lpng -ltiff -ljpeg -o $(BINDIR)/disp_to_h_projective
 
 height_rpc_move: iio.o rpc.o height_rpc_move.o
-	cc iio.o rpc.o height_rpc_move.o -lpng -ltiff -ljpeg -o ../bin/height_rpc_move
+	cc iio.o rpc.o height_rpc_move.o -lpng -ltiff -ljpeg -o $(BINDIR)/height_rpc_move
 
 veco: iio.o veco.o
-	cc iio.o veco.o -lpng -ltiff -ljpeg -o ../bin/veco
+	cc iio.o veco.o -lpng -ltiff -ljpeg -o $(BINDIR)/veco
 
 morphoop: iio.o morphoop.o
-	cc iio.o morphoop.o -lpng -ltiff -ljpeg -o ../bin/morphoop
+	cc iio.o morphoop.o -lpng -ltiff -ljpeg -o $(BINDIR)/morphoop
 
 gblur: iio.o gblur.o
-	cc iio.o gblur.o -lpng -ltiff -ljpeg -lfftw3f -o ../bin/gblur
+	cc iio.o gblur.o -lpng -ltiff -ljpeg -lfftw3f -o $(BINDIR)/gblur
 
 fftconvolve: iio.o fftconvolve.o
-	cc iio.o fftconvolve.o -lpng -ltiff -ljpeg -lfftw3f -o ../bin/fftconvolve
+	cc iio.o fftconvolve.o -lpng -ltiff -ljpeg -lfftw3f -o $(BINDIR)/fftconvolve
 
 zoom_zeropadding: iio.o zoom_zeropadding.o
-	cc iio.o zoom_zeropadding.o -lpng -ltiff -ljpeg -lfftw3f -o ../bin/zoom_zeropadding
+	cc iio.o zoom_zeropadding.o -lpng -ltiff -ljpeg -lfftw3f -o $(BINDIR)/zoom_zeropadding
 
 zoom_2d: iio.o zoom_2d.o zoom_r2c.o
-	cc iio.o zoom_2d.o zoom_r2c.o -lpng -ltiff -ljpeg -lfftw3 -o ../bin/zoom_2d
+	cc iio.o zoom_2d.o zoom_r2c.o -lpng -ltiff -ljpeg -lfftw3 -o $(BINDIR)/zoom_2d
 
 siftu: siftu.o
-	cc siftu.o -lm -o ../bin/siftu
+	cc siftu.o -lm -o $(BINDIR)/siftu
 
 srtm4: srtm4.c
-	cc -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c -lm -o ../bin/srtm4
+	cc -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c -lm -o $(BINDIR)/srtm4
 
 ransac: ransac.o
-	cc ransac.o -lm -o ../bin/ransac
+	cc ransac.o -lm -o $(BINDIR)/ransac
 
 iio.o: iio.c iio.h
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN iio.c
