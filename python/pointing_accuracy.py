@@ -600,6 +600,5 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None):
     # multiprocessing.Process object
     if out_dict is not None:
         out_dict['correction_matrix'] = A
-        print A
 
     return A

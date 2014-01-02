@@ -44,11 +44,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     Returns:
         path to the height map, resampled on the grid of the reference image.
     """
-    # debug print
-    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
-
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
+
+    # redirect stdout to log file
+    fout = open('%s/stdout.log' % out_dir, 'w')
+    sys.stdout = fout
+
+    # debug print
+    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
 
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
@@ -60,6 +64,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     dem     = '%s/dem.tif' % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
+    sift_matches = '%s/sift_matches.txt' % out_dir
 
     ## select ROI
     try:
@@ -79,13 +84,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         h = z * np.ceil(h / z)
 
     ## correct pointing error
-    A = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w,
-            h)
+    # A is the correction matrix and m is the list of sift matches
+    A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y,
+        w, h)
 
-    ## save the subsampling factor and
-    # the pointing correction matrix
-    np.savetxt(pointing, A)
+    ## save the subsampling factor, the sift matches and the pointing
+    # correction matrix
     np.savetxt(subsampling, np.array([z]))
+    np.savetxt(pointing, A)
+    np.savetxt(sift_matches, m)
 
     # ATTENTION if subsampling_factor is set the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
@@ -93,7 +100,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     ## rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
-        rpc2, x, y, w, h, rect1, rect2, A)
+        rpc2, x, y, w, h, rect1, rect2, A, m)
 
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
@@ -105,6 +112,10 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
         rpc_err, A)
     triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
+
+    # close logs
+    sys.stdout = sys.__stdout__
+    fout.close()
 
     return dem
 
@@ -197,8 +208,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     PROCESSES = int(0.75 * multiprocessing.cpu_count())
     print 'Creating pool with %d processes\n' % PROCESSES
     pool = multiprocessing.Pool(PROCESSES)
-    print 'pool = %s' % pool
-    print
 
     # process the tiles
     # don't parallellize if in debug mode

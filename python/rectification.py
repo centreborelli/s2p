@@ -311,7 +311,7 @@ def update_minmax_range_extrapolating_registration_affinity(matches, H1,
     return dispx_min, dispx_max
 
 
-def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
+def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None, m=None):
     """
     Computes rectifying homographies for a ROI in a pair of Pleiades images.
 
@@ -324,6 +324,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2. This matrix is usually estimated with the pointing_accuracy
             module.
+        m (optional): Nx4 numpy array containing a list of matches.
 
     Returns:
         H1, H2: Two 3x3 matrices representing the rectifying homographies to be
@@ -384,11 +385,12 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
     # add an horizontal translation to H2 to center the disparity range around
     # the origin, if sift matches are available
     print "step 5: horizontal registration ------------------------------------"
-    try:
-        sift_matches = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
-    except Exception:
-        print 'something failed with sift matches'
-        sys.exit()
+    if m is None:
+        try:
+            m = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+        except Exception:
+            print 'something failed with sift matches'
+            sys.exit()
 
     # filter sift matches with the known fundamental matrix
     F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
@@ -396,23 +398,22 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None)
         from global_params import epipolar_thresh
     except ImportError:
         epipolar_thresh = 2.0
-    sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
-        epipolar_thresh)
-    print 'remaining sift matches', len(sift_matches)
-    if not len(sift_matches):
+    m = filter_matches_epipolar_constraint(F, m, epipolar_thresh)
+    print 'remaining sift matches', len(m)
+    if not len(m):
         print """all the sift matches have been discarded by the epipolar
         constraint. This is probably due to the pointing error. Try with a
         bigger value for epipolar_thresh."""
         sys.exit()
 
-    H2, disp_m, disp_M = register_horizontally(sift_matches, H1, H2)
-    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(sift_matches,
+    H2, disp_m, disp_M = register_horizontally(m, H1, H2)
+    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(m,
         H1, H2, w, h)
 
     return H1, H2, disp_m, disp_M
 
 
-def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc'):
+def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, flag='rpc'):
     """
     Rectify a ROI in a pair of Pleiades images.
 
@@ -426,6 +427,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2. This matrix is usually estimated with the pointing_accuracy
             module.
+        m (optional): Nx4 numpy array containing a list of sift matches, in the
+            full image coordinates frame
         flag (default: 'rpc'): option to decide wether to use rpc of sift
             matches for the fundamental matrix estimation.
 
@@ -448,7 +451,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, flag='rpc
     # compute rectifying homographies
     if flag == 'rpc':
         H1, H2, disp_min, disp_max = compute_rectification_homographies(im1,
-            im2, rpc1, rpc2, x, y, w, h, A)
+            im2, rpc1, rpc2, x, y, w, h, A, m)
     else:
         H1, H2, disp_min, disp_max = compute_rectification_homographies_sift(
             im1, im2, rpc1, rpc2, x, y, w, h)
