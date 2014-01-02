@@ -95,17 +95,43 @@ def matrix_translation(tx, ty):
 
 
 def image_size(im):
-    out = tmpfile('.txt')
-    run('imprintf "%%w %%h" %s > %s' % (shellquote(im), out));
-    (nc, nr) = map(int, open(out).read().split())
-    return (nc, nr)
+    """
+    Reads the width and height of an image.
+
+    Args:
+        im: path to the input image file
+    Returns:
+        a tuple of size 2, giving width and height
+    """
+    try:
+        with open(im):
+            out = tmpfile('.txt')
+            run('imprintf "%%w %%h" %s > %s' % (shellquote(im), out));
+            (nc, nr) = map(int, open(out).read().split())
+            return (nc, nr)
+    except IOError:
+        print "image_size: the input file doesn't exist"
+        sys.exit()
 
 
 def image_pix_dim(im):
-    out = tmpfile('.txt')
-    run('imprintf "%%c" %s > %s' % (shellquote(im), out));
-    dim = open(out).readline().split()[0]
-    return int(dim)
+    """
+    Reads the number of channels of an image.
+
+    Args:
+        im: path to the input image file
+    Returns:
+        number of channels of the image
+    """
+    try:
+        with open(im):
+            out = tmpfile('.txt')
+            run('imprintf "%%c" %s > %s' % (shellquote(im), out));
+            dim = open(out).readline().split()[0]
+            return int(dim)
+    except IOError:
+        print "image_pix_dim: the input file doesn't exist"
+        sys.exit()
 
 
 def image_crop(im, x, y, w, h, out=None):
