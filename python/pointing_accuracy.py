@@ -512,7 +512,8 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
             bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)],
             #maxiter=50,
             #callback=print_params,
-            disp=True)
+            iprint=0,
+            disp=0)
 
     # default values are:
     # fmin_l_bfgs_b(func, x0, fprime=None, args=(), approx_grad=0, bounds=None,
@@ -575,7 +576,8 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None):
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to img2 in
-        order to correct the pointing error.
+        order to correct the pointing error, and the list of sift matches used
+        to compute this correction.
     """
     # read rpcs
     r1 = rpc_model.RPCModel(rpc1)
@@ -600,4 +602,4 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None):
     if out_dict is not None:
         out_dict['correction_matrix'] = A
 
-    return A
+    return A, m
