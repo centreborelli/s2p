@@ -42,9 +42,17 @@ def tmpfile(ext=''):
 def run(cmd):
     """
     Runs a shell command, and print it before running.
+
+    Arguments:
+        cmd: string to be passed to a shell
+
+    Both stdout and stderr of the shell in which the command is run are those
+    of the parent process.
     """
     print cmd
-    subprocess.call(cmd, shell=True, env=os.environ)
+    subprocess.call(cmd, shell=True, stdout=sys.stdout, stderr=subprocess.STDOUT,
+        env=os.environ)
+    return
 
 
 def shellquote(s):
