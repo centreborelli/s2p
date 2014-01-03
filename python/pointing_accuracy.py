@@ -513,8 +513,8 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
             bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)])
             #maxiter=50,
             #callback=print_params,
-            iprint=0,
-            disp=0)
+            #iprint=0,
+            #disp=0)
 
     # default values are:
     # fmin_l_bfgs_b(func, x0, fprime=None, args=(), approx_grad=0, bounds=None,
