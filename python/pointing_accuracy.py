@@ -509,7 +509,7 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
             args=(rpc1, rpc2, matches),
             approx_grad=True,
             factr=1,
-            bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)],
+            bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)])#,
             #maxiter=50,
             #callback=print_params,
             #iprint=0,
