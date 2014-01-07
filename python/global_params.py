@@ -17,7 +17,9 @@ matching_algorithm = 'hirschmuller08'
 
 use_pleiades_unsharpening = True
 
-
+temporary_dir = "/tmp"
+tile_size  = 500
+max_nb_threads = -1
 
 # bunch not used yet
 ##############################

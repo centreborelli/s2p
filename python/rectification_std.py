@@ -10,7 +10,7 @@ import rpc_utils
 import estimation
 import evaluation
 import common
-
+import global_params
 
 def center_2d_points(pts):
     """
@@ -208,7 +208,7 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
             out.append(matches[i, :])
             mask[i] = 1 # for debug only
 
-    np.savetxt('/tmp/sift_F_msk', mask, '%d') # for debug only
+    np.savetxt(global_params.temporary_dir+'sift_F_msk', mask, '%d') # for debug only
     return np.array(out)
 
 
