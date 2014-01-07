@@ -1,18 +1,17 @@
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
 #!/usr/bin/env python
 
+import os
 import numpy as np
+
 import rectification
 import rpc_utils
 import rpc_model
 import common
 import estimation
 import evaluation
-import visualisation
 import global_params
-import os
 
 
 def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
@@ -510,7 +509,7 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
             args=(rpc1, rpc2, matches),
             approx_grad=True,
             factr=1,
-            bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)])
+            bounds=[(-150, 150), (-100, 100), (-100, 100), (-200000, 200000)],
             #maxiter=50,
             #callback=print_params,
             #iprint=0,

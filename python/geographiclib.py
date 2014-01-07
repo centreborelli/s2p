@@ -4,6 +4,7 @@
 import subprocess
 import numpy as np
 import common
+import global_params
 
 def geodetic_to_geocentric(lat, lon, alt):
     """

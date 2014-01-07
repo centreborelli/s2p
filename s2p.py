@@ -165,17 +165,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # multiple of the number of cores
     if tw is None and th is None and ov is None:
         ov = z * np.ceil(100 / z)
-        if w <= 1000:
+        if w <= global_params.tile_size:
             tw = w
         else:
-            tw = 1000
+            tw = global_params.tile_size
             #TODO: modify tiles size to be close do a divisor of w
             #while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
             #    tw += 1
-        if h <= 1000:
+        if h <= global_params.tile_size:
             th = h
         else:
-            th = 1000
+            th = global_params.tile_size
             #TODO: modify tiles size to be close do a divisor of h
             #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
             #    th += 1
@@ -208,6 +208,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # create pool with less workers than available cores
     PROCESSES = int(0.75 * multiprocessing.cpu_count())
+    if global_params.max_nb_threads > 0:
+        PROCESSES = min(PROCESSES,global_params.max_nb_threads)
+
     print 'Creating pool with %d processes\n' % PROCESSES
     pool = multiprocessing.Pool(PROCESSES)
 
@@ -392,6 +395,12 @@ if __name__ == '__main__':
     global_params.matching_algorithm = cfg['matching_algorithm']
     global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
     global_params.debug = cfg['debug']
+    if "temporary_dir" in cfg:
+        global_params.temporary_dir = cfg['temporary_dir']
+    if "tile_size" in cfg:
+        global_params.tile_size = cfg['tile_size']
+    if "max_nb_threads" in cfg:
+        global_params.max_nb_threads = cfg['max_nb_threads']
 
     # roi definition and output path
     x = cfg['roi']['x']
