@@ -62,7 +62,6 @@ def matches_from_sift(im1, im2):
         matches: 2D numpy array containing a list of matches. Each line
             contains one pair of points, ordered as x1 y1 x2 y2.
             The coordinate system is that of the big images.
-            If no sift matches are found, then an exception is raised.
     """
     ## Try to import the global parameters module
     #  it permits to pass values between different modules
@@ -83,8 +82,9 @@ def matches_from_sift(im1, im2):
     except ImportError:
         sift_match_thresh = 0.6
     matches = common.sift_keypoints_match(kpts1, kpts2, 1, sift_match_thresh)
+
     # compensate coordinates for the crop and the zoom
-    return matches*subsampling_factor_registration
+    return matches * subsampling_factor_registration
 
 
 def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -107,7 +107,6 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
         matches: 2D numpy array containing a list of matches. Each line
             contains one pair of points, ordered as x1 y1 x2 y2.
             The coordinate system is that of the big images.
-            If no sift matches are found, then an exception is raised.
     """
     x1, y1, w1, h1 = x, y, w, h
     x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x, y, w, h)
@@ -127,12 +126,9 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
         # compensate coordinates for the crop and the zoom
         pts1 = common.points_apply_homography(T1, matches[:, 0:2])
         pts2 = common.points_apply_homography(T2, matches[:, 2:4])
-
         return np.hstack([pts1, pts2])
     else:
-        raise Exception("no sift matches")
-
-
+        return np.array([[]])
 
 
 def filter_matches_epipolar_constraint(F, matches, thresh):
@@ -386,11 +382,17 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
     # the origin, if sift matches are available
     print "step 5: horizontal registration ------------------------------------"
     if m is None:
-        try:
-            m = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
-        except Exception:
-            print 'something failed with sift matches'
-            sys.exit()
+        m = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+
+    if len(m) < 2:
+        # 0 or 1 sift match
+        print """rectification.compute_rectification_homographies:
+        Less than 2 sift matches. No registration of images will be performed,
+        and we will use a rough estimation of disparity range based on srtm
+        data"""
+        disp_m, disp_M = rpc_utils.rough_disparity_range_estimation(rpc1,
+            rpc2, x, y, w, h, H1, H2)
+        return H1, H2, disp_m, disp_M
 
     # filter sift matches with the known fundamental matrix
     F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
@@ -400,11 +402,16 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         epipolar_thresh = 2.0
     m = filter_matches_epipolar_constraint(F, m, epipolar_thresh)
     print 'remaining sift matches', len(m)
-    if not len(m):
-        print """all the sift matches have been discarded by the epipolar
-        constraint. This is probably due to the pointing error. Try with a
-        bigger value for epipolar_thresh."""
-        sys.exit()
+    if len(m) < 2:
+        # 0 or 1 sift match
+        print """rectification.compute_rectification_homographies: all the sift
+        matches have been discarded by the epipolar constraint. This is
+        probably due to the pointing error. Try with a bigger value for
+        epipolar_thresh. We will use a rough estimation of disparity range
+        based on srtm data"""
+        disp_m, disp_M = rpc_utils.rough_disparity_range_estimation(rpc1,
+            rpc2, x, y, w, h, H1, H2)
+        return H1, H2, disp_m, disp_M
 
     H2, disp_m, disp_M = register_horizontally(m, H1, H2)
     disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(m,
