@@ -23,5 +23,9 @@
   "n_gcp_per_axis" : 5,
   "epipolar_thresh" : 0.5,
   "use_pleiades_unsharpening" : true,
-  "debug" : false
+  "debug" : false,
+  "temporary_dir" : "/tmp",
+  "tile_size" : 500,
+  "max_nb_threads" : -1,
+  "clean_tmp" : false
 }

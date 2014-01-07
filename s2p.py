@@ -237,8 +237,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     tile_composer.mosaic(out, w, h, ov, tiles)
 
     # cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+    if global_params.clean_tmp:
+        while common.garbage:
+            common.run('rm ' + common.garbage.pop())
 
     return out
 
@@ -297,8 +298,9 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+    if global_params.clean_tmp:
+        while common.garbage:
+            common.run('rm ' + common.garbage.pop())
 
     return dem
 
@@ -362,8 +364,9 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
             merc_x, merc_y)
 
     # cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+    if global_params.clean_tmp:
+        while common.garbage:
+            common.run('rm ' + common.garbage.pop())
 
 
 if __name__ == '__main__':
@@ -396,11 +399,13 @@ if __name__ == '__main__':
     global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
     global_params.debug = cfg['debug']
     if "temporary_dir" in cfg:
-        global_params.temporary_dir = cfg['temporary_dir']
+        global_params.temporary_dir = str(cfg['temporary_dir'])
     if "tile_size" in cfg:
         global_params.tile_size = cfg['tile_size']
     if "max_nb_threads" in cfg:
         global_params.max_nb_threads = cfg['max_nb_threads']
+    if "clean_tmp" in cfg:
+        global_params.clean_tmp = cfg['clean_tmp']
 
     # roi definition and output path
     x = cfg['roi']['x']

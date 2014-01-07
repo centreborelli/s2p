@@ -20,6 +20,7 @@ use_pleiades_unsharpening = True
 temporary_dir = "/tmp"
 tile_size  = 500
 max_nb_threads = -1
+clean_tmp = True 
 
 # bunch not used yet
 ##############################
