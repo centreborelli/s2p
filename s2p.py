@@ -87,7 +87,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     ## correct pointing error
     # A is the correction matrix and m is the list of sift matches
     A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y,
-        w, h)
+        w, h, first_guess=A_global)
 
     ## save the subsampling factor, the sift matches and the pointing
     # correction matrix
@@ -209,7 +209,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # create pool with less workers than available cores
     PROCESSES = int(0.75 * multiprocessing.cpu_count())
     if global_params.max_nb_threads > 0:
-        PROCESSES = min(PROCESSES,global_params.max_nb_threads)
+        PROCESSES = min(PROCESSES, global_params.max_nb_threads)
 
     print 'Creating pool with %d processes\n' % PROCESSES
     pool = multiprocessing.Pool(PROCESSES)
