@@ -205,6 +205,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         p.start()
         p.join()
         A = out_dict['correction_matrix']
+        np.savetxt('%s/pointing_global.txt' % out_dir, A)
     else:
         A = None
 
