@@ -391,7 +391,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         and we will use a rough estimation of disparity range based on srtm
         data"""
         disp_m, disp_M = rpc_utils.rough_disparity_range_estimation(rpc1,
-            rpc2, x, y, w, h, H1, H2)
+            rpc2, x, y, w, h, H1, H2, A)
         return H1, H2, disp_m, disp_M
 
     # filter sift matches with the known fundamental matrix
@@ -410,7 +410,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         epipolar_thresh. We will use a rough estimation of disparity range
         based on srtm data"""
         disp_m, disp_M = rpc_utils.rough_disparity_range_estimation(rpc1,
-            rpc2, x, y, w, h, H1, H2)
+            rpc2, x, y, w, h, H1, H2, A)
         return H1, H2, disp_m, disp_M
 
     H2, disp_m, disp_M = register_horizontally(m, H1, H2)
