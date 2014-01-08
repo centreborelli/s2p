@@ -605,7 +605,7 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
         m = np.array([[]])
         if first_guess is not None:
             A = first_guess
-        else
+        else:
             A = np.eye(3)
         if out_dict is not None:
             out_dict['correction_matrix'] = A
