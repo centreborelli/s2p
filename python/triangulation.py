@@ -102,7 +102,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
     hh = np.ceil((y + h * zoom) / 4.0) - yy
     crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
-    crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
+    crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
