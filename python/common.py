@@ -207,7 +207,7 @@ def image_zoom_gdal(im, f, out=None):
     sz = image_size(im)
 
     # First, we need to make sure dataset has a proper origin/spacing
-    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (sz[0]/f, sz[1]/f,im,tmp))
+    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (sz[0]/f, -sz[1]/f,im,tmp))
 
     # FFT doesn't play nice with infinite values, so we remove them
     run('gdalwarp -r cubic -ts %d %d %s %s' %  (sz[0]/f, sz[1]/f,tmp, out))
