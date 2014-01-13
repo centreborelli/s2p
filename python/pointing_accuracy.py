@@ -90,7 +90,6 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
     # compute the mean displacement from epipolar lines
     d_sum = 0
-    print len(p1)
     for i in range(len(p1)):
         x  = np.array([p1[i, 0], p1[i, 1], 1])
         xx = np.array([p2[i, 0], p2[i, 1], 1])
@@ -523,7 +522,12 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     # fmin_l_bfgs_b(func, x0, fprime=None, args=(), approx_grad=0, bounds=None,
     # m=10, factr=10000000.0, pgtol=1e-05, epsilon=1e-08, iprint=-1,
     # maxfun=15000, disp=None)
-    print v, min_val, debug
+    print 'theta: %f' % v[0]
+    print 'tx: %f' % v[1]
+    print 'ty: %f' % v[2]
+    print 'shear: %f' % v[3]
+    print 'min cost: %f' % min_val
+    print debug
     return euclidean_transform_matrix(v)
 
 
