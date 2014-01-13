@@ -14,3 +14,4 @@ iterate.dat
 3rdparty/stereo_hirschmuller_2008/testdata/
 pleiades_data/images/*/sift_matches.txt
 pleiades_data/images/*/.__*
+ipynb

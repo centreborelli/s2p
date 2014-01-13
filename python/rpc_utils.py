@@ -6,6 +6,7 @@ import numpy as np
 import estimation
 import geographiclib
 import common
+from numpy import testing
 
 
 def print_distance_between_vectors(u, v, msg):
@@ -413,3 +414,71 @@ def world_to_image_correspondences_from_rpc(rpc, x, y, w, h, n):
     X, Y, Z = geographiclib.geodetic_to_geocentric(lat, lon, alt)
 
     return np.vstack([X, Y, Z]).T, np.vstack([x, y]).T
+
+
+def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
+    """
+    Converts an altitude into a disparity.
+
+    Args:
+        rpc1: an instance of the rpc_model.RPCModel class for the reference
+            image
+        rpc2: an instance of the rpc_model.RPCModel class for the secondary
+            image
+        x, y: coordinates of the point in the reference image
+        alt: altitude above the WGS84 ellipsoid (in meters) of the point
+        H1, H2: rectifying homographies
+        A (optional): pointing correction matrix
+
+    Returns:
+        the horizontal disparity of the (x, y) point of im1, assuming that the
+        3-space point associated has altitude alt. The disparity is made
+        horizontal thanks to the two rectifying homographies H1 and H2.
+    """
+    xx, yy = find_corresponding_point(rpc1, rpc2, x, y, alt)[0:2]
+    p1 = np.vstack([x, y]).T
+    p2 = np.vstack([xx, yy]).T
+
+    if A is not None:
+        print "rpc_utils.alt_to_disp: applying pointing error correction"
+        # correct coordinates of points in im2, according to A
+        p2 = common.points_apply_homography(np.linalg.inv(A), p2)
+
+    p1 = common.points_apply_homography(H1, p1)
+    p2 = common.points_apply_homography(H2, p2)
+    np.testing.assert_allclose(p1[:, 1], p2[:, 1], atol=0.1)
+    disp = p2[:, 0] - p1[:, 0]
+    return disp
+
+
+def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A):
+    """
+    Args:
+        rpc1: an instance of the rpc_model.RPCModel class for the reference
+            image
+        rpc2: an instance of the rpc_model.RPCModel class for the secondary
+            image
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the reference image. (x, y) is the top-left corner, and
+            (w, h) are the dimensions of the rectangle.
+        H1, H2: rectifying homographies
+        A (optional): pointing correction matrix
+
+    Returns:
+        the min and max horizontal disparity observed on the 4 corners of the
+        ROI with the min/max altitude assumptions given by the srtm. The
+        disparity is made horizontal thanks to the two rectifying homographies
+        H1 and H2.
+    """
+    m, M = altitude_range(rpc1, x, y, w, h)
+
+    # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
+    a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
+    b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
+    c = np.array([m, M,   m,   M,   m,   M,   m,   M])
+
+    # compute the disparities of these 8 points
+    d = alt_to_disp(rpc1, rpc2, a, b, c, H1, H2, A)
+
+    # return min and max disparities
+    return np.min(d), np.max(d)
