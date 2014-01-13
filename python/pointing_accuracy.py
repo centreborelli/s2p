@@ -184,7 +184,7 @@ def cost_function(v, *args):
     Objective function to minimize in order to correct the pointing error.
 
     Arguments:
-        v: vector of size 4, containing the 4 parameters of the euclidean
+        v: vector of size 3 or 4, containing the parameters of the euclidean
             transformation we are looking for.
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
         matches: 2D numpy array containing a list of matches. Each line
@@ -206,11 +206,14 @@ def cost_function(v, *args):
     # verify that parameters are in the bounding box
     if (np.abs(v[0]) > 200*np.pi or
         np.abs(v[1]) > 10000 or
-        np.abs(v[2]) > 10000 or
-        np.abs(v[3]) > 20000):
+        np.abs(v[2]) > 10000):
         print 'warning: cost_function is going too far'
         print v
 
+    if (len(v) > 3):
+        if (np.abs(v[3]) > 20000):
+            print 'warning: cost_function is going too far'
+            print v
 
     # compute the altitudes from the matches without correction
     x1 = matches[:, 0]
