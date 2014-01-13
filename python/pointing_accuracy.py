@@ -54,7 +54,8 @@ def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
     return np.max(np.abs(e))
 
 
-def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
+def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
+        matches=None):
     """
     Measures the pointing error on a Pleiades' pair of images.
 
@@ -66,13 +67,16 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
             rectangle.
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2.
+        matches (optional): Nx4 numpy array containing a list of matches to use
+            to compute the pointing error
 
     Returns:
         the mean pointing error, in the direction orthogonal to the epipolar
         lines. This error is measured in pixels, and computed from an
         approximated fundamental matrix.
     """
-    matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    if matches is None:
+        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
 
