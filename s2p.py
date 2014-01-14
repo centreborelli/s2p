@@ -11,6 +11,7 @@ import numpy as np
 
 from python import common
 from python import rpc_model
+from python import rpc_utils
 from python import geographiclib
 from python import pointing_accuracy
 from python import rectification
@@ -19,6 +20,42 @@ from python import triangulation
 from python import tile_composer
 from python import fusion
 from python import global_params
+
+
+def estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h, 
+                                  height_lm = -20 , height_hm = +100):
+
+    # Read models
+    rpc1 = rpc_model.RPCModel(rpc1)
+    rpc2 = rpc_model.RPCModel(rpc2)
+
+    # First, we need to get the srtm range in the tile
+    srtm_min, srtm_max = rpc_utils.altitude_range(rpc1,x,y,w,h)
+    print "SRTM range for tile: ["+str(srtm_min)+", "+str(srtm_max)+"]"
+    
+    # Add the user-defined margin
+    h_min = srtm_min + height_lm
+    h_max = srtm_max + height_hm
+    
+    # Get the center of the ROI
+    im1_center = np.array([[x + 0.5 * w, y + 0.5 * h]])
+
+    # Get poins in im2 corresponding to center at lower and higher altitude
+    im2_point_mh = np.array([rpc_utils.find_corresponding_point(rpc1,rpc2,im1_center[0,0],im1_center[0,1],h_min)])
+    im2_point_Mh = np.array([rpc_utils.find_corresponding_point(rpc1,rpc2,im1_center[0,0],im1_center[0,1],h_max)])
+    
+    # Transform all points to epipolar geometry
+    epi_im1_center = common.points_apply_homography(H1,im1_center)
+    epi_im2_mh = common.points_apply_homography(H2,im2_point_mh)
+    epi_im2_Mh = common.points_apply_homography(H2,im2_point_Mh)
+    
+    # Compute min and max disp
+    disp_min = min(epi_im2_mh[0,0]-epi_im1_center[0,0],epi_im2_Mh[0,0]-epi_im1_center[0,0])
+    disp_max = max(epi_im2_mh[0,0]-epi_im1_center[0,0],epi_im2_Mh[0,0]-epi_im1_center[0,0])
+    
+    # Return disp range
+    return disp_min,disp_max
+
 
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
@@ -104,6 +141,20 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
         rpc2, x, y, w, h, rect1, rect2, A, m)
 
+
+    if global_params.disp_range_method == "auto_srtm" or global_params.disp_range_method == "wider_sift_srtm":
+        srtm_disp_min, srtm_disp_max = estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h, global_params.disp_range_srtm_low_margin, global_params.disp_range_srtm_high_margin)
+
+        if global_params.disp_range_method == "auto_srtm":
+            disp_min = srtm_disp_min
+            disp_max = srtm_disp_max
+            print "Auto srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
+        elif global_params.disp_range_method == "wider_sift_srtm":
+            disp_min = min(srtm_disp_min, disp_min)
+            disp_max = max(srtm_disp_max, disp_max)
+            print "Wider sift srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
+    else:
+         print "Auto sift disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
@@ -401,6 +452,13 @@ if __name__ == '__main__':
     global_params.matching_algorithm = cfg['matching_algorithm']
     global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
     global_params.debug = cfg['debug']
+    if "disp_range_method" in cfg:
+        global_params.disp_range_method = str(cfg['disp_range_method'])
+    if "disp_range_srtm_low_margin" in cfg:
+        global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
+    if "disp_range_srtm_high_margin" in cfg:
+        global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_high_margin'])
+        
     if "temporary_dir" in cfg:
         global_params.temporary_dir = str(cfg['temporary_dir'])
     if "tile_size" in cfg:
