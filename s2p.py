@@ -204,8 +204,12 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
         p.start()
         p.join()
-        A = out_dict['correction_matrix']
-        np.savetxt('%s/pointing_global.txt' % out_dir, A)
+        if 'correction_matrix' in out_dict:
+            A = out_dict['correction_matrix']
+            np.savetxt('%s/pointing_global.txt' % out_dir, A)
+        else:
+            print "WARNING: correction matrix not found. The estimation process seems to have failed for some reason. Global correction matrix will be replaced by eye matrix."
+            A = np.eye(3)
     else:
         A = None
 
