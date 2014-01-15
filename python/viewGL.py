@@ -1,6 +1,5 @@
-# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
-
 #!/usr/bin/env python
+# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
 ## {{{ http://code.activestate.com/recipes/325391/ (r1)
 from OpenGL.GLUT import *
