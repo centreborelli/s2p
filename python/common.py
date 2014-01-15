@@ -119,7 +119,7 @@ def image_size(im):
             (nc, nr) = map(int, open(out).read().split())
             return (nc, nr)
     except IOError:
-        print "image_size: the input file doesn't exist"
+        print "image_size: the input file doesn't exist ("+str(im)+")"
         sys.exit()
 
 

@@ -22,41 +22,6 @@ from python import fusion
 from python import global_params
 
 
-def estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h, 
-                                  height_lm = -20 , height_hm = +100):
-
-    # Read models
-    rpc1 = rpc_model.RPCModel(rpc1)
-    rpc2 = rpc_model.RPCModel(rpc2)
-
-    # First, we need to get the srtm range in the tile
-    srtm_min, srtm_max = rpc_utils.altitude_range(rpc1,x,y,w,h)
-    print "SRTM range for tile: ["+str(srtm_min)+", "+str(srtm_max)+"]"
-    
-    # Add the user-defined margin
-    h_min = srtm_min + height_lm
-    h_max = srtm_max + height_hm
-    
-    # Get the center of the ROI
-    im1_center = np.array([[x + 0.5 * w, y + 0.5 * h]])
-
-    # Get poins in im2 corresponding to center at lower and higher altitude
-    im2_point_mh = np.array([rpc_utils.find_corresponding_point(rpc1,rpc2,im1_center[0,0],im1_center[0,1],h_min)])
-    im2_point_Mh = np.array([rpc_utils.find_corresponding_point(rpc1,rpc2,im1_center[0,0],im1_center[0,1],h_max)])
-    
-    # Transform all points to epipolar geometry
-    epi_im1_center = common.points_apply_homography(H1,im1_center)
-    epi_im2_mh = common.points_apply_homography(H2,im2_point_mh)
-    epi_im2_Mh = common.points_apply_homography(H2,im2_point_Mh)
-    
-    # Compute min and max disp
-    disp_min = min(epi_im2_mh[0,0]-epi_im1_center[0,0],epi_im2_Mh[0,0]-epi_im1_center[0,0])
-    disp_max = max(epi_im2_mh[0,0]-epi_im1_center[0,0],epi_im2_Mh[0,0]-epi_im1_center[0,0])
-    
-    # Return disp range
-    return disp_min,disp_max
-
-
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         w=None, h=None, A_global=None, prv1=None):
@@ -143,7 +108,11 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
 
     if global_params.disp_range_method == "auto_srtm" or global_params.disp_range_method == "wider_sift_srtm":
-        srtm_disp_min, srtm_disp_max = estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h, global_params.disp_range_srtm_low_margin, global_params.disp_range_srtm_high_margin)
+        # Read models
+        rpci1 = rpc_model.RPCModel(rpc1)
+        rpci2 = rpc_model.RPCModel(rpc2)
+        srtm_disp_min, srtm_disp_max = rpc_utils.rough_disparity_range_estimation(rpci1,rpci2,x,y,w,h,H1,H2,A,global_params.disp_range_srtm_low_margin, global_params.disp_range_srtm_high_margin)
+        # srtm_disp_min, srtm_disp_max = estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h)
 
         if global_params.disp_range_method == "auto_srtm":
             disp_min = srtm_disp_min

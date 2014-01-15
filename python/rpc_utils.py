@@ -446,12 +446,12 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
 
     p1 = common.points_apply_homography(H1, p1)
     p2 = common.points_apply_homography(H2, p2)
-    np.testing.assert_allclose(p1[:, 1], p2[:, 1], atol=0.1)
+    # np.testing.assert_allclose(p1[:, 1], p2[:, 1], atol=0.1)
     disp = p2[:, 0] - p1[:, 0]
     return disp
 
 
-def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A):
+def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_margin = 0, high_margin = 0):
     """
     Args:
         rpc1: an instance of the rpc_model.RPCModel class for the reference
@@ -471,6 +471,9 @@ def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A):
         H1 and H2.
     """
     m, M = altitude_range(rpc1, x, y, w, h)
+
+    m = m + low_margin
+    M = M + high_margin
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
