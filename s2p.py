@@ -321,7 +321,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
             tile_w, tile_h, overlap)
 
     # merge the two digital elevation models
-    dem = '%s/dem_fusion.tif' % out_dir
+    dem = '%s/dem.tif' % out_dir
     fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
@@ -431,7 +431,7 @@ if __name__ == '__main__':
         global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
     if "disp_range_srtm_high_margin" in cfg:
         global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_high_margin'])
-        
+
     if "temporary_dir" in cfg:
         global_params.temporary_dir = str(cfg['temporary_dir'])
     if "tile_size" in cfg:
