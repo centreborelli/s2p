@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
@@ -92,8 +93,8 @@ unsigned char test_little_endian( void )
 }
 
 void write_ply_header_binary(FILE* f, int npoints) {
-    if ( ! test_little_endian() )  
-       for(int i=1;i<100;i++) 
+    if (!test_little_endian())
+       for (int i = 1; i < 100; i++)
           printf("BINARY PLY NOT SUPPORTED ON BIG ENDIAN SYSTEMS!!\n");
     fprintf(f, "ply\n");
     fprintf(f, "format binary_little_endian 1.0\n");
@@ -115,33 +116,63 @@ void write_ply_header_binary(FILE* f, int npoints) {
 SMART_PARAMETER_SILENT(IJMESH, 0)
 SMART_PARAMETER_SILENT(IJMESHFAC, 2)
 
+
+void print_help(char *bin_name) {
+    fprintf(stderr, "usage:\n\t"
+            "%s [-a] colors heights rpc Hfile.txt out.ply [x0 y0]\n", bin_name);
+    //       0         1      2       3   4        5       6  7
+    fprintf(stderr, "\t use -a flag to write an ascii ply (default: binary)\n");
+}
+
+
 int main(int c, char *v[])
 {
-    if (c != 6 & c != 8) {
-        fprintf(stderr, "usage:\n\t"
-                "%s colors heights rpc Hfile.txt out.ply [x0 y0]\n", *v);
-        //       0    1      2       3   4        5       6  7
+    if (c != 6 & c != 7 & c != 8 & c!= 9) {
+        print_help(*v);
         return 1;
     }
 
-    // write a binary PLY
+    // binary | ascii flag
     int binary = 1;
+    int k;
 
+    // parse args with getopt to search for the ascii '-a' flag
+    while ((k = getopt (c, v, "a")) != -1)
+        switch (k)
+        {
+            case 'a':
+                binary = 0;
+                break;
+            case '?':
+                if (isprint (optopt))
+                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+                else
+                    fprintf (stderr, "Unknown option character `\\x%x'.\n",
+                            optopt);
+                print_help(*v);
+                return 1;
+            default:
+                fprintf(stderr, "default case\n");
+                print_help(*v);
+                abort ();
+        }
+
+    // read the other arguments
     // x0 and y0 are meant to allow the user to choose the origin in the
     // mercator coordinates system, in order to avoid visualisation problems
     // due to huge values of the coordinates (for which float precision is
     // often not enough)
-
-    char *fname_colors = v[1];
-    char *fname_heights = v[2];
-    char *fname_rpc = v[3];
+    int i = optind;
+    char *fname_colors = v[i++];
+    char *fname_heights = v[i++];
+    char *fname_rpc = v[i++];
     double H[3][3], invH[3][3];
-    read_matrix(H, v[4]);
-    FILE *out = fopen(v[5], "w");
+    read_matrix(H, v[i++]);
+    FILE *out = fopen(v[i++], "w");
     invert_homography(invH, H);
 
-    int x0 = c == 8 ? atoi(v[6]) : 0;
-    int y0 = c == 8 ? atoi(v[7]) : 0;
+    int x0 = c > i ? atoi(v[i++]) : 0;
+    int y0 = c > i ? atoi(v[i]) : 0;
 
     int w, h, pd, ww, hh;
     uint8_t *colors = iio_read_image_uint8_vec(fname_colors, &w, &h, &pd);
@@ -202,7 +233,7 @@ int main(int c, char *v[])
             }
 
             // print the voxel in the ply output file
-            if(binary) {
+            if (binary) {
                float X[3] = {xyz[0], xyz[1], xyz[2]};
                float N[3] = {nrm[0], nrm[1], nrm[2]};
                unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};

@@ -89,7 +89,7 @@ rpc.o: rpc.c xfopen.c
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN rpc.c
 
 colormesh.o: colormesh.c iio.h fail.c rpc.h read_matrix.c smapa.h
-	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN colormesh.c
+	cc -c -std=c99 -g -O3 -D_GNU_SOURCE -DNDEBUG -DDONT_USE_TEST_MAIN colormesh.c
 
 downsa.o: downsa.c fragments.c iio.h
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN downsa.c
