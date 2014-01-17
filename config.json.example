@@ -27,5 +27,5 @@
   "temporary_dir" : "/tmp",
   "tile_size" : 500,
   "max_nb_threads" : -1,
-  "clean_tmp" : false
+  "clean_tmp" : true
 }
