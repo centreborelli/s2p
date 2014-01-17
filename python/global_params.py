@@ -17,6 +17,11 @@ matching_algorithm = 'hirschmuller08'
 
 use_pleiades_unsharpening = True
 
+# One of "auto_sift", "auto_srtm", "wider_sift_srtm"
+disp_range_method = "auto_sift"
+disp_range_srtm_low_margin = -10
+disp_range_srtm_high_margin = +100
+
 temporary_dir = "/tmp"
 tile_size  = 500
 max_nb_threads = -1

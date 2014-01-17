@@ -11,6 +11,7 @@ import numpy as np
 
 from python import common
 from python import rpc_model
+from python import rpc_utils
 from python import geographiclib
 from python import pointing_accuracy
 from python import rectification
@@ -19,6 +20,7 @@ from python import triangulation
 from python import tile_composer
 from python import fusion
 from python import global_params
+
 
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
@@ -104,6 +106,24 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
         rpc2, x, y, w, h, rect1, rect2, A, m)
 
+
+    if global_params.disp_range_method == "auto_srtm" or global_params.disp_range_method == "wider_sift_srtm":
+        # Read models
+        rpci1 = rpc_model.RPCModel(rpc1)
+        rpci2 = rpc_model.RPCModel(rpc2)
+        srtm_disp_min, srtm_disp_max = rpc_utils.rough_disparity_range_estimation(rpci1,rpci2,x,y,w,h,H1,H2,A,global_params.disp_range_srtm_low_margin, global_params.disp_range_srtm_high_margin)
+        # srtm_disp_min, srtm_disp_max = estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h)
+
+        if global_params.disp_range_method == "auto_srtm":
+            disp_min = srtm_disp_min
+            disp_max = srtm_disp_max
+            print "Auto srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
+        elif global_params.disp_range_method == "wider_sift_srtm":
+            disp_min = min(srtm_disp_min, disp_min)
+            disp_max = max(srtm_disp_max, disp_max)
+            print "Wider sift srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
+    else:
+         print "Auto sift disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
@@ -204,8 +224,12 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
         p.start()
         p.join()
-        A = out_dict['correction_matrix']
-        np.savetxt('%s/pointing_global.txt' % out_dir, A)
+        if 'correction_matrix' in out_dict:
+            A = out_dict['correction_matrix']
+            np.savetxt('%s/pointing_global.txt' % out_dir, A)
+        else:
+            print "WARNING: correction matrix not found. The estimation process seems to have failed for some reason. Global correction matrix will be replaced by eye matrix."
+            A = np.eye(3)
     else:
         A = None
 
@@ -297,7 +321,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
             tile_w, tile_h, overlap)
 
     # merge the two digital elevation models
-    dem = '%s/dem_fusion.tif' % out_dir
+    dem = '%s/dem.tif' % out_dir
     fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
@@ -309,7 +333,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
 
 
 def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
-        merc_y=None):
+        merc_y=None, ascii_ply=False):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
@@ -323,6 +347,8 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
             or process_triplet function
         merc_{x,y}: mercator coordinates of the point we want to use as
             origin in the local coordinate system of the computed cloud
+        ascii_ply (optional, default false): boolean flag to tell if the output
+            ply file should be encoded in plain text (ascii).
     """
     # output files
     common.run('mkdir -p %s' % out_dir)
@@ -364,7 +390,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
         crop_color = common.image_qauto(crop)
 
     triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
-            merc_x, merc_y)
+            merc_x, merc_y, ascii_ply)
 
     # cleanup
     if global_params.clean_tmp:
@@ -401,6 +427,13 @@ if __name__ == '__main__':
     global_params.matching_algorithm = cfg['matching_algorithm']
     global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
     global_params.debug = cfg['debug']
+    if "disp_range_method" in cfg:
+        global_params.disp_range_method = str(cfg['disp_range_method'])
+    if "disp_range_srtm_low_margin" in cfg:
+        global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
+    if "disp_range_srtm_high_margin" in cfg:
+        global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_high_margin'])
+
     if "temporary_dir" in cfg:
         global_params.temporary_dir = str(cfg['temporary_dir'])
     if "tile_size" in cfg:

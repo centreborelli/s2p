@@ -119,7 +119,7 @@ def image_size(im):
             (nc, nr) = map(int, open(out).read().split())
             return (nc, nr)
     except IOError:
-        print "image_size: the input file doesn't exist"
+        print "image_size: the input file doesn't exist ("+str(im)+")"
         sys.exit()
 
 
@@ -192,6 +192,27 @@ def image_safe_zoom_fft(im, f, out=None):
     # FFT doesn't play nice with infinite values, so we remove them
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
     return out
+
+def image_zoom_gdal(im, f, out=None):
+    """
+    zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out."""
+    if f == 1:
+        return im
+
+    if out is None:
+        out = tmpfile('.tif')
+
+    tmp = tmpfile('.tif')
+
+    sz = image_size(im)
+
+    # First, we need to make sure dataset has a proper origin/spacing
+    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (sz[0]/f, -sz[1]/f,im,tmp))
+
+    # FFT doesn't play nice with infinite values, so we remove them
+    run('gdalwarp -r cubic -ts %d %d %s %s' %  (sz[0]/f, sz[1]/f,tmp, out))
+    return out
+
 
 def image_zoom_out_morpho(im, f):
     """
