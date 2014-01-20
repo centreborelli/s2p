@@ -8,6 +8,7 @@ import multiprocessing
 import sys
 import json
 import numpy as np
+import os.path
 
 from python import common
 from python import rpc_model
@@ -144,6 +145,33 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     return dem
 
 
+def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
+        w=None, h=None, A_global=None, prv1=None):
+    """
+    Safe call to process_pair_single_tile (all exceptions will be
+    caught). Arguments are the same. This safe version is used when
+    processing with multiprocessing module, which will silent
+    exceptions and break downstream tasks.
+
+    Returns:
+    path to the height map, resampled on the grid of the reference image
+    """
+    dem = ""
+    try:
+        dem = process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y,
+        w, h, A_global, prv1)
+    # Catch all possible exceptions here
+    except:
+        e = sys.exc_info()[0]
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        print "Failed to generate tile %i %i %i %i: %s)" %(x,y,w,h,str(e))
+        # Append to the list of failed tiles
+        return dem
+
+    print "Tile %i %i %i %i generated." %(x,y,w,h)
+    return dem
+
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         h=None, tw=None, th=None, ov=None):
     """
@@ -252,12 +280,24 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
                     j, tw, th, A)
             else:
-                pool.apply_async(process_pair_single_tile, args=(tile_dir,
+                pool.apply_async(safe_process_pair_single_tile, args=(tile_dir,
                     img1, rpc1, img2, rpc2, i, j, tw, th, A))
 
     # wait for all the processes to terminate
     pool.close()
     pool.join()
+
+
+    # Retry all failed jobs in main thread
+    print "Retrying failed tiles in main thread if any."
+    for j in np.arange(y, y + h - ov, th - ov):
+        for i in np.arange(x, x + w - ov, tw - ov):
+            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
+            dem = '%s/dem.tif' % tile_dir
+            
+            if not os.path.exists(dem):
+                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
+                                          j, tw, th, A)
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
