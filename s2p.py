@@ -361,7 +361,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
             tile_w, tile_h, overlap)
 
     # merge the two digital elevation models
-    dem = '%s/dem_fusion.tif' % out_dir
+    dem = '%s/dem.tif' % out_dir
     fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
@@ -373,7 +373,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
 
 
 def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
-        merc_y=None):
+        merc_y=None, ascii_ply=False):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
@@ -387,6 +387,8 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
             or process_triplet function
         merc_{x,y}: mercator coordinates of the point we want to use as
             origin in the local coordinate system of the computed cloud
+        ascii_ply (optional, default false): boolean flag to tell if the output
+            ply file should be encoded in plain text (ascii).
     """
     # output files
     common.run('mkdir -p %s' % out_dir)
@@ -428,7 +430,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
         crop_color = common.image_qauto(crop)
 
     triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
-            merc_x, merc_y)
+            merc_x, merc_y, ascii_ply)
 
     # cleanup
     if global_params.clean_tmp:
@@ -471,7 +473,7 @@ if __name__ == '__main__':
         global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
     if "disp_range_srtm_high_margin" in cfg:
         global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_high_margin'])
-        
+
     if "temporary_dir" in cfg:
         global_params.temporary_dir = str(cfg['temporary_dir'])
     if "tile_size" in cfg:

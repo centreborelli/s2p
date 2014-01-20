@@ -11,10 +11,13 @@ monasse: build_dir
 build_dir:
 	mkdir -p ../bin/monasse_refactored_build
 
-imscript: bin_dir colormesh downsa backflow synflow imprintf plambda qauto qeasy crop disp_to_h colormesh_projective disp_to_h_projective height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d siftu srtm4 ransac
+imscript: bin_dir bin2asc colormesh downsa backflow synflow imprintf plambda qauto qeasy crop disp_to_h colormesh_projective disp_to_h_projective height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d siftu srtm4 ransac
 
 bin_dir:
 	mkdir -p $(BINDIR)
+
+bin2asc: bin2asc.c
+	cc -std=c99 bin2asc.c -o $(BINDIR)/bin2asc
 
 colormesh: iio.o rpc.o colormesh.o
 	cc iio.o rpc.o colormesh.o -lpng -ltiff -ljpeg -o $(BINDIR)/colormesh
@@ -89,7 +92,7 @@ rpc.o: rpc.c xfopen.c
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN rpc.c
 
 colormesh.o: colormesh.c iio.h fail.c rpc.h read_matrix.c smapa.h
-	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN colormesh.c
+	cc -c -std=c99 -g -O3 -D_GNU_SOURCE -DNDEBUG -DDONT_USE_TEST_MAIN colormesh.c
 
 downsa.o: downsa.c fragments.c iio.h
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN downsa.c

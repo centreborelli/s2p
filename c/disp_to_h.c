@@ -22,24 +22,25 @@ void applyHom(double outv[3], double M[3][3], double v[3]) {
 }
 
 
-// convert geodetic coordinates to mercator using a reference longitude
-static void convert_geodetic_to_mercator(double mercator[2], double geodetic[2],double reference_longitude) {
+/*// convert geodetic coordinates to mercator using a reference longitude
+static void convert_geodetic_to_mercator(double mercator[2], double
+        geodetic[2], double reference_longitude) {
     double lon0 = reference_longitude;
     double R = 6378.1*1000;
     double cte = 1/360.*2*M_PI;
-    mercator[0] = R*(geodetic[0]-lon0)*cte;
-    mercator[1] = R*log((1+sin(geodetic[1]*cte))/cos(geodetic[1]*cte));
+    mercator[0] = R * (geodetic[0] - lon0) * cte;
+    mercator[1] = R * log((1 + sin(geodetic[1] * cte)) / cos(geodetic[1] * cte));
 }
 
 
 // normalize in place a 3d vector
-static void normalize_vector_3d(double vec[3]){
-    const int dim=3;
+static void normalize_vector_3d(double vec[3]) {
+    const int dim = 3;
     double norm = 0;
-    for(int i=0;i<dim;i++)
-        norm += vec[i]*vec[i];
+    for (int i = 0; i < dim ; i++)
+        norm += vec[i] * vec[i];
     norm = sqrt(norm);
-    for(int i=0;i<dim;i++)
+    for (int i = 0; i < dim ; i++)
         vec[i] /= norm;
 }
 
@@ -73,7 +74,7 @@ struct world_point {
     float r;
     float g;
     float b;
-};
+};*/
 
 
 int main_disp_to_h(int c, char *v[])
@@ -91,8 +92,8 @@ int main_disp_to_h(int c, char *v[])
     read_rpc_file_xml(rpca, v[1]);
     read_rpc_file_xml(rpcb, v[2]);
     double Ha[3][3], Hb[3][3];
-    read_matrix(Ha,v[3]);
-    read_matrix(Hb,v[4]);
+    read_matrix(Ha, v[3]);
+    read_matrix(Hb, v[4]);
 
     int nx, ny, nch;
     float *dispy;
@@ -114,7 +115,7 @@ int main_disp_to_h(int c, char *v[])
     INVERT_3X3(invHb, det, Hb);
 
     // allocate structure for the output data
-    struct world_point *outbuf = malloc(nx*ny*sizeof(*outbuf));
+//    struct world_point *outbuf = malloc(nx * ny * sizeof(*outbuf));
 
     int npoints = 0;
     for (int y = 0; y < ny; y++) {
@@ -124,9 +125,9 @@ int main_disp_to_h(int c, char *v[])
                 heightMap[pos] = NAN;
                 errMap[pos] = NAN;
             } else {
-                double q0[3], q1[3],
-                       groundCoords[2], groundCoordsPlus10[2],
-                       groundCoordsNorm[3];
+                double q0[3], q1[3];
+//                double groundCoords[2], groundCoordsPlus10[2],
+//                       groundCoordsNorm[3];
                 double err, h;
                 double dx = dispx[pos];
                 double dy = dispy[pos];
@@ -137,47 +138,47 @@ int main_disp_to_h(int c, char *v[])
 
                 // compute the coordinates
                 h = rpc_height(rpca, rpcb, q0[0], q0[1], q1[0], q1[1], &err);
-                eval_rpc(groundCoords, rpca, q0[0], q0[1], h);
-                // compute normal
-                eval_rpc(groundCoordsPlus10, rpca, q0[0], q0[1], h+10);
-                groundCoordsNorm[0] = groundCoordsPlus10[0] - groundCoords[0];
-                groundCoordsNorm[1] = groundCoordsPlus10[1] - groundCoords[1];
-                groundCoordsNorm[2] = h+10 - h;
-                normalize_vector_3d(groundCoordsNorm);
-
-                // mercator conversion
-                double mercator[2], mercatorPlus10[2], mercatorNorm[3],
-                       lon0 = 0.0; // reference longitude
-                convert_geodetic_to_mercator(mercator, groundCoords, lon0);
-                // compute normal
-                convert_geodetic_to_mercator(mercatorPlus10, groundCoordsPlus10, lon0);
-                mercatorNorm[0] = mercator[0] - mercatorPlus10[0];
-                mercatorNorm[1] = mercator[1] - mercatorPlus10[1];
-                mercatorNorm[2] = h+10 -h;
-                normalize_vector_3d(mercatorNorm);
-
-                // relief exageration:
-                // 1   --> no exageration
-                // 0.1 --> x10 factor
-                double reliefExagerationFactor = 1;
-
-                outbuf[npoints].lon          = groundCoords[0];
-                outbuf[npoints].lat          = groundCoords[1];
-                outbuf[npoints].h            = h;
-                outbuf[npoints].normal_lon   = groundCoordsNorm[0];
-                outbuf[npoints].normal_lat   = groundCoordsNorm[1];
-                outbuf[npoints].normal_h     = groundCoordsNorm[2];
-
-                outbuf[npoints].x_mercator   = mercator[0];
-                outbuf[npoints].y_mercator   = mercator[1];
-                outbuf[npoints].exagerated_h = h/reliefExagerationFactor;
-                outbuf[npoints].normal_x_mercator = mercatorNorm[0];
-                outbuf[npoints].normal_y_mercator = mercatorNorm[1];
-                outbuf[npoints].normal_h_mercator = mercatorNorm[2];
-
-                outbuf[npoints].rpc_error    = err;
-                outbuf[npoints].x            = x;
-                outbuf[npoints].y            = y;
+//                eval_rpc(groundCoords, rpca, q0[0], q0[1], h);
+//                // compute normal
+//                eval_rpc(groundCoordsPlus10, rpca, q0[0], q0[1], h+10);
+//                groundCoordsNorm[0] = groundCoordsPlus10[0] - groundCoords[0];
+//                groundCoordsNorm[1] = groundCoordsPlus10[1] - groundCoords[1];
+//                groundCoordsNorm[2] = h+10 - h;
+//                normalize_vector_3d(groundCoordsNorm);
+//
+//                // mercator conversion
+//                double mercator[2], mercatorPlus10[2], mercatorNorm[3],
+//                       lon0 = 0.0; // reference longitude
+//                convert_geodetic_to_mercator(mercator, groundCoords, lon0);
+//                // compute normal
+//                convert_geodetic_to_mercator(mercatorPlus10, groundCoordsPlus10, lon0);
+//                mercatorNorm[0] = mercator[0] - mercatorPlus10[0];
+//                mercatorNorm[1] = mercator[1] - mercatorPlus10[1];
+//                mercatorNorm[2] = h+10 -h;
+//                normalize_vector_3d(mercatorNorm);
+//
+//                // relief exageration:
+//                // 1   --> no exageration
+//                // 0.1 --> x10 factor
+//                double reliefExagerationFactor = 1;
+//
+//                outbuf[npoints].lon          = groundCoords[0];
+//                outbuf[npoints].lat          = groundCoords[1];
+//                outbuf[npoints].h            = h;
+//                outbuf[npoints].normal_lon   = groundCoordsNorm[0];
+//                outbuf[npoints].normal_lat   = groundCoordsNorm[1];
+//                outbuf[npoints].normal_h     = groundCoordsNorm[2];
+//
+//                outbuf[npoints].x_mercator   = mercator[0];
+//                outbuf[npoints].y_mercator   = mercator[1];
+//                outbuf[npoints].exagerated_h = h/reliefExagerationFactor;
+//                outbuf[npoints].normal_x_mercator = mercatorNorm[0];
+//                outbuf[npoints].normal_y_mercator = mercatorNorm[1];
+//                outbuf[npoints].normal_h_mercator = mercatorNorm[2];
+//
+//                outbuf[npoints].rpc_error    = err;
+//                outbuf[npoints].x            = x;
+//                outbuf[npoints].y            = y;
 
                 if (err < 5) {
                     heightMap[pos] = h;
