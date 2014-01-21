@@ -16,22 +16,33 @@
 #include "rpc.h"
 #include "read_matrix.c"
 
-static void mercator(double m[2], double x[2])
-{
-    double R = 6378100;
-    double deg = M_PI/180;
-    m[0] = R * x[0] * deg;
-    m[1] = R * log( ( 1 + sin(x[1]*deg) ) / cos(x[1]*deg) );
-}
+// static void mercator(double m[2], double x[2])
+// {
+//     double R = 6378100;
+//     double deg = M_PI/180;
+//     m[0] = R * x[0] * deg;
+//     m[1] = R * log( ( 1 + sin(x[1]*deg) ) / cos(x[1]*deg) );
+// }
+//
+// static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
+// {
+//     double tmp[2];
+//     eval_rpc(tmp, r, i, j, h);
+//     mercator(xyz, tmp);
+//     xyz[2] = h;
+// }
+
+void utm(double east_north[2], double lat, double lon);
 
 static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
 {
     double tmp[2];
     eval_rpc(tmp, r, i, j, h);
-    mercator(xyz, tmp);
-//    eval_rpc(xyz, r, i, j, h);
-    xyz[2] = h;
+    double east_north[2];
+    utm(east_north, tmp[1], tmp[0]);
+    printf("%f %f\n", east_north[0], east_north[1]);
 }
+
 
 static void apply_homography(double y[2], double H[3][3], double x[2])
 {
