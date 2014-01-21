@@ -484,6 +484,12 @@ if __name__ == '__main__':
     if "clean_tmp" in cfg:
         global_params.clean_tmp = cfg['clean_tmp']
 
+    # other params to be read in the json
+    if "offset_ply" in cfg:
+        do_offset = cfg['offset_ply']
+    else:
+        do_offset = False
+
     # roi definition and output path
     x = cfg['roi']['x']
     y = cfg['roi']['y']
@@ -506,4 +512,4 @@ if __name__ == '__main__':
                 y, w, h, thresh=3)
 
     # point cloud generation
-    generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem)
+    generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem, do_offset)
