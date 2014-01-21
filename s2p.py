@@ -413,7 +413,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
         lon = r.firstLon
         off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
     else:
-        off_x, off_y = None, None
+        off_x, off_y = 0, 0
 
     # crop the ROI and zoom
     if zoom == 1:
