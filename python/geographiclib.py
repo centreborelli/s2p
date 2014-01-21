@@ -69,48 +69,48 @@ def geodetic_to_mercator(lat, lon, ref_lon=0):
     y = r * np.log( (1 + np.sin(lat*c)) / np.cos(lat*c))
     return x, y
 
-def geodetic_to_utm(lat, lon, zone = None):
-     """
+
+def geodetic_to_utm(lat, lon, zone=None):
+    """
     Converts WGS84 ellipsoidal coordinates to UTM coordinates, using
     the most appropriate zone. Please note that forcing an UTM zone
-    may raise an exception if the lat,lon falls too far from the
+    may raise an exception if the lat, lon falls too far from the
     requested UTM zone.
 
     Args:
         lat: latitude, in degrees between -90 and 90
         lon: longitude, between -180 and 180
-        zone: None (automatic zone determination) or string ('31N' for instance). 
-        
+        zone: None (automatic zone determination) or string ('31N' for instance)
 
     Returns:
         x, y, zone: the UTM coordinates of the input point, and the zone
     """
 
-     command = ['GeoConvert']
+    command = ['GeoConvert']
 
-     # if zone is None, we let GeoConvert guess the zone
-     if zone is None:
-         command.append("-u")
-         command.append("-s")
-     else:
-         command.append("-u")
-         command.append("-z")
-         command.append(zone)
-     
-     p1 = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
-     p2 = subprocess.Popen(command, stdin=p1.stdout,stdout=subprocess.PIPE)
-     line = p2.stdout.readline()
-     
-     if p2.returncode != 0:
-         raise Exception(line)
+    # if zone is None, we let GeoConvert guess the zone
+    if zone is None:
+        command.append("-u")
+        command.append("-s")
+    else:
+        command.append("-u")
+        command.append("-z")
+        command.append(zone)
 
-     splits = line.split()
+    p1 = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(command, stdin=p1.stdout, stdout=subprocess.PIPE)
+    line = p2.stdout.readline()
 
-     zone = splits[0]
-     x = float(splits[1])
-     y = float(splits[2])
+    if p2.returncode != 0:
+        raise Exception(line)
 
-     return x,y,zone
+    splits = line.split()
+    zone = splits[0]
+    x = float(splits[1])
+    y = float(splits[2])
+
+    return x, y, zone
+
 
 def geoid_above_ellipsoid(lat, lon):
     """
