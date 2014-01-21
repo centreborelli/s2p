@@ -32,15 +32,15 @@
 //     xyz[2] = h;
 // }
 
-void utm(double east_north[2], double lat, double lon);
+void utm(double *east_north, double lat, double lon);
 
 static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
 {
-    double tmp[2];
-    eval_rpc(tmp, r, i, j, h);
-    double east_north[2];
-    utm(east_north, tmp[1], tmp[0]);
-    printf("%f %f\n", east_north[0], east_north[1]);
+    double lon_lat[2];
+    eval_rpc(lon_lat, r, i, j, h);
+    utm(xyz, lon_lat[1], lon_lat[0]);
+    xyz[2] = h;
+    //printf("%f %f\n", xyz[0], xyz[1]);
 }
 
 
