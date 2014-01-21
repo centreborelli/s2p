@@ -118,52 +118,60 @@ SMART_PARAMETER_SILENT(IJMESH, 0)
 SMART_PARAMETER_SILENT(IJMESHFAC, 2)
 
 
+// void print_help(char *bin_name) {
+//     fprintf(stderr, "usage:\n\t"
+//             "%s [-a] colors heights rpc Hfile.txt out.ply [x0 y0]\n", bin_name);
+//     //       0         1      2       3   4        5       6  7
+//     fprintf(stderr, "\t use -a flag to write an ascii ply (default: binary)\n");
+// }
+
 void print_help(char *bin_name) {
     fprintf(stderr, "usage:\n\t"
-            "%s [-a] colors heights rpc Hfile.txt out.ply [x0 y0]\n", bin_name);
-    //       0         1      2       3   4        5       6  7
-    fprintf(stderr, "\t use -a flag to write an ascii ply (default: binary)\n");
+            "%s colors heights rpc Hfile.txt out.ply [x0 y0]\n", bin_name);
+    //       0    1      2       3   4        5       6  7
 }
 
 
 int main(int c, char *v[])
 {
-    if (c != 6 & c != 7 & c != 8 & c!= 9) {
+    if (c != 6 & c != 7 & c != 8 & c!= 5) {
         print_help(*v);
         return 1;
     }
 
     // binary | ascii flag
     int binary = 1;
-    int k;
-
-    // parse args with getopt to search for the ascii '-a' flag
-    while ((k = getopt (c, v, "a")) != -1)
-        switch (k)
-        {
-            case 'a':
-                binary = 0;
-                break;
-            case '?':
-                if (isprint (optopt))
-                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-                else
-                    fprintf (stderr, "Unknown option character `\\x%x'.\n",
-                            optopt);
-                print_help(*v);
-                return 1;
-            default:
-                fprintf(stderr, "default case\n");
-                print_help(*v);
-                abort ();
-        }
+//    int k;
+//
+//    // parse args with getopt to search for the ascii '-a' flag
+//    while ((k = getopt (c, v, "a")) != -1)
+//        switch (k)
+//        {
+//            case 'a':
+//                binary = 0;
+//                printf("ascii\n");
+//                break;
+//            case '?':
+//                if (isprint (optopt))
+//                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+//                else
+//                    fprintf (stderr, "Unknown option character `\\x%x'.\n",
+//                            optopt);
+//                print_help(*v);
+//                return 1;
+//            default:
+//                fprintf(stderr, "default case\n");
+//                print_help(*v);
+//                abort ();
+//        }
 
     // read the other arguments
     // x0 and y0 are meant to allow the user to choose the origin in the
     // mercator coordinates system, in order to avoid visualisation problems
     // due to huge values of the coordinates (for which float precision is
     // often not enough)
-    int i = optind;
+//    int i = optind;
+    int i = 1;
     char *fname_colors = v[i++];
     char *fname_heights = v[i++];
     char *fname_rpc = v[i++];
