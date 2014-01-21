@@ -124,8 +124,8 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     return
 
 
-def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, merc_x=0,
-        merc_y=0, ascii_ply=False):
+def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
+        off_y=0, ascii_ply=False):
     """
     Computes a color point cloud from a height map.
 
@@ -138,16 +138,15 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, merc_x=0,
             transforming the coordinates system of the original full size image
             into the coordinates system of the crop we are dealing with.
         cloud: path to the output points cloud (ply format)
-            merc_{x,y} (optional, default 0): mercator coordinates of the point
-            we want to use as origin in the local coordinate system of the
-            computed cloud
+        off_{x,y} (optional, default 0): coordinates of the point we want to
+            use as origin in the local coordinate system of the computed cloud
         ascii_ply (optional, default false): boolean flag to tell if the output
             ply file should be encoded in plain text (ascii).
     """
     if ascii_ply:
         common.run("colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
-            heights, rpc, H, cloud, merc_x, merc_y))
+            heights, rpc, H, cloud, off_x, off_y))
     else:
         common.run("colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
-            rpc, H, cloud, merc_x, merc_y))
+            rpc, H, cloud, off_x, off_y))
     return

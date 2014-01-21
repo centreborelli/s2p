@@ -372,8 +372,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     return dem
 
 
-def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
-        merc_y=None, ascii_ply=False):
+def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
@@ -385,10 +384,10 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
             dimensions of the rectangle.
         dem: path to the digital elevation model, produced by the process_pair
             or process_triplet function
-        merc_{x,y}: mercator coordinates of the point we want to use as
-            origin in the local coordinate system of the computed cloud
-        ascii_ply (optional, default false): boolean flag to tell if the output
-            ply file should be encoded in plain text (ascii).
+        do_offset (optional, default: False): boolean flag to decide wether the
+            x, y coordinates of points in the ply file will be translated or
+            not (translated to be close to 0, to avoid precision loss due to
+            huge numbers)
     """
     # output files
     common.run('mkdir -p %s' % out_dir)
@@ -407,12 +406,14 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
     trans = common.tmpfile('.txt')
     np.savetxt(trans, A)
 
-    # compute mercator offset
-    if merc_x is None:
+    # compute offset
+    if do_offset:
         r = rpc_model.RPCModel(rpc)
         lat = r.firstLat
         lon = r.firstLon
-        merc_x, merc_y = geographiclib.geodetic_to_mercator(lat, lon)
+        off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
+    else:
+        off_x, off_y = None, None
 
     # crop the ROI and zoom
     if zoom == 1:
@@ -430,7 +431,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, merc_x=None,
         crop_color = common.image_qauto(crop)
 
     triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
-            merc_x, merc_y, ascii_ply)
+            off_x, off_y)
 
     # cleanup
     if global_params.clean_tmp:
