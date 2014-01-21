@@ -101,10 +101,8 @@ def geodetic_to_utm(lat, lon, zone=None):
     p2 = subprocess.Popen(command, stdin=p1.stdout, stdout=subprocess.PIPE)
     line = p2.stdout.readline()
 
-    if p2.returncode != 0:
-        raise Exception(line)
-
     splits = line.split()
+    print splits
     zone = splits[0]
     x = float(splits[1])
     y = float(splits[2])
