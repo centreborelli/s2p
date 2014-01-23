@@ -108,7 +108,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     # followed by zoom
     x0 = x - 4*xx
     y0 = y - 4*yy
-    crop_ms = common.image_crop(crop_ms, x0, y0, w, h)
+    crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
     assert(common.image_size(crop_panchro) == common.image_size(crop_ms))
 
     # convert rgbi to rgb and requantify between 0 and 255
