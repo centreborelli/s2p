@@ -33,12 +33,22 @@
 // }
 
 void utm(double *east_north, double lat, double lon);
+void utm_alt_zone(double *out, double lat, double lon, int zone);
+void utm_zone(int * zone, bool * northp, double lat, double lon);
 
-static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
+
+  static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h, int zone)
 {
     double lon_lat[2];
     eval_rpc(lon_lat, r, i, j, h);
-    utm(xyz, lon_lat[1], lon_lat[0]);
+    if(zone>=0)
+      {
+        utm_alt_zone(xyz, lon_lat[1], lon_lat[0],zone);
+      }
+    else
+      {
+        utm(xyz, lon_lat[1], lon_lat[0]);
+      }
     xyz[2] = h;
     //printf("%f %f\n", xyz[0], xyz[1]);
 }
@@ -81,10 +91,14 @@ static void normalize_vector_3d(double vec[3])
 }
 
 
-void write_ply_header(FILE* f, int npoints) {
+void write_ply_header(FILE* f, int npoints, int zone, bool hem) {
     fprintf(f, "ply\n");
     fprintf(f, "format ascii 1.0\n");
     fprintf(f, "comment created by S2P\n");
+    if(zone>=0)
+      {
+        fprintf(f,"comment projection: UTM %i%s\n",zone,(hem ? "N" : "S"));
+      }
     fprintf(f, "element vertex %d\n", npoints);
     fprintf(f, "property float x\n");
     fprintf(f, "property float y\n");
@@ -104,13 +118,17 @@ unsigned char test_little_endian( void )
       int x=1;   return (*(char*)&(x)==1);
 }
 
-void write_ply_header_binary(FILE* f, int npoints) {
+void write_ply_header_binary(FILE* f, int npoints, int zone, bool hem) {
     if (!test_little_endian())
        for (int i = 1; i < 100; i++)
           printf("BINARY PLY NOT SUPPORTED ON BIG ENDIAN SYSTEMS!!\n");
     fprintf(f, "ply\n");
     fprintf(f, "format binary_little_endian 1.0\n");
     fprintf(f, "comment created by S2P\n");
+    if(zone>=0)
+      {
+        fprintf(f,"comment projection: UTM %i%s\n",zone,(hem ? "N" : "S"));
+      }
     fprintf(f, "element vertex %d\n", npoints);
     fprintf(f, "property float x\n");
     fprintf(f, "property float y\n");
@@ -205,18 +223,33 @@ int main(int c, char *v[])
     uint8_t (*color)[w][pd] = (void*)colors;
     float (*height)[w] = (void*)heights;
 
+    int zone = -1;
+    bool hem = true;
+
     // count number of valid pixels
     int npoints = 0;
     for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
             if (!isnan(height[j][i]))
+              {
                 npoints++;
+                
+                // UTM Zone will be the zone of first not nan point
+                if(zone<0)
+                  {
+                    double xy[2] = {i, j}, pq[2];
+                    apply_homography(pq, invH, xy);
+                    double lon_lat[2];
+                    eval_rpc(lon_lat, r, pq[0], pq[1], h);
+                    utm_zone(&zone,&hem,lon_lat[1], lon_lat[0]);
+                  }
+              }
 
     // print header for ply file
     if (binary)
-       write_ply_header_binary(out, npoints);
+      write_ply_header_binary(out, npoints,zone, hem);
     else
-       write_ply_header(out, npoints);
+      write_ply_header(out, npoints, zone, hem);
 
     // print points coordinates and values
     for (int j = 0; j < h; j++)
@@ -239,8 +272,8 @@ int main(int c, char *v[])
             double nrm[3] = {0, 0, 1};
             if (!IJMESH()) {
                 double tmp[3];
-                getxyz(xyz, r, pq[0], pq[1], height[j][i]);
-                getxyz(tmp, r, pq[0], pq[1], height[j][i] + 10);
+                getxyz(xyz, r, pq[0], pq[1], height[j][i],zone);
+                getxyz(tmp, r, pq[0], pq[1], height[j][i] + 10,zone);
                 nrm[0] = tmp[0] - xyz[0];
                 nrm[1] = tmp[1] - xyz[1];
                 nrm[2] = tmp[2] - xyz[2];
