@@ -56,18 +56,26 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
     """
     n = len(x1)
     h0 = np.zeros(n)
+    h0_inc = h0
     p2 = np.vstack([x2, y2]).T
     HSTEP = 1
+    err = np.zeros(n)
+
     for i in range(100):
         tx, ty, tz = find_corresponding_point(model_a, model_b, x1, y1, h0)
         r0 = np.vstack([tx,ty]).T
         tx, ty, tz = find_corresponding_point(model_a, model_b, x1, y1, h0+HSTEP)
         r1 = np.vstack([tx,ty]).T
-
         a = r1 - r0
         b = p2 - r0
-        # implements:   h0_inc = dot(a,b) / dot(a,a)
-        h0_inc = np.diag(np.dot(a, b.T)) / np.diag(np.dot(a, a.T))
+        # implements: h0_inc = dot(a,b) / dot(a,a) For some reason,
+        # the formulation bellow causes massive memory leaks on some
+        # systems.
+        # h0_inc = np.divide(np.diag(np.dot(a, b.T)), np.diag(np.dot(a, a.T)))
+        # Replacing with the equivalent:
+        diagabdot = np.multiply(a[:,0],b[:,0])+np.multiply(a[:,1],b[:,1])
+        diagaadot = np.multiply(a[:,0],a[:,0])+np.multiply(a[:,1],a[:,1])
+        h0_inc = np.divide(diagabdot,diagaadot)
 #        if np.any(np.isnan(h0_inc)):
 #            print x1, y1, x2, y2
 #            print a
@@ -76,13 +84,16 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
         q = r0 + np.dot(np.diag(h0_inc), a)
         # implements: err = sqrt( dot(q-p2,q-p2) )
         tmp = q-p2
-        err =  np.sqrt(np.diag(np.dot(tmp, tmp.T)))
+        err =  np.sqrt(np.multiply(tmp[:,0], tmp[:,0])+np.multiply(tmp[:,1], tmp[:,1]))
 #       print np.arctan2(tmp[:, 1], tmp[:, 0]) # for debug
 #       print err # for debug
-        h0 += h0_inc*HSTEP
+        h0 = np.add(h0,h0_inc*HSTEP)
         # implements: if fabs(h0_inc) < 0.0001:
         if np.max(np.fabs(h0_inc)) < 0.001:
             break
+
+
+
 
     return (h0, err)
 
@@ -256,6 +267,7 @@ def altitude_range(rpc, x, y, w, h):
 
     # if bounding box is out of srtm domain, return coarse altitude estimation
     if (lat_m < -60 or lat_M > 60):
+        print "Out of SRTM domain, returning coarse range from rpc"
         return altitude_range_coarse(rpc)
 
     # sample the bounding box with regular step of 3 arcseconds (srtm
