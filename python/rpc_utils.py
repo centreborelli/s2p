@@ -267,7 +267,6 @@ def altitude_range(rpc, x, y, w, h):
 
     # if bounding box is out of srtm domain, return coarse altitude estimation
     if (lat_m < -60 or lat_M > 60):
-        print "Out of SRTM domain, returning coarse range from rpc"
         return altitude_range_coarse(rpc)
 
     # sample the bounding box with regular step of 3 arcseconds (srtm
@@ -287,12 +286,11 @@ def altitude_range(rpc, x, y, w, h):
     # offset srtm heights with the geoid - ellipsoid difference
     geoid = common.run_binary_on_list_of_points(ellipsoid_points,
             'GeoidEval')[:, 0]
-
-    h = srtm - geoid
+    h = geoid + srtm
 
     # extract extrema (and add a +-100m security margin)
-    h_m = np.round(h.min())
-    h_M = np.round(h.max())
+    h_m = -100 + np.round(h.min())
+    h_M =  100 + np.round(h.max())
 
     return h_m, h_M
 
@@ -371,10 +369,6 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
     """
     m, M = altitude_range(rpc1, x, y, w, h)
 
-    # add a security margin
-    m = m - 100
-    M = M + 100
-
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
     b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
@@ -403,11 +397,6 @@ def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
         an array of matches, one per line, expressed as x1, y1, x2, y2.
     """
     m, M = altitude_range(rpc1, x, y, w, h)
-
-    # Add a security margin
-    m = m - 100
-    M = M + 100
-
     lon, lat, alt = ground_control_points(rpc1, x, y, w, h, m, M, n)
     x1, y1, h1 = rpc1.inverse_estimate(lon, lat, alt)
     x2, y2, h2 = rpc2.inverse_estimate(lon, lat, alt)
@@ -468,7 +457,6 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
 
     p1 = common.points_apply_homography(H1, p1)
     p2 = common.points_apply_homography(H2, p2)
-
     # np.testing.assert_allclose(p1[:, 1], p2[:, 1], atol=0.1)
     disp = p2[:, 0] - p1[:, 0]
     return disp

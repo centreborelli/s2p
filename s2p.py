@@ -125,7 +125,6 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             print "Wider sift srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
     else:
          print "Auto sift disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
-
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
@@ -474,7 +473,7 @@ if __name__ == '__main__':
     if "disp_range_srtm_low_margin" in cfg:
         global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
     if "disp_range_srtm_high_margin" in cfg:
-        global_params.disp_range_srtm_high_margin = float(cfg['disp_range_srtm_high_margin'])
+        global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_high_margin'])
 
     if "temporary_dir" in cfg:
         global_params.temporary_dir = str(cfg['temporary_dir'])
