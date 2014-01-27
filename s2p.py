@@ -473,7 +473,7 @@ if __name__ == '__main__':
     if "disp_range_srtm_low_margin" in cfg:
         global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
     if "disp_range_srtm_high_margin" in cfg:
-        global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_high_margin'])
+        global_params.disp_range_srtm_high_margin = float(cfg['disp_range_srtm_high_margin'])
 
     if "temporary_dir" in cfg:
         global_params.temporary_dir = str(cfg['temporary_dir'])
