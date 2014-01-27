@@ -245,3 +245,45 @@ def loop_zhang(F, w, h):
     Ha = common.matrix_read(Haf, 3, 3)
     Hb = common.matrix_read(Hbf, 3, 3)
     return Ha, Hb
+
+
+def affine_fundamental_matrix(matches):
+    """
+    Estimates the affine fundamental matrix given a set of point
+    correspondences between two images.
+
+    Arguments:
+        matches: 2D array of size Nx4 containing a list of pairs of matching
+            points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
+            the point in the first view while (x2, y2) is the matching point in
+            the second view.
+
+    Returns:
+        the estimated affine fundamental matrix, given by the Gold Standard
+        algorithm, as described in Hartley & Zisserman book (see chap. 14).
+    """
+    # revert the order of points to fit H&Z convention (see algo 14.1)
+    X = matches[:, [2, 3, 0, 1]]
+
+    # compute the centroid
+    N = len(X)
+    XX = np.sum(X, axis=0) / N
+
+    # compute the Nx4 matrix A
+    A = X - np.tile(XX, (N, 1))
+
+    # the solution is obtained as the singular vector corresponding to the smallest
+    # singular value of matrix A. See Hartley and Zissermann for details.
+    # It is the last line of matrix V (because np.linalg.svd returns V^T)
+    U, S, V = np.linalg.svd(A)
+    N = V[-1, :]
+
+    # extract values and build F
+    F = np.zeros((3, 3))
+    F[0, 2] = N[0]
+    F[1, 2] = N[1]
+    F[2, 0] = N[2]
+    F[2, 1] = N[3]
+    F[2, 2] = -np.dot(N, XX)
+
+    return F
