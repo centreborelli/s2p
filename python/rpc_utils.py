@@ -276,6 +276,7 @@ def altitude_range(rpc, x, y, w, h):
 
     # compute srtm height on all these points
     srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
+    srtm = np.ravel(srtm)
 
     # srtm data may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
