@@ -204,7 +204,7 @@ static float *malloc_tile_data(char *tile_filename)
 	cellsize=nodatavalue=finc=ncols=nrows=xllcorner=yllcorner=-42;
 
 	int r = sscanf(f, "ncols %d\nnrows %d\nxllcorner %d\nyllcorner %d\n"
-			"cellsize %lf\nNODATA_value %lf%n", &ncols, &nrows,
+			"cellsize %lf\nNODATA_value %lf\n%n", &ncols, &nrows,
 			&xllcorner, &yllcorner, &cellsize, &nodatavalue, &finc);
 
 	if (r != 6) {
