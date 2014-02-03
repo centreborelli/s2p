@@ -16,7 +16,7 @@ extern "C" void utm_alt_zone(double *out, double lat, double lon, int zone)
     out[1] = p.AltNorthing();
 }
 
-extern "C" void utm_zone(int * zone, bool * northp, double lat, double lon)
+extern "C" void utm_zone(int *zone, bool *northp, double lat, double lon)
 {
   GeographicLib::GeoCoords p(lat, lon);
   zone[0] = p.Zone();

@@ -11,11 +11,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "iio.h"
 
 
 //#define SRTM4_URL "ftp://xftp.jrc.it/pub/srtmV4/arcasci/srtm_%02d_%02d.zip"
-#define SRTM4_URL "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/ASCII/srtm_%02d_%02d.zip"
+#define SRTM4_URL_ASC "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/ASCII/srtm_%02d_%02d.zip"
+#define SRTM4_URL_TIF "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/GeoTIFF/srtm_%02d_%02d.zip"
 #define SRTM4_ASC "%s/srtm_%02d_%02d.asc"
+#define SRTM4_TIF "%s/srtm_%02d_%02d.tif"
 
 
 
@@ -96,11 +99,17 @@ static bool file_exists(const char *fname)
 	return false;
 }
 
-static void download_tile_file(int tlon, int tlat)
+static void download_tile_file(int tlon, int tlat, bool tif)
 {
 	int n = FILENAME_MAX;
 	char url[n], zipname[n];
-	snprintf(url, n, SRTM4_URL, tlon, tlat);
+
+    // use TIF or ASC url according to boolean param 'tif'
+    if (tif)
+	    snprintf(url, n, SRTM4_URL_TIF, tlon, tlat);
+    else
+	    snprintf(url, n, SRTM4_URL_ASC, tlon, tlat);
+
 	snprintf(zipname, n, "%s/tmp.zip", cachedir());
 	int rd = download(zipname, url);
 	if (0 == rd) {
@@ -114,11 +123,15 @@ static void download_tile_file(int tlon, int tlat)
 	}
 }
 
-static char *get_asc_tile_filename(int tlon, int tlat)
+static char *get_tile_filename(int tlon, int tlat, bool tif)
 {
 	// XXX TODO FIXME WRONG WARNING : THIS code is not reentrant
 	static char fname[FILENAME_MAX];
-	snprintf(fname, FILENAME_MAX, SRTM4_ASC, cachedir(), tlon, tlat);
+    // use TIF or ASC filename pattern according to boolean param 'tif'
+    if (tif)
+	    snprintf(fname, FILENAME_MAX, SRTM4_TIF, cachedir(), tlon, tlat);
+    else
+	    snprintf(fname, FILENAME_MAX, SRTM4_ASC, cachedir(), tlon, tlat);
 	return fname;
 }
 
@@ -204,7 +217,7 @@ static float *malloc_tile_data(char *tile_filename)
 	cellsize=nodatavalue=finc=ncols=nrows=xllcorner=yllcorner=-42;
 
 	int r = sscanf(f, "ncols %d\nnrows %d\nxllcorner %d\nyllcorner %d\n"
-			"cellsize %lf\nNODATA_value %lf%n", &ncols, &nrows,
+			"cellsize %lf\nNODATA_value %lf\n%n", &ncols, &nrows,
 			&xllcorner, &yllcorner, &cellsize, &nodatavalue, &finc);
 
 	if (r != 6) {
@@ -240,16 +253,23 @@ static float *malloc_tile_data(char *tile_filename)
 
 static float *global_table_of_tiles[360][180] = {{0}};
 
-static float *produce_tile(int tlon, int tlat)
+static float *produce_tile(int tlon, int tlat, bool tif)
 {
 	float *t = global_table_of_tiles[tlon][tlat];
 	if (!t) {
-		char *fname = get_asc_tile_filename(tlon, tlat);
+		char *fname = get_tile_filename(tlon, tlat, tif);
 		if (!file_exists(fname))
-			download_tile_file(tlon, tlat);
+			download_tile_file(tlon, tlat, tif);
 		if (!file_exists(fname))
 			return NULL;
-		t = malloc_tile_data(fname);
+        if (tif) {
+            int w, h;
+            t = iio_read_image_float(fname, &w, &h);
+            if ((w != 6000) || (h != 6000))
+               fprintf(stderr, "produce_tile: tif srtm file isn't 6000x6000\n");
+        }
+        else
+		    t = malloc_tile_data(fname);
 		global_table_of_tiles[tlon][tlat] = t;
 	}
 	return t;
@@ -302,7 +322,7 @@ double srtm4(double lon, double lat)
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
-	float *t = produce_tile(tlon, tlat);
+	float *t = produce_tile(tlon, tlat, true);
 	return bilinear_interpolation_at(t, 6000, 6000, xlon, xlat);
 }
 
@@ -311,7 +331,7 @@ double srtm4_nn(double lon, double lat)
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
-	float *t = produce_tile(tlon, tlat);
+	float *t = produce_tile(tlon, tlat, true);
 	return nearest_neighbor_interpolation_at(t, 6000, 6000, xlon, xlat);
 }
 
