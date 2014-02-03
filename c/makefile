@@ -82,8 +82,11 @@ zoom_2d: iio.o zoom_2d.o zoom_r2c.o
 siftu: siftu.o
 	cc siftu.o -lm -o $(BINDIR)/siftu
 
-srtm4: srtm4.c
-	cc -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c -lm -o $(BINDIR)/srtm4
+srtm4.o: srtm4.c iio.h
+	cc -c -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c
+
+srtm4: srtm4.o iio.o
+	cc srtm4.o iio.o -lm -lpng -ltiff -ljpeg -o $(BINDIR)/srtm4
 
 ransac: ransac.o
 	cc ransac.o -lm -o $(BINDIR)/ransac
