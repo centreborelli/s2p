@@ -17,7 +17,7 @@ int main(int c, char *v[])
     // open the input binary file
     FILE *f = fopen(filename, "rb");
 
-    // copy the header from line 3 to 14 (yes, it's not really generic, but
+    // copy the header from line 3 to 15 (yes, it's not really generic, but
     // this util is specific for ply files written by the colormesh binary)
     // first skip the first two lines of the file, and write them to output
     char buf[100];
@@ -25,7 +25,7 @@ int main(int c, char *v[])
     fgets(buf, 100, f);
     printf("ply\n");
     printf("format ascii 1.0\n");
-    for (int i=2; i < 14; ++i) {
+    for (int i=2; i < 15; ++i) {
         fgets(buf, 100, f);
         printf("%s", buf);
     }
