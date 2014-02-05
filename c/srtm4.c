@@ -240,7 +240,7 @@ static float *malloc_tile_data(char *tile_filename)
 	char *tok = my_strtok(fp);
 	while (tok && cx < n) {
 		int x = my_atoi(tok);
-		t[cx++] = x > -100 ? x : NAN;
+		t[cx++] = x > -1000 ? x : NAN;
 		tok = my_strtok(NULL);
 	}
 	free(f);
@@ -313,6 +313,7 @@ static float nearest_neighbor_interpolation_at(float *x,
 	int ip = rintf(p);
 	int iq = rintf(q);
 	float r = getpixel_1(x, w, h, ip, iq);
+    if (r < -1000) return NAN;
 	return r;
 }
 
