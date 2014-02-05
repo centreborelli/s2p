@@ -29,6 +29,55 @@ def distance_point_to_line(x, l):
     return num/den
 
 
+def max_dist_points_to_lines(x, l):
+    """
+    Args:
+        x: 2D array of size Nx2 containing a list of points in the plane
+        l: 2D array of size Nx3 containing a list of lines given by their
+            homogeneous coordinates
+
+    Returns:
+        the highest pointwise distance between the points and the lines.
+
+    """
+    a = np.multiply(x[:, 0], l[:, 0]) + np.multiply(x[:, 1], l[:, 1]) + l[:, 2]
+    b = np.hypot(l[:, 0], l[:, 1])
+    d = np.abs(np.divide(a, b))
+    return np.max(d)
+
+
+def fundamental_matrix_fast(F, matches):
+    """
+    Evaluates the precision of a fundamental matrix against a set of point
+    correspondences.
+
+    Arguments:
+        F: fundamental matrix
+        matches: 2D array of size Nx4 containing a list of pairs of matching
+            points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
+            the point in the first view while (x2, y2) is the matching point in
+            the second view.
+
+    Returns:
+        the highest symmetric residual error, ie the maximum over all the
+        matches of the following quantity:
+                    max( d(x_i, F^Tx'_i), d(x'_i, Fx_i) ),
+        where we use the notations of Hartley and Zisserman
+    """
+    N  = len(matches)
+    x  = np.ones((N, 3))
+    xx = np.ones((N, 3))
+
+    x[:, 0:2]  = matches[:, 0:2]
+    xx[:, 0:2] = matches[:, 2:4]
+    l =  np.dot(xx, F)
+    ll = np.dot(x, F.T)
+    d1 = max_dist_points_to_lines(matches[:, 0:2], l)
+    d2 = max_dist_points_to_lines(matches[:, 2:4], ll)
+    return max(d1, d2)
+
+
+
 def fundamental_matrix(F, matches):
     """
     Evaluates the precision of a fundamental matrix against a set of point
