@@ -214,28 +214,28 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # TODO: impose the constraint that ntx*nty is inferior to or equal to a
     # multiple of the number of cores
     if tw is None and th is None and ov is None:
-        ov = z * np.ceil(100 / z)
-        if w <= global_params.tile_size:
+        ov = z * 100
+        if w <= z * global_params.tile_size:
             tw = w
         else:
-            tw = global_params.tile_size
+            tw = z * global_params.tile_size
             #TODO: modify tiles size to be close do a divisor of w
             #while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
             #    tw += 1
-        if h <= global_params.tile_size:
+        if h <= z * global_params.tile_size:
             th = h
         else:
-            th = global_params.tile_size
+            th = z * global_params.tile_size
             #TODO: modify tiles size to be close do a divisor of h
             #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
             #    th += 1
     ntx = np.ceil((w - ov) / (tw - ov))
     nty = np.ceil((h - ov) / (th - ov))
     # ensure that the coordinates of each tile are multiples of the zoom factor
-    if (z != 1):
-        ov = z * np.floor(ov / z)
-        tw = z * np.floor(tw / z)
-        th = z * np.floor(th / z)
+#    if (z != 1):
+#        ov = z * np.floor(ov / z)
+#        tw = z * np.floor(tw / z)
+#        th = z * np.floor(th / z)
     print 'tiles size is tw, th = (%d, %d)' % (tw, th)
     print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
     print 'total number of tiles is %d' % (ntx * nty)
@@ -301,7 +301,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
-    tile_composer.mosaic(out, w, h, ov, tiles)
+    tile_composer.mosaic(out, w/z, h/z, ov/z, tiles)
 
     # cleanup
     if global_params.clean_tmp:
