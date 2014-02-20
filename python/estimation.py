@@ -196,8 +196,8 @@ def fundamental_matrix_ransac(matches, precision=1.0):
             points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
             the point in the first view while (x2, y2) is the matching point in
             the second view.
-        precision: optional parameter indicating the maximum error 
-            allowed for counting the inliers 
+        precision: optional parameter indicating the maximum error
+            allowed for counting the inliers
 
     Returns:
         the estimated fundamental matrix
@@ -221,6 +221,37 @@ def fundamental_matrix_ransac(matches, precision=1.0):
     common.matrix_write(Ffile, (common.matrix_read(Ffile, 3, 3)).transpose())
     return common.matrix_read(Ffile, 3, 3)
 
+
+def fundamental_matrix_cameras(P1, P2):
+    """
+    Computes the fundamental matrix given the matrices of two cameras.
+
+    Arguments:
+        P1, P2: 2D arrays of size 3x4 containing the camera matrices
+
+    Returns:
+        the computed fundamental matrix, given by the formula 17.3 (p. 412) in
+        Hartley & Zisserman book (2nd ed.).
+    """
+    X0 = P1[[1, 2], :];
+    X1 = P1[[2, 0], :];
+    X2 = P1[[0, 1], :];
+    Y0 = P2[[1, 2], :];
+    Y1 = P2[[2, 0], :];
+    Y2 = P2[[0, 1], :];
+
+    F = np.zeros((3, 3))
+    F[0, 0] = np.linalg.det(np.vstack([X0, Y0]))
+    F[0, 1] = np.linalg.det(np.vstack([X1, Y0]))
+    F[0, 2] = np.linalg.det(np.vstack([X2, Y0]))
+    F[1, 0] = np.linalg.det(np.vstack([X0, Y1]))
+    F[1, 1] = np.linalg.det(np.vstack([X1, Y1]))
+    F[1, 2] = np.linalg.det(np.vstack([X2, Y1]))
+    F[2, 0] = np.linalg.det(np.vstack([X0, Y2]))
+    F[2, 1] = np.linalg.det(np.vstack([X1, Y2]))
+    F[2, 2] = np.linalg.det(np.vstack([X2, Y2]))
+
+    return F
 
 def loop_zhang(F, w, h):
     """
