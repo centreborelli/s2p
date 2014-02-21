@@ -171,42 +171,57 @@ class RPCModel:
 
 
     def direct_estimate_iterative(self, col, row, alt, return_normalized=False):
-        # compute a first approximation of lon, lat using the coordinates of
-        # the image corners. The image rows are supposed to be aligned with
-        # parallels (lat) and the image columns are supposed to be aligned with
-        # the meridians (lon)
+        cCol = (col - self.colOff) / self.colScale
+        cRow = (row - self.linOff) / self.linScale
+        cAlt = (alt - self.altOff) / self.altScale
 
-        # lon is the barycenter of firstLon and lastLon, with weights (nx -
-        # col) and col
-        lon = (1.0 - col / self.lastCol) * self.firstLon + (col / self.lastCol) * self.lastLon
-        lat = (1.0 - row / self.lastRow) * self.firstLat + (row / self.lastRow) * self.lastLat
-        X0 = np.array(self.inverse_estimate(lon, lat, alt)[0:2])
-        print 'initial lon, lat: ', lon, lat
-        print 'initial X0: ', X0[0], X0[1]
+        # as a first approximation, cLon is cCol and cLat is cRow. The image
+        # rows are supposed to be aligned with parallels (lat) and the image
+        # columns are supposed to be aligned with the meridians (lon)
+        cLon = cCol
+        cLat = cRow
+        x0 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat, cLon, cAlt)
+        y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat, cLon, cAlt)
+        print 'initial clon, clat: ', cLon, cLat
+        print 'initial X0: ', x0, y0
 
-        Xtarget = np.array([col, row])
-        EPS = 0.0000001
-        while np.linalg.norm(X0 - Xtarget) > 0.002:
-           # debug print
-           sys.stdout.write('target: %02d, %02d\r' % (Xtarget[0], Xtarget[1]))
-           sys.stdout.write('current position: %f, %f\r' % (X0[0], X0[1]))
-           sys.stdout.flush()
-           # build a base on the image
-           X1 = np.array(self.inverse_estimate(lon + EPS, lat, alt)[0:2])
-           X2 = np.array(self.inverse_estimate(lon, lat + EPS, alt)[0:2])
+        EPS = 0.1
+        n = 0
+        while np.hypot(x0 - cCol, y0 - cRow) * self.colScale > 0.001:
+            # debug print
+           # sys.stdout.write('target: %02d, %02d\r' % (cCol, cRow))
+           # sys.stdout.write('current position: %f, %f\r' % (x0, y0))
+           # sys.stdout.flush()
 
-           # project Xtarget-X0 on the base X1-X0, X2-X0
-           a1 = np.dot(Xtarget - X0, X1 - X0) / np.linalg.norm(X1 - X0)
-           a2 = np.dot(Xtarget - X0, X2 - X0) / np.linalg.norm(X2 - X0)
+            # build a base on the image
+            x1 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat, cLon + EPS, cAlt)
+            y1 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat, cLon + EPS, cAlt)
+            x2 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat + EPS, cLon, cAlt)
+            y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat + EPS, cLon, cAlt)
 
-           # use the coefficients a1, a2 to compute an approximation of the
-           # point on the gound which in turn will give us the new X0
-           lon += a1 * EPS
-           lat += a2 * EPS
-           X0 = np.array(self.inverse_estimate(lon, lat, alt)[0:2])
+            X0 = np.array([x0, y0])
+            X1 = np.array([x1, y1])
+            X2 = np.array([x2, y2])
+            Xf = np.array([cCol, cRow])
 
+            # project Xf-X0 on the base X1-X0, X2-X0
+            a1 = np.dot(Xf - X0, X1 - X0) / np.linalg.norm(X1 - X0)
+            a2 = np.dot(Xf - X0, X2 - X0) / np.linalg.norm(X2 - X0)
+
+            # use the coefficients a1, a2 to compute an approximation of the
+            # point on the gound which in turn will give us the new X0
+            cLon += a1 * EPS
+            cLat += a2 * EPS
+            x0 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat, cLon, cAlt)
+            y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat, cLon, cAlt)
+            n += 1
+
+        print '%d iterations' % n
         if return_normalized:
-            print 'return_normalized not implemented yet!'
+            return cLon, cLat, cAlt
+
+        lon = cLon*self.lonScale + self.lonOff
+        lat = cLat*self.latScale + self.latOff
         return lon, lat, alt
 
 
