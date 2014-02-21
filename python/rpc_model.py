@@ -1,6 +1,7 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
+import sys
 import numpy as np
 from xml.etree.ElementTree import ElementTree
 
@@ -169,40 +170,44 @@ class RPCModel:
         return col, lin, alt
 
 
-#    # sorry this function is not ready yet
-#    def direct_estimate_iterative(self, col, lin, alt, return_normalized=False):
-#        cCol = (col - self.colOff) / self.colScale
-#        cLin = (lin - self.linOff) / self.linScale
-#        cAlt = (alt - self.altOff) / self.altScale
-#
-#        ### PSEUDOCODE 
-#
-#        # compute a first approximation of lon, lat using the coordinates of the image 
-#        # corners to deduce the approximate position on the ground of the pixel
-#        # alt is known, just verify if it's within the bounds
-#        lon0,lat0 <--- appriximate using the corners
-#        X0 = inverse_estimate(self,lon0,lat0,alt);
-#
-#        Xtarget = col,lin
-#        while abs(X0 - Xtarget) > 0.00001 #
-#           # build a base on the image
-#           X1 = inverse_estimate(self,lon0+eps,lat0,alt);
-#           X2 = inverse_estimate(self,lon0,lat0+eps,alt);
-#   
-#           # project Xtarget on the base X1-X0,  X2-X0 
-#           p1,p2 = <Xtarget,X1-X0> (X1-X0),   <Xtarget,X2-X0> (X2-X0)
-#           
-#           # use the coefficients to copute an approximation of the point on the gound 
-#           # which in turn will give us the new X0
-#           (lon0,lat0) = (lon0,lat0) + (p1*eps, p2*eps)
-#           X0 = inverse_estimate(self,lon0,lat0,alt);
-#
-#
-#        lon = cLon*self.lonScale + self.lonOff
-#        lat = cLat*self.latScale + self.latOff
-#        if return_normalized:
-#           return cLon, cLat, cAlt
-#        return lon, lat, alt
+    def direct_estimate_iterative(self, col, row, alt, return_normalized=False):
+        # compute a first approximation of lon, lat using the coordinates of
+        # the image corners. The image rows are supposed to be aligned with
+        # parallels (lat) and the image columns are supposed to be aligned with
+        # the meridians (lon)
+
+        # lon is the barycenter of firstLon and lastLon, with weights (nx -
+        # col) and col
+        lon = (1.0 - col / self.lastCol) * self.firstLon + (col / self.lastCol) * self.lastLon
+        lat = (1.0 - row / self.lastRow) * self.firstLat + (row / self.lastRow) * self.lastLat
+        X0 = np.array(self.inverse_estimate(lon, lat, alt)[0:2])
+        print 'initial lon, lat: ', lon, lat
+        print 'initial X0: ', X0[0], X0[1]
+
+        Xtarget = np.array([col, row])
+        EPS = 0.0000001
+        while np.linalg.norm(X0 - Xtarget) > 0.002:
+           # debug print
+           sys.stdout.write('target: %02d, %02d\r' % (Xtarget[0], Xtarget[1]))
+           sys.stdout.write('current position: %f, %f\r' % (X0[0], X0[1]))
+           sys.stdout.flush()
+           # build a base on the image
+           X1 = np.array(self.inverse_estimate(lon + EPS, lat, alt)[0:2])
+           X2 = np.array(self.inverse_estimate(lon, lat + EPS, alt)[0:2])
+
+           # project Xtarget-X0 on the base X1-X0, X2-X0
+           a1 = np.dot(Xtarget - X0, X1 - X0) / np.linalg.norm(X1 - X0)
+           a2 = np.dot(Xtarget - X0, X2 - X0) / np.linalg.norm(X2 - X0)
+
+           # use the coefficients a1, a2 to compute an approximation of the
+           # point on the gound which in turn will give us the new X0
+           lon += a1 * EPS
+           lat += a2 * EPS
+           X0 = np.array(self.inverse_estimate(lon, lat, alt)[0:2])
+
+        if return_normalized:
+            print 'return_normalized not implemented yet!'
+        return lon, lat, alt
 
 
 
