@@ -223,39 +223,47 @@ class RPCModel:
         return lon, lat, alt
 
 
-    def direct_estimate_iterative(self, col, row, alt, return_normalized=False):
-        cCol = (col - self.colOff) / self.colScale
-        cRow = (row - self.linOff) / self.linScale
-        cAlt = (alt - self.altOff) / self.altScale
+    def direct_estimate_iterative_single_point(self, col, row, alt):
+        """
+        Iterative estimation of direct projection (image to ground), for a
+        single point expressed in normalised coordinates.
 
-        # as a first approximation, cLon is cCol and cLat is cRow. The image
+        Args:
+            col, row: normalised image coordinates (ie between -1 and 1)
+            alt: altitude (in meters above the ellipsoid) of the corresponding
+                3D point
+
+        Returns:
+            lon, lat, alt
+        """
+        # as a first approximation, lon is col and lat is row. The image
         # rows are supposed to be aligned with parallels (lat) and the image
         # columns are supposed to be aligned with the meridians (lon)
-        cLon = cCol
-        cLat = cRow
-        x0 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat, cLon, cAlt)
-        y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat, cLon, cAlt)
-        # print 'initial clon, clat: ', cLon, cLat
+        lon = col
+        lat = row
+        x0 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon, alt)
+        y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon, alt)
+        # print 'initial clon, clat: ', lon, lat
         # print 'initial X0: ', x0, y0
 
         EPS = 0.1
-        n = 0
-        while np.hypot(x0 - cCol, y0 - cRow) * self.colScale > 0.001:
+        #n = 0
+        while np.hypot(x0 - col, y0 - row) * self.colScale > 0.001:
             # debug print
-           # sys.stdout.write('target: %02d, %02d\r' % (cCol, cRow))
+           # sys.stdout.write('target: %02d, %02d\r' % (col, row))
            # sys.stdout.write('current position: %f, %f\r' % (x0, y0))
            # sys.stdout.flush()
 
             # build a base on the image
-            x1 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat, cLon + EPS, cAlt)
-            y1 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat, cLon + EPS, cAlt)
-            x2 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat + EPS, cLon, cAlt)
-            y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat + EPS, cLon, cAlt)
+            x1 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon + EPS, alt)
+            y1 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon + EPS, alt)
+            x2 = apply_rfm(self.inverseColNum, self.inverseColDen, lat + EPS, lon, alt)
+            y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat + EPS, lon, alt)
 
             X0 = np.array([x0, y0])
             X1 = np.array([x1, y1])
             X2 = np.array([x2, y2])
-            Xf = np.array([cCol, cRow])
+            Xf = np.array([col, row])
 
             # project Xf-X0 on the base X1-X0, X2-X0
             a1 = np.dot(Xf - X0, X1 - X0) / np.linalg.norm(X1 - X0)
@@ -263,16 +271,50 @@ class RPCModel:
 
             # use the coefficients a1, a2 to compute an approximation of the
             # point on the gound which in turn will give us the new X0
-            cLon += a1 * EPS
-            cLat += a2 * EPS
-            x0 = apply_rfm(self.inverseColNum, self.inverseColDen, cLat, cLon, cAlt)
-            y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, cLat, cLon, cAlt)
-            n += 1
+            lon += a1 * EPS
+            lat += a2 * EPS
+            x0 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon, alt)
+            y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon, alt)
+            #n += 1
 
-        print 'direct_estimate_iterative: %d iterations' % n
-        if return_normalized:
-            return cLon, cLat, cAlt
+        #print 'direct_estimate_iterative: %d iterations' % n
+        return lon, lat, alt
 
+    def direct_estimate_iterative(self, col, row, alt, return_normalized=False):
+        """
+        Iterative estimation of direct projection (image to ground), for a
+        list of points expressed in real coordinates (not normalized).
+
+        Args:
+            col, row: tuples or numpy 1D arrays containing image coordinates
+            alt: tuple or numpy 1D array containing altitudes (in meters above
+                the ellipsoid) of the corresponding 3D points
+
+        Returns:
+            lon, lat, alt
+        """
+        # convert input args to numpy arrays, in case there is only one point
+        if (type(col) is int) or (type(col) is float):
+            col = np.array([col])
+            row = np.array([row])
+            alt = np.array([alt])
+
+        # normalise input image coordinates
+        cCol = (col - self.colOff) / self.colScale
+        cRow = (row - self.linOff) / self.linScale
+        cAlt = (alt - self.altOff) / self.altScale
+
+        # iterate over the list of points
+        n = len(col)
+        cLon = np.zeros(n)
+        cLat = np.zeros(n)
+        for i in range(n):
+            tmp = self.direct_estimate_iterative_single_point(cCol[i], cRow[i],
+                    cAlt[i])
+            cLon[i] = tmp[0]
+            cLat[i] = tmp[1]
+
+        # denormalize and return
         lon = cLon*self.lonScale + self.lonOff
         lat = cLat*self.latScale + self.latOff
         return lon, lat, alt
