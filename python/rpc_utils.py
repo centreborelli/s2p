@@ -200,8 +200,8 @@ def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
     lons = np.arange(lon_m, lon_M, srtm_step)
     lats = np.arange(lat_m, lat_M, srtm_step)
 
-    # put all the samples in an array. There should a more pythonic way to do
-    # this
+    # put all the samples in an array. There should be a more pythonic way to
+    # do this
     out = np.zeros((len(lons)*len(lats), 2))
     for i in xrange(len(lons)):
         for j in xrange(len(lats)):
@@ -283,7 +283,7 @@ def altitude_range(rpc, x, y, w, h):
         return altitude_range_coarse(rpc)
 
     # offset srtm heights with the geoid - ellipsoid difference
-    geoid = common.run_binary_on_list_of_points(ellipsoid_points,
+    geoid = common.run_binary_on_list_of_points(np.fliplr(ellipsoid_points),
             'GeoidEval')[:, 0]
     h = geoid + srtm
 
