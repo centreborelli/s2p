@@ -236,45 +236,49 @@ class RPCModel:
         Returns:
             lon, lat, alt
         """
-        # as a first approximation, lon is col and lat is row. The image
-        # rows are supposed to be aligned with parallels (lat) and the image
-        # columns are supposed to be aligned with the meridians (lon)
-        lon = col
-        lat = row
+        # target point: Xf (f for final)
+        Xf = np.array([col, row])
+
+        # use 3 corners of the lon, lat domain and project them into the image
+        # to get the first estimation of (lon, lat)
+        # EPS is 2 for the first iteration, then 0.1.
+        lon = -1
+        lat = -1
+        EPS = 2
         x0 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon, alt)
         y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon, alt)
-        # print 'initial clon, clat: ', lon, lat
-        # print 'initial X0: ', x0, y0
+        x1 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon + EPS, alt)
+        y1 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon + EPS, alt)
+        x2 = apply_rfm(self.inverseColNum, self.inverseColDen, lat + EPS, lon, alt)
+        y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat + EPS, lon, alt)
 
-        EPS = 0.1
         #n = 0
         while np.hypot(x0 - col, y0 - row) * self.colScale > 0.001:
-            # debug print
-           # sys.stdout.write('target: %02d, %02d\r' % (col, row))
-           # sys.stdout.write('current position: %f, %f\r' % (x0, y0))
-           # sys.stdout.flush()
+            X0 = np.array([x0, y0])
+            X1 = np.array([x1, y1])
+            X2 = np.array([x2, y2])
+            e1 = X1 - X0
+            e2 = X2 - X0
+            u  = Xf - X0
 
-            # build a base on the image
+            # project u on the base (e1, e2): u = a1*e1 + a2*e2
+            M = np.vstack((e1, e2)).T
+            a = np.dot(np.linalg.inv(M), u)
+
+            # use the coefficients a1, a2 to compute an approximation of the
+            # point on the gound which in turn will give us the new X0
+            lon += a[0] * EPS
+            lat += a[1] * EPS
+
+            # update X0, X1 and X2
+            EPS = .1
+            x0 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon, alt)
+            y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon, alt)
             x1 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon + EPS, alt)
             y1 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon + EPS, alt)
             x2 = apply_rfm(self.inverseColNum, self.inverseColDen, lat + EPS, lon, alt)
             y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat + EPS, lon, alt)
 
-            X0 = np.array([x0, y0])
-            X1 = np.array([x1, y1])
-            X2 = np.array([x2, y2])
-            Xf = np.array([col, row])
-
-            # project Xf-X0 on the base X1-X0, X2-X0
-            a1 = np.dot(Xf - X0, X1 - X0) / np.linalg.norm(X1 - X0)
-            a2 = np.dot(Xf - X0, X2 - X0) / np.linalg.norm(X2 - X0)
-
-            # use the coefficients a1, a2 to compute an approximation of the
-            # point on the gound which in turn will give us the new X0
-            lon += a1 * EPS
-            lat += a2 * EPS
-            x0 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon, alt)
-            y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon, alt)
             #n += 1
 
         #print 'direct_estimate_iterative: %d iterations' % n
