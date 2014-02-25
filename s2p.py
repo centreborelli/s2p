@@ -205,10 +205,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     z = global_params.subsampling_factor
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
-        x = z * np.floor(x / z)
-        y = z * np.floor(y / z)
-        w = z * np.ceil(w / z)
-        h = z * np.ceil(h / z)
+        x = z * np.floor(float(x) / z)
+        y = z * np.floor(float(y) / z)
+        w = z * np.ceil(float(w) / z)
+        h = z * np.ceil(float(h) / z)
 
     # TODO: automatically compute optimal size for tiles
     # TODO: impose the constraint that ntx*nty is inferior to or equal to a
@@ -229,8 +229,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             #TODO: modify tiles size to be close do a divisor of h
             #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
             #    th += 1
-    ntx = np.ceil((w - ov) / (tw - ov))
-    nty = np.ceil((h - ov) / (th - ov))
+    ntx = np.ceil(float(w - ov) / (tw - ov))
+    nty = np.ceil(float(h - ov) / (th - ov))
     # ensure that the coordinates of each tile are multiples of the zoom factor
 #    if (z != 1):
 #        ov = z * np.floor(ov / z)
