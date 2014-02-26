@@ -287,8 +287,8 @@ def image_qauto(im):
     Returns:
         path of requantized image, saved as png
     """
-    out = tmpfile('.png')
-    run('qauto %s %s 2> /dev/null' % (im, out))
+    out = tmpfile('.tif')
+    run('gdal_translate -co profile=baseline -scale %s %s 2> /dev/null' % (im, out))
     return out
 
 
@@ -304,8 +304,8 @@ def image_qeasy(im, black, white):
     Returns:
         path of requantized image, saved as png
     """
-    out = tmpfile('.png')
-    run('qeasy %d %d %s %s 2> /dev/null' % (black, white, im, out))
+    out = tmpfile('.tif')
+    run('gdal_translate -co profile=baseline -scale %d %d %s %s 2> /dev/null' % (black, white, im, out))
     return out
 
 
