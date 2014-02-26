@@ -44,20 +44,21 @@ bb=$(basename "$b")
 b_extension="${bb##*.}"
 b_name="${bb%.*}"
 if [ $a_extension == "tif" ]; then
-    thresholds=`qauto $a /tmp/$a_name.png 2>&1 |  cut -f2 -d=`
-    a=/tmp/$a_name.png
+    thresholds=`plambda $a "x isnan 0 x if" | qauto - $a.png 2>&1 |  cut -f2 -d=`
+    a=$a.png
     # use the same threshods for the second image
-    qeasy $thresholds $b /tmp/$b_name.png
-    b=/tmp/$b_name.png
+    qeasy $thresholds $b $b.png
+    b=$b.png
 fi
 
 # HACK! make it invariant to illumination changes?
-gblur 2 $a   | plambda  - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + " | qauto - $a
-gblur 2 $b   | plambda  - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + " | qauto - $b
-
+gblur 2 $a   | plambda  - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + "  -o  $a.tif
+thresholds=`plambda $a.tif "x isnan 0 x if" | qauto - $a 2>&1 |  cut -f2 -d=`
+gblur 2 $b   | plambda  - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + " | qeasy $thresholds - $b
 
 
 #usage: ./build/SGBM im1 im2 out [mindisp(0) maxdisp(64) SADwindow(1) P1(0) P2(0) LRdiff(1)]
-echo "SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr"
-SGBM $a $b $disp $im $iM $SAD_win $P1 $P2 $lr
-plambda $disp "x isnan 0 255 if" | iion - $mask
+echo "sgbm2 $a $b $disp $im $iM $SAD_win $P1 $P2 $lr"
+LD_LIBRARY_PATH=/home/carlo/local/lib sgbm2 $a $b $disp $im $iM $SAD_win $P1 $P2 $lr
+# the points are either unmatched or not present in the original images $1/$2, we remove these points
+plambda $disp "x 0 join " | backflow - $2 | plambda $disp $1 - "x isnan y isnan z isnan or or 0 255 if" | iion - $mask
