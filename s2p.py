@@ -231,16 +231,13 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             #    th += 1
     ntx = np.ceil(float(w - ov) / (tw - ov))
     nty = np.ceil(float(h - ov) / (th - ov))
-    # ensure that the coordinates of each tile are multiples of the zoom factor
-#    if (z != 1):
-#        ov = z * np.floor(ov / z)
-#        tw = z * np.floor(tw / z)
-#        th = z * np.floor(th / z)
+
     print 'tiles size is tw, th = (%d, %d)' % (tw, th)
     print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
     print 'total number of tiles is %d' % (ntx * nty)
 
     # if several tiles, compute global pointing correction (on the whole ROI)
+    A = None
     if ntx * nty > 1:
         # the global pointing correction is run in a subprocess. This is a
         # workaround to a nasty bug affecting the Multiprocessing package when used
@@ -256,10 +253,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             A = out_dict['correction_matrix']
             np.savetxt('%s/pointing_global.txt' % out_dir, A)
         else:
-            print "WARNING: correction matrix not found. The estimation process seems to have failed for some reason. Global correction matrix will be replaced by eye matrix."
-            A = np.eye(3)
-    else:
-        A = None
+            print """WARNING: global correction matrix not found. The
+            estimation process seems to have failed. No global correction will
+            be applied."""
 
     # create pool with less workers than available cores
     PROCESSES = int(0.75 * multiprocessing.cpu_count())
@@ -288,16 +284,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     pool.join()
 
 
-    # Retry all failed jobs in main thread
-    print "Retrying failed tiles in main thread if any."
+    # Check if all tiles were computed
     for j in np.arange(y, y + h - ov, th - ov):
         for i in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             dem = '%s/dem.tif' % tile_dir
-            
+
             if not os.path.exists(dem):
-                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
-                                          j, tw, th, A)
+                print "WARNING: Tile %d %d %d %d failed. Retrying..." % (i, j,
+                        tw, th)
+                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
+                        j, tw, th, A)
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
