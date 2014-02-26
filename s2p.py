@@ -298,7 +298,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
-    tile_composer.mosaic(out, w/z, h/z, ov/z, tiles)
+    tile_composer.mosaic(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
 
     # cleanup
     if global_params.clean_tmp:
