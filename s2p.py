@@ -439,7 +439,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
 if __name__ == '__main__':
 
     if len(sys.argv) == 2:
-      config  = sys.argv[1]
+      config_file  = sys.argv[1]
     else:
       print """
       Incorrect syntax, use:
@@ -451,7 +451,7 @@ if __name__ == '__main__':
       sys.exit(1)
 
     # read the json configuration file
-    f = open(config)
+    f = open(config_file)
     cfg = json.load(f)
     f.close()
 
@@ -498,6 +498,11 @@ if __name__ == '__main__':
     clr1 = cfg['images'][0]['clr']
     img2 = cfg['images'][1]['img']
     rpc2 = cfg['images'][1]['rpc']
+
+    # create output directory for the experiment, and store a copy the json
+    # config file there
+    common.run('mkdir -p %s' % out_dir)
+    common.run('cp %s %s/config.json' % (config_file, out_dir))
 
     # dem generation
     if len(cfg['images']) == 2:
