@@ -1,5 +1,5 @@
 # compilers configuration
-CC = cc
+CC = gcc
 OFLAGS = -O3
 LIBS = -lpng 
 #-lefence -ltiff -ljpeg
