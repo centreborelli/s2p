@@ -192,8 +192,8 @@ int main_disp_to_h(int c, char *v[])
         }
     }
     // save the height map and error map
-    iio_save_image_float_vec(fout_heights, heightMap, nx,ny, 1);
-    iio_save_image_float_vec(fout_err, errMap, nx,ny, 1);
+    iio_save_image_float_vec(fout_heights, heightMap, nx, ny, 1);
+    iio_save_image_float_vec(fout_err, errMap, nx, ny, 1);
     return 0;
 }
 

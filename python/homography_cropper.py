@@ -82,7 +82,7 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
         # of the zoom factor
         tmpw, tmph = common.image_size(tmp)
         tmpw, tmph = int(tmpw/subsampling_factor), int(tmph/subsampling_factor)
-        tmp  = common.image_crop(tmp, 0, 0, tmpw*subsampling_factor, tmph*subsampling_factor)
+        tmp  = common.image_crop_TIFF(tmp, 0, 0, tmpw*subsampling_factor, tmph*subsampling_factor)
         # zoom out the input image
         tmp = common.image_safe_zoom_fft(tmp, subsampling_factor)
 
