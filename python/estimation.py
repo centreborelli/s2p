@@ -196,8 +196,8 @@ def fundamental_matrix_ransac(matches, precision=1.0):
             points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
             the point in the first view while (x2, y2) is the matching point in
             the second view.
-        precision: optional parameter indicating the maximum error 
-            allowed for counting the inliers 
+        precision: optional parameter indicating the maximum error
+            allowed for counting the inliers
 
     Returns:
         the estimated fundamental matrix
@@ -222,6 +222,37 @@ def fundamental_matrix_ransac(matches, precision=1.0):
     return common.matrix_read(Ffile, 3, 3)
 
 
+def fundamental_matrix_cameras(P1, P2):
+    """
+    Computes the fundamental matrix given the matrices of two cameras.
+
+    Arguments:
+        P1, P2: 2D arrays of size 3x4 containing the camera matrices
+
+    Returns:
+        the computed fundamental matrix, given by the formula 17.3 (p. 412) in
+        Hartley & Zisserman book (2nd ed.).
+    """
+    X0 = P1[[1, 2], :];
+    X1 = P1[[2, 0], :];
+    X2 = P1[[0, 1], :];
+    Y0 = P2[[1, 2], :];
+    Y1 = P2[[2, 0], :];
+    Y2 = P2[[0, 1], :];
+
+    F = np.zeros((3, 3))
+    F[0, 0] = np.linalg.det(np.vstack([X0, Y0]))
+    F[0, 1] = np.linalg.det(np.vstack([X1, Y0]))
+    F[0, 2] = np.linalg.det(np.vstack([X2, Y0]))
+    F[1, 0] = np.linalg.det(np.vstack([X0, Y1]))
+    F[1, 1] = np.linalg.det(np.vstack([X1, Y1]))
+    F[1, 2] = np.linalg.det(np.vstack([X2, Y1]))
+    F[2, 0] = np.linalg.det(np.vstack([X0, Y2]))
+    F[2, 1] = np.linalg.det(np.vstack([X1, Y2]))
+    F[2, 2] = np.linalg.det(np.vstack([X2, Y2]))
+
+    return F
+
 def loop_zhang(F, w, h):
     """
     Computes rectifying homographies from a fundamental matrix, with Loop-Zhang.
@@ -245,3 +276,45 @@ def loop_zhang(F, w, h):
     Ha = common.matrix_read(Haf, 3, 3)
     Hb = common.matrix_read(Hbf, 3, 3)
     return Ha, Hb
+
+
+def affine_fundamental_matrix(matches):
+    """
+    Estimates the affine fundamental matrix given a set of point
+    correspondences between two images.
+
+    Arguments:
+        matches: 2D array of size Nx4 containing a list of pairs of matching
+            points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
+            the point in the first view while (x2, y2) is the matching point in
+            the second view.
+
+    Returns:
+        the estimated affine fundamental matrix, given by the Gold Standard
+        algorithm, as described in Hartley & Zisserman book (see chap. 14).
+    """
+    # revert the order of points to fit H&Z convention (see algo 14.1)
+    X = matches[:, [2, 3, 0, 1]]
+
+    # compute the centroid
+    N = len(X)
+    XX = np.sum(X, axis=0) / N
+
+    # compute the Nx4 matrix A
+    A = X - np.tile(XX, (N, 1))
+
+    # the solution is obtained as the singular vector corresponding to the smallest
+    # singular value of matrix A. See Hartley and Zissermann for details.
+    # It is the last line of matrix V (because np.linalg.svd returns V^T)
+    U, S, V = np.linalg.svd(A)
+    N = V[-1, :]
+
+    # extract values and build F
+    F = np.zeros((3, 3))
+    F[0, 2] = N[0]
+    F[1, 2] = N[1]
+    F[2, 0] = N[2]
+    F[2, 1] = N[3]
+    F[2, 2] = -np.dot(N, XX)
+
+    return F

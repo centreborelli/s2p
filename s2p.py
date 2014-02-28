@@ -205,42 +205,39 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     z = global_params.subsampling_factor
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
-        x = z * np.floor(x / z)
-        y = z * np.floor(y / z)
-        w = z * np.ceil(w / z)
-        h = z * np.ceil(h / z)
+        x = z * np.floor(float(x) / z)
+        y = z * np.floor(float(y) / z)
+        w = z * np.ceil(float(w) / z)
+        h = z * np.ceil(float(h) / z)
 
     # TODO: automatically compute optimal size for tiles
     # TODO: impose the constraint that ntx*nty is inferior to or equal to a
     # multiple of the number of cores
     if tw is None and th is None and ov is None:
-        ov = z * np.ceil(100 / z)
-        if w <= global_params.tile_size:
+        ov = z * 100
+        if w <= z * global_params.tile_size:
             tw = w
         else:
-            tw = global_params.tile_size
+            tw = z * global_params.tile_size
             #TODO: modify tiles size to be close do a divisor of w
             #while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
             #    tw += 1
-        if h <= global_params.tile_size:
+        if h <= z * global_params.tile_size:
             th = h
         else:
-            th = global_params.tile_size
+            th = z * global_params.tile_size
             #TODO: modify tiles size to be close do a divisor of h
             #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
             #    th += 1
-    ntx = np.ceil((w - ov) / (tw - ov))
-    nty = np.ceil((h - ov) / (th - ov))
-    # ensure that the coordinates of each tile are multiples of the zoom factor
-    if (z != 1):
-        ov = z * np.floor(ov / z)
-        tw = z * np.floor(tw / z)
-        th = z * np.floor(th / z)
+    ntx = np.ceil(float(w - ov) / (tw - ov))
+    nty = np.ceil(float(h - ov) / (th - ov))
+
     print 'tiles size is tw, th = (%d, %d)' % (tw, th)
     print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
     print 'total number of tiles is %d' % (ntx * nty)
 
     # if several tiles, compute global pointing correction (on the whole ROI)
+    A = None
     if ntx * nty > 1:
         # the global pointing correction is run in a subprocess. This is a
         # workaround to a nasty bug affecting the Multiprocessing package when used
@@ -256,10 +253,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             A = out_dict['correction_matrix']
             np.savetxt('%s/pointing_global.txt' % out_dir, A)
         else:
-            print "WARNING: correction matrix not found. The estimation process seems to have failed for some reason. Global correction matrix will be replaced by eye matrix."
-            A = np.eye(3)
-    else:
-        A = None
+            print """WARNING: global correction matrix not found. The
+            estimation process seems to have failed. No global correction will
+            be applied."""
 
     # create pool with less workers than available cores
     PROCESSES = int(0.75 * multiprocessing.cpu_count())
@@ -288,20 +284,21 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     pool.join()
 
 
-    # Retry all failed jobs in main thread
-    print "Retrying failed tiles in main thread if any."
+    # Check if all tiles were computed
     for j in np.arange(y, y + h - ov, th - ov):
         for i in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             dem = '%s/dem.tif' % tile_dir
-            
+
             if not os.path.exists(dem):
-                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
-                                          j, tw, th, A)
+                print "WARNING: Tile %d %d %d %d failed. Retrying..." % (i, j,
+                        tw, th)
+                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
+                        j, tw, th, A)
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
-    tile_composer.mosaic(out, w, h, ov, tiles)
+    tile_composer.mosaic(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
 
     # cleanup
     if global_params.clean_tmp:
@@ -409,8 +406,8 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     # compute offset
     if do_offset:
         r = rpc_model.RPCModel(rpc)
-        lat = r.firstLat
-        lon = r.firstLon
+        lat = r.latOff
+        lon = r.lonOff
         off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
     else:
         off_x, off_y = 0, 0
@@ -442,7 +439,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
 if __name__ == '__main__':
 
     if len(sys.argv) == 2:
-      config  = sys.argv[1]
+      config_file  = sys.argv[1]
     else:
       print """
       Incorrect syntax, use:
@@ -454,7 +451,7 @@ if __name__ == '__main__':
       sys.exit(1)
 
     # read the json configuration file
-    f = open(config)
+    f = open(config_file)
     cfg = json.load(f)
     f.close()
 
@@ -501,6 +498,11 @@ if __name__ == '__main__':
     clr1 = cfg['images'][0]['clr']
     img2 = cfg['images'][1]['img']
     rpc2 = cfg['images'][1]['rpc']
+
+    # create output directory for the experiment, and store a copy the json
+    # config file there
+    common.run('mkdir -p %s' % out_dir)
+    common.run('cp %s %s/config.json' % (config_file, out_dir))
 
     # dem generation
     if len(cfg['images']) == 2:

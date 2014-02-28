@@ -134,23 +134,22 @@ Mat sgbm_stereo(Mat &u1, Mat &u2, int mindisp, int maxdisp, int SADwin, int P1, 
     // To avoid losing two vertical bands on the left and right sides of the
     // reference image
     // the stereo matching is done by the sgbm() operator
-    Mat uu1(u1.rows, (int) (u1.cols + max(-mindisp, 0) + max(maxdisp, 0)), u1.type());
-    Mat uu2(u2.rows, (int) (u2.cols + max(-mindisp, 0) + max(maxdisp, 0)), u2.type());
-    paste(uu1, u1, max(maxdisp, 0), 0);
-    paste(uu2, u2, max(maxdisp, 0), 0);
+    Mat uu1(u1.rows, (int) (u1.cols + max(-mindisp, 0) ), u1.type());
+    Mat uu2(u2.rows, (int) (u2.cols + max(-mindisp, 0) ), u2.type());
+    paste(uu1, u1,  0, 0);
+    paste(uu2, u2,  0, 0);
     Mat disp, ddisp;
     sgbm(uu1, uu2, ddisp);
-    disp = ddisp(Range::all(), Range(max(maxdisp, 0), max(maxdisp, 0) + u1.cols));
+    disp = ddisp(Range::all(), Range( 0, u1.cols));
 
 //    // WITHOUT CROP TRICK
 //    Mat disp, disp_8u;
 //    sgbm(u1, u2, disp);
-//    disp.convertTo(disp_8u, CV_8U);
 //
 
-    Mat fdisp(disp.rows, disp.cols,DataType<float>::type);
-    for (int y=0; y<disp.rows; y++)
-        for (int x=0; x<disp.cols; x++)
+    Mat fdisp(u1.rows, u1.cols,DataType<float>::type);
+    for (int y=0; y<u1.rows; y++)
+        for (int x=0; x<u1.cols; x++)
             if (disp.at<int16_t>(y, x) == -((-mindisp+1)*16))
                 fdisp.at<float>(y,x) = NAN;
             else
@@ -206,6 +205,13 @@ Mat sgbm_stereo_slice(Mat &u1, Mat &u2, int mindisp, int maxdisp, int SADwin, in
       paste(disp, slicedisp,
 		  0, ymin, 0, top_padding, nc1,
 		  ymax - ymin - top_padding - bottom_padding);
+
+      // ALTERNATIVE WAY TO DO THE PASTE
+//      for(int y=0;y<ymax - ymin - top_padding - bottom_padding;y++) {
+//      for(int x=0;x<nc1;x++) {
+//         disp.at<float>(ymin+top_padding+y,x) = slicedisp.at<uint8_t>(top_padding+y,x);
+//      }
+//      }
 
    }
    return disp;
@@ -273,11 +279,12 @@ int main(int c, char** v)
     // convert back the disparities to our convention before saving
     float *odisp = (float*) malloc(disp.rows*disp.cols*sizeof(float));
     for (int y=0; y<disp.rows; y++)
-       for (int x=0; x<disp.cols; x++)
+       for (int x=0; x<disp.cols; x++){
           if(LRmask.at<float>(y, x) )
              odisp[x+y*disp.cols] = disp.at<float>(y, x);
           else
              odisp[x+y*disp.cols] = NAN;
+       }
     
 
     // save

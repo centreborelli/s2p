@@ -68,32 +68,29 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
         r1 = np.vstack([tx,ty]).T
         a = r1 - r0
         b = p2 - r0
-        # implements: h0_inc = dot(a,b) / dot(a,a) For some reason,
-        # the formulation bellow causes massive memory leaks on some
-        # systems.
+        # implements: h0_inc = dot(a,b) / dot(a,a)
+        # For some reason, the formulation below causes massive memory leaks on
+        # some systems.
         # h0_inc = np.divide(np.diag(np.dot(a, b.T)), np.diag(np.dot(a, a.T)))
         # Replacing with the equivalent:
-        diagabdot = np.multiply(a[:,0],b[:,0])+np.multiply(a[:,1],b[:,1])
-        diagaadot = np.multiply(a[:,0],a[:,0])+np.multiply(a[:,1],a[:,1])
-        h0_inc = np.divide(diagabdot,diagaadot)
+        diagabdot = np.multiply(a[:, 0], b[:, 0]) + np.multiply(a[:, 1], b[:, 1])
+        diagaadot = np.multiply(a[:, 0], a[:, 0]) + np.multiply(a[:, 1], a[:, 1])
+        h0_inc = np.divide(diagabdot, diagaadot)
 #        if np.any(np.isnan(h0_inc)):
 #            print x1, y1, x2, y2
 #            print a
 #            return h0, h0*0
         # implements:   q = r0 + h0_inc * a
         q = r0 + np.dot(np.diag(h0_inc), a)
-        # implements: err = sqrt( dot(q-p2,q-p2) )
+        # implements: err = sqrt(dot(q-p2, q-p2))
         tmp = q-p2
-        err =  np.sqrt(np.multiply(tmp[:,0], tmp[:,0])+np.multiply(tmp[:,1], tmp[:,1]))
+        err =  np.sqrt(np.multiply(tmp[:, 0], tmp[:, 0]) + np.multiply(tmp[:, 1], tmp[:, 1]))
 #       print np.arctan2(tmp[:, 1], tmp[:, 0]) # for debug
 #       print err # for debug
-        h0 = np.add(h0,h0_inc*HSTEP)
+        h0 = np.add(h0, h0_inc*HSTEP)
         # implements: if fabs(h0_inc) < 0.0001:
         if np.max(np.fabs(h0_inc)) < 0.001:
             break
-
-
-
 
     return (h0, err)
 
@@ -203,8 +200,8 @@ def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
     lons = np.arange(lon_m, lon_M, srtm_step)
     lats = np.arange(lat_m, lat_M, srtm_step)
 
-    # put all the samples in an array. There should a more pythonic way to do
-    # this
+    # put all the samples in an array. There should be a more pythonic way to
+    # do this
     out = np.zeros((len(lons)*len(lats), 2))
     for i in xrange(len(lons)):
         for j in xrange(len(lats)):
@@ -276,6 +273,7 @@ def altitude_range(rpc, x, y, w, h):
 
     # compute srtm height on all these points
     srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
+    srtm = np.ravel(srtm)
 
     # srtm data may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
@@ -285,7 +283,7 @@ def altitude_range(rpc, x, y, w, h):
         return altitude_range_coarse(rpc)
 
     # offset srtm heights with the geoid - ellipsoid difference
-    geoid = common.run_binary_on_list_of_points(ellipsoid_points,
+    geoid = common.run_binary_on_list_of_points(np.fliplr(ellipsoid_points),
             'GeoidEval')[:, 0]
     h = geoid + srtm
 

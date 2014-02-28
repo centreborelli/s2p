@@ -105,17 +105,15 @@ Now you can compile the SGBM wrapper:
     cmake -D CMAKE_PREFIX_PATH=~/local ..
     make
 
-#### GDAL
+#### GDAL >= 1.10
 
-In addition, the `gdal_translate` binary is needed, and is probably already installed
-on your system, or available through your package manager. If not, do:
+In addition, the `gdal_translate` binary is needed. The version must be >= 1.10.
 
     cd 3rdparty
     wget http://download.osgeo.org/gdal/1.10.1/gdal-1.10.1.tar.gz
     tar xzf gdal-1.10.1.tar.gz
     cd gdal-1.10.1
-    ./configure --prefix=~/local
-    make
+    ./configure --prefix=$HOME/local
     make install
 
 #### Sift
@@ -142,7 +140,7 @@ on your system, or available through your package manager. If not, do:
 
 
 ### Copy 3rd party binaries into bin
-   
+
 To make the 3rd party binaries available to the s2p system run the following script
 
     cd bin

@@ -1,6 +1,7 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
+import sys
 import numpy as np
 from xml.etree.ElementTree import ElementTree
 
@@ -102,6 +103,23 @@ class RPCModel:
         tree = ElementTree()
         tree.parse(XMLfile)
 
+        # determine wether it's a pleiades or a worldview image
+        a = tree.find('Metadata_Identification/METADATA_PROFILE') # PHR_SENSOR
+        b = tree.find('IMD/IMAGE/SATID') # WV02
+        if a is not None:
+            if a.text == 'PHR_SENSOR':
+                self.satellite = 'pleiades'
+                self.read_rpc_pleiades(tree)
+            else:
+                print 'unknown sensor type'
+        elif b is not None:
+            if b.text == 'WV02':
+                self.satellite = 'worldview2'
+                self.read_rpc_worldview(tree)
+            else:
+                print 'unknown sensor type'
+
+    def read_rpc_pleiades(self, tree):
         # direct model
         d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
         direct = [float(child.text) for child in d]
@@ -146,17 +164,36 @@ class RPCModel:
         self.linScale = float(v.find('LINE_SCALE').text)
         self.linOff   = float(v.find('LINE_OFF').text)
 
-    def direct_estimate(self, col, lin, alt, return_normalized=False):
-        cCol = (col - self.colOff) / self.colScale
-        cLin = (lin - self.linOff) / self.linScale
-        cAlt = (alt - self.altOff) / self.altScale
-        cLon = apply_rfm(self.directLonNum, self.directLonDen, cLin, cCol, cAlt)
-        cLat = apply_rfm(self.directLatNum, self.directLatDen, cLin, cCol, cAlt)
-        lon = cLon*self.lonScale + self.lonOff
-        lat = cLat*self.latScale + self.latOff
-        if return_normalized:
-           return cLon, cLat, cAlt
-        return lon, lat, alt
+    def read_rpc_worldview(self, tree):
+        # inverse model
+        im = tree.find('RPB/IMAGE')
+        l = im.find('LINENUMCOEFList/LINENUMCOEF')
+        self.inverseLinNum = [float(c) for c in l.text.split()]
+        l = im.find('LINEDENCOEFList/LINEDENCOEF')
+        self.inverseLinDen = [float(c) for c in l.text.split()]
+        l = im.find('SAMPNUMCOEFList/SAMPNUMCOEF')
+        self.inverseColNum = [float(c) for c in l.text.split()]
+        l = im.find('SAMPDENCOEFList/SAMPDENCOEF')
+        self.inverseColDen = [float(c) for c in l.text.split()]
+        self.inverseBias = float(im.find('ERRBIAS').text)
+
+        # scale and offset
+        self.linOff   = float(im.find('LINEOFFSET').text)
+        self.colOff   = float(im.find('SAMPOFFSET').text)
+        self.latOff   = float(im.find('LATOFFSET').text)
+        self.lonOff   = float(im.find('LONGOFFSET').text)
+        self.altOff   = float(im.find('HEIGHTOFFSET').text)
+
+        self.linScale = float(im.find('LINESCALE').text)
+        self.colScale = float(im.find('SAMPSCALE').text)
+        self.latScale = float(im.find('LATSCALE').text)
+        self.lonScale = float(im.find('LONGSCALE').text)
+        self.altScale = float(im.find('HEIGHTSCALE').text)
+
+        # image dimensions
+        self.lastRow = int(tree.find('IMD/NUMROWS').text)
+        self.lastCol = int(tree.find('IMD/NUMCOLUMNS').text)
+
 
     def inverse_estimate(self, lon, lat, alt):
         cLon = (lon - self.lonOff) / self.lonScale
@@ -169,65 +206,119 @@ class RPCModel:
         return col, lin, alt
 
 
-#    # sorry this function is not ready yet
-#    def direct_estimate_iterative(self, col, lin, alt, return_normalized=False):
-#        cCol = (col - self.colOff) / self.colScale
-#        cLin = (lin - self.linOff) / self.linScale
-#        cAlt = (alt - self.altOff) / self.altScale
-#
-#        ### PSEUDOCODE 
-#
-#        # compute a first approximation of lon, lat using the coordinates of the image 
-#        # corners to deduce the approximate position on the ground of the pixel
-#        # alt is known, just verify if it's within the bounds
-#        lon0,lat0 <--- appriximate using the corners
-#        X0 = inverse_estimate(self,lon0,lat0,alt);
-#
-#        Xtarget = col,lin
-#        while abs(X0 - Xtarget) > 0.00001 #
-#           # build a base on the image
-#           X1 = inverse_estimate(self,lon0+eps,lat0,alt);
-#           X2 = inverse_estimate(self,lon0,lat0+eps,alt);
-#   
-#           # project Xtarget on the base X1-X0,  X2-X0 
-#           p1,p2 = <Xtarget,X1-X0> (X1-X0),   <Xtarget,X2-X0> (X2-X0)
-#           
-#           # use the coefficients to copute an approximation of the point on the gound 
-#           # which in turn will give us the new X0
-#           (lon0,lat0) = (lon0,lat0) + (p1*eps, p2*eps)
-#           X0 = inverse_estimate(self,lon0,lat0,alt);
-#
-#
-#        lon = cLon*self.lonScale + self.lonOff
-#        lat = cLat*self.latScale + self.latOff
-#        if return_normalized:
-#           return cLon, cLat, cAlt
-#        return lon, lat, alt
+    def direct_estimate(self, col, lin, alt, return_normalized=False):
 
+        if self.satellite == 'worldview2':
+            return self.direct_estimate_iterative(col, lin, alt, return_normalized)
+
+        cCol = (col - self.colOff) / self.colScale
+        cLin = (lin - self.linOff) / self.linScale
+        cAlt = (alt - self.altOff) / self.altScale
+        cLon = apply_rfm(self.directLonNum, self.directLonDen, cLin, cCol, cAlt)
+        cLat = apply_rfm(self.directLatNum, self.directLatDen, cLin, cCol, cAlt)
+        lon = cLon*self.lonScale + self.lonOff
+        lat = cLat*self.latScale + self.latOff
+        if return_normalized:
+           return cLon, cLat, cAlt
+        return lon, lat, alt
+
+
+    def direct_estimate_iterative(self, col, row, alt, return_normalized=False):
+        """
+        Iterative estimation of direct projection (image to ground), for a
+        list (or array) of image points expressed in image coordinates.
+
+        Args:
+            col, row: image coordinates
+            alt: altitude (in meters above the ellipsoid) of the corresponding
+                3D point
+            return_normalized: boolean flag. If true, then return normalized
+                coordinates
+
+
+        Returns:
+            lon, lat, alt
+        """
+        # normalise input image coordinates
+        cCol = (col - self.colOff) / self.colScale
+        cRow = (row - self.linOff) / self.linScale
+        cAlt = (alt - self.altOff) / self.altScale
+
+        # target point: Xf (f for final)
+        Xf = np.vstack([cCol, cRow]).T
+
+        # use 3 corners of the lon, lat domain and project them into the image
+        # to get the first estimation of (lon, lat)
+        # EPS is 2 for the first iteration, then 0.1.
+        lon = -np.ones(len(Xf))
+        lat = -np.ones(len(Xf))
+        EPS = 2
+        x0 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon, cAlt)
+        y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon, cAlt)
+        x1 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon + EPS, cAlt)
+        y1 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon + EPS, cAlt)
+        x2 = apply_rfm(self.inverseColNum, self.inverseColDen, lat + EPS, lon, cAlt)
+        y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat + EPS, lon, cAlt)
+
+        n = 0
+        while not np.all((x0 - cCol) ** 2 + (y0 - cRow) ** 2 < 0.000001):
+            X0 = np.vstack([x0, y0]).T
+            X1 = np.vstack([x1, y1]).T
+            X2 = np.vstack([x2, y2]).T
+            e1 = X1 - X0
+            e2 = X2 - X0
+            u  = Xf - X0
+
+            # project u on the base (e1, e2): u = a1*e1 + a2*e2
+            # the exact computation is given by:
+            #   M = np.vstack((e1, e2)).T
+            #   a = np.dot(np.linalg.inv(M), u)
+            # but I don't know how to vectorize this.
+            # Assuming that e1 and e2 are orthogonal, a1 is given by
+            # <u, e1> / <e1, e1>
+            num = np.sum(np.multiply(u, e1), axis=1)
+            den = np.sum(np.multiply(e1, e1), axis=1)
+            a1 = np.divide(num, den)
+
+            num = np.sum(np.multiply(u, e2), axis=1)
+            den = np.sum(np.multiply(e2, e2), axis=1)
+            a2 = np.divide(num, den)
+
+            # use the coefficients a1, a2 to compute an approximation of the
+            # point on the gound which in turn will give us the new X0
+            lon += a1 * EPS
+            lat += a2 * EPS
+
+            # update X0, X1 and X2
+            EPS = .1
+            x0 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon, cAlt)
+            y0 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon, cAlt)
+            x1 = apply_rfm(self.inverseColNum, self.inverseColDen, lat, lon + EPS, cAlt)
+            y1 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat, lon + EPS, cAlt)
+            x2 = apply_rfm(self.inverseColNum, self.inverseColDen, lat + EPS, lon, cAlt)
+            y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat + EPS, lon, cAlt)
+            #n += 1
+
+        #print 'direct_estimate_iterative: %d iterations' % n
+
+        if return_normalized:
+           return lon, lat, cAlt
+
+        # else denormalize and return
+        lon = lon*self.lonScale + self.lonOff
+        lat = lat*self.latScale + self.latOff
+        return lon, lat, alt
 
 
 
     def __repr__(self):
         return '''
-    ### Direct Model ###
-        directLonNum = {directLonNum}
-        directLonDen = {directLonDen}
-        directLatNum = {directLatNum}
-        directLatDen = {directLatDen}
-        directBias   = {directBias}
-
     ### Inverse Model ###
         inverseColNum = {inverseColNum}
         inverseColDen = {inverseColDen}
         inverseLinNum = {inverseLinNum}
         inverseLinDen = {inverseLinDen}
         inverseBias   = {inverseBias}
-
-    ### Validity Domains ###
-        firstLon = {firstLon}
-        firstLat = {firstLat}
-        lastLon  = {lastLon}
-        lastLat  = {lastLat}
 
     ### Scale and Offsets ###
         lonScale = {lonScale}
@@ -240,20 +331,11 @@ class RPCModel:
         colOff   = {colOff}
         linScale = {linScale}
         linOff   = {linOff}'''.format(
-        directLonNum  = self.directLonNum,
-        directLonDen  = self.directLonDen,
-        directLatNum  = self.directLatNum,
-        directLatDen  = self.directLatDen,
-        directBias    = self.directBias,
         inverseColNum = self.inverseColNum,
         inverseColDen = self.inverseColDen,
         inverseLinNum = self.inverseLinNum,
         inverseLinDen = self.inverseLinDen,
         inverseBias   = self.inverseBias,
-        firstLon      = self.firstLon,
-        firstLat      = self.firstLat,
-        lastLon       = self.lastLon,
-        lastLat       = self.lastLat,
         lonScale      = self.lonScale,
         lonOff        = self.lonOff,
         latScale      = self.latScale,

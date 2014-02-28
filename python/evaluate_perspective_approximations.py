@@ -6,6 +6,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import rpc_model
 import rpc_utils
 import estimation
@@ -184,28 +185,46 @@ def plot_projective_error(n_learn, n_test, rpc1, rpc2=None):
     return err
 
 
-def plot_3d_surface(x, y, z):
+def plot_3d_surface(x, y, z, xlabel=None, ylabel=None, zlabel=None,
+        outfile=None):
     """
     Call the Axes3D.plot_trisurf function from matplotlib to plot a surface.
     Args:
         x, y: 1D arrays containing the x and y values
         z: 2D array containing the z values. BE CAREFUL, its shape has to
             be (len(y), len(x))
+        {x,y,z}label: string containing label for the {x,y,z} axis
+        outfile (optional): path to the pdf file where to save the plot
 
     Returns:
         nothing, but opens a window with the plot
     """
     # reshape the data
     x, y = np.meshgrid(x, y)
-    x = x.flatten()
-    y = y.flatten()
-    z = z.flatten()
+    x = x.ravel()
+    y = y.ravel()
+    z = z.ravel()
 
     # make the plot
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     ax.plot_trisurf(x, y, z, cmap = cm.jet, linewidth = 0.2)
-    plt.show()
+
+    # put labels
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
+    if zlabel is not None:
+        ax.set_zlabel(zlabel)
+
+    # save or show the plot
+    if outfile is not None:
+        pp = PdfPages(outfile)
+        plt.savefig(pp, format='pdf', bbox_inches='tight')
+        pp.close()
+    else:
+        plt.show()
 
 
 def main():

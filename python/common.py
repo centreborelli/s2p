@@ -434,7 +434,7 @@ def image_crop_TIFF(im, x, y, w, h, out=None):
     Crops tif images.
 
     Args:
-        im: path to a tif image
+        im: path to a tif image, or to a tile map file (*.til)
         x, y, w, h: four integers definig the rectangular crop in the image.
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
@@ -469,10 +469,10 @@ def image_crop_TIFF(im, x, y, w, h, out=None):
 def image_crop_LARGE(im, x, y, w, h):
     if (int(x) != x or int(y) != y):
         print 'Warning: image_crop_LARGE will round the coordinates of your crop'
-    if im.lower().endswith('tif') or im.lower().endswith('tiff'):
+    if im.lower().endswith(('tif', 'tiff', 'til')):
        return image_crop_TIFF(im, x, y, w, h)
     else:
-       print "image_crop_LARGE: the input image must be tif or tiff"
+       print "image_crop_LARGE: the input image must be tif, tiff or til"
        return image_crop(im, x, y, w, h)
 
 
