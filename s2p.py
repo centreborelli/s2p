@@ -416,8 +416,10 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     if zoom == 1:
         common.image_crop_TIFF(img, x, y, w, h, crop)
     else:
+        # gdal is used for the zoom because it handles BigTIFF files, and
+        # before the zoom out the image may be that big
         tmp_crop = common.image_crop_TIFF(img, x, y, w, h)
-        common.image_safe_zoom_fft(tmp_crop, zoom, crop)
+        common.image_zoom_gdal(tmp_crop, zoom, crop)
 
     # colorize, then generate point cloud
     try:
