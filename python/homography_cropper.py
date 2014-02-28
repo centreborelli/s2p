@@ -60,29 +60,30 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
 
     # This filter is needed (for panchro images) because the original PLEAIDES
     # SENSOR PERFECT images are aliased
-    if (common.image_pix_dim(tmp) == 1 and subsampling_factor == 1 and global_params.use_pleiades_unsharpening):
+    if (common.image_pix_dim(tmp) == 1 and subsampling_factor == 1 and
+            global_params.use_pleiades_unsharpening):
         tmp = image_apply_pleiades_unsharpening_filter(tmp)
 
-    # the output image is zoomed out by subsampling_factor so
-    # H, w, and h are updated accordingly
     assert(subsampling_factor >= 1)
-    Z = np.eye(3);
-    Z[0,0] = Z[1,1] = 1.0/subsampling_factor
-    H = np.dot(Z, H)
-
-    w = int(w/subsampling_factor)
-    h = int(h/subsampling_factor)
-
-
     # Since the objective is to commpute a zoomed out homographic application
     # to save computations we zoom out the image before applying the homography
     # and then update H accordingly
     if subsampling_factor != 1:
+        # the output image is zoomed out by subsampling_factor so
+        # H, w, and h are updated accordingly
+        Z = np.eye(3);
+        Z[0,0] = Z[1,1] = 1.0/subsampling_factor
+        H = np.dot(Z, H)
+
+        w = int(w/subsampling_factor)
+        h = int(h/subsampling_factor)
+
         # the DCT zoom is NOT SAFE, when the input image size is not a multiple
         # of the zoom factor
         tmpw, tmph = common.image_size(tmp)
         tmpw, tmph = int(tmpw/subsampling_factor), int(tmph/subsampling_factor)
-        tmp  = common.image_crop_TIFF(tmp, 0, 0, tmpw*subsampling_factor, tmph*subsampling_factor)
+        tmp  = common.image_crop_TIFF(tmp, 0, 0, tmpw*subsampling_factor,
+                tmph*subsampling_factor, tmp)
         # zoom out the input image
         tmp = common.image_safe_zoom_fft(tmp, subsampling_factor)
 
