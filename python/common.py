@@ -193,7 +193,7 @@ def image_safe_zoom_fft(im, f, out=None):
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
     return out
 
-def image_zoom_gdal(im, f, out=None):
+def image_zoom_gdal(im, f, out=None, w=None, h=None):
     """
     zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out.
     """
@@ -204,14 +204,17 @@ def image_zoom_gdal(im, f, out=None):
         out = tmpfile('.tif')
 
     tmp = tmpfile('.tif')
-    sz = image_size(im)
+
+    if w is None or h is None:
+        sz = image_size(im)
+        w = sz[0]
+        h = sz[1]
 
     # First, we need to make sure the dataset has a proper origin/spacing
-    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (sz[0]/f, -sz[1]/f, im,
-        tmp))
+    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/f, -h/f, im, tmp))
 
     # do the zoom with gdalwarp
-    run('gdalwarp -r cubic -ts %d %d %s %s' %  (sz[0]/f, sz[1]/f, tmp, out))
+    run('gdalwarp -r cubic -ts %d %d %s %s' %  (w/f, h/f, tmp, out))
     return out
 
 
