@@ -28,5 +28,9 @@
   "tile_size" : 500,
   "max_nb_threads" : -1,
   "clean_tmp" : true,
-  "offset_ply" : true
+  "offset_ply" : true,
+  "fusion_thresh" : 3,
+  "disp_range_method" : 'sift',
+  "disp_range_srtm_high_margin" : 50,
+  "disp_range_srtm_low_margin" : -20
 }

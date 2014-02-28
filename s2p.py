@@ -480,6 +480,8 @@ if __name__ == '__main__':
         global_params.max_nb_threads = cfg['max_nb_threads']
     if "clean_tmp" in cfg:
         global_params.clean_tmp = cfg['clean_tmp']
+    if "fusion_thresh" in cfg:
+        global_params.fusion_thresh = cfg['fusion_thresh']
 
     # other params to be read in the json
     if "offset_ply" in cfg:
@@ -511,7 +513,7 @@ if __name__ == '__main__':
         img3 = cfg['images'][2]['img']
         rpc3 = cfg['images'][2]['rpc']
         dem = process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x,
-                y, w, h, thresh=3)
+                y, w, h, global_params.fusion_thresh)
 
     # point cloud generation
     generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem, do_offset)
