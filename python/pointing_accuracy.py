@@ -606,7 +606,7 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
         if w*h < 2e6:
             m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h)
         else:
-            m = filtered_sift_matches_full_img(img1, img2, r1, r2, 'automatic',
+            m = filtered_sift_matches_full_img(img1, img2, r1, r2, global_params.pointing_correction_rois_mode,
                     None, 1000, x, y, w, h)
     except Exception as e:
         print e

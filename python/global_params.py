@@ -15,6 +15,8 @@ epipolar_thresh = 0.5
 # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08', hirschmuller08_laplacian'
 matching_algorithm = 'hirschmuller08'
 
+pointing_correction_rois_mode= = 'automatic'
+
 use_pleiades_unsharpening = True
 
 # One of "auto_sift", "auto_srtm", "wider_sift_srtm"

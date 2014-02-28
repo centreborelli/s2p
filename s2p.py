@@ -465,6 +465,8 @@ if __name__ == '__main__':
     global_params.matching_algorithm = cfg['matching_algorithm']
     global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
     global_params.debug = cfg['debug']
+    if "pointing_correction_rois_mode" in cfg:
+        global_params.pointing_correction_rois_mode = str(cfg['pointing_correction_rois_mode'])
     if "disp_range_method" in cfg:
         global_params.disp_range_method = str(cfg['disp_range_method'])
     if "disp_range_srtm_low_margin" in cfg:
