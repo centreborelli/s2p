@@ -492,6 +492,8 @@ if __name__ == '__main__':
         global_params.clean_tmp = cfg['clean_tmp']
     if "fusion_thresh" in cfg:
         global_params.fusion_thresh = cfg['fusion_thresh']
+    if "full_img" in cfg:
+        global_params.full_img = cfg['full_img']
 
     # other params to be read in the json
     if "offset_ply" in cfg:
@@ -500,16 +502,24 @@ if __name__ == '__main__':
         do_offset = False
 
     # roi definition and output path
-    x = cfg['roi']['x']
-    y = cfg['roi']['y']
-    w = cfg['roi']['w']
-    h = cfg['roi']['h']
     out_dir = str(cfg['out_dir'])
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     clr1 = cfg['images'][0]['clr']
     img2 = cfg['images'][1]['img']
     rpc2 = cfg['images'][1]['rpc']
+    if "full_img" in cfg:
+        if cfg['full_img']:
+            sz = common.image_size_gdal(img1)
+            x = 0
+            y = 0
+            w = sz[0]
+            h = sz[1]
+    else:
+        x = cfg['roi']['x']
+        y = cfg['roi']['y']
+        w = cfg['roi']['w']
+        h = cfg['roi']['h']
 
     # create output directory for the experiment, and store a copy the json
     # config file there
