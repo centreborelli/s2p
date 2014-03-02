@@ -7,6 +7,8 @@ import os
 import sys
 import subprocess
 import tempfile
+import re
+
 import rpc_model
 import global_params
 
@@ -120,6 +122,30 @@ def image_size(im):
             return (nc, nr)
     except IOError:
         print "image_size: the input file doesn't exist ("+str(im)+")"
+        sys.exit()
+
+
+def image_size_gdal(im):
+    """
+    Reads the width and height of an image, using gdal.
+
+    Args:
+        im: path to the input image file
+    Returns:
+        a tuple of size 2, giving width and height
+    """
+    try:
+        with open(im):
+            "gdalinfo %s | grep Size" % im
+            p1 = subprocess.Popen(['gdalinfo', im], stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(['grep', 'Size'], stdin=p1.stdout, stdout=subprocess.PIPE)
+            line = p2.stdout.readline()
+            out = re.findall(r"[\w']+", line)
+            nc = out[2]
+            nr = out[3]
+            return (nc, nr)
+    except IOError:
+        print "image_size_gdal: the input file doesn't exist %s" % str(im)
         sys.exit()
 
 
