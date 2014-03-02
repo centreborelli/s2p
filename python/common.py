@@ -141,8 +141,8 @@ def image_size_gdal(im):
             p2 = subprocess.Popen(['grep', 'Size'], stdin=p1.stdout, stdout=subprocess.PIPE)
             line = p2.stdout.readline()
             out = re.findall(r"[\w']+", line)
-            nc = out[2]
-            nr = out[3]
+            nc = int(out[2])
+            nr = int(out[3])
             return (nc, nr)
     except IOError:
         print "image_size_gdal: the input file doesn't exist %s" % str(im)
