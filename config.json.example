@@ -15,6 +15,7 @@
     "w" : 300,
     "h" : 300
     },
+  "full_img" : false,
   "matching_algorithm" : "hirschmuller08",
   "subsampling_factor" : 1,
   "subsampling_factor_registration" : 1,
@@ -30,7 +31,7 @@
   "clean_tmp" : true,
   "offset_ply" : true,
   "fusion_thresh" : 3,
-  "disp_range_method" : 'sift',
+  "disp_range_method" : "sift",
   "disp_range_srtm_high_margin" : 50,
   "disp_range_srtm_low_margin" : -20
 }
