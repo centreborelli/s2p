@@ -392,12 +392,20 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     crop_color = '%s/roi_color_ref.tif' % out_dir
     cloud = '%s/cloud.ply' % out_dir
 
-    # read the zoom value
-    zoom = global_params.subsampling_factor
+    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
+    # ensure that the coordinates of the ROI are multiples of the zoom factor,
+    # to avoid bad registration of tiles due to rounding problems.
+    z = global_params.subsampling_factor
+    assert(z > 0 and z == np.floor(z))
+    if (z != 1):
+        x = z * np.floor(float(x) / z)
+        y = z * np.floor(float(y) / z)
+        w = z * np.ceil(float(w) / z)
+        h = z * np.ceil(float(h) / z)
 
     # build the matrix of the zoom + translation transformation
     A = common.matrix_translation(-x, -y)
-    f = 1.0/zoom
+    f = 1.0/z
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
     trans = common.tmpfile('.txt')
@@ -413,18 +421,18 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
         off_x, off_y = 0, 0
 
     # crop the ROI and zoom
-    if zoom == 1:
+    if z == 1:
         common.image_crop_TIFF(img, x, y, w, h, crop)
     else:
         # gdal is used for the zoom because it handles BigTIFF files, and
         # before the zoom out the image may be that big
         tmp_crop = common.image_crop_TIFF(img, x, y, w, h)
-        common.image_zoom_gdal(tmp_crop, zoom, crop, w, h)
+        common.image_zoom_gdal(tmp_crop, z, crop, w, h)
 
     # colorize, then generate point cloud
     try:
         with open(clr):
-            triangulation.colorize(crop, clr, x, y, zoom, crop_color)
+            triangulation.colorize(crop, clr, x, y, z, crop_color)
     except IOError:
         print 'no color image available for this dataset.'
         crop_color = common.image_qauto(crop)
