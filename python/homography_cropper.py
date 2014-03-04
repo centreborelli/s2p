@@ -25,12 +25,12 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
 
     Args:
         im_out: path to the output image
-        im_in: path to the input (jp2 or tif) full Pleiades image
+        im_in: path to the input (tif) full Pleiades image
         H: numpy array containing the 3x3 homography matrix
         w, h: size of the output image
         subsampling_factor (optional, default=1): when set to z>1
            will result in the application of the homography Z*H
-           where Z = diag(1/z,1/z,1)
+           where Z = diag(1/z, 1/z, 1)
            So the output will be zoomed out by a factor z
            The output image will be (w/z, h/z)
 
@@ -52,46 +52,57 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
     x0, y0, w0, h0 = common.bounding_box2D(inv_H_pts)
     x0, y0 = np.floor([x0, y0])
     w0, h0 = np.ceil([w0, h0])
-    tmp = common.image_crop_LARGE(im_in, x0, y0, w0, h0)
+    crop_fullres = common.image_crop_LARGE(im_in, x0, y0, w0, h0)
+
+    # This filter is needed (for panchro images) because the original PLEAIDES
+    # SENSOR PERFECT images are aliased
+    if (common.image_pix_dim(crop_fullres) == 1 and subsampling_factor == 1 and
+            global_params.use_pleiades_unsharpening):
+        tmp = image_apply_pleiades_unsharpening_filter(crop_fullres)
+        common.run('rm %s' % crop_fullres)
+        crop_fullres = tmp
 
     # compensate the homography with the translation induced by the preliminary
     # crop, then apply the homography and crop.
     H = np.dot(H, common.matrix_translation(x0, y0))
 
-    # This filter is needed (for panchro images) because the original PLEAIDES
-    # SENSOR PERFECT images are aliased
-    if (common.image_pix_dim(tmp) == 1 and subsampling_factor == 1 and global_params.use_pleiades_unsharpening):
-        tmp = image_apply_pleiades_unsharpening_filter(tmp)
+    # Since the objective is to compute a zoomed out homographic transformation
+    # of the input image, to save computations we zoom out the image before
+    # applying the homography. If Z is the matrix representing the zoom out and
+    # H the homography matrix, this trick consists in applying Z*H*Z^{-1} to
+    # the zoomed image Z*Im instead of applying Z*H to the original image Im.
+    if subsampling_factor == 1:
+        common.image_apply_homography(im_out, crop_fullres, H, w, h)
+        return
 
-    # the output image is zoomed out by subsampling_factor so
-    # H, w, and h are updated accordingly
-    assert(subsampling_factor >= 1)
-    Z = np.eye(3);
-    Z[0,0] = Z[1,1] = 1.0/subsampling_factor
-    H = np.dot(Z, H)
+    else:
+        assert(subsampling_factor >= 1)
 
-    w = int(w/subsampling_factor)
-    h = int(h/subsampling_factor)
+        # H becomes Z*H*Z^{-1}
+        Z = np.eye(3);
+        Z[0,0] = Z[1,1] = 1 / float(subsampling_factor)
+        H = np.dot(Z, H)
+        H = np.dot(H, np.linalg.inv(Z))
 
+        # w, and h are updated accordingly
+        w = int(w / subsampling_factor)
+        h = int(h / subsampling_factor)
 
-    # Since the objective is to commpute a zoomed out homographic application
-    # to save computations we zoom out the image before applying the homography
-    # and then update H accordingly
-    if subsampling_factor != 1:
-        # the DCT zoom is NOT SAFE, when the input image size is not a multiple
+        # the DCT zoom is NOT SAFE when the input image size is not a multiple
         # of the zoom factor
-        tmpw, tmph = common.image_size(tmp)
-        tmpw, tmph = int(tmpw/subsampling_factor), int(tmph/subsampling_factor)
-        tmp  = common.image_crop_TIFF(tmp, 0, 0, tmpw*subsampling_factor, tmph*subsampling_factor)
-        # zoom out the input image
-        tmp = common.image_safe_zoom_fft(tmp, subsampling_factor)
+        tmpw, tmph = common.image_size(crop_fullres)
+        tmpw, tmph = int(tmpw / subsampling_factor), int(tmph / subsampling_factor)
+        crop_fullres_safe = common.image_crop_TIFF(crop_fullres, 0, 0, tmpw *
+                subsampling_factor, tmph * subsampling_factor)
+        common.run('rm %s' % crop_fullres)
+
+        # zoom out the input image (crop_fullres)
+        crop_zoom_out = common.image_safe_zoom_fft(crop_fullres_safe,
+                subsampling_factor)
+        common.run('rm %s' % crop_fullres_safe)
+
+        # apply the homography to the zoomed out crop
+        common.image_apply_homography(im_out, crop_zoom_out, H, w, h)
+        return
 
         # TODO DCT IS STILL NOT SAFE THE position 0,0 is translated half pixel !
-
-        # update H
-        Z = np.eye(3)
-        Z[0, 0] = Z[1, 1] = 1.0*subsampling_factor
-        H = np.dot(H, Z)
-
-    common.image_apply_homography(im_out, tmp, H, w, h)
-    return

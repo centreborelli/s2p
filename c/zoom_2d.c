@@ -19,37 +19,30 @@ int main(int c, char *v[])
 
     // Input image loading
     int w, h, pd;
-    float *input = iio_read_image_float_vec(file_in, &w, &h, &pd);
+    float *input = iio_read_image_float_split(file_in, &w, &h, &pd);
     printf("Width : %d, ", w);
     printf("Height : %d, ", h);
     printf("Channels : %d\n", pd);
 
 
     // Memory allocations
-    float *output = malloc(w_out*h_out*pd*sizeof(float));
-    float *in_ch = malloc(w*h*sizeof(float));
-    float *out_ch = malloc(w_out*h_out*sizeof(float));
+    int n = w * h;
+    int n_out = w_out * h_out;
+    float *output = malloc(n_out*pd*sizeof(float));
+    int off_in = 0;
+    int off_out = 0;
 
     // Image processing, channel by channel
     for (int channel=0; channel<pd; channel++)
     {
-        // Copy the current channel
-        for (int pix=0; pix<w*h; pix++)
-            in_ch[pix] = input[pd*pix+channel];
-
         // Apply the transformation on the current channel
-        image_zoom_2d(in_ch, out_ch, w, h, w_out, h_out);
-
-        // Copy the result in the out image :
-        for (int pix=0; pix<w_out*h_out; pix++)
-            output[pd*pix+channel] = out_ch[pix];
+        image_zoom_2d(input + off_in, output + off_out, w, h, w_out, h_out);
+        off_in += n;
+        off_out += n_out;
     }
 
-    iio_save_image_float_vec(file_out, output, w_out, h_out, pd);
-
-    // Free memory
-    free(in_ch);
-    free(out_ch);
+    // Save and free memory
+    iio_save_image_float_split(file_out, output, w_out, h_out, pd);
     free(input);
     free(output);
 

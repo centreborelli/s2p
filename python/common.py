@@ -7,6 +7,8 @@ import os
 import sys
 import subprocess
 import tempfile
+import re
+
 import rpc_model
 import global_params
 
@@ -123,6 +125,30 @@ def image_size(im):
         sys.exit()
 
 
+def image_size_gdal(im):
+    """
+    Reads the width and height of an image, using gdal.
+
+    Args:
+        im: path to the input image file
+    Returns:
+        a tuple of size 2, giving width and height
+    """
+    try:
+        with open(im):
+            "gdalinfo %s | grep Size" % im
+            p1 = subprocess.Popen(['gdalinfo', im], stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(['grep', 'Size'], stdin=p1.stdout, stdout=subprocess.PIPE)
+            line = p2.stdout.readline()
+            out = re.findall(r"[\w']+", line)
+            nc = int(out[2])
+            nr = int(out[3])
+            return (nc, nr)
+    except IOError:
+        print "image_size_gdal: the input file doesn't exist %s" % str(im)
+        sys.exit()
+
+
 def image_pix_dim(im):
     """
     Reads the number of channels of an image.
@@ -193,9 +219,10 @@ def image_safe_zoom_fft(im, f, out=None):
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
     return out
 
-def image_zoom_gdal(im, f, out=None):
+def image_zoom_gdal(im, f, out=None, w=None, h=None):
     """
-    zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out."""
+    zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out.
+    """
     if f == 1:
         return im
 
@@ -204,13 +231,16 @@ def image_zoom_gdal(im, f, out=None):
 
     tmp = tmpfile('.tif')
 
-    sz = image_size(im)
+    if w is None or h is None:
+        sz = image_size(im)
+        w = sz[0]
+        h = sz[1]
 
-    # First, we need to make sure dataset has a proper origin/spacing
-    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (sz[0]/f, -sz[1]/f,im,tmp))
+    # First, we need to make sure the dataset has a proper origin/spacing
+    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/f, -h/f, im, tmp))
 
-    # FFT doesn't play nice with infinite values, so we remove them
-    run('gdalwarp -r cubic -ts %d %d %s %s' %  (sz[0]/f, sz[1]/f,tmp, out))
+    # do the zoom with gdalwarp
+    run('gdalwarp -r cubic -ts %d %d %s %s' %  (w/f, h/f, tmp, out))
     return out
 
 
