@@ -70,6 +70,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
     sift_matches = '%s/sift_matches.txt' % out_dir
+    H_ref = '%s/H_ref.txt' % out_dir
+    H_sec = '%s/H_sec.txt' % out_dir
+    disp_min_max = '%s/disp_min_max.txt' % out_dir
 
     ## select ROI
     try:
@@ -93,19 +96,21 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y,
         w, h, first_guess=A_global)
 
-    ## save the subsampling factor, the sift matches and the pointing
-    # correction matrix
-    np.savetxt(subsampling, np.array([z]))
-    np.savetxt(pointing, A)
-    np.savetxt(sift_matches, m)
-
-    # ATTENTION if subsampling_factor is set the rectified images will be
-    # smaller, and the homography matrices and disparity range will reflect
-    # this fact
-
     ## rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
         rpc2, x, y, w, h, rect1, rect2, A, m)
+
+    ## save the subsampling factor, the sift matches, the pointing
+    # correction matrix, the rectifying homographies and the disparity bounds
+    # ATTENTION if subsampling_factor is set the rectified images will be
+    # smaller, and the homography matrices and disparity range will reflect
+    # this fact
+    np.savetxt(subsampling, np.array([z]))
+    np.savetxt(pointing, A)
+    np.savetxt(sift_matches, m)
+    np.savetxt(H_ref, H1)
+    np.savetxt(H_sec, H2)
+    np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
 
 
     if global_params.disp_range_method == "auto_srtm" or global_params.disp_range_method == "wider_sift_srtm":
@@ -125,6 +130,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             print "Wider sift srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
     else:
          print "Auto sift disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
+
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
