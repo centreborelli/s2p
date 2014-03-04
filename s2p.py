@@ -392,12 +392,20 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     crop_color = '%s/roi_color_ref.tif' % out_dir
     cloud = '%s/cloud.ply' % out_dir
 
-    # read the zoom value
-    zoom = global_params.subsampling_factor
+    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
+    # ensure that the coordinates of the ROI are multiples of the zoom factor,
+    # to avoid bad registration of tiles due to rounding problems.
+    z = global_params.subsampling_factor
+    assert(z > 0 and z == np.floor(z))
+    if (z != 1):
+        x = z * np.floor(float(x) / z)
+        y = z * np.floor(float(y) / z)
+        w = z * np.ceil(float(w) / z)
+        h = z * np.ceil(float(h) / z)
 
     # build the matrix of the zoom + translation transformation
     A = common.matrix_translation(-x, -y)
-    f = 1.0/zoom
+    f = 1.0/z
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
     trans = common.tmpfile('.txt')
@@ -413,16 +421,18 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
         off_x, off_y = 0, 0
 
     # crop the ROI and zoom
-    if zoom == 1:
+    if z == 1:
         common.image_crop_TIFF(img, x, y, w, h, crop)
     else:
+        # gdal is used for the zoom because it handles BigTIFF files, and
+        # before the zoom out the image may be that big
         tmp_crop = common.image_crop_TIFF(img, x, y, w, h)
-        common.image_safe_zoom_fft(tmp_crop, zoom, crop)
+        common.image_zoom_gdal(tmp_crop, z, crop, w, h)
 
     # colorize, then generate point cloud
     try:
         with open(clr):
-            triangulation.colorize(crop, clr, x, y, zoom, crop_color)
+            triangulation.colorize(crop, clr, x, y, z, crop_color)
     except IOError:
         print 'no color image available for this dataset.'
         crop_color = common.image_qauto(crop)
@@ -482,6 +492,10 @@ if __name__ == '__main__':
         global_params.max_nb_threads = cfg['max_nb_threads']
     if "clean_tmp" in cfg:
         global_params.clean_tmp = cfg['clean_tmp']
+    if "fusion_thresh" in cfg:
+        global_params.fusion_thresh = cfg['fusion_thresh']
+    if "full_img" in cfg:
+        global_params.full_img = cfg['full_img']
 
     # other params to be read in the json
     if "offset_ply" in cfg:
@@ -490,16 +504,24 @@ if __name__ == '__main__':
         do_offset = False
 
     # roi definition and output path
-    x = cfg['roi']['x']
-    y = cfg['roi']['y']
-    w = cfg['roi']['w']
-    h = cfg['roi']['h']
     out_dir = str(cfg['out_dir'])
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     clr1 = cfg['images'][0]['clr']
     img2 = cfg['images'][1]['img']
     rpc2 = cfg['images'][1]['rpc']
+    if "full_img" in cfg:
+        if cfg['full_img']:
+            sz = common.image_size_gdal(img1)
+            x = 0
+            y = 0
+            w = sz[0]
+            h = sz[1]
+    else:
+        x = cfg['roi']['x']
+        y = cfg['roi']['y']
+        w = cfg['roi']['w']
+        h = cfg['roi']['h']
 
     # create output directory for the experiment, and store a copy the json
     # config file there
@@ -513,7 +535,7 @@ if __name__ == '__main__':
         img3 = cfg['images'][2]['img']
         rpc3 = cfg['images'][2]['rpc']
         dem = process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x,
-                y, w, h, thresh=3)
+                y, w, h, global_params.fusion_thresh)
 
     # point cloud generation
     generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem, do_offset)

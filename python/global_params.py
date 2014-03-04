@@ -24,6 +24,10 @@ disp_range_method = "auto_sift"
 disp_range_srtm_low_margin = -10
 disp_range_srtm_high_margin = +100
 
+# threshold (in meters) used for the fusion of two dems in triplet processing
+# It should be adapted to the zoom factor
+fusion_thresh = 3
+
 temporary_dir = "/tmp"
 tile_size  = 500
 max_nb_threads = -1
