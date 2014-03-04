@@ -287,8 +287,9 @@ def image_qauto(im):
     Returns:
         path of requantized image, saved as png
     """
-    out = tmpfile('.tif')
-    run('gdal_translate -co profile=baseline -scale %s %s 2> /dev/null' % (im, out))
+    out = tmpfile('.png')
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s 2> /dev/null' % (im, out))
+    #run('qauto %s %s 2> /dev/null' % (im, out))
     return out
 
 
@@ -304,8 +305,8 @@ def image_qeasy(im, black, white):
     Returns:
         path of requantized image, saved as png
     """
-    out = tmpfile('.tif')
-    run('gdal_translate -co profile=baseline -scale %d %d %s %s 2> /dev/null' % (black, white, im, out))
+    out = tmpfile('.png')
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s 2> /dev/null' % (black, white, im, out))
     return out
 
 
@@ -320,7 +321,8 @@ def rgbi_to_rgb(im):
         output rgb image
     """
     out = tmpfile('.tif')
-    run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
+    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s 2> /dev/null' %(im, out))
+    #run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
     return out
 
 
