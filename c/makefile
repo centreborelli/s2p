@@ -11,7 +11,10 @@ monasse: build_dir
 build_dir:
 	mkdir -p ../bin/monasse_refactored_build
 
-imscript: bin_dir bin2asc colormesh downsa backflow synflow imprintf iion plambda qauto qeasy crop disp_to_h colormesh_projective disp_to_h_projective height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d siftu srtm4 ransac
+imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
+	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
+	height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
+	siftu srtm4 ransac colormesh
 
 bin_dir:
 	mkdir -p $(BINDIR)

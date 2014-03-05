@@ -138,6 +138,9 @@ int main_disp_to_h(int c, char *v[])
 
                 // compute the coordinates
                 h = rpc_height(rpca, rpcb, q0[0], q0[1], q1[0], q1[1], &err);
+                heightMap[pos] = h;
+                errMap[pos] = err;
+
 //                eval_rpc(groundCoords, rpca, q0[0], q0[1], h);
 //                // compute normal
 //                eval_rpc(groundCoordsPlus10, rpca, q0[0], q0[1], h+10);
@@ -179,14 +182,6 @@ int main_disp_to_h(int c, char *v[])
 //                outbuf[npoints].rpc_error    = err;
 //                outbuf[npoints].x            = x;
 //                outbuf[npoints].y            = y;
-
-                if (err < 5) {
-                    heightMap[pos] = h;
-                    errMap[pos] = err;
-                } else {
-                    heightMap[pos] = NAN;
-                    errMap[pos] = NAN;
-                }
 
             }
         }
