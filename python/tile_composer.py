@@ -46,7 +46,7 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
                 vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>" %tile_fname)
                 vrtfile.write("\t\t\t<SourceBand>1</SourceBand>")
                 vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>" %(0,x1-x0,0,y1-y0))
-                vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>") %(x0,x1-x0,y0,y1-y0))
+                vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>" %(x0,x1-x0,y0,y1-y0))
                 vrtfile.write("\t\t</SimpleSource>")
     
     vrtfile.write("\t</VRTRasterBand>")
