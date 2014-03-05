@@ -25,7 +25,7 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
     nty = np.ceil(float(h - ov) / (th - ov)).astype(int)
     assert(ntx * nty == N)
 
-    vrtfilename = common.tmpfile('vrt')
+    vrtfilename = common.tmpfile('.vrt')
     
     vrtfile = open(vrtfilename,'w')
 
