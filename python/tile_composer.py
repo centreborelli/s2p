@@ -6,6 +6,57 @@ import numpy as np
 import piio
 import common
 
+def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
+    """
+    Compose several tiles of the same size into a bigger image (using gdal vrt)
+
+    Args:
+        fout: path to the output image
+        w, h: output image dimensions
+        list_tiles: list containing paths to the input tiles
+        tw, th: dimensions of a tile (they must all have the same dimensions)
+        ov: overlap between tiles (in pixels)
+
+    Returns:
+        nothing
+    """
+    N = len(list_tiles)
+    ntx = np.ceil(float(w - ov) / (tw - ov)).astype(int)
+    nty = np.ceil(float(h - ov) / (th - ov)).astype(int)
+    assert(ntx * nty == N)
+
+    vrtfilename = common.tmpfile('vrt')
+    
+    vrtfile = open(vrtfilename,'w')
+
+    vrtfile.write("<VRTDataset rasterXSize=\"%i\" rasterYSize=\"%i\">" %(w,h))
+    vrtfile.write("\t<VRTRasterBand dataType=\"UInt32\" band=\"1\">")
+    vrtfile.write("\t\t<ColorInterp>Gray</ColorInterp>")
+
+    # loop over all the tiles
+    for j in range(nty):
+        for i in range(ntx):
+            x0 = i * (tw - ov)
+            y0 = j * (th - ov)
+            x1 = min(x0 + tw, w)
+            y1 = min(y0 + th, h)
+            tile_fname = list_tiles[j * ntx + i]
+            if os.path.isfile(tile_fname):
+                vrtfile.write("\t\t<SimpleSource>")
+                vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>" %tile_fname)
+                vrtfile.write("\t\t\t<SourceBand>1</SourceBand>")
+                vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>" %(0,x1-x0,0,y1-y0))
+                vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>") %(x0,x1-x0,y0,y1-y0))
+                vrtfile.write("\t\t</SimpleSource>")
+    
+    vrtfile.write("\t</VRTRasterBand>")
+    vrtfile.write("</VRTDataset>")
+    vrtfile.close()
+
+    run('gdal_translate %s %s' %(vrtfilename,fout))
+
+    return
+
 def mosaic(fout, w, h, list_tiles, tw, th, ov):
     """
     Compose several tiles of the same size into a bigger image.
