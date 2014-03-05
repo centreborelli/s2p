@@ -53,7 +53,7 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
     vrtfile.write("</VRTDataset>")
     vrtfile.close()
 
-    run('gdal_translate %s %s' %(vrtfilename,fout))
+    common.run('gdal_translate %s %s' %(vrtfilename,fout))
 
     return
 
