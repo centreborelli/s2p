@@ -71,6 +71,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     pointing = '%s/pointing.txt' % out_dir
     sift_matches = '%s/sift_matches.txt' % out_dir
 
+    if global_params.retry and os.path.isfile(dem):
+        print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h) 
+        if not global_params.debug:
+            sys.stdout = sys.__stdout__
+            sys.stderr = sys.__stderr__
+            fout.close()
+        return dem
+
+
     ## select ROI
     try:
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
@@ -245,15 +254,19 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         # http://stackoverflow.com/questions/19705200/multiprocessing-with-numpy-makes-python-quit-unexpectedly-on-osx
         manager = multiprocessing.Manager()
         out_dict = manager.dict()
-        p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
-            args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
-        p.start()
-        p.join()
-        if 'correction_matrix' in out_dict:
-            A = out_dict['correction_matrix']
-            np.savetxt('%s/pointing_global.txt' % out_dir, A)
-        else:
-            print """WARNING: global correction matrix not found. The
+        matrix_file = '%s/pointing_global.txt' % out_dir
+
+        if not global_params.retry or not os.path.isfile(matrix_file):
+
+            p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
+                                        args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
+            p.start()
+            p.join()
+            if 'correction_matrix' in out_dict:
+                A = out_dict['correction_matrix']
+                np.savetxt(matrix_file, A)
+            else:
+                print """WARNING: global correction matrix not found. The
             estimation process seems to have failed. No global correction will
             be applied."""
 
@@ -298,7 +311,12 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
-    tile_composer.mosaic(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
+    if not global_params.retry or not os.path.isfile(out):
+        print "Mosaic method: "+global_params.mosaic_method
+        if global_params.mosaic_method == 'gdal':
+            tile_composer.mosaic_gdal(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
+        else:
+            tile_composer.mosaic(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
 
     # cleanup
     if global_params.clean_tmp:
@@ -496,6 +514,12 @@ if __name__ == '__main__':
         global_params.fusion_thresh = cfg['fusion_thresh']
     if "full_img" in cfg:
         global_params.full_img = cfg['full_img']
+
+    if "retry" in cfg:
+        global_params.retry = cfg['retry']
+
+    if "mosaic_method" in cfg:
+        global_params.mosaic_method = cfg['mosaic_method']
 
     # other params to be read in the json
     if "offset_ply" in cfg:
