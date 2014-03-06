@@ -33,7 +33,7 @@ tile_size  = 500
 max_nb_threads = -1
 clean_tmp = True 
 
-retry = False
+skip_existing = False
 mosaic_method = 'piio'
 
 # bunch not used yet

@@ -74,8 +74,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
 
-    if global_params.retry and os.path.isfile(dem):
-        print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h) 
+    if os.path.isfile(dem) and global_params.skip_existing:
+        print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
         if not global_params.debug:
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
@@ -262,10 +262,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         out_dict = manager.dict()
         matrix_file = '%s/pointing_global.txt' % out_dir
 
-        if not global_params.retry or not os.path.isfile(matrix_file):
-
+        if not os.path.isfile(matrix_file) or not global_params.skip_existing:
             p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
-                                        args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
+                    args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
             p.start()
             p.join()
             if 'correction_matrix' in out_dict:
@@ -309,7 +308,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             dem = '%s/dem.tif' % tile_dir
 
-            if not os.path.exists(dem):
+            if not os.path.isfile(dem):
                 print "WARNING: Tile %d %d %d %d failed. Retrying..." % (i, j,
                         tw, th)
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
@@ -317,7 +316,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
-    if not global_params.retry or not os.path.isfile(out):
+    if not os.path.isfile(out) or not global_params.skip_existing:
         print "Mosaic method: "+global_params.mosaic_method
         if global_params.mosaic_method == 'gdal':
             tile_composer.mosaic_gdal(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
@@ -521,8 +520,8 @@ if __name__ == '__main__':
     if "full_img" in cfg:
         global_params.full_img = cfg['full_img']
 
-    if "retry" in cfg:
-        global_params.retry = cfg['retry']
+    if "skip_existing" in cfg:
+        global_params.skip_existing = cfg['skip_existing']
 
     if "mosaic_method" in cfg:
         global_params.mosaic_method = cfg['mosaic_method']

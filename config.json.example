@@ -33,5 +33,7 @@
   "fusion_thresh" : 3,
   "disp_range_method" : "sift",
   "disp_range_srtm_high_margin" : 50,
-  "disp_range_srtm_low_margin" : -20
+  "disp_range_srtm_low_margin" : -20,
+  "skip_existing" : false,
+  "mosaic_method" : 'piio'
 }

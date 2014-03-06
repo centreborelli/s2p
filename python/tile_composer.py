@@ -106,7 +106,7 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
                 tile[~ind] = 0
                 out[y0:y1, x0:x1] += tile[:y1 - y0, :x1 - x0]
 
-    # put nan wher count is zero, and take the average where count is nonzero.
+    # put nan where count is zero, and take the average where count is nonzero.
     ind = (count > 0)
     out[ind] = out[ind] / count[ind]
     out[~ind] = np.nan
