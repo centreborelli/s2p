@@ -539,13 +539,12 @@ if __name__ == '__main__':
     clr1 = cfg['images'][0]['clr']
     img2 = cfg['images'][1]['img']
     rpc2 = cfg['images'][1]['rpc']
-    if "full_img" in cfg:
-        if cfg['full_img']:
-            sz = common.image_size_gdal(img1)
-            x = 0
-            y = 0
-            w = sz[0]
-            h = sz[1]
+    if "full_img" in cfg and cfg['full_img']:
+        sz = common.image_size_gdal(img1)
+        x = 0
+        y = 0
+        w = sz[0]
+        h = sz[1]
     else:
         x = cfg['roi']['x']
         y = cfg['roi']['y']
