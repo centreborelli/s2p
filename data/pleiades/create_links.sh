@@ -13,16 +13,14 @@ function create_links ()
         do
             i=$(($i+1))
             # image
-            abs_path=$pleiades_dir/$image
             link_name=`printf im%02d$suffix.tif $i`
-            ln -sf $abs_path $dataset/$link_name
+            ln -sf $image $dataset/$link_name
             # preview
-            dir_path=`dirname $image`
-            abs_path=$pleiades_dir/$dir_path/PREVIEW_*.JPG
+            abs_path=`dirname $image`/PREVIEW_*.JPG
             link_name=`printf prev%02d$suffix.jpg $i`
             ln -sf $abs_path $dataset/$link_name
             # rpc
-            abs_path=$pleiades_dir/$dir_path/RPC_*.XML
+            abs_path=`dirname $image`/RPC_*.XML
             link_name=`printf rpc%02d$suffix.xml $i`
             cp $abs_path $dataset/
             ln -sf `basename $abs_path` $dataset/$link_name
@@ -49,15 +47,31 @@ if [ ! -d $pleiades_dir ] ; then
     exit
 fi
 
-
-# create the symlinks
-for dataset in `find * -type d`
-    do
-        if [ -f "$dataset/images_paths_panchro.txt" ] ; then
-            create_links $dataset "images_paths_panchro.txt" ""
+# step 1: parse the pleiades data folder to extract the paths to JP2.TIF images
+for f in $pleiades_dir/*; do
+    if [ -d $f ]; then
+        mkdir -p `basename $f`
+        if ls $f/dataset_* &> /dev/null; then
+            # the dataset has subdatasets (multidate)
+            for ff in $f/dataset_*; do
+                mkdir -p `basename $f`/`basename $ff`
+                find $ff | grep "JP2.TIF" | grep "_P_" >  `basename $f`/`basename $ff`/paths_panchro.txt
+                find $ff | grep "JP2.TIF" | grep "_MS_" > `basename $f`/`basename $ff`/paths_ms.txt
+            done
+        else
+            # the dataset does not have subdatasets
+            find $f | grep "JP2.TIF" | grep "_P_" >  `basename $f`/paths_panchro.txt
+            find $f | grep "JP2.TIF" | grep "_MS_" > `basename $f`/paths_ms.txt
         fi
+    fi
+done
 
-        if [ -f "$dataset/images_paths_ms.txt" ] ; then
-            create_links $dataset "images_paths_ms.txt" "_color"
-        fi
-    done
+# step 2: create the symlinks
+for dataset in `find * -type d`; do
+    if [ -f "$dataset/paths_panchro.txt" ] ; then
+        create_links $dataset "paths_panchro.txt" ""
+    fi
+    if [ -f "$dataset/paths_ms.txt" ] ; then
+        create_links $dataset "paths_ms.txt" "_color"
+    fi
+done
