@@ -25,7 +25,7 @@ from python import global_params
 
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-        w=None, h=None, A_global=None, prv1=None):
+        w=None, h=None, prv1=None):
     """
     Computes a height map from a Pair of Pleiades images, without tiling
 
@@ -40,12 +40,10 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        A_global (optional): global pointing correction matrix, used for
-            triangulation (but not for stereo-rectification)
         prv1 (optional): path to a preview of the reference image
 
     Returns:
-        path to the height map, resampled on the grid of the reference image.
+        nothing
     """
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
@@ -64,9 +62,6 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     rect2 = '%s/rectified_sec.tif' % (out_dir)
     disp    = '%s/rectified_disp.pgm'   % (out_dir)
     mask    = '%s/rectified_mask.png'   % (out_dir)
-    height  = '%s/rectified_height.tif' % (out_dir)
-    rpc_err = '%s/rpc_err.tif'% (out_dir)
-    dem     = '%s/dem.tif' % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
     sift_matches = '%s/sift_matches.txt' % out_dir
@@ -80,7 +75,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
             fout.close()
-        return dem
+        return
 
 
     ## select ROI
@@ -103,24 +98,11 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     ## correct pointing error
     # A is the correction matrix and m is the list of sift matches
     A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y,
-        w, h, first_guess=A_global)
+            w, h)
 
     ## rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
         rpc2, x, y, w, h, rect1, rect2, A, m)
-
-    ## save the subsampling factor, the sift matches, the pointing
-    # correction matrix, the rectifying homographies and the disparity bounds
-    # ATTENTION if subsampling_factor is set the rectified images will be
-    # smaller, and the homography matrices and disparity range will reflect
-    # this fact
-    np.savetxt(subsampling, np.array([z]))
-    np.savetxt(pointing, A)
-    np.savetxt(sift_matches, m)
-    np.savetxt(H_ref, H1)
-    np.savetxt(H_sec, H2)
-    np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
-
 
     if global_params.disp_range_method == "auto_srtm" or global_params.disp_range_method == "wider_sift_srtm":
         # Read models
@@ -142,14 +124,19 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        global_params.matching_algorithm, disp_min, disp_max)
+            global_params.matching_algorithm, disp_min, disp_max)
 
-    ## triangulation
-    if A_global is not None:
-        A = A_global
-    triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
-        rpc_err, A)
-    triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
+    ## save the subsampling factor, the sift matches, the pointing
+    # correction matrix, the rectifying homographies and the disparity bounds
+    # ATTENTION if subsampling_factor is set the rectified images will be
+    # smaller, and the homography matrices and disparity range will reflect
+    # this fact
+    np.savetxt(subsampling, np.array([z]))
+    np.savetxt(pointing, A)
+    np.savetxt(sift_matches, m)
+    np.savetxt(H_ref, H1)
+    np.savetxt(H_sec, H2)
+    np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
 
     # close logs
     if not global_params.debug:
@@ -157,7 +144,18 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         sys.stderr = sys.__stderr__
         fout.close()
 
-    return dem
+    return
+
+#        path to the height map, resampled on the grid of the reference image.
+#    height  = '%s/rectified_height.tif' % (out_dir)
+#    rpc_err = '%s/rpc_err.tif'% (out_dir)
+#    dem     = '%s/dem.tif' % (out_dir)
+#    ## triangulation
+#    if A_global is not None:
+#        A = A_global
+#    triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
+#        rpc_err, A)
+#    triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
 
 
 def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
