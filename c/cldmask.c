@@ -349,7 +349,7 @@ int main(int c, char *v[])
 	// read input arguments
 	char *Hstring = pick_option(&c, &v, "h", "");
 	if (c != 5 && c!= 4 && c != 3) {
-		return fprintf(stderr, "usage:\n\t%s"
+		return fprintf(stderr, "usage:\n\t%s "
 		"width height [-h \"h1 ... h9\"] [clouds.gml [out.png]]\n", *v);
 		//   1 2                          3           4
 	}
