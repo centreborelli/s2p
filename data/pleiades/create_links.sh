@@ -24,6 +24,18 @@ function create_links ()
             link_name=`printf rpc%02d$suffix.xml $i`
             cp $abs_path $dataset/
             ln -sf `basename $abs_path` $dataset/$link_name
+            # roi mask
+            abs_path=`dirname $image`/MASKS/ROI*.GML
+            link_name=`printf roi_msk%02d$suffix.xml $i`
+            cp $abs_path $dataset/
+            ln -sf `basename $abs_path` $dataset/$link_name
+            # cloud mask
+            abs_path=`dirname $image`/MASKS/CLD*.GML
+            link_name=`printf cld_msk%02d$suffix.xml $i`
+            if [ -f $abs_path ]; then
+                cp $abs_path $dataset/
+                ln -sf `basename $abs_path` $dataset/$link_name
+            fi
     done
 }
 
@@ -59,7 +71,7 @@ for f in $pleiades_dir/*; do
                 find $ff | grep "JP2.TIF" | grep "_MS_" > `basename $f`/`basename $ff`/paths_ms.txt
             done
         else
-            # the dataset does not have subdatasets
+            # the dataset has no subdatasets
             find $f | grep "JP2.TIF" | grep "_P_" >  `basename $f`/paths_panchro.txt
             find $f | grep "JP2.TIF" | grep "_MS_" > `basename $f`/paths_ms.txt
         fi
