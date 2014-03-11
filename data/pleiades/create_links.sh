@@ -26,12 +26,12 @@ function create_links ()
             ln -sf `basename $abs_path` $dataset/$link_name
             # roi mask
             abs_path=`dirname $image`/MASKS/ROI*.GML
-            link_name=`printf roi_msk%02d$suffix.xml $i`
+            link_name=`printf roi_msk%02d$suffix.gml $i`
             cp $abs_path $dataset/
             ln -sf `basename $abs_path` $dataset/$link_name
             # cloud mask
             abs_path=`dirname $image`/MASKS/CLD*.GML
-            link_name=`printf cld_msk%02d$suffix.xml $i`
+            link_name=`printf cld_msk%02d$suffix.gml $i`
             if [ -f $abs_path ]; then
                 cp $abs_path $dataset/
                 ln -sf `basename $abs_path` $dataset/$link_name
