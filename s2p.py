@@ -25,7 +25,7 @@ from python import global_params
 
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-        w=None, h=None, A_global=None, prv1=None):
+        w=None, h=None, A_global=None, prv1=None, cld_msk=None, roi_msk=None):
     """
     Computes a height map from a Pair of Pleiades images, without tiling
 
@@ -43,6 +43,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         A_global (optional): global pointing correction matrix, used for
             triangulation (but not for stereo-rectification)
         prv1 (optional): path to a preview of the reference image
+        cld_msk (optional): path to a gml file containing a cloud mask
+        roi_msk (optional): path to a gml file containing a mask defining the
+            area contained in the full image.
 
     Returns:
         path to the height map, resampled on the grid of the reference image.
@@ -144,6 +147,12 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         global_params.matching_algorithm, disp_min, disp_max)
 
+    ## update mask with cloud mask and roi mask
+    if cld_msk is not None:
+        triangulation.update_mask(mask, H1, cld_msk, True)
+    if roi_msk is not None:
+        triangulation.update_mask(mask, H1, roi_msk, False)
+
     ## triangulation
     if A_global is not None:
         A = A_global
@@ -160,8 +169,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     return dem
 
 
-def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-        w=None, h=None, A_global=None, prv1=None):
+def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
+        y=None, w=None, h=None, A_global=None, prv1=None, cld_msk=None,
+        roi_msk=None):
     """
     Safe call to process_pair_single_tile (all exceptions will be
     caught). Arguments are the same. This safe version is used when
@@ -174,7 +184,7 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=Non
     dem = ""
     try:
         dem = process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y,
-        w, h, A_global, prv1)
+            w, h, A_global, prv1, cld_msk, roi_msk)
     # Catch all possible exceptions here
     except:
         e = sys.exc_info()[0]
@@ -188,7 +198,7 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=Non
     return dem
 
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
-        h=None, tw=None, th=None, ov=None):
+        h=None, tw=None, th=None, ov=None, cld_msk=None, roi_msk=None):
     """
     Computes a height map from a Pair of Pleiades images, using tiles.
 
@@ -206,6 +216,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             cutted into small tiles for processing.
         tw, th: dimensions of the tiles
         ov: width of overlapping bands between tiles
+        cld_msk (optional): path to a gml file containing a cloud mask
+        roi_msk (optional): path to a gml file containing a mask defining the
+            area contained in the full image.
 
     Returns:
         path to the digital elevation model (dem), resampled on the grid of the
@@ -292,10 +305,11 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             tiles.append('%s/dem.tif' % tile_dir)
             if global_params.debug:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
-                    j, tw, th, A)
+                    j, tw, th, A, None, cld_msk, roi_msk)
             else:
                 pool.apply_async(safe_process_pair_single_tile, args=(tile_dir,
-                    img1, rpc1, img2, rpc2, i, j, tw, th, A))
+                    img1, rpc1, img2, rpc2, i, j, tw, th, A, None, cld_msk,
+                    roi_msk))
 
     # wait for all the processes to terminate
     pool.close()
@@ -312,7 +326,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
                 print "WARNING: Tile %d %d %d %d failed. Retrying..." % (i, j,
                         tw, th)
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
-                        j, tw, th, A)
+                        j, tw, th, A, None, cld_msk, roi_msk)
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
