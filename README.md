@@ -163,11 +163,7 @@ dataset by other means.** The size of these images is around 40000 x 40000
 pixels, covering an area of 20km x 20km. The files weigh approximately 2GB
 each.
 
-Only the `xml` files containing the calibration data (encoded by rpc
-coefficients) are provided. They are located in the folder `pleiades_data/rpc`.
-The folder `pleiades_data/images` contains the list of the relative paths to
-the full images of our dataset. These paths are relative to the location of
-your copy of the dataset. Run the script `create_links.sh` to generate symbolic
-links to the images files. These links will be located in the
-`pleiades_data/images/*` subfolders and are easier to use than the actual real
-paths to the image files.
+Run the script `data/pleiades/create_links.sh` to generate symbolic links to
+the images files and copy the `xml` files. The links will be located in the
+`data/pleiades/*` subfolders and are easier to use than the actual real paths
+to the image files.
