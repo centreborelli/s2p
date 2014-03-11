@@ -14,13 +14,16 @@ build_dir:
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
 	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
 	height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
-	siftu srtm4 ransac colormesh
+	siftu srtm4 ransac colormesh cldmask
 
 bin_dir:
 	mkdir -p $(BINDIR)
 
 bin2asc: bin2asc.c
 	cc -std=c99 bin2asc.c -o $(BINDIR)/bin2asc
+
+cldmask: iio.o cldmask.o
+	cc iio.o cldmask.o -lpng -ltiff -ljpeg -o $(BINDIR)/cldmask
 
 colormesh: iio.o rpc.o colormesh.o geographiclib_wrapper.o
 	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lGeographic -o $(BINDIR)/colormesh
@@ -169,6 +172,9 @@ siftu.o: siftu.c siftie.c
 
 ransac.o: ransac.c fail.c xmalloc.c xfopen.c cmphomod.c ransac_cases.c parsenumbers.c
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN ransac.c
+
+cldmask.o: cldmask.c fail.c xmalloc.c xfopen.c parsenumbers.c drawsegment.c pickopt.c
+	cc -c -std=c99 -g -O3 cldmask.c
 
 clean:
 	rm *.o

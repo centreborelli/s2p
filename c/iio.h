@@ -90,6 +90,8 @@ void *iio_read_image_float_matrix_vec(const char *fnam, int *w, int *h, int *pd)
 double *iio_read_image_double(const char *fname, int *w, int *h);
 double *iio_read_image_double_vec(const char *fname, int *w, int *h, int *pd);
 
+int *iio_read_image_int(const char *fname, int *w, int *h);
+
 // All these functions are boring  variations, and they are defined at the
 // end of this file.  More interesting are the two following general
 // functions:
@@ -266,6 +268,7 @@ void iio_save_image_float_split(char *filename, float *x, int w, int h, int pd);
 void iio_save_image_double_vec(char *filename, double *x, int w, int h, int pd);
 void iio_save_image_float(char *filename, float *x, int w, int h);
 void iio_save_image_double(char *filename, double *x, int w, int h);
+void iio_save_image_int(char *filename, int *x, int w, int h);
 void iio_save_image_uint8_vec(char *filename, uint8_t *x, int w, int h, int pd);
 void iio_save_image_uint16_vec(char *filename, uint16_t *x, int w, int h, int pd);
 void iio_save_image_uint8_matrix_rgb(char *f, unsigned char (**x)[3], int w, int h);

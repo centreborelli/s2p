@@ -90,6 +90,21 @@ static int parse_floats(float *t, int nmax, const char *s)
 	return i;
 }
 
+static float *alloc_parse_floats2(int nmax, const char *s, int *n)
+{
+	if (!nmax) nmax = strlen(s);
+	float *r = xmalloc(nmax*sizeof*r);
+	s += strspn(s, "[] \n\t,:;()");
+	int i = 0, w;
+	while (i < nmax && 1 == sscanf(s, "%g%*[][ \n\t,:;]%n", r + i, &w))
+	{
+		i += 1;
+		s += w;
+	}
+	*n = i;
+	return r;
+}
+
 static float *alloc_parse_floats(int nmax, const char *ss, int *n)
 {
 	// add a space to s, so that gabriele's expression works as intended
@@ -108,6 +123,25 @@ static float *alloc_parse_floats(int nmax, const char *ss, int *n)
 		s += w;
 	}
 	//fprintf(stderr, "finished, got i=%d\n", i);
+	*n = i;
+	return r;
+}
+
+static double *alloc_parse_doubles(int nmax, const char *ss, int *n)
+{
+	// add a space to s, so that gabriele's expression works as intended
+	int ns = strlen(ss);
+	char t[2+ns], *s = t;
+	s[0] = ' ';
+	for (int i = 0; i <= ns; i++)
+		s[i+1] = ss[i];
+
+	double *r = xmalloc(nmax * sizeof*r);
+	int i = 0, w;
+	while (i < nmax && 1 == sscanf(s, "%*[][ \n\t,:;]%lf%n", r + i, &w)) {
+		i += 1;
+		s += w;
+	}
 	*n = i;
 	return r;
 }
