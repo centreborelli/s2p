@@ -7,6 +7,37 @@ import numpy as np
 import common
 import homography_cropper
 
+def update_mask(target_mask, H, gml_file, invert_gml=False):
+    """
+    Computes the intersection between an image mask and a gml mask
+
+    Args:
+        target_mask: path to the png file containing the image mask. This file
+            will be overwritten.
+        H: 3x3 numpy array defining the rectifying homography
+        gml_file: path to the gml file defining the mask on the full image
+        invert_gml: boolean flag. Set it to True if the gml mask is positive on
+            marked regions (it is the case for cloud masks, but not for roi masks)
+
+    Returns:
+        nothing. The file target_mask is modified.
+    """
+    msk = common.tmpfile('.png')
+    w, h = common.image_size(target_mask)
+
+    # write the 9 coefficients of the homography to a string, then call cldmask
+    hij = ' '.join(['%r' % num for num in H.flatten()])
+    common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, gml_file, msk))
+
+    # invert gml mask
+    if invert_gml:
+        common.run('plambda %s "255 x -" -o %s' % (msk, msk))
+
+    # compute the intersection between target_mask and msk
+    common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk, target_mask))
+    return
+
+
 def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     """
     Computes a height map from a disparity map, using rpc.
@@ -42,7 +73,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
         in_map: path to the input map, usually a height map or a mask, sampled
             on the rectified grid
         H: numpy 3x3 array containing the rectifying homography
-        x, y, w, h: four integers defining the rectangular ROI in the original 
+        x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
         zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
