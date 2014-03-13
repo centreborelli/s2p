@@ -23,7 +23,7 @@ bin2asc: bin2asc.c
 	cc -std=c99 bin2asc.c -o $(BINDIR)/bin2asc
 
 colormesh: iio.o rpc.o colormesh.o geographiclib_wrapper.o
-	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lGeographic -o $(BINDIR)/colormesh
+	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lGeographic -lstdc++ -o $(BINDIR)/colormesh
 
 downsa: iio.o downsa.o
 	cc iio.o downsa.o -lpng -ltiff -ljpeg -o $(BINDIR)/downsa
