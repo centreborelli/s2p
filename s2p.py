@@ -289,12 +289,12 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             be applied."""
 
     # create pool with less workers than available cores
-    PROCESSES = int(0.75 * multiprocessing.cpu_count())
+    max_processes = multiprocessing.cpu_count()
     if global_params.max_nb_threads > 0:
-        PROCESSES = min(PROCESSES, global_params.max_nb_threads)
+        max_processes = min(max_processes, global_params.max_nb_threads)
 
-    print 'Creating pool with %d processes\n' % PROCESSES
-    pool = multiprocessing.Pool(PROCESSES)
+    print 'Creating pool with %d processes\n' % max_processes
+    pool = multiprocessing.Pool(max_processes)
 
     # process the tiles
     # don't parallellize if in debug mode
