@@ -347,7 +347,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
 def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
         y=None, w=None, h=None, thresh=3, tile_w=None, tile_h=None,
-        overlap=None, prv1=None):
+        overlap=None, prv1=None, cld_msk=None, roi_msk=None):
     """
     Computes a height map from three Pleiades images.
 
@@ -370,6 +370,9 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
         tile_w, tile_h: dimensions of the tiles
         overlap: width of overlapping bands between tiles
         prv1 (optional): path to a preview of the reference image
+        cld_msk (optional): path to a gml file containing a cloud mask
+        roi_msk (optional): path to a gml file containing a mask defining the
+            area contained in the full image.
 
     Returns:
         path to the digital elevaton model (dem), resampled on the grid of the
@@ -388,11 +391,11 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
     dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-            tile_w, tile_h, overlap)
+            tile_w, tile_h, overlap, cld1, roi1)
 
     out_dir_right = '%s/right' % out_dir
     dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-            tile_w, tile_h, overlap)
+            tile_w, tile_h, overlap, cld1, roi1)
 
     # merge the two digital elevation models
     dem = '%s/dem.tif' % out_dir
@@ -551,6 +554,10 @@ if __name__ == '__main__':
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     clr1 = cfg['images'][0]['clr']
+    if "cld" in cfg['images'][0]:
+        cld1 = cfg['images'][0]['cld']
+    if "roi" in cfg['images'][0]:
+        roi1 = cfg['images'][0]['roi']
     img2 = cfg['images'][1]['img']
     rpc2 = cfg['images'][1]['rpc']
     if "full_img" in cfg and cfg['full_img']:
@@ -572,12 +579,14 @@ if __name__ == '__main__':
 
     # dem generation
     if len(cfg['images']) == 2:
-        dem = process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h)
+        dem = process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, None,
+                None, None, cld1, roi1)
     else:
         img3 = cfg['images'][2]['img']
         rpc3 = cfg['images'][2]['rpc']
         dem = process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x,
-                y, w, h, global_params.fusion_thresh)
+                y, w, h, global_params.fusion_thresh, None, None, None, None,
+                cld1, roi1)
 
     # point cloud generation
     generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem, do_offset)
