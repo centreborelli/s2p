@@ -153,7 +153,7 @@ def grep_xml(xml_file, tag):
     Reads the value of an element in an xml file.
 
     Args:
-        xml_grep FIRST_COL mont_blanc/dim*.xml | cut -d '>' -f 2 | cut -d '<' -f 1file: path to the xml file
+        xml_file: path to the xml file
         tag: start/end tag delimiting the desired element
 
     Returns:
@@ -163,15 +163,19 @@ def grep_xml(xml_file, tag):
     """
     try:
         with open(xml_file):
-            p1 = subprocess.Popen(['grep', tag, xml_file], stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(['cut', '-d', '>', '-f', '2'], stdin=p1.stdout, stdout=subprocess.PIPE)
-            p3 = subprocess.Popen(['cut', '-d', '<', '-f', '1'], stdin=p2.stdout, stdout=subprocess.PIPE)
+            p1 = subprocess.Popen(['grep', tag, xml_file],
+                    stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(['cut', '-d', '>', '-f', '2'],
+                    stdin=p1.stdout, stdout=subprocess.PIPE)
+            p3 = subprocess.Popen(['cut', '-d', '<', '-f', '1'],
+                    stdin=p2.stdout, stdout=subprocess.PIPE)
             lines = p3.stdout.read().splitlines()
             if not lines:
                 print "grep_xml: no tag %s in file %s" % (tag, xml_file)
                 return
-            else:
-                return lines[0]
+            if len(lines) > 1:
+                print "grep_xml: WARNING several occurences of %s in file %s" % (tag, xml_file)
+            return lines[0]
     except IOError:
         print "grep_xml: the input file doesn't exist %s" % str(im)
         sys.exit()
