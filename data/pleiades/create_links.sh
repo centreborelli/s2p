@@ -24,6 +24,11 @@ function create_links ()
             link_name=`printf rpc%02d$suffix.xml $i`
             cp $abs_path $dataset/
             ln -sf `basename $abs_path` $dataset/$link_name
+            # dim (other xml files with dimensions informations)
+            abs_path=`dirname $image`/DIM_*.XML
+            link_name=`printf dim%02d$suffix.xml $i`
+            cp $abs_path $dataset/
+            ln -sf `basename $abs_path` $dataset/$link_name
             # roi mask
             abs_path=`dirname $image`/MASKS/ROI*.GML
             link_name=`printf roi_msk%02d$suffix.gml $i`
@@ -67,13 +72,13 @@ for f in $pleiades_dir/*; do
             # the dataset has subdatasets (multidate)
             for ff in $f/dataset_*; do
                 mkdir -p `basename $f`/`basename $ff`
-                find $ff | grep "JP2.TIF" | grep "_P_" >  `basename $f`/`basename $ff`/paths_panchro.txt
-                find $ff | grep "JP2.TIF" | grep "_MS_" > `basename $f`/`basename $ff`/paths_ms.txt
+                find $ff | grep "JP2.TIF" | grep - v "JP2.TIF.ovr" | grep "_P_" >  `basename $f`/`basename $ff`/paths_panchro.txt
+                find $ff | grep "JP2.TIF" | grep - v "JP2.TIF.ovr" | grep "_MS_" > `basename $f`/`basename $ff`/paths_ms.txt
             done
         else
             # the dataset has no subdatasets
-            find $f | grep "JP2.TIF" | grep "_P_" >  `basename $f`/paths_panchro.txt
-            find $f | grep "JP2.TIF" | grep "_MS_" > `basename $f`/paths_ms.txt
+            find $f | grep "JP2.TIF" | grep - v "JP2.TIF.ovr" | grep "_P_" >  `basename $f`/paths_panchro.txt
+            find $f | grep "JP2.TIF" | grep - v "JP2.TIF.ovr" | grep "_MS_" > `basename $f`/paths_ms.txt
         fi
     fi
 done
