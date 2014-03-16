@@ -1,12 +1,15 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+# Copyright (C) 2013, Enric Meinhardt <ellopsis@gmail.com>
 
+import datetime
 import subprocess
 import numpy as np
+from numpy import testing
+
 import estimation
 import geographiclib
 import common
-from numpy import testing
 
 
 def print_distance_between_vectors(u, v, msg):
@@ -495,3 +498,39 @@ def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_marg
 
     # return min and max disparities
     return np.min(d), np.max(d)
+
+
+def compute_ms_panchro_offset(dim_pan, dim_ms):
+    """
+    Computes the offset, in panchro pixels,  between a panchro image and the
+    corresponding 4x zoomed ms image.
+
+    Args:
+        dim_pan: path to the xml file DIM_*.XML for the panchro image
+        dim_ms:  path to the xml file DIM_*.XML for the ms (ie color) image
+
+    Returns:
+        (off_col, off_row): the offset to apply to the ms image before fusion
+        with the panchro.
+    """
+    # column offset
+    first_col_ms = int(common.grep_xml(dim_ms, "FIRST_COL"))
+    first_col_pan = int(common.grep_xml(dim_pan, "FIRST_COL"))
+    off_col = 4 * first_col_ms - first_col_pan
+
+    # row offset
+    t_e_pan = float(common.grep_xml(dim_pan, "LINE_PERIOD"))
+    t_init_ms  = common.grep_xml(dim_ms, "START")
+    t_init_pan = common.grep_xml(dim_pan, "START")
+    t_ms =  datetime.datetime.strptime(t_init_ms[:26], "%Y-%m-%dT%H:%M:%S.%f")
+    t_pan = datetime.datetime.strptime(t_init_pan[:26], "%Y-%m-%dT%H:%M:%S.%f")
+
+    delta_t = 1000 * (t_ms - t_pan)
+    off_row = int(delta_t.total_seconds() / t_e_pan)
+
+    #print "t_e_pan: %f" % t_e_pan
+    #print "t_init_ms:  %s" % t_init_ms
+    #print "t_init_pan: %s" % t_init_pan
+    #print off_col, off_row
+
+    return off_col, off_row
