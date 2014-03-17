@@ -526,7 +526,7 @@ def compute_ms_panchro_offset(dim_pan, dim_ms):
     t_pan = datetime.datetime.strptime(t_init_pan[:26], "%Y-%m-%dT%H:%M:%S.%f")
 
     delta_t = 1000 * (t_ms - t_pan)
-    off_row = int(delta_t.total_seconds() / t_e_pan)
+    off_row = int(total_seconds(delta_t) / t_e_pan)
 
     #print "t_e_pan: %f" % t_e_pan
     #print "t_init_ms:  %s" % t_init_ms
@@ -534,3 +534,21 @@ def compute_ms_panchro_offset(dim_pan, dim_ms):
     #print off_col, off_row
 
     return off_col, off_row
+
+
+def total_seconds(td):
+    """
+    Return the total number of seconds contained in the duration.
+
+    Args:
+        td: datetime.timedelta object
+
+    Returns:
+        the equivalent time expressed in seconds
+
+    This function implements the timedelta.total_seconds() method available in
+    python 2.7, to make the compute_ms_panchro_offset usable even with python
+    2.6
+    """
+    return float((td.microseconds + (td.seconds + td.days * 24 * 3600) *
+        10**6)) / 10**6
