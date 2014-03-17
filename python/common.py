@@ -177,7 +177,7 @@ def grep_xml(xml_file, tag):
                 print "grep_xml: WARNING several occurences of %s in file %s" % (tag, xml_file)
             return lines[0]
     except IOError:
-        print "grep_xml: the input file doesn't exist %s" % str(im)
+        print "grep_xml: the input file %s doesn't exist" % xml_file
         sys.exit()
 
 
