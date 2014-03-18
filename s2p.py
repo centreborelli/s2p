@@ -473,7 +473,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     try:
         with open(clr):
             triangulation.colorize(crop, clr, x, y, z, crop_color)
-    except IOError:
+    except (IOError, TypeError):
         print 'no color image available for this dataset.'
         crop_color = common.image_qauto(crop)
 
