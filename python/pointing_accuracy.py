@@ -11,7 +11,7 @@ import rpc_model
 import common
 import estimation
 import evaluation
-import global_params
+import config
 
 
 def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
@@ -599,14 +599,14 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
     r2 = rpc_model.RPCModel(rpc2)
 
     ## correct pointing error - no subsampling!
-    tmp = global_params.subsampling_factor_registration
-    global_params.subsampling_factor_registration = 1
+    tmp = config.subsampling_factor_registration
+    config.subsampling_factor_registration = 1
 
     try:
         if w*h < 2e6:
             m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h)
         else:
-            m = filtered_sift_matches_full_img(img1, img2, r1, r2, global_params.pointing_correction_rois_mode,
+            m = filtered_sift_matches_full_img(img1, img2, r1, r2, config.pointing_correction_rois_mode,
                     None, 1000, x, y, w, h)
     except Exception as e:
         print e
@@ -622,7 +622,7 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
             out_dict['correction_matrix'] = A
         return A, m
 
-    global_params.subsampling_factor_registration = tmp
+    config.subsampling_factor_registration = tmp
 
     A = optimize_pair(img1, img2, r1, r2, None, m)
 

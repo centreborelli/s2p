@@ -54,7 +54,7 @@ def matches_from_sift(im1, im2):
         im1, im2: paths to the two images (usually jp2 or tif)
 
         This function uses the parameter subsampling_factor_registration
-        from the global_params module. If factor > 1 then the registration
+        from the config module. If factor > 1 then the registration
         is performed over subsampled images, but the resulting keypoints
         are then scaled back to conceal the subsampling
 
@@ -66,7 +66,7 @@ def matches_from_sift(im1, im2):
     ## Try to import the global parameters module
     #  it permits to pass values between different modules
     try:
-        from global_params import subsampling_factor_registration
+        from config import subsampling_factor_registration
         if subsampling_factor_registration != 1:
             im1 = common.image_safe_zoom_fft(im1, subsampling_factor_registration)
             im2 = common.image_safe_zoom_fft(im2, subsampling_factor_registration)
@@ -78,7 +78,7 @@ def matches_from_sift(im1, im2):
     kpts1 = common.image_sift_keypoints(im1, '')
     kpts2 = common.image_sift_keypoints(im2, '')
     try:
-        from global_params import sift_match_thresh
+        from config import sift_match_thresh
     except ImportError:
         sift_match_thresh = 0.6
     matches = common.sift_keypoints_match(kpts1, kpts2, 1, sift_match_thresh)
@@ -99,7 +99,7 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
             rectangle.
 
         This function uses the parameter subsampling_factor_registration
-        from the global_params module. If factor > 1 then the registration
+        from the config module. If factor > 1 then the registration
         is performed over subsampled images, but the resulting keypoints
         are then scaled back to conceal the subsampling
 
@@ -233,7 +233,7 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
 
     # add a security margin to the disp range
     try:
-        from python.global_params import disp_range_extra_margin as d
+        from python.config import disp_range_extra_margin as d
     except ImportError:
         d = 0.2
     if (dispx_min < 0):
@@ -333,7 +333,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
     print "step 1: find matches, and center them ------------------------------"
     try:
-        from python.global_params import n_gcp_per_axis as n
+        from python.config import n_gcp_per_axis as n
     except ImportError:
         n = 5
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, n)
@@ -397,7 +397,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
     # filter sift matches with the known fundamental matrix
     F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
     try:
-        from global_params import epipolar_thresh
+        from config import epipolar_thresh
     except ImportError:
         epipolar_thresh = 2.0
     m = filter_matches_epipolar_constraint(F, m, epipolar_thresh)
@@ -440,7 +440,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, f
             matches for the fundamental matrix estimation.
 
         This function uses the parameter subsampling_factor from the
-        global_params module.  If the factor z > 1 then the output images will
+        config module.  If the factor z > 1 then the output images will
         be subsampled by a factor z.  The output matrices H1, H2, and the
         ranges are also updated accordingly:
         Hi = Z*Hi   with Z = diag(1/z,1/z,1)   and
@@ -474,7 +474,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, f
     ## Try to import the global parameters module
     #  it permits to pass values between different modules
     try:
-        from python.global_params import subsampling_factor
+        from python.config import subsampling_factor
     except ImportError:
         subsampling_factor = 1
 

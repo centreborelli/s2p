@@ -20,7 +20,7 @@ from python import block_matching
 from python import triangulation
 from python import tile_composer
 from python import fusion
-from python import global_params
+from python import config
 
 
 
@@ -54,7 +54,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     common.run('mkdir -p %s' % out_dir)
 
     # redirect stdout and stderr to log file
-    if not global_params.debug:
+    if not config.debug:
         fout = open('%s/stdout.log' % out_dir, 'w', 0) # '0' is for no buffering
         sys.stdout = fout
         sys.stderr = fout
@@ -77,9 +77,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
 
-    if os.path.isfile(dem) and global_params.skip_existing:
+    if os.path.isfile(dem) and config.skip_existing:
         print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
-        if not global_params.debug:
+        if not config.debug:
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
             fout.close()
@@ -95,7 +95,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor
-    z = global_params.subsampling_factor
+    z = config.subsampling_factor
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
         x = z * np.floor(x / z)
@@ -125,18 +125,18 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
 
 
-    if global_params.disp_range_method == "auto_srtm" or global_params.disp_range_method == "wider_sift_srtm":
+    if config.disp_range_method == "auto_srtm" or config.disp_range_method == "wider_sift_srtm":
         # Read models
         rpci1 = rpc_model.RPCModel(rpc1)
         rpci2 = rpc_model.RPCModel(rpc2)
-        srtm_disp_min, srtm_disp_max = rpc_utils.rough_disparity_range_estimation(rpci1,rpci2,x,y,w,h,H1,H2,A,global_params.disp_range_srtm_low_margin, global_params.disp_range_srtm_high_margin)
+        srtm_disp_min, srtm_disp_max = rpc_utils.rough_disparity_range_estimation(rpci1,rpci2,x,y,w,h,H1,H2,A,config.disp_range_srtm_low_margin, config.disp_range_srtm_high_margin)
         # srtm_disp_min, srtm_disp_max = estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h)
 
-        if global_params.disp_range_method == "auto_srtm":
+        if config.disp_range_method == "auto_srtm":
             disp_min = srtm_disp_min
             disp_max = srtm_disp_max
             print "Auto srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
-        elif global_params.disp_range_method == "wider_sift_srtm":
+        elif config.disp_range_method == "wider_sift_srtm":
             disp_min = min(srtm_disp_min, disp_min)
             disp_max = max(srtm_disp_max, disp_max)
             print "Wider sift srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
@@ -145,7 +145,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        global_params.matching_algorithm, disp_min, disp_max)
+        config.matching_algorithm, disp_min, disp_max)
 
     ## update mask with cloud mask and roi mask
     if cld_msk is not None:
@@ -161,7 +161,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
 
     # close logs
-    if not global_params.debug:
+    if not config.debug:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         fout.close()
@@ -230,7 +230,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
-    z = global_params.subsampling_factor
+    z = config.subsampling_factor
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
         x = z * np.floor(float(x) / z)
@@ -243,17 +243,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # multiple of the number of cores
     if tw is None and th is None and ov is None:
         ov = z * 100
-        if w <= z * global_params.tile_size:
+        if w <= z * config.tile_size:
             tw = w
         else:
-            tw = z * global_params.tile_size
+            tw = z * config.tile_size
             #TODO: modify tiles size to be close do a divisor of w
             #while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
             #    tw += 1
-        if h <= z * global_params.tile_size:
+        if h <= z * config.tile_size:
             th = h
         else:
-            th = z * global_params.tile_size
+            th = z * config.tile_size
             #TODO: modify tiles size to be close do a divisor of h
             #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
             #    th += 1
@@ -275,7 +275,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         out_dict = manager.dict()
         matrix_file = '%s/pointing_global.txt' % out_dir
 
-        if not os.path.isfile(matrix_file) or not global_params.skip_existing:
+        if not os.path.isfile(matrix_file) or not config.skip_existing:
             p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
                     args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
             p.start()
@@ -290,8 +290,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # create pool with less workers than available cores
     max_processes = multiprocessing.cpu_count()
-    if global_params.max_nb_threads > 0:
-        max_processes = min(max_processes, global_params.max_nb_threads)
+    if config.max_nb_threads > 0:
+        max_processes = min(max_processes, config.max_nb_threads)
 
     print 'Creating pool with %d processes\n' % max_processes
     pool = multiprocessing.Pool(max_processes)
@@ -303,7 +303,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         for i in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             tiles.append('%s/dem.tif' % tile_dir)
-            if global_params.debug:
+            if config.debug:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
                     j, tw, th, A, None, cld_msk, roi_msk)
             else:
@@ -330,15 +330,15 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
-    if not os.path.isfile(out) or not global_params.skip_existing:
-        print "Mosaic method: "+global_params.mosaic_method
-        if global_params.mosaic_method == 'gdal':
+    if not os.path.isfile(out) or not config.skip_existing:
+        print "Mosaic method: "+config.mosaic_method
+        if config.mosaic_method == 'gdal':
             tile_composer.mosaic_gdal(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
         else:
             tile_composer.mosaic(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
 
     # cleanup
-    if global_params.clean_tmp:
+    if config.clean_tmp:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
 
@@ -402,7 +402,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
-    if global_params.clean_tmp:
+    if config.clean_tmp:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
 
@@ -435,7 +435,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
-    z = global_params.subsampling_factor
+    z = config.subsampling_factor
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
         x = z * np.floor(float(x) / z)
@@ -481,7 +481,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
             off_x, off_y)
 
     # cleanup
-    if global_params.clean_tmp:
+    if config.clean_tmp:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
 
@@ -505,43 +505,43 @@ if __name__ == '__main__':
     cfg = json.load(f)
     f.close()
 
-    # fill the global_params module
-    global_params.subsampling_factor = cfg['subsampling_factor']
-    global_params.subsampling_factor_registration = cfg['subsampling_factor_registration']
-    global_params.sift_match_thresh = cfg['sift_match_thresh']
-    global_params.disp_range_extra_margin = cfg['disp_range_extra_margin']
-    global_params.n_gcp_per_axis = cfg['n_gcp_per_axis']
-    global_params.epipolar_thresh = cfg['epipolar_thresh']
-    global_params.matching_algorithm = cfg['matching_algorithm']
-    global_params.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
-    global_params.debug = cfg['debug']
+    # fill the config module
+    config.subsampling_factor = cfg['subsampling_factor']
+    config.subsampling_factor_registration = cfg['subsampling_factor_registration']
+    config.sift_match_thresh = cfg['sift_match_thresh']
+    config.disp_range_extra_margin = cfg['disp_range_extra_margin']
+    config.n_gcp_per_axis = cfg['n_gcp_per_axis']
+    config.epipolar_thresh = cfg['epipolar_thresh']
+    config.matching_algorithm = cfg['matching_algorithm']
+    config.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
+    config.debug = cfg['debug']
     if "pointing_correction_rois_mode" in cfg:
-        global_params.pointing_correction_rois_mode = str(cfg['pointing_correction_rois_mode'])
+        config.pointing_correction_rois_mode = str(cfg['pointing_correction_rois_mode'])
     if "disp_range_method" in cfg:
-        global_params.disp_range_method = str(cfg['disp_range_method'])
+        config.disp_range_method = str(cfg['disp_range_method'])
     if "disp_range_srtm_low_margin" in cfg:
-        global_params.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
+        config.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
     if "disp_range_srtm_high_margin" in cfg:
-        global_params.disp_range_srtm_high_margin = float(cfg['disp_range_srtm_high_margin'])
+        config.disp_range_srtm_high_margin = float(cfg['disp_range_srtm_high_margin'])
 
     if "temporary_dir" in cfg:
-        global_params.temporary_dir = str(cfg['temporary_dir'])
+        config.temporary_dir = str(cfg['temporary_dir'])
     if "tile_size" in cfg:
-        global_params.tile_size = cfg['tile_size']
+        config.tile_size = cfg['tile_size']
     if "max_nb_threads" in cfg:
-        global_params.max_nb_threads = cfg['max_nb_threads']
+        config.max_nb_threads = cfg['max_nb_threads']
     if "clean_tmp" in cfg:
-        global_params.clean_tmp = cfg['clean_tmp']
+        config.clean_tmp = cfg['clean_tmp']
     if "fusion_thresh" in cfg:
-        global_params.fusion_thresh = cfg['fusion_thresh']
+        config.fusion_thresh = cfg['fusion_thresh']
     if "full_img" in cfg:
-        global_params.full_img = cfg['full_img']
+        config.full_img = cfg['full_img']
 
     if "skip_existing" in cfg:
-        global_params.skip_existing = cfg['skip_existing']
+        config.skip_existing = cfg['skip_existing']
 
     if "mosaic_method" in cfg:
-        global_params.mosaic_method = cfg['mosaic_method']
+        config.mosaic_method = cfg['mosaic_method']
 
     # other params to be read in the json
     if "offset_ply" in cfg:
@@ -585,7 +585,7 @@ if __name__ == '__main__':
         img3 = cfg['images'][2]['img']
         rpc3 = cfg['images'][2]['rpc']
         dem = process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x,
-                y, w, h, global_params.fusion_thresh, None, None, None, None,
+                y, w, h, config.fusion_thresh, None, None, None, None,
                 cld1, roi1)
 
     # point cloud generation

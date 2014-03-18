@@ -31,16 +31,7 @@ fusion_thresh = 3
 temporary_dir = "/tmp"
 tile_size  = 500
 max_nb_threads = -1
-clean_tmp = True 
+clean_tmp = True
 
 skip_existing = False
 mosaic_method = 'piio'
-
-# bunch not used yet
-##############################
-# handy collector
-# http://code.activestate.com/recipes/52308/
-class Bunch:
-   def __init__(self, **kwds):
-      self.__dict__.update(kwds)
-

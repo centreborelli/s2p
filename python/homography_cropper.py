@@ -5,7 +5,7 @@
 
 import numpy as np
 import common
-import global_params
+import config
 
 def image_apply_pleiades_unsharpening_filter(im):
     """
@@ -57,7 +57,7 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
     # This filter is needed (for panchro images) because the original PLEAIDES
     # SENSOR PERFECT images are aliased
     if (common.image_pix_dim(crop_fullres) == 1 and subsampling_factor == 1 and
-            global_params.use_pleiades_unsharpening):
+            config.use_pleiades_unsharpening):
         tmp = image_apply_pleiades_unsharpening_filter(crop_fullres)
         common.run('rm %s' % crop_fullres)
         crop_fullres = tmp
