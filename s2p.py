@@ -607,7 +607,7 @@ if __name__ == '__main__':
     # config.cfg dictionary there
     common.run('mkdir -p %s' % cfg['out_dir'])
     f = open('%s/config.json' % cfg['out_dir'], 'w')
-    json.dump(cfg, f)
+    json.dump(cfg, f, indent=2)
     f.close()
 
     # dem generation
