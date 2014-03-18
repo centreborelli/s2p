@@ -26,7 +26,7 @@
   "use_pleiades_unsharpening" : true,
   "debug" : false,
   "temporary_dir" : "/tmp",
-  "tile_size" : 500,
+  "tile_size" : 1000,
   "max_nb_threads" : -1,
   "clean_tmp" : true,
   "offset_ply" : true,
