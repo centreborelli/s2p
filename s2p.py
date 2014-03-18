@@ -9,6 +9,7 @@ import sys
 import json
 import numpy as np
 import os.path
+import copy
 
 from python import common
 from python import rpc_model
@@ -76,6 +77,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H_ref = '%s/H_ref.txt' % out_dir
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
+    config = '%s/config.json' % out_dir
 
     if os.path.isfile(dem) and cfg['skip_existing']:
         print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
@@ -159,6 +161,16 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
         rpc_err, A)
     triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
+
+    ## save json file with all the parameters needed to reproduce this tile
+    tile_cfg = copy.deepcopy(cfg)
+    tile_cfg['roi']['x'] = x
+    tile_cfg['roi']['y'] = y
+    tile_cfg['roi']['w'] = w
+    tile_cfg['roi']['h'] = h
+    f = open(config, 'w')
+    json.dump(tile_cfg, f, indent=2)
+    f.close()
 
     # close logs
     if not cfg['debug']:
@@ -597,7 +609,7 @@ if __name__ == '__main__':
             cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
             None, None, None, cfg['images'][0]['cld'], cfg['images'][0]['roi'])
     else:
-        dem = process_pair(cfg['out_dir'],
+        dem = process_triplet(cfg['out_dir'],
             cfg['images'][0]['img'], cfg['images'][0]['rpc'],
             cfg['images'][1]['img'], cfg['images'][1]['rpc'],
             cfg['images'][2]['img'], cfg['images'][2]['rpc'],
