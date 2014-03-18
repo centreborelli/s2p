@@ -20,7 +20,7 @@ from python import block_matching
 from python import triangulation
 from python import tile_composer
 from python import fusion
-from python import config
+from python.config import cfg
 
 
 
@@ -54,7 +54,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     common.run('mkdir -p %s' % out_dir)
 
     # redirect stdout and stderr to log file
-    if not config.debug:
+    if not cfg['debug']:
         fout = open('%s/stdout.log' % out_dir, 'w', 0) # '0' is for no buffering
         sys.stdout = fout
         sys.stderr = fout
@@ -77,9 +77,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
 
-    if os.path.isfile(dem) and config.skip_existing:
+    if os.path.isfile(dem) and cfg['skip_existing']:
         print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
-        if not config.debug:
+        if not cfg['debug']:
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
             fout.close()
@@ -95,7 +95,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor
-    z = config.subsampling_factor
+    z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
         x = z * np.floor(x / z)
@@ -125,27 +125,27 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
 
 
-    if config.disp_range_method == "auto_srtm" or config.disp_range_method == "wider_sift_srtm":
+    if cfg['disp_range_method'] in ["auto_srtm", "wider_sift_srtm"]:
         # Read models
         rpci1 = rpc_model.RPCModel(rpc1)
         rpci2 = rpc_model.RPCModel(rpc2)
-        srtm_disp_min, srtm_disp_max = rpc_utils.rough_disparity_range_estimation(rpci1,rpci2,x,y,w,h,H1,H2,A,config.disp_range_srtm_low_margin, config.disp_range_srtm_high_margin)
-        # srtm_disp_min, srtm_disp_max = estimate_disp_range_from_srtm(img1, img2, rpc1, rpc2, H1, H2, x, y, w, h)
+        srtm_disp_min, srtm_disp_max = rpc_utils.rough_disparity_range_estimation(rpci1, rpci2, x, y, w, h,
+            H1, H2, A, cfg['disp_range_srtm_low_margin'], cfg['disp_range_srtm_high_margin'])
 
-        if config.disp_range_method == "auto_srtm":
+        if cfg['disp_range_method'] == "auto_srtm":
             disp_min = srtm_disp_min
             disp_max = srtm_disp_max
-            print "Auto srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
-        elif config.disp_range_method == "wider_sift_srtm":
+            print "Auto srtm disp range: [%s, %s]" % (disp_min, disp_max)
+        elif cfg['disp_range_method'] == "wider_sift_srtm":
             disp_min = min(srtm_disp_min, disp_min)
             disp_max = max(srtm_disp_max, disp_max)
-            print "Wider sift srtm disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
+            print "Wider sift srtm disp range: [%s, %s]" % (disp_min, disp_max)
     else:
-         print "Auto sift disp range: ["+str(disp_min)+", "+str(disp_max)+"]"
+         print "Auto sift disp range:  [%s, %s]" % (disp_min, disp_max)
 
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        config.matching_algorithm, disp_min, disp_max)
+        cfg['matching_algorithm'], disp_min, disp_max)
 
     ## update mask with cloud mask and roi mask
     if cld_msk is not None:
@@ -161,7 +161,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
 
     # close logs
-    if not config.debug:
+    if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         fout.close()
@@ -230,7 +230,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
-    z = config.subsampling_factor
+    z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
         x = z * np.floor(float(x) / z)
@@ -243,17 +243,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # multiple of the number of cores
     if tw is None and th is None and ov is None:
         ov = z * 100
-        if w <= z * config.tile_size:
+        if w <= z * cfg['tile_size']:
             tw = w
         else:
-            tw = z * config.tile_size
+            tw = z * cfg['tile_size']
             #TODO: modify tiles size to be close do a divisor of w
             #while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
             #    tw += 1
-        if h <= z * config.tile_size:
+        if h <= z * cfg['tile_size']:
             th = h
         else:
-            th = z * config.tile_size
+            th = z * cfg['tile_size']
             #TODO: modify tiles size to be close do a divisor of h
             #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
             #    th += 1
@@ -275,7 +275,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         out_dict = manager.dict()
         matrix_file = '%s/pointing_global.txt' % out_dir
 
-        if not os.path.isfile(matrix_file) or not config.skip_existing:
+        if not os.path.isfile(matrix_file) or not cfg['skip_existing']:
             p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
                     args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
             p.start()
@@ -290,8 +290,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # create pool with less workers than available cores
     max_processes = multiprocessing.cpu_count()
-    if config.max_nb_threads > 0:
-        max_processes = min(max_processes, config.max_nb_threads)
+    if cfg['max_nb_threads'] > 0:
+        max_processes = min(max_processes, cfg['max_nb_threads'])
 
     print 'Creating pool with %d processes\n' % max_processes
     pool = multiprocessing.Pool(max_processes)
@@ -303,7 +303,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         for i in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
             tiles.append('%s/dem.tif' % tile_dir)
-            if config.debug:
+            if cfg['debug']:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
                     j, tw, th, A, None, cld_msk, roi_msk)
             else:
@@ -330,15 +330,15 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
-    if not os.path.isfile(out) or not config.skip_existing:
-        print "Mosaic method: "+config.mosaic_method
-        if config.mosaic_method == 'gdal':
+    if not os.path.isfile(out) or not cfg['skip_existing']:
+        print "Mosaic method: %s" % cfg['mosaic_method']
+        if cfg['mosaic_method'] == 'gdal':
             tile_composer.mosaic_gdal(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
         else:
             tile_composer.mosaic(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
 
     # cleanup
-    if config.clean_tmp:
+    if cfg['clean_tmp']:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
 
@@ -402,7 +402,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
-    if config.clean_tmp:
+    if cfg['clean_tmp']:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
 
@@ -435,7 +435,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
-    z = config.subsampling_factor
+    z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
     if (z != 1):
         x = z * np.floor(float(x) / z)
@@ -481,112 +481,153 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
             off_x, off_y)
 
     # cleanup
-    if config.clean_tmp:
+    if cfg['clean_tmp']:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
+
+# TODO: remove this unused function
+def fill_config_module(user_cfg):
+    """
+    Copies the user-specified parameters (from a python dict read from a json
+    file) into the config module.
+
+    Args:
+        cfg: python dict containing the user-specified parameters
+
+    Returns:
+        nothing, bug fills the config.py module which is used to share
+        configuration among all modules
+    """
+    ## mandatory parameters: files io and roi
+    # files io
+    config.out_dir = str(user_cfg['out_dir'])
+    config.img1 = user_cfg['images'][0]['img']
+    config.rpc1 = user_cfg['images'][0]['rpc']
+    config.img2 = user_cfg['images'][1]['img']
+    config.rpc2 = user_cfg['images'][1]['rpc']
+
+    # roi
+    if "full_img" in user_cfg and user_cfg['full_img']:
+        sz = common.image_size_gdal(img1)
+        config.x = 0
+        config.y = 0
+        config.w = sz[0]
+        config.h = sz[1]
+    else:
+        config.x = user_cfg['roi']['x']
+        config.y = user_cfg['roi']['y']
+        config.w = user_cfg['roi']['w']
+        config.h = user_cfg['roi']['h']
+
+
+    ## optional parameters
+    if "clr" in user_cfg['images'][0]:
+        config.clr1 = user_cfg['images'][0]['clr']
+    if "cld" in user_cfg['images'][0]:
+        config.cld1 = user_cfg['images'][0]['cld']
+    if "roi" in user_cfg['images'][0]:
+        config.roi1 = user_cfg['images'][0]['roi']
+    config.subsampling_factor = user_cfg['subsampling_factor']
+    config.subsampling_factor_registration = user_cfg['subsampling_factor_registration']
+    config.sift_match_thresh = user_cfg['sift_match_thresh']
+    config.disp_range_extra_margin = user_cfg['disp_range_extra_margin']
+    config.n_gcp_per_axis = user_cfg['n_gcp_per_axis']
+    config.epipolar_thresh = user_cfg['epipolar_thresh']
+    config.matching_algorithm = user_cfg['matching_algorithm']
+    config.use_pleiades_unsharpening = user_cfg['use_pleiades_unsharpening']
+    config.debug = user_cfg['debug']
+    if "pointing_correction_rois_mode" in user_cfg:
+        config.pointing_correction_rois_mode = str(user_cfg['pointing_correction_rois_mode'])
+    if "disp_range_method" in user_cfg:
+        config.disp_range_method = str(user_cfg['disp_range_method'])
+    if "disp_range_srtm_low_margin" in user_cfg:
+        config.disp_range_srtm_low_margin = float(user_cfg['disp_range_srtm_low_margin'])
+    if "disp_range_srtm_high_margin" in user_cfg:
+        config.disp_range_srtm_high_margin = float(user_cfg['disp_range_srtm_high_margin'])
+
+    if "temporary_dir" in user_cfg:
+        config.temporary_dir = str(user_cfg['temporary_dir'])
+    if "tile_size" in user_cfg:
+        config.tile_size = user_cfg['tile_size']
+    if "max_nb_threads" in user_cfg:
+        config.max_nb_threads = user_cfg['max_nb_threads']
+    if "clean_tmp" in user_cfg:
+        config.clean_tmp = user_cfg['clean_tmp']
+    if "fusion_thresh" in user_cfg:
+        config.fusion_thresh = user_cfg['fusion_thresh']
+    if "full_img" in user_cfg:
+        config.full_img = user_cfg['full_img']
+
+    if "skip_existing" in user_cfg:
+        config.skip_existing = user_cfg['skip_existing']
+
+    if "mosaic_method" in user_cfg:
+        config.mosaic_method = user_cfg['mosaic_method']
+    if "offset_ply" in user_cfg:
+        do_offset = user_cfg['offset_ply']
+
+
 
 
 if __name__ == '__main__':
 
     if len(sys.argv) == 2:
-      config_file  = sys.argv[1]
+        config_file  = sys.argv[1]
     else:
-      print """
-      Incorrect syntax, use:
-        > %s config.json
+        print """
+        Incorrect syntax, use:
+          > %s config.json
 
-        Launches the s2p pipeline. All the parameters, paths to input and
-        output files, are defined in the json configuration file.
-      """ % sys.argv[0]
-      sys.exit(1)
+          Launches the s2p pipeline. All the parameters, paths to input and
+          output files, are defined in the json configuration file.
+        """ % sys.argv[0]
+        sys.exit(1)
 
     # read the json configuration file
     f = open(config_file)
-    cfg = json.load(f)
+    user_cfg = json.load(f)
     f.close()
 
-    # fill the config module
-    config.subsampling_factor = cfg['subsampling_factor']
-    config.subsampling_factor_registration = cfg['subsampling_factor_registration']
-    config.sift_match_thresh = cfg['sift_match_thresh']
-    config.disp_range_extra_margin = cfg['disp_range_extra_margin']
-    config.n_gcp_per_axis = cfg['n_gcp_per_axis']
-    config.epipolar_thresh = cfg['epipolar_thresh']
-    config.matching_algorithm = cfg['matching_algorithm']
-    config.use_pleiades_unsharpening = cfg['use_pleiades_unsharpening']
-    config.debug = cfg['debug']
-    if "pointing_correction_rois_mode" in cfg:
-        config.pointing_correction_rois_mode = str(cfg['pointing_correction_rois_mode'])
-    if "disp_range_method" in cfg:
-        config.disp_range_method = str(cfg['disp_range_method'])
-    if "disp_range_srtm_low_margin" in cfg:
-        config.disp_range_srtm_low_margin = float(cfg['disp_range_srtm_low_margin'])
-    if "disp_range_srtm_high_margin" in cfg:
-        config.disp_range_srtm_high_margin = float(cfg['disp_range_srtm_high_margin'])
+    #TODO: separate function to check that all the mandatory arguments are
+    #defined
 
-    if "temporary_dir" in cfg:
-        config.temporary_dir = str(cfg['temporary_dir'])
-    if "tile_size" in cfg:
-        config.tile_size = cfg['tile_size']
-    if "max_nb_threads" in cfg:
-        config.max_nb_threads = cfg['max_nb_threads']
-    if "clean_tmp" in cfg:
-        config.clean_tmp = cfg['clean_tmp']
-    if "fusion_thresh" in cfg:
-        config.fusion_thresh = cfg['fusion_thresh']
-    if "full_img" in cfg:
-        config.full_img = cfg['full_img']
+    # fill the config module: updates the content of the config.cfg dictionary
+    # with the content of the user_cfg dictionary
+    cfg.update(user_cfg)
 
-    if "skip_existing" in cfg:
-        config.skip_existing = cfg['skip_existing']
+    # sets keys 'clr', 'cld' and 'roi' of the reference image to None if they
+    # are not already defined. The default values of these optional arguments
+    # can not be defined directly in the config.py module. They would be
+    # overwritten by the previous update, because they are in a nested dict.
+    cfg['images'][0].setdefault('clr')
+    cfg['images'][0].setdefault('cld')
+    cfg['images'][0].setdefault('roi')
 
-    if "mosaic_method" in cfg:
-        config.mosaic_method = cfg['mosaic_method']
-
-    # other params to be read in the json
-    if "offset_ply" in cfg:
-        do_offset = cfg['offset_ply']
-    else:
-        do_offset = False
-
-    # roi definition and output path
-    out_dir = str(cfg['out_dir'])
-    img1 = cfg['images'][0]['img']
-    rpc1 = cfg['images'][0]['rpc']
-    clr1 = cfg['images'][0]['clr']
-    if "cld" in cfg['images'][0]:
-        cld1 = cfg['images'][0]['cld']
-    if "roi" in cfg['images'][0]:
-        roi1 = cfg['images'][0]['roi']
-    img2 = cfg['images'][1]['img']
-    rpc2 = cfg['images'][1]['rpc']
-    if "full_img" in cfg and cfg['full_img']:
-        sz = common.image_size_gdal(img1)
-        x = 0
-        y = 0
-        w = sz[0]
-        h = sz[1]
-    else:
-        x = cfg['roi']['x']
-        y = cfg['roi']['y']
-        w = cfg['roi']['w']
-        h = cfg['roi']['h']
-
-    # create output directory for the experiment, and store a copy the json
-    # config file there
-    common.run('mkdir -p %s' % out_dir)
-    common.run('cp %s %s/config.json' % (config_file, out_dir))
+    # create output directory for the experiment, and store a json dump of the
+    # config.cfg dictionary there
+    common.run('mkdir -p %s' % cfg['out_dir'])
+    f = open('%s/config.json' % cfg['out_dir'], 'w')
+    json.dump(cfg, f)
+    f.close()
 
     # dem generation
     if len(cfg['images']) == 2:
-        dem = process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, None,
-                None, None, cld1, roi1)
+        dem = process_pair(cfg['out_dir'],
+            cfg['images'][0]['img'], cfg['images'][0]['rpc'],
+            cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+            cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+            None, None, None, cfg['images'][0]['cld'], cfg['images'][0]['roi'])
     else:
-        img3 = cfg['images'][2]['img']
-        rpc3 = cfg['images'][2]['rpc']
-        dem = process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x,
-                y, w, h, config.fusion_thresh, None, None, None, None,
-                cld1, roi1)
+        dem = process_pair(cfg['out_dir'],
+            cfg['images'][0]['img'], cfg['images'][0]['rpc'],
+            cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+            cfg['images'][2]['img'], cfg['images'][2]['rpc'],
+            cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+            cfg['fusion_thresh'], None, None, None, None,
+            cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
     # point cloud generation
-    generate_cloud(out_dir, img1, rpc1, clr1, x, y, w, h, dem, do_offset)
+    generate_cloud(cfg['out_dir'],
+      cfg['images'][0]['img'], cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
+      cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+      dem, cfg['do_offset'])
