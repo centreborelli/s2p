@@ -36,10 +36,11 @@ cfg['disp_range_srtm_high_margin'] = +100
 cfg['fusion_thresh'] = 3
 
 cfg['temporary_dir'] = "/tmp"
-cfg['tile_size']  = 500
+cfg['full_img']  = False
+cfg['tile_size']  = 1000
 cfg['max_nb_threads'] = -1
 cfg['clean_tmp'] = True
-
+cfg['debug'] = False
 cfg['skip_existing'] = False
 cfg['mosaic_method'] = 'piio'
-cfg['do_offset'] = False
+cfg['offset_ply'] = False

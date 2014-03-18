@@ -523,10 +523,11 @@ def check_parameters(usr_cfg):
 
     ## warn about unknown optional parameters: these parameters have no default
     # value in the global config.cfg dictionary, and thus they are not used
-    # anywhere.  They may appear in the input_cfg because of a typo.
-    l = input_cfg.keys()
+    # anywhere.  They may appear in the usr_cfg because of a typo.
+    l = usr_cfg.keys()
 
     # remove mandatory parameters (they are not in config.cfg)
+    l.remove('out_dir')
     l.remove('images')
     if 'roi' in l:
         l.remove('roi')
@@ -608,4 +609,4 @@ if __name__ == '__main__':
     generate_cloud(cfg['out_dir'],
       cfg['images'][0]['img'], cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
       cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-      dem, cfg['do_offset'])
+      dem, cfg['offset_ply'])
