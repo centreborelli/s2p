@@ -485,88 +485,57 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
 
-# TODO: remove this unused function
-def fill_config_module(user_cfg):
+
+def check_parameters(usr_cfg):
     """
-    Copies the user-specified parameters (from a python dict read from a json
-    file) into the config module.
+    Checks that the provided dictionary defines all the mandatory
+    arguments, and warns about unknown optional arguments.
 
     Args:
-        cfg: python dict containing the user-specified parameters
+        usr_cfg: python dict read from the json input file
 
     Returns:
-        nothing, bug fills the config.py module which is used to share
-        configuration among all modules
+        nothing
     """
-    ## mandatory parameters: files io and roi
-    # files io
-    config.out_dir = str(user_cfg['out_dir'])
-    config.img1 = user_cfg['images'][0]['img']
-    config.rpc1 = user_cfg['images'][0]['rpc']
-    config.img2 = user_cfg['images'][1]['img']
-    config.rpc2 = user_cfg['images'][1]['rpc']
+
+    ## verify that i/o files and roi are defined
+    # i/o files
+    if 'out_dir' not in usr_cfg:
+        print "missing output dir: abort"
+        sys.exit(1)
+    if 'images' not in usr_cfg or len(usr_cfg['images']) < 2:
+        print "missing input data paths: abort"
+        sys.exit(1)
+    if 'img' not in usr_cfg['images'][0] or 'rpc' not in usr_cfg['images'][0]:
+        print "missing input data paths for image 0: abort"
+        sys.exit(1)
+    if 'img' not in usr_cfg['images'][1] or 'rpc' not in usr_cfg['images'][1]:
+        print "missing input data paths for image 1: abort"
+        sys.exit(1)
 
     # roi
-    if "full_img" in user_cfg and user_cfg['full_img']:
-        sz = common.image_size_gdal(img1)
-        config.x = 0
-        config.y = 0
-        config.w = sz[0]
-        config.h = sz[1]
-    else:
-        config.x = user_cfg['roi']['x']
-        config.y = user_cfg['roi']['y']
-        config.w = user_cfg['roi']['w']
-        config.h = user_cfg['roi']['h']
+    if ('full_img' not in usr_cfg) or (not usr_cfg['full_img']):
+        if 'roi' not in usr_cfg or ('x' not in usr_cfg['roi']) or ('y' not in
+                usr_cfg['roi']) or ('w' not in usr_cfg['roi']) or ('h' not in
+                        usr_cfg['roi']):
+            print "bad or missing roi definition: abort"
+            sys.exit(1)
 
+    ## warn about unknown optional parameters: these parameters have no default
+    # value in the global config.cfg dictionary, and thus they are not used
+    # anywhere.  They may appear in the input_cfg because of a typo.
+    l = input_cfg.keys()
 
-    ## optional parameters
-    if "clr" in user_cfg['images'][0]:
-        config.clr1 = user_cfg['images'][0]['clr']
-    if "cld" in user_cfg['images'][0]:
-        config.cld1 = user_cfg['images'][0]['cld']
-    if "roi" in user_cfg['images'][0]:
-        config.roi1 = user_cfg['images'][0]['roi']
-    config.subsampling_factor = user_cfg['subsampling_factor']
-    config.subsampling_factor_registration = user_cfg['subsampling_factor_registration']
-    config.sift_match_thresh = user_cfg['sift_match_thresh']
-    config.disp_range_extra_margin = user_cfg['disp_range_extra_margin']
-    config.n_gcp_per_axis = user_cfg['n_gcp_per_axis']
-    config.epipolar_thresh = user_cfg['epipolar_thresh']
-    config.matching_algorithm = user_cfg['matching_algorithm']
-    config.use_pleiades_unsharpening = user_cfg['use_pleiades_unsharpening']
-    config.debug = user_cfg['debug']
-    if "pointing_correction_rois_mode" in user_cfg:
-        config.pointing_correction_rois_mode = str(user_cfg['pointing_correction_rois_mode'])
-    if "disp_range_method" in user_cfg:
-        config.disp_range_method = str(user_cfg['disp_range_method'])
-    if "disp_range_srtm_low_margin" in user_cfg:
-        config.disp_range_srtm_low_margin = float(user_cfg['disp_range_srtm_low_margin'])
-    if "disp_range_srtm_high_margin" in user_cfg:
-        config.disp_range_srtm_high_margin = float(user_cfg['disp_range_srtm_high_margin'])
+    # remove mandatory parameters (they are not in config.cfg)
+    l.remove('images')
+    if 'roi' in l:
+        l.remove('roi')
 
-    if "temporary_dir" in user_cfg:
-        config.temporary_dir = str(user_cfg['temporary_dir'])
-    if "tile_size" in user_cfg:
-        config.tile_size = user_cfg['tile_size']
-    if "max_nb_threads" in user_cfg:
-        config.max_nb_threads = user_cfg['max_nb_threads']
-    if "clean_tmp" in user_cfg:
-        config.clean_tmp = user_cfg['clean_tmp']
-    if "fusion_thresh" in user_cfg:
-        config.fusion_thresh = user_cfg['fusion_thresh']
-    if "full_img" in user_cfg:
-        config.full_img = user_cfg['full_img']
-
-    if "skip_existing" in user_cfg:
-        config.skip_existing = user_cfg['skip_existing']
-
-    if "mosaic_method" in user_cfg:
-        config.mosaic_method = user_cfg['mosaic_method']
-    if "offset_ply" in user_cfg:
-        do_offset = user_cfg['offset_ply']
-
-
+    # check
+    for k in l:
+        if not k in cfg:
+            print """parameter %s unknown: you should remove it from the input
+            json file. It will be ignored.""" % k
 
 
 if __name__ == '__main__':
@@ -588,8 +557,9 @@ if __name__ == '__main__':
     user_cfg = json.load(f)
     f.close()
 
-    #TODO: separate function to check that all the mandatory arguments are
-    #defined
+    # Check that all the mandatory arguments are defined, and warn about
+    # 'unknown' params
+    check_parameters(user_cfg)
 
     # fill the config module: updates the content of the config.cfg dictionary
     # with the content of the user_cfg dictionary
@@ -602,6 +572,14 @@ if __name__ == '__main__':
     cfg['images'][0].setdefault('clr')
     cfg['images'][0].setdefault('cld')
     cfg['images'][0].setdefault('roi')
+
+    # update roi definition if the full_img flag is set to true
+    if ('full_img' in cfg) and cfg['full_img']:
+        sz = common.image_size_gdal(cfg['images'][0]['img'])
+        cfg['roi']['x'] = 0
+        cfg['roi']['y'] = 0
+        cfg['roi']['w'] = sz[0]
+        cfg['roi']['h'] = sz[1]
 
     # create output directory for the experiment, and store a json dump of the
     # config.cfg dictionary there
