@@ -124,7 +124,7 @@ In addition, the `gdal_translate` binary is needed. The version must be >= 1.10.
 #### piio
 
     cd 3rdparty
-    git clone https://github.com/mnhrdt/iio.git
+    git clone https://github.com/carlodef/iio.git
     cd piio_packaged
     python setup.py install --prefix=~/local
     export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages

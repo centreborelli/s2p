@@ -10,7 +10,7 @@ import tempfile
 import re
 
 import rpc_model
-import global_params
+from config import cfg
 
 
 # add the bin folder to system path
@@ -36,7 +36,7 @@ def tmpfile(ext=''):
     The path of the created file is added to the garbage list to allow cleaning
     at the end of the pipeline.
     """
-    fd, out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = global_params.temporary_dir)
+    fd, out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = cfg['temporary_dir'])
     garbage.append(out)
     os.close(fd)           # http://www.logilab.org/blogentry/17873
     return out
