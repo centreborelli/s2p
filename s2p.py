@@ -589,6 +589,7 @@ if __name__ == '__main__':
     # update roi definition if the full_img flag is set to true
     if ('full_img' in cfg) and cfg['full_img']:
         sz = common.image_size_gdal(cfg['images'][0]['img'])
+        cfg['roi'] = {}
         cfg['roi']['x'] = 0
         cfg['roi']['y'] = 0
         cfg['roi']['w'] = sz[0]
