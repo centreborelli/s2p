@@ -11,6 +11,7 @@ import rpc_utils
 import estimation
 import evaluation
 import common
+from config import cfg
 
 
 def center_2d_points(pts):
@@ -54,7 +55,7 @@ def matches_from_sift(im1, im2):
         im1, im2: paths to the two images (usually jp2 or tif)
 
         This function uses the parameter subsampling_factor_registration
-        from the global_params module. If factor > 1 then the registration
+        from the config module. If factor > 1 then the registration
         is performed over subsampled images, but the resulting keypoints
         are then scaled back to conceal the subsampling
 
@@ -63,28 +64,17 @@ def matches_from_sift(im1, im2):
             contains one pair of points, ordered as x1 y1 x2 y2.
             The coordinate system is that of the big images.
     """
-    ## Try to import the global parameters module
-    #  it permits to pass values between different modules
-    try:
-        from global_params import subsampling_factor_registration
-        if subsampling_factor_registration != 1:
-            im1 = common.image_safe_zoom_fft(im1, subsampling_factor_registration)
-            im2 = common.image_safe_zoom_fft(im2, subsampling_factor_registration)
-    except ImportError:
-        subsampling_factor_registration = 1
-
+    if cfg['subsampling_factor_registration'] != 1:
+        im1 = common.image_safe_zoom_fft(im1, subsampling_factor_registration)
+        im2 = common.image_safe_zoom_fft(im2, subsampling_factor_registration)
 
     # apply sift, then transport keypoints coordinates in the big images frame
-    kpts1 = common.image_sift_keypoints(im1, '')
-    kpts2 = common.image_sift_keypoints(im2, '')
-    try:
-        from global_params import sift_match_thresh
-    except ImportError:
-        sift_match_thresh = 0.6
-    matches = common.sift_keypoints_match(kpts1, kpts2, 1, sift_match_thresh)
+    p1 = common.image_sift_keypoints(im1, '')
+    p2 = common.image_sift_keypoints(im2, '')
+    matches = common.sift_keypoints_match(p1, p2, 1, cfg['sift_match_thresh'])
 
     # compensate coordinates for the crop and the zoom
-    return matches * subsampling_factor_registration
+    return matches * cfg['subsampling_factor_registration']
 
 
 def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -99,7 +89,7 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
             rectangle.
 
         This function uses the parameter subsampling_factor_registration
-        from the global_params module. If factor > 1 then the registration
+        from the config module. If factor > 1 then the registration
         is performed over subsampled images, but the resulting keypoints
         are then scaled back to conceal the subsampling
 
@@ -232,18 +222,15 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     dispx_max = np.ceil((np.max(x2 - x1)))
 
     # add a security margin to the disp range
-    try:
-        from python.global_params import disp_range_extra_margin as d
-    except ImportError:
-        d = 0.2
+    d = cfg['disp_range_extra_margin']
     if (dispx_min < 0):
-        dispx_min = (1+d) * dispx_min
+        dispx_min = (1 + d) * dispx_min
     else:
-        dispx_min = (1-d) * dispx_min
+        dispx_min = (1 - d) * dispx_min
     if (dispx_max > 0):
-        dispx_max = (1+d) * dispx_max
+        dispx_max = (1 + d) * dispx_max
     else:
-        dispx_max = (1-d) * dispx_max
+        dispx_max = (1 - d) * dispx_max
 
     return H2, dispx_min, dispx_max
 
@@ -332,10 +319,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
     # estimate rectifying homographies.
 
     print "step 1: find matches, and center them ------------------------------"
-    try:
-        from python.global_params import n_gcp_per_axis as n
-    except ImportError:
-        n = 5
+    n = cfg['n_gcp_per_axis']
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, n)
     p1 = rpc_matches[:, 0:2]
     p2 = rpc_matches[:, 2:4]
@@ -395,12 +379,9 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         return H1, H2, disp_m, disp_M
 
     # filter sift matches with the known fundamental matrix
-    F = np.dot(T2.T, np.dot(F, T1)) # convert F for big images coordinate frame
-    try:
-        from global_params import epipolar_thresh
-    except ImportError:
-        epipolar_thresh = 2.0
-    m = filter_matches_epipolar_constraint(F, m, epipolar_thresh)
+    # but first convert F for big images coordinate frame
+    F = np.dot(T2.T, np.dot(F, T1)) 
+    m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
     print 'remaining sift matches', len(m)
     if len(m) < 2:
         # 0 or 1 sift match
@@ -440,7 +421,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, f
             matches for the fundamental matrix estimation.
 
         This function uses the parameter subsampling_factor from the
-        global_params module.  If the factor z > 1 then the output images will
+        config module.  If the factor z > 1 then the output images will
         be subsampled by a factor z.  The output matrices H1, H2, and the
         ranges are also updated accordingly:
         Hi = Z*Hi   with Z = diag(1/z,1/z,1)   and
@@ -471,28 +452,23 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, f
     assert (round(x0) == 0)
     assert (round(y0) == 0)
 
-    ## Try to import the global parameters module
-    #  it permits to pass values between different modules
-    try:
-        from python.global_params import subsampling_factor
-    except ImportError:
-        subsampling_factor = 1
-
     # apply homographies and do the crops
-    homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, subsampling_factor)
-    homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, subsampling_factor)
+    homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0,
+            cfg['subsampling_factor'])
+    homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0,
+            cfg['subsampling_factor'])
 
-    #  If subsampling_factor the homographies are altered to reflect the zoom
-    if subsampling_factor != 1:
+    #  If subsampling_factor'] the homographies are altered to reflect the zoom
+    if cfg['subsampling_factor'] != 1:
         from math import floor, ceil
         # update the H1 and H2 to reflect the zoom
         Z = np.eye(3);
-        Z[0,0] = Z[1,1] = 1.0/subsampling_factor
+        Z[0,0] = Z[1,1] = 1.0 / cfg['subsampling_factor']
 
         H1 = np.dot(Z, H1)
         H2 = np.dot(Z, H2)
-        disp_min = floor(disp_min/subsampling_factor)
-        disp_max = ceil(disp_max/subsampling_factor)
+        disp_min = floor(disp_min / cfg['subsampling_factor'])
+        disp_max = ceil(disp_max / cfg['subsampling_factor'])
 
     return H1, H2, disp_min, disp_max
 
