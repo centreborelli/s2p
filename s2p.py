@@ -11,6 +11,7 @@ import numpy as np
 import os.path
 import copy
 
+from python import tee
 from python import common
 from python import rpc_model
 from python import rpc_utils
@@ -236,6 +237,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         path to the digital elevation model (dem), resampled on the grid of the
         reference image.
     """
+    # duplicate stdout and stderr to log file
+    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
+
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
@@ -390,6 +394,9 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
         path to the digital elevaton model (dem), resampled on the grid of the
         reference image.
     """
+    # duplicate stdout and stderr to log file
+    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
+
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
