@@ -271,10 +271,10 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
         h = sz[1]
 
     # First, we need to make sure the dataset has a proper origin/spacing
-    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/f, -h/f, im, tmp))
+    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/float(f), -h/float(f), im, tmp))
 
     # do the zoom with gdalwarp
-    run('gdalwarp -r cubic -ts %d %d %s %s' %  (w/f, h/f, tmp, out))
+    run('gdalwarp -r cubic -ts %d %d %s %s' %  (w/float(f), h/float(f), tmp, out))
     return out
 
 
