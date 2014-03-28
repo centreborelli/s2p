@@ -43,6 +43,12 @@ def update_mask(target_mask, H, gml_file, invert_gml=False, erosion=None):
 
     # compute the intersection between target_mask and msk
     common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk, target_mask))
+
+    # save msk (for debug purposes)
+    if invert_gml:
+        common.run('cp %s %s.cloud.png' % (msk, target_mask))
+    else:
+        common.run('cp %s %s.roi.png' % (msk, target_mask))
     return
 
 
@@ -136,12 +142,13 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     #   translation (-1 - x/4, -y/4)
     #   zoom 4/z
     w, h = common.image_size(crop_panchro)
-    xx = np.floor(x / 4.0) + 1
-    yy = np.floor(y / 4.0)
-    ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
-    hh = np.ceil((y + h * zoom) / 4.0) - yy
+    xx = np.floor(x / 4.0) - 10
+    yy = np.floor(y / 4.0) - 10
+    ww = np.ceil((x + w * zoom) / 4.0) + 10 - xx
+    hh = np.ceil((y + h * zoom) / 4.0) + 10 - yy
     crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
-    crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
+    #crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
+    crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
