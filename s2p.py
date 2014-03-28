@@ -154,7 +154,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     if cld_msk is not None:
         triangulation.update_mask(mask, H1, cld_msk, True)
     if roi_msk is not None:
-        triangulation.update_mask(mask, H1, roi_msk, False, 20)
+        triangulation.update_mask(mask, H1, roi_msk, False, cfg['msk_erosion'])
 
     ## triangulation
     if A_global is not None:
