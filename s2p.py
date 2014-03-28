@@ -410,11 +410,11 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
     dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-            tile_w, tile_h, overlap, cld1, roi1)
+            tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     out_dir_right = '%s/right' % out_dir
     dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-            tile_w, tile_h, overlap, cld1, roi1)
+            tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     # merge the two digital elevation models
     dem = '%s/dem.tif' % out_dir
