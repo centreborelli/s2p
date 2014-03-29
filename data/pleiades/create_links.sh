@@ -72,15 +72,15 @@ for f in $pleiades_dir/*; do
             # the dataset has subdatasets (multidate)
             for ff in $f/dataset_*; do
                 mkdir -p `basename $f`/`basename $ff`
-                find $ff | grep "JP2.TIF" | grep -v "JP2.TIF.ovr" | grep "_P_"   | sort > `basename $f`/`basename $ff`/paths_panchro.txt
-                find $ff | grep "JP2.TIF" | grep -v "JP2.TIF.ovr" | grep "_MS_"  | sort > `basename $f`/`basename $ff`/paths_ms.txt
-                find $ff | grep "JP2.TIF" | grep -v "JP2.TIF.ovr" | grep "_PMS_" | sort > `basename $f`/`basename $ff`/paths_pms.txt
+                find $ff | grep "JP2.TIF" | grep "R1C1" | grep -v "JP2.TIF.ovr" | grep "_P_"   | sort > `basename $f`/`basename $ff`/paths_panchro.txt
+                find $ff | grep "JP2.TIF" | grep "R1C1" | grep -v "JP2.TIF.ovr" | grep "_MS_"  | sort > `basename $f`/`basename $ff`/paths_ms.txt
+                find $ff | grep "JP2.TIF" | grep "R1C1" | grep -v "JP2.TIF.ovr" | grep "_PMS_" | sort > `basename $f`/`basename $ff`/paths_pms.txt
             done
         else
             # the dataset has no subdatasets
-            find $f | grep "JP2.TIF" | grep -v "JP2.TIF.ovr" | grep "_P_"   | sort > `basename $f`/paths_panchro.txt
-            find $f | grep "JP2.TIF" | grep -v "JP2.TIF.ovr" | grep "_MS_"  | sort > `basename $f`/paths_ms.txt
-            find $f | grep "JP2.TIF" | grep -v "JP2.TIF.ovr" | grep "_PMS_" | sort > `basename $f`/paths_pms.txt
+            find $f | grep "JP2.TIF" | grep "R1C1" | grep -v "JP2.TIF.ovr" | grep "_P_"   | sort > `basename $f`/paths_panchro.txt
+            find $f | grep "JP2.TIF" | grep "R1C1" | grep -v "JP2.TIF.ovr" | grep "_MS_"  | sort > `basename $f`/paths_ms.txt
+            find $f | grep "JP2.TIF" | grep "R1C1" | grep -v "JP2.TIF.ovr" | grep "_PMS_" | sort > `basename $f`/paths_pms.txt
         fi
     fi
 done
