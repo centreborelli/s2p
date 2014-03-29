@@ -11,6 +11,7 @@ import numpy as np
 import os.path
 import copy
 
+from python import tee
 from python import common
 from python import rpc_model
 from python import rpc_utils
@@ -153,7 +154,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     if cld_msk is not None:
         triangulation.update_mask(mask, H1, cld_msk, True)
     if roi_msk is not None:
-        triangulation.update_mask(mask, H1, roi_msk, False)
+        triangulation.update_mask(mask, H1, roi_msk, False, cfg['msk_erosion'])
 
     ## triangulation
     if A_global is not None:
@@ -236,6 +237,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         path to the digital elevation model (dem), resampled on the grid of the
         reference image.
     """
+    # duplicate stdout and stderr to log file
+    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
+
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
@@ -390,6 +394,9 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
         path to the digital elevaton model (dem), resampled on the grid of the
         reference image.
     """
+    # duplicate stdout and stderr to log file
+    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
+
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
@@ -403,11 +410,11 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
     dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-            tile_w, tile_h, overlap, cld1, roi1)
+            tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     out_dir_right = '%s/right' % out_dir
     dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-            tile_w, tile_h, overlap, cld1, roi1)
+            tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     # merge the two digital elevation models
     dem = '%s/dem.tif' % out_dir
@@ -589,6 +596,7 @@ if __name__ == '__main__':
     # update roi definition if the full_img flag is set to true
     if ('full_img' in cfg) and cfg['full_img']:
         sz = common.image_size_gdal(cfg['images'][0]['img'])
+        cfg['roi'] = {}
         cfg['roi']['x'] = 0
         cfg['roi']['y'] = 0
         cfg['roi']['w'] = sz[0]

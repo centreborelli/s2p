@@ -14,13 +14,16 @@ build_dir:
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
 	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
 	height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
-	siftu srtm4 ransac colormesh cldmask
+	siftu srtm4 ransac colormesh cldmask morsi
 
 bin_dir:
 	mkdir -p $(BINDIR)
 
 bin2asc: bin2asc.c
 	cc -std=c99 bin2asc.c -o $(BINDIR)/bin2asc
+
+morsi: iio.o morsi.o
+	cc iio.o morsi.o -lpng -ltiff -ljpeg -o $(BINDIR)/morsi
 
 cldmask: iio.o cldmask.o
 	cc iio.o cldmask.o -lpng -ltiff -ljpeg -o $(BINDIR)/cldmask
@@ -175,6 +178,9 @@ ransac.o: ransac.c fail.c xmalloc.c xfopen.c cmphomod.c ransac_cases.c parsenumb
 
 cldmask.o: cldmask.c fail.c xmalloc.c xfopen.c parsenumbers.c drawsegment.c pickopt.c
 	cc -c -std=c99 -g -O3 cldmask.c
+
+morsi.o: morsi.c iio.h
+	cc -c -std=c99 -g -O3 morsi.c
 
 clean:
 	rm *.o

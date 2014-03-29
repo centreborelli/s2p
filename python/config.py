@@ -44,3 +44,4 @@ cfg['debug'] = False
 cfg['skip_existing'] = False
 cfg['mosaic_method'] = 'piio'
 cfg['offset_ply'] = False
+cfg['msk_erosion'] = 50

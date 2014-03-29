@@ -7,7 +7,7 @@ import numpy as np
 import common
 import homography_cropper
 
-def update_mask(target_mask, H, gml_file, invert_gml=False):
+def update_mask(target_mask, H, gml_file, invert_gml=False, erosion=None):
     """
     Computes the intersection between an image mask and a gml mask
 
@@ -18,6 +18,10 @@ def update_mask(target_mask, H, gml_file, invert_gml=False):
         gml_file: path to the gml file defining the mask on the full image
         invert_gml: boolean flag. Set it to True if the gml mask is positive on
             marked regions (it is the case for cloud masks, but not for roi masks)
+        erosion (optional, default None): erosion parameter applied to the gml
+            mask. Note that the mask should have been inverted (if needed) to
+            mark accepted pixels with a positive value, and rejected pixels
+            with 0.
 
     Returns:
         nothing. The file target_mask is modified.
@@ -33,8 +37,18 @@ def update_mask(target_mask, H, gml_file, invert_gml=False):
     if invert_gml:
         common.run('plambda %s "255 x -" -o %s' % (msk, msk))
 
+    # apply erosion
+    if erosion is not None:
+        common.run('morsi disk%d erosion %s %s' % (int(erosion), msk, msk))
+
     # compute the intersection between target_mask and msk
     common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk, target_mask))
+
+    # save msk (for debug purposes)
+    if invert_gml:
+        common.run('cp %s %s.cloud.png' % (msk, target_mask))
+    else:
+        common.run('cp %s %s.roi.png' % (msk, target_mask))
     return
 
 
@@ -128,12 +142,13 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     #   translation (-1 - x/4, -y/4)
     #   zoom 4/z
     w, h = common.image_size(crop_panchro)
-    xx = np.floor(x / 4.0) + 1
-    yy = np.floor(y / 4.0)
-    ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
-    hh = np.ceil((y + h * zoom) / 4.0) - yy
+    xx = np.floor(x / 4.0) - 10
+    yy = np.floor(y / 4.0) - 10
+    ww = np.ceil((x + w * zoom) / 4.0) + 10 - xx
+    hh = np.ceil((y + h * zoom) / 4.0) + 10 - yy
     crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
-    crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
+    #crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
+    crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
