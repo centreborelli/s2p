@@ -493,8 +493,12 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
         with open(clr):
             triangulation.colorize(crop, clr, x, y, z, crop_color)
     except (IOError, TypeError):
-        print 'no color image available for this dataset.'
-        crop_color = common.image_qauto(crop)
+        print 'no xs image available for this dataset...'
+        if common.image_pix_dim(crop) == 4:
+            print '... but the image is pansharpened fusioned!'
+            crop_color = common.rgbi_to_rgb(crop)
+        else:
+            crop_color = common.image_qauto(crop)
 
     triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
             off_x, off_y)
