@@ -52,7 +52,7 @@ def matches_from_sift(im1, im2):
     Computes a list of sift matches between two images.
 
     Args:
-        im1, im2: paths to the two images (usually jp2 or tif)
+        im1, im2: paths to the two images
 
         This function uses the parameter subsampling_factor_registration
         from the config module. If factor > 1 then the registration
@@ -64,17 +64,18 @@ def matches_from_sift(im1, im2):
             contains one pair of points, ordered as x1 y1 x2 y2.
             The coordinate system is that of the big images.
     """
-    if cfg['subsampling_factor_registration'] != 1:
-        im1 = common.image_safe_zoom_fft(im1, subsampling_factor_registration)
-        im2 = common.image_safe_zoom_fft(im2, subsampling_factor_registration)
+    zoom = cfg['subsampling_factor_registration']
+    if zoom != 1:
+        im1 = common.image_safe_zoom_fft(im1, zoom)
+        im2 = common.image_safe_zoom_fft(im2, zoom)
 
     # apply sift, then transport keypoints coordinates in the big images frame
-    p1 = common.image_sift_keypoints(im1, '')
-    p2 = common.image_sift_keypoints(im2, '')
+    p1 = common.image_sift_keypoints(im1)
+    p2 = common.image_sift_keypoints(im2)
     matches = common.sift_keypoints_match(p1, p2, 1, cfg['sift_match_thresh'])
 
     # compensate coordinates for the crop and the zoom
-    return matches * cfg['subsampling_factor_registration']
+    return matches * zoom
 
 
 def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -380,7 +381,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
     # filter sift matches with the known fundamental matrix
     # but first convert F for big images coordinate frame
-    F = np.dot(T2.T, np.dot(F, T1)) 
+    F = np.dot(T2.T, np.dot(F, T1))
     m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
     print 'remaining sift matches', len(m)
     if len(m) < 2:

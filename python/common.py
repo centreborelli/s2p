@@ -408,21 +408,23 @@ def rgbi_to_rgb(im):
     return out
 
 
-def image_sift_keypoints(im, keyfile='', max_nb=None):
+def image_sift_keypoints(im, keyfile=None, max_nb=None):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
     Args:
         im: path to the input image
-        keyfile: path to the file where to write the list of sift descriptors
-        max_nb: maximal number of keypoints. If more keypoints are detected,
-            those at smallest scales are discarded
+        keyfile (optional): path to the file where to write the list of sift
+            descriptors
+        max_nb (optional): maximal number of keypoints. If more keypoints are
+            detected, those at smallest scales are discarded
 
     Returns:
         path to the file containing the list of descriptors
     """
-    if (keyfile == ''):
+    if keyfile is None:
        keyfile = tmpfile('.txt')
+
     run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
 
     # remove header from keypoint files
@@ -431,7 +433,7 @@ def image_sift_keypoints(im, keyfile='', max_nb=None):
     run("cp %s %s" % (tmp, keyfile))
 
     # keep only the first max_nb points
-    if max_nb:
+    if max_nb is not None:
         run("head -n %d %s > %s" % (max_nb, keyfile, tmp))
         run("cp %s %s" % (tmp, keyfile))
     return keyfile
