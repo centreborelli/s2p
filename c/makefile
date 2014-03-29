@@ -26,7 +26,7 @@ cldmask: iio.o cldmask.o
 	cc iio.o cldmask.o -lpng -ltiff -ljpeg -o $(BINDIR)/cldmask
 
 colormesh: iio.o rpc.o colormesh.o geographiclib_wrapper.o
-	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lGeographic -lstdc++ -o $(BINDIR)/colormesh
+	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lGeographic -lstdc++ -o $(BINDIR)/colormesh -L../3rdparty/GeographicLib-1.32/src/
 
 downsa: iio.o downsa.o
 	cc iio.o downsa.o -lpng -ltiff -ljpeg -o $(BINDIR)/downsa
