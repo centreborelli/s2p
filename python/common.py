@@ -121,7 +121,7 @@ def image_size(im):
             (nc, nr) = map(int, open(out).read().split())
             return (nc, nr)
     except IOError:
-        print "image_size: the input file doesn't exist ("+str(im)+")"
+        print "image_size: the input file %s doesn't exist" % str(im)"
         sys.exit()
 
 
@@ -144,7 +144,7 @@ def image_size_gdal(im):
             nr = int(out[3])
             return (nc, nr)
     except IOError:
-        print "image_size_gdal: the input file doesn't exist %s" % str(im)
+        print "image_size_gdal: the input file %s doesn't exist" % str(im)
         sys.exit()
 
 
@@ -352,8 +352,22 @@ def image_qauto(im):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s 2> /dev/null' % (im, out))
-    #run('qauto %s %s 2> /dev/null' % (im, out))
+    run('qauto %s %s' % (im, out))
+    return out
+
+
+def image_qauto_gdal(im):
+    """
+    Uniform requantization between min and max intensity.
+
+    Args:
+        im: path to input image
+
+    Returns:
+        path of requantized image, saved as png
+    """
+    out = tmpfile('.png')
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s' % (im, out))
     return out
 
 
@@ -370,7 +384,7 @@ def image_qeasy(im, black, white):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s 2> /dev/null' % (black, white, im, out))
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s' % (black, white, im, out))
     return out
 
 
@@ -394,7 +408,7 @@ def pansharpened_to_panchro(im, out=None):
 
 def rgbi_to_rgb(im):
     """
-    Converts a 4-channel red, green, blue, infrared (rgbi) image to rgb.
+    Converts a 4-channel RGBI (I for infrared) image to rgb, with iio
 
     Args:
         im: path to the input image
@@ -403,8 +417,22 @@ def rgbi_to_rgb(im):
         output rgb image
     """
     out = tmpfile('.tif')
-    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s 2> /dev/null' %(im, out))
-    #run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
+    run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
+    return out
+
+
+def rgbi_to_rgb_gdal(im):
+    """
+    Converts a 4-channel RGBI (I for infrared) image to rgb, using gdal
+
+    Args:
+        im: path to the input image
+
+    Returns:
+        output rgb image
+    """
+    out = tmpfile('.tif')
+    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s' %(im, out))
     return out
 
 
