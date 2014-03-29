@@ -374,6 +374,24 @@ def image_qeasy(im, black, white):
     return out
 
 
+def pansharpened_to_panchro(im, out=None):
+    """
+    Converts a RGBI pansharpened image to a graylevel image.
+
+    Args:
+        im: path to the input image
+        out (optional): path to the output image
+
+    Returns:
+        path to the output image
+    """
+    if out is None:
+        out = tmpfile('.tif')
+    run('plambda %s "x[0] x[1] x[2] x[3] + + + 4 /" -o %s' % (im, out))
+    return out
+
+
+
 def rgbi_to_rgb(im):
     """
     Converts a 4-channel red, green, blue, infrared (rgbi) image to rgb.
