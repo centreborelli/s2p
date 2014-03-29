@@ -52,7 +52,7 @@ def matches_from_sift(im1, im2):
     Computes a list of sift matches between two images.
 
     Args:
-        im1, im2: paths to the two images (usually jp2 or tif)
+        im1, im2: paths to the two images
 
         This function uses the parameter subsampling_factor_registration
         from the config module. If factor > 1 then the registration
@@ -64,17 +64,25 @@ def matches_from_sift(im1, im2):
             contains one pair of points, ordered as x1 y1 x2 y2.
             The coordinate system is that of the big images.
     """
-    if cfg['subsampling_factor_registration'] != 1:
-        im1 = common.image_safe_zoom_fft(im1, subsampling_factor_registration)
-        im2 = common.image_safe_zoom_fft(im2, subsampling_factor_registration)
+    # convert to gray
+    if common.image_pix_dim(im1) == 4:
+        im1 = common.pansharpened_to_panchro(im1)
+    if common.image_pix_dim(im2) == 4:
+        im2 = common.pansharpened_to_panchro(im2)
+
+    # zoom out
+    zoom = cfg['subsampling_factor_registration']
+    if zoom != 1:
+        im1 = common.image_safe_zoom_fft(im1, zoom)
+        im2 = common.image_safe_zoom_fft(im2, zoom)
 
     # apply sift, then transport keypoints coordinates in the big images frame
-    p1 = common.image_sift_keypoints(im1, '')
-    p2 = common.image_sift_keypoints(im2, '')
+    p1 = common.image_sift_keypoints(im1)
+    p2 = common.image_sift_keypoints(im2)
     matches = common.sift_keypoints_match(p1, p2, 1, cfg['sift_match_thresh'])
 
     # compensate coordinates for the crop and the zoom
-    return matches * cfg['subsampling_factor_registration']
+    return matches * zoom
 
 
 def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -294,7 +302,8 @@ def update_minmax_range_extrapolating_registration_affinity(matches, H1,
     return dispx_min, dispx_max
 
 
-def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None, m=None):
+def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
+        A=None, m=None):
     """
     Computes rectifying homographies for a ROI in a pair of Pleiades images.
 
@@ -380,7 +389,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
     # filter sift matches with the known fundamental matrix
     # but first convert F for big images coordinate frame
-    F = np.dot(T2.T, np.dot(F, T1)) 
+    F = np.dot(T2.T, np.dot(F, T1))
     m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
     print 'remaining sift matches', len(m)
     if len(m) < 2:
@@ -449,14 +458,14 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, f
     pts1 = common.points_apply_homography(H1, roi)
     x0, y0, w0, h0 = common.bounding_box2D(pts1)
     # check that the first homography maps the ROI in the positive quadrant
-    assert (round(x0) == 0)
-    assert (round(y0) == 0)
+    assert(round(x0) == 0)
+    assert(round(y0) == 0)
 
     # apply homographies and do the crops
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0,
-            cfg['subsampling_factor'])
+            cfg['subsampling_factor'], True)
     homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0,
-            cfg['subsampling_factor'])
+            cfg['subsampling_factor'], True)
 
     #  If subsampling_factor'] the homographies are altered to reflect the zoom
     if cfg['subsampling_factor'] != 1:

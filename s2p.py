@@ -10,6 +10,7 @@ import json
 import numpy as np
 import os.path
 import copy
+import operator
 
 from python import tee
 from python import common
@@ -489,12 +490,21 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
         common.image_zoom_gdal(tmp_crop, z, crop, w, h)
 
     # colorize, then generate point cloud
-    try:
-        with open(clr):
-            triangulation.colorize(crop, clr, x, y, z, crop_color)
-    except (IOError, TypeError):
-        print 'no color image available for this dataset.'
-        crop_color = common.image_qauto(crop)
+    if clr is not None:
+        print 'colorizing...'
+        triangulation.colorize(crop, clr, x, y, z, crop_color)
+    elif common.image_pix_dim(crop) == 4:
+        print 'the image is pansharpened fusioned'
+
+        # if the image is big, use gdal
+        if reduce(operator.mul, common.image_size(crop)) > 1e8:
+            crop_color = common.rgbi_to_rgb_gdal(crop)
+            crop_color = common.image_qauto_gdal(crop_color)
+        else:
+            crop_color = common.rgbi_to_rgb(crop)
+            crop_color = common.image_qauto(crop_color)
+    else:
+        print 'no color data'
 
     triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
             off_x, off_y)

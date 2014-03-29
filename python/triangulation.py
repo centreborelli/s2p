@@ -161,8 +161,8 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     crop_rgb = common.rgbi_to_rgb(crop_ms)
     #rgb      = common.image_qeasy(crop_rgb, 300, 3000)
     #panchro  = common.image_qeasy(crop_panchro, 300, 3000)
-    rgb      = common.image_qauto(crop_rgb)
-    panchro  = common.image_qauto(crop_panchro)
+    rgb      = common.image_qauto_gdal(crop_rgb)
+    panchro  = common.image_qauto_gdal(crop_panchro)
 
     # 2. Combine linearly the intensity and the color to obtain the result
     common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' %

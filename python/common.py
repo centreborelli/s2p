@@ -121,7 +121,7 @@ def image_size(im):
             (nc, nr) = map(int, open(out).read().split())
             return (nc, nr)
     except IOError:
-        print "image_size: the input file doesn't exist ("+str(im)+")"
+        print "image_size: the input file %s doesn't exist" % str(im)"
         sys.exit()
 
 
@@ -144,7 +144,7 @@ def image_size_gdal(im):
             nr = int(out[3])
             return (nc, nr)
     except IOError:
-        print "image_size_gdal: the input file doesn't exist %s" % str(im)
+        print "image_size_gdal: the input file %s doesn't exist" % str(im)
         sys.exit()
 
 
@@ -352,8 +352,22 @@ def image_qauto(im):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s 2> /dev/null' % (im, out))
-    #run('qauto %s %s 2> /dev/null' % (im, out))
+    run('qauto %s %s' % (im, out))
+    return out
+
+
+def image_qauto_gdal(im):
+    """
+    Uniform requantization between min and max intensity.
+
+    Args:
+        im: path to input image
+
+    Returns:
+        path of requantized image, saved as png
+    """
+    out = tmpfile('.png')
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s' % (im, out))
     return out
 
 
@@ -370,13 +384,31 @@ def image_qeasy(im, black, white):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s 2> /dev/null' % (black, white, im, out))
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s' % (black, white, im, out))
     return out
+
+
+def pansharpened_to_panchro(im, out=None):
+    """
+    Converts a RGBI pansharpened image to a graylevel image.
+
+    Args:
+        im: path to the input image
+        out (optional): path to the output image
+
+    Returns:
+        path to the output image
+    """
+    if out is None:
+        out = tmpfile('.tif')
+    run('plambda %s "x[0] x[1] x[2] x[3] + + + 4 /" -o %s' % (im, out))
+    return out
+
 
 
 def rgbi_to_rgb(im):
     """
-    Converts a 4-channel red, green, blue, infrared (rgbi) image to rgb.
+    Converts a 4-channel RGBI (I for infrared) image to rgb, with iio
 
     Args:
         im: path to the input image
@@ -385,26 +417,42 @@ def rgbi_to_rgb(im):
         output rgb image
     """
     out = tmpfile('.tif')
-    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s 2> /dev/null' %(im, out))
-    #run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
+    run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
     return out
 
 
-def image_sift_keypoints(im, keyfile='', max_nb=None):
+def rgbi_to_rgb_gdal(im):
+    """
+    Converts a 4-channel RGBI (I for infrared) image to rgb, using gdal
+
+    Args:
+        im: path to the input image
+
+    Returns:
+        output rgb image
+    """
+    out = tmpfile('.tif')
+    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s' %(im, out))
+    return out
+
+
+def image_sift_keypoints(im, keyfile=None, max_nb=None):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
     Args:
         im: path to the input image
-        keyfile: path to the file where to write the list of sift descriptors
-        max_nb: maximal number of keypoints. If more keypoints are detected,
-            those at smallest scales are discarded
+        keyfile (optional): path to the file where to write the list of sift
+            descriptors
+        max_nb (optional): maximal number of keypoints. If more keypoints are
+            detected, those at smallest scales are discarded
 
     Returns:
         path to the file containing the list of descriptors
     """
-    if (keyfile == ''):
+    if keyfile is None:
        keyfile = tmpfile('.txt')
+
     run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
 
     # remove header from keypoint files
@@ -413,7 +461,7 @@ def image_sift_keypoints(im, keyfile='', max_nb=None):
     run("cp %s %s" % (tmp, keyfile))
 
     # keep only the first max_nb points
-    if max_nb:
+    if max_nb is not None:
         run("head -n %d %s > %s" % (max_nb, keyfile, tmp))
         run("cp %s %s" % (tmp, keyfile))
     return keyfile
