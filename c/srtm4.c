@@ -368,3 +368,38 @@ int main(int c, char *v[])
     }
 }
 #endif//MAIN_SRTM4
+
+
+#ifndef MAIN_SRTM4
+#ifdef MAIN_SRTM4_WHICH_TILE
+static void print_tile_filename(double lon, double lat)
+{
+	int tlon, tlat;
+	float xlon, xlat;
+	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
+    printf("srtm_%02d_%02d.zip\n", tlon, tlat);
+    return;
+}
+
+
+int main(int c, char *v[])
+{
+	if (c != 1 && c != 3) {
+		fprintf(stderr, "usage:\n\t%s longitude latitude\n", *v);
+		return 1;
+	}
+    if (c == 3) {
+	    double lon = atof(v[1]);
+	    double lat = atof(v[2]);
+        print_tile_filename(lon, lat);
+	    return 0;
+    }
+    else {
+        double lon, lat;
+        while(2 == scanf("%lf %lf\n", &lon, &lat)) {
+            print_tile_filename(lon, lat);
+        }
+    }
+}
+#endif//MAIN_SRTM4_WHICH_TILE
+#endif
