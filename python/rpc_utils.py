@@ -246,7 +246,7 @@ def altitude_range_coarse(rpc):
     return m, M
 
 
-def altitude_range(rpc, x, y, w, h):
+def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
     """
     Computes an altitude range using SRTM data.
 
@@ -255,6 +255,9 @@ def altitude_range(rpc, x, y, w, h):
         x, y, w, h: four integers definig a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
+        margin_top: margin (in meters) to add to the upper bound of the range
+        margin_bottom: margin (usually negative) to add to the lower bound of
+            the range
 
     Returns:
         lower and upper bounds on the altitude of the world points that are
@@ -291,8 +294,8 @@ def altitude_range(rpc, x, y, w, h):
     h = geoid + srtm
 
     # extract extrema (and add a +-100m security margin)
-    h_m = -100 + np.round(h.min())
-    h_M =  100 + np.round(h.max())
+    h_m = np.round(h.min()) + margin_bottom
+    h_M = np.round(h.max()) + margin_top
 
     return h_m, h_M
 
@@ -369,7 +372,7 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
         to contain the projections of the 3D points that are visible in the
         input ROI.
     """
-    m, M = altitude_range(rpc1, x, y, w, h)
+    m, M = altitude_range(rpc1, x, y, w, h, 0, 0)
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
@@ -398,7 +401,7 @@ def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
     Returns:
         an array of matches, one per line, expressed as x1, y1, x2, y2.
     """
-    m, M = altitude_range(rpc1, x, y, w, h)
+    m, M = altitude_range(rpc1, x, y, w, h, 100, -100)
     lon, lat, alt = ground_control_points(rpc1, x, y, w, h, m, M, n)
     x1, y1, h1 = rpc1.inverse_estimate(lon, lat, alt)
     x2, y2, h2 = rpc2.inverse_estimate(lon, lat, alt)
@@ -421,7 +424,7 @@ def world_to_image_correspondences_from_rpc(rpc, x, y, w, h, n):
     Returns:
         an array of correspondences, one per line, expressed as X, Y, Z, x, y.
     """
-    m, M = altitude_range(rpc, x, y, w, h)
+    m, M = altitude_range(rpc, x, y, w, h, 100, -100)
     lon, lat, alt = ground_control_points(rpc, x, y, w, h, m, M, n)
     x, y, h = rpc.inverse_estimate(lon, lat, alt)
     X, Y, Z = geographiclib.geodetic_to_geocentric(lat, lon, alt)
@@ -464,7 +467,8 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     return disp
 
 
-def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_margin = 0, high_margin = 0):
+def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
+        margin_top=0, margin_bottom=0):
     """
     Args:
         rpc1: an instance of the rpc_model.RPCModel class for the reference
@@ -476,6 +480,8 @@ def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_marg
             (w, h) are the dimensions of the rectangle.
         H1, H2: rectifying homographies
         A (optional): pointing correction matrix
+        margin_top: margin (in meters) to add to the upper bound of the range
+        margin_bottom: margin (negative) to add to the lower bound of the range
 
     Returns:
         the min and max horizontal disparity observed on the 4 corners of the
@@ -483,10 +489,7 @@ def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_marg
         disparity is made horizontal thanks to the two rectifying homographies
         H1 and H2.
     """
-    m, M = altitude_range(rpc1, x, y, w, h)
-
-    m = m + low_margin
-    M = M + high_margin
+    m, M = altitude_range(rpc1, x, y, w, h, margin_top, margin_bottom)
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
