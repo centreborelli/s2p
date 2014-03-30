@@ -10,6 +10,7 @@ import json
 import numpy as np
 import os.path
 import copy
+import operator
 
 from python import tee
 from python import common
@@ -237,11 +238,11 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         path to the digital elevation model (dem), resampled on the grid of the
         reference image.
     """
-    # duplicate stdout and stderr to log file
-    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
-
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
+
+    # duplicate stdout and stderr to log file
+    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
@@ -394,11 +395,11 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
         path to the digital elevaton model (dem), resampled on the grid of the
         reference image.
     """
-    # duplicate stdout and stderr to log file
-    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
-
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
+
+    # duplicate stdout and stderr to log file
+    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
 
     # select ROI
     try:
@@ -489,12 +490,21 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
         common.image_zoom_gdal(tmp_crop, z, crop, w, h)
 
     # colorize, then generate point cloud
-    try:
-        with open(clr):
-            triangulation.colorize(crop, clr, x, y, z, crop_color)
-    except (IOError, TypeError):
-        print 'no color image available for this dataset.'
-        crop_color = common.image_qauto(crop)
+    if clr is not None:
+        print 'colorizing...'
+        triangulation.colorize(crop, clr, x, y, z, crop_color)
+    elif common.image_pix_dim(crop) == 4:
+        print 'the image is pansharpened fusioned'
+
+        # if the image is big, use gdal
+        if reduce(operator.mul, common.image_size(crop)) > 1e8:
+            crop_color = common.rgbi_to_rgb_gdal(crop)
+            crop_color = common.image_qauto_gdal(crop_color)
+        else:
+            crop_color = common.rgbi_to_rgb(crop)
+            crop_color = common.image_qauto(crop_color)
+    else:
+        print 'no color data'
 
     triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
             off_x, off_y)

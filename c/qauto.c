@@ -13,18 +13,15 @@ static int compare_floats(const void *a, const void *b)
 	return (*da > *db) - (*da < *db);
 }
 
-static void get_rminmax(float *rmin, float *rmax, float *x, int n, int rb)
+static void get_rminmax(float *rmin, float *rmax, float *x, int n)
 {
 	float *tx = xmalloc(n*sizeof*tx);
 	int N = 0;
 	for (int i = 0; i < n; i++)
 		if (!isnan(x[i]))
 			tx[N++] = x[i];
-	if (rb >= N/2) {
-		fprintf(stderr, "too many NANs");
-		abort();
-	}
 	qsort(tx, N, sizeof*tx, compare_floats);
+	int rb = N/200;
 	*rmin = tx[rb];
 	*rmax = tx[N-1-rb];
 	free(tx);
@@ -44,7 +41,7 @@ int main(int c, char *v[])
 	float *x = iio_read_image_float_vec(in, &w, &h, &pd);
 
 	float rmin, rmax;
-	get_rminmax(&rmin, &rmax, x, w*h*pd, w*h*pd/200);
+	get_rminmax(&rmin, &rmax, x, w*h*pd);
 	fprintf(stderr, "qauto: rminmax = %g %g\n", rmin, rmax);
 
 	uint8_t *y = xmalloc(w*h*pd);
