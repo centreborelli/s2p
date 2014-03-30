@@ -505,6 +505,7 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
             crop_color = common.image_qauto(crop_color)
     else:
         print 'no color data'
+        crop_color = crop
 
     triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
             off_x, off_y)
