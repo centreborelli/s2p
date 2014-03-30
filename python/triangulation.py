@@ -190,9 +190,9 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
             ply file should be encoded in plain text (ascii).
     """
     if ascii_ply:
-        common.run("colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
+        common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
             heights, rpc, H, cloud, off_x, off_y))
     else:
-        common.run("colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
+        common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
             rpc, H, cloud, off_x, off_y))
     return
