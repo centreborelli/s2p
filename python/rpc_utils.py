@@ -193,15 +193,18 @@ def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
     assert lat_M < 60
     assert lat_m < lat_M
 
+    # width of srtm bin: 6000x6000 samples in a tile of 5x5 degrees, ie 3
+    # arcseconds (in degrees)
+    srtm_bin = 1.0/1200
+
     # round down lon_m, lat_m and round up lon_M, lat_M so they are integer
     # multiples of 3 arcseconds
-    lon_m, lon_M = round_updown(lon_m, lon_M, 1.0/1200.0)
-    lat_m, lat_M = round_updown(lat_m, lat_M, 1.0/1200.0)
+    lon_m, lon_M = round_updown(lon_m, lon_M, srtm_bin)
+    lat_m, lat_M = round_updown(lat_m, lat_M, srtm_bin)
 
-    # compute the samples
-    srtm_step = 1.0/1200 # 6000x6000 samples in a tile of 5x5 degrees
-    lons = np.arange(lon_m, lon_M, srtm_step)
-    lats = np.arange(lat_m, lat_M, srtm_step)
+    # compute the samples: one in the center of each srtm bin
+    lons = np.arange(lon_m, lon_M, srtm_bin) + .5 * srtm_bin
+    lats = np.arange(lat_m, lat_M, srtm_bin) + .5 * srtm_bin
 
     # put all the samples in an array. There should be a more pythonic way to
     # do this
