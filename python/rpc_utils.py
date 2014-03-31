@@ -284,12 +284,16 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
     srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
     srtm = np.ravel(srtm)
 
+    # TODO: choose between the two heuristics implemented here
     # srtm data may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
-    # respect to geoid is 0. But for safety we prefer to give up the precise
+    # respect to geoid is 0. Thus we replace the nans with 0.
+    srtm[np.isnan(srtm)] = 0
+
+    # But for safety we prefer to give up the precise
     # altitude estimation in these cases and use the coarse one.
-    if np.isnan(np.sum(srtm)):
-        return altitude_range_coarse(rpc)
+#    if np.isnan(np.sum(srtm)):
+#        return altitude_range_coarse(rpc)
 
     # offset srtm heights with the geoid - ellipsoid difference
     geoid = common.run_binary_on_list_of_points(np.fliplr(ellipsoid_points),
