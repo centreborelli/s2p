@@ -429,13 +429,18 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     return dem
 
 
-def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
+def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
+        do_offset=False):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
-        img: path to the panchro image
-        rpc: path to the xml file containing rpc coefficients
-        clr: path to the xs (multispectral, ie color) image
+        im1:  path to the panchro reference image
+        rpc1: path to the xml file containing rpc coefficients for the
+            reference image
+        clr:  path to the xs (multispectral, ie color) reference image
+        im2:  path to the panchro secondary image
+        rpc2: path to the xml file containing rpc coefficients for the
+            secondary image
         x, y, w, h: four integers defining the rectangular ROI in the original
             panchro image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
@@ -448,8 +453,9 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
     """
     # output files
     common.run('mkdir -p %s' % out_dir)
-    crop = '%s/roi_ref.tif' % out_dir
     crop_color = '%s/roi_color_ref.tif' % out_dir
+    crop_ref = '%s/roi_ref.tif' % out_dir
+    crop_sec = '%s/roi_sec.tif' % out_dir
     cloud = '%s/cloud.ply' % out_dir
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
@@ -473,40 +479,47 @@ def generate_cloud(out_dir, img, rpc, clr, x, y, w, h, dem, do_offset=False):
 
     # compute offset
     if do_offset:
-        r = rpc_model.RPCModel(rpc)
+        r = rpc_model.RPCModel(rpc1)
         lat = r.latOff
         lon = r.lonOff
         off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
     else:
         off_x, off_y = 0, 0
 
-    # crop the ROI and zoom
+    # crop the ROI in ref and sec images, then zoom
+    r1 = rpc_model.RPCModel(rpc1)
+    r2 = rpc_model.RPCModel(rpc2)
+    x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x, y, w, h)
     if z == 1:
-        common.image_crop_TIFF(img, x, y, w, h, crop)
+        common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
+        common.image_crop_TIFF(im2, x2, y2, w2, h2, crop_sec)
     else:
         # gdal is used for the zoom because it handles BigTIFF files, and
         # before the zoom out the image may be that big
-        tmp_crop = common.image_crop_TIFF(img, x, y, w, h)
-        common.image_zoom_gdal(tmp_crop, z, crop, w, h)
+        tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
+        common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
+        tmp_crop = common.image_crop_TIFF(im2, x2, y2, w2, h2)
+        common.image_zoom_gdal(tmp_crop, z, crop_sec, w2, h2)
 
     # colorize, then generate point cloud
     if clr is not None:
         print 'colorizing...'
-        triangulation.colorize(crop, clr, x, y, z, crop_color)
-    elif common.image_pix_dim(crop) == 4:
+        triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
+    elif common.image_pix_dim(crop_ref) == 4:
         print 'the image is pansharpened fusioned'
 
         # if the image is big, use gdal
-        if reduce(operator.mul, common.image_size(crop)) > 1e8:
-            crop_color = common.rgbi_to_rgb_gdal(crop)
+        if reduce(operator.mul, common.image_size(crop_ref)) > 1e8:
+            crop_color = common.rgbi_to_rgb_gdal(crop_ref)
             crop_color = common.image_qauto_gdal(crop_color)
         else:
-            crop_color = common.rgbi_to_rgb(crop)
+            crop_color = common.rgbi_to_rgb(crop_ref)
             crop_color = common.image_qauto(crop_color)
     else:
         print 'no color data'
+        crop_color = crop_ref
 
-    triangulation.compute_point_cloud(crop_color, dem, rpc, trans, cloud,
+    triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
             off_x, off_y)
 
     # cleanup
@@ -638,5 +651,6 @@ if __name__ == '__main__':
     # point cloud generation
     generate_cloud(cfg['out_dir'],
       cfg['images'][0]['img'], cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
+      cfg['images'][1]['img'], cfg['images'][1]['rpc'],
       cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
       dem, cfg['offset_ply'])

@@ -14,7 +14,7 @@ build_dir:
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
 	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
 	height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
-	siftu srtm4 ransac colormesh cldmask morsi
+	siftu srtm4 srtm4_which_tile ransac colormesh cldmask morsi
 
 bin_dir:
 	mkdir -p $(BINDIR)
@@ -94,8 +94,14 @@ siftu: siftu.o
 srtm4.o: srtm4.c iio.h
 	cc -c -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c
 
+srtm4_which_tile.o: srtm4.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4_WHICH_TILE srtm4.c -o srtm4_which_tile.o
+
 srtm4: srtm4.o iio.o
 	cc srtm4.o iio.o -lm -lpng -ltiff -ljpeg -o $(BINDIR)/srtm4
+
+srtm4_which_tile: srtm4_which_tile.o iio.o
+	cc srtm4_which_tile.o iio.o -lm -lpng -ltiff -ljpeg -o $(BINDIR)/srtm4_which_tile
 
 ransac: ransac.o
 	cc ransac.o -lm -o $(BINDIR)/ransac
