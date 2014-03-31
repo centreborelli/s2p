@@ -151,7 +151,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         cfg['matching_algorithm'], disp_min, disp_max)
 
-    ## update mask with cloud mask and roi mask
+    ## update mask with water mask, cloud mask and roi mask
+    triangulation.update_mask(mask, H1, rpc1, False, None, True)
     if cld_msk is not None:
         triangulation.update_mask(mask, H1, cld_msk, True)
     if roi_msk is not None:
