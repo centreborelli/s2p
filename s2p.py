@@ -56,15 +56,6 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'w', 0) # '0' is for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
-    # debug print
-    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
-
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
     rect2 = '%s/rectified_sec.tif' % (out_dir)
@@ -88,6 +79,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             sys.stderr = sys.__stderr__
             fout.close()
         return dem
+
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % out_dir, 'w', 0) # '0' is for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
+    # debug print
+    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
 
 
     ## select ROI
