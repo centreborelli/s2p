@@ -107,7 +107,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     """
     # write the inverse of the resampling transform matrix. In brief it is:
     # homography * translation * zoom
-    # This matrix transports the coordinates of the original croopped and
+    # This matrix transports the coordinates of the original cropped and
     # zoomed grid (the one desired for out_height) to the rectified cropped and
     # zoomed grid (the one we have for height)
     Z = np.diag([zoom, zoom, 1])
@@ -153,13 +153,13 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     #   translation (-1 - x/4, -y/4)
     #   zoom 4/z
     w, h = common.image_size(crop_panchro)
-    xx = np.floor(x / 4.0) - 10
-    yy = np.floor(y / 4.0) - 10
-    ww = np.ceil((x + w * zoom) / 4.0) + 10 - xx
-    hh = np.ceil((y + h * zoom) / 4.0) + 10 - yy
+    xx = np.floor(x / 4.0) + 1
+    yy = np.floor(y / 4.0)
+    ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
+    hh = np.ceil((y + h * zoom) / 4.0) - yy
     crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
-    #crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
-    crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
+    crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
+    #crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
