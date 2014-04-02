@@ -14,7 +14,7 @@ build_dir:
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
 	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
 	height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
-	siftu srtm4 srtm4_which_tile ransac colormesh cldmask morsi
+	siftu srtm4 srtm4_which_tile ransac colormesh cldmask morsi watermask
 
 bin_dir:
 	mkdir -p $(BINDIR)
@@ -24,6 +24,9 @@ bin2asc: bin2asc.c
 
 morsi: iio.o morsi.o
 	cc iio.o morsi.o -lpng -ltiff -ljpeg -o $(BINDIR)/morsi
+
+watermask: iio.o watermask.o
+	cc iio.o watermask.o -lpng -ltiff -ljpeg -o $(BINDIR)/watermask
 
 cldmask: iio.o cldmask.o
 	cc iio.o cldmask.o -lpng -ltiff -ljpeg -o $(BINDIR)/cldmask
@@ -184,6 +187,9 @@ ransac.o: ransac.c fail.c xmalloc.c xfopen.c cmphomod.c ransac_cases.c parsenumb
 
 cldmask.o: cldmask.c fail.c xmalloc.c xfopen.c parsenumbers.c drawsegment.c pickopt.c
 	cc -c -std=c99 -g -O3 cldmask.c
+
+watermask.o: watermask.c fail.c xmalloc.c pickopt.c rpc.c srtm4.c iio.h parsenumbers.c
+	cc -c -std=c99 -g -O3 -DDONT_USE_TEST_MAIN watermask.c
 
 morsi.o: morsi.c iio.h
 	cc -c -std=c99 -g -O3 morsi.c
