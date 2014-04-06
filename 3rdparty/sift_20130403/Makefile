@@ -1,7 +1,7 @@
 # compilers configuration
 CC = gcc
 OFLAGS = -O3
-LIBS = -lpng 
+LIBS = -lpng -lm
 #-lefence -ltiff -ljpeg
 
 #CFLAGS = -g3 -rdynamic -Wall -Werror -Wno-write-strings  -Wno-deprecated -pedantic -std=c99 -D_POSIX_C_SOURCE=200809L
