@@ -69,22 +69,20 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
 
     Args:
         rpc1, rpc2: paths to the xml files
-        H1, H2: two 3x3 numpy arrays defining the rectifying homographies
+        H1, H2: path to txt files containing two 3x3 numpy arrays defining
+            the rectifying homographies
         disp, mask: paths to the diparity and mask maps
         height: path to the output height map
         rpc_err: path to the output rpc_error of triangulation
         A (optional): pointing correction matrix for im2
     """
-    # save homographies to files
-    hom1 = common.tmpfile('.txt')
-    hom2 = common.tmpfile('.txt')
-    np.savetxt(hom1, H1)
     if A is not None:
-        np.savetxt(hom2, np.dot(H2, np.linalg.inv(A)))
+        HH2 = common.tmpfile('.txt')
+        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
     else:
-        np.savetxt(hom2, H2)
+        HH2 = H2
 
-    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, hom1, hom2,
+    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, HH2,
         disp, mask, height, rpc_err))
     return
 
