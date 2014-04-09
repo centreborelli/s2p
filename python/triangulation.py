@@ -95,7 +95,8 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     Args:
         in_map: path to the input map, usually a height map or a mask, sampled
             on the rectified grid
-        H: numpy 3x3 array containing the rectifying homography
+        H: path to txt file containing a numpy 3x3 array representing the
+            rectifying homography
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
@@ -110,7 +111,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # zoomed grid (the one we have for height)
     Z = np.diag([zoom, zoom, 1])
     A = common.matrix_translation(x, y)
-    HH = np.dot(H, np.dot(A, Z))
+    HH = np.dot(np.loadtxt(H), np.dot(A, Z))
 
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow
