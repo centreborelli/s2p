@@ -310,32 +310,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
 
     # compute global pointing correction
     A = pointing_accuracy.global_from_local(tiles, ntx, nty)
+    np.savetxt('%s/pointing.txt' % out_dir, A)
 
-#    # if several tiles, compute global pointing correction (on the whole ROI)
-#    A = None
-#    if ntx * nty > 1:
-#        # the global pointing correction is run in a subprocess. This is a
-#        # workaround to a nasty bug affecting the Multiprocessing package when used
-#        # with Numpy on osx, causing Python to 'quit unexpectedly':
-#        # http://stackoverflow.com/questions/19705200/multiprocessing-with-numpy-makes-python-quit-unexpectedly-on-osx
-#        manager = multiprocessing.Manager()
-#        out_dict = manager.dict()
-#        matrix_file = '%s/pointing_global.txt' % out_dir
-#
-#        if not os.path.isfile(matrix_file) or not cfg['skip_existing']:
-#            p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
-#                    args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
-#            p.start()
-#            p.join()
-#            if 'correction_matrix' in out_dict:
-#                A = out_dict['correction_matrix']
-#                np.savetxt(matrix_file, A)
-#            else:
-#                print """WARNING: global correction matrix not found. The
-#            estimation process seems to have failed. No global correction will
-#            be applied."""
-
-    ## triangulation
+    ## triangulation TODO: parallelize
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
             tile = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
