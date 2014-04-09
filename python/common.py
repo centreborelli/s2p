@@ -10,7 +10,7 @@ import tempfile
 import re
 
 import rpc_model
-import global_params
+from config import cfg
 
 
 # add the bin folder to system path
@@ -36,7 +36,7 @@ def tmpfile(ext=''):
     The path of the created file is added to the garbage list to allow cleaning
     at the end of the pipeline.
     """
-    fd, out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = global_params.temporary_dir)
+    fd, out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = cfg['temporary_dir'])
     garbage.append(out)
     os.close(fd)           # http://www.logilab.org/blogentry/17873
     return out
@@ -121,7 +121,7 @@ def image_size(im):
             (nc, nr) = map(int, open(out).read().split())
             return (nc, nr)
     except IOError:
-        print "image_size: the input file doesn't exist ("+str(im)+")"
+        print "image_size: the input file %s doesn't exist" % str(im)
         sys.exit()
 
 
@@ -136,7 +136,6 @@ def image_size_gdal(im):
     """
     try:
         with open(im):
-            "gdalinfo %s | grep Size" % im
             p1 = subprocess.Popen(['gdalinfo', im], stdout=subprocess.PIPE)
             p2 = subprocess.Popen(['grep', 'Size'], stdin=p1.stdout, stdout=subprocess.PIPE)
             line = p2.stdout.readline()
@@ -145,8 +144,42 @@ def image_size_gdal(im):
             nr = int(out[3])
             return (nc, nr)
     except IOError:
-        print "image_size_gdal: the input file doesn't exist %s" % str(im)
+        print "image_size_gdal: the input file %s doesn't exist" % str(im)
         sys.exit()
+
+
+def grep_xml(xml_file, tag):
+    """
+    Reads the value of an element in an xml file.
+
+    Args:
+        xml_file: path to the xml file
+        tag: start/end tag delimiting the desired element
+
+    Returns:
+        A string containing the element written between <tag> and </tag>
+        Only the value of the element associated to the first occurence of the
+        tag will be returned.
+    """
+    try:
+        with open(xml_file):
+            p1 = subprocess.Popen(['grep', tag, xml_file],
+                    stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(['cut', '-d', '>', '-f', '2'],
+                    stdin=p1.stdout, stdout=subprocess.PIPE)
+            p3 = subprocess.Popen(['cut', '-d', '<', '-f', '1'],
+                    stdin=p2.stdout, stdout=subprocess.PIPE)
+            lines = p3.stdout.read().splitlines()
+            if not lines:
+                print "grep_xml: no tag %s in file %s" % (tag, xml_file)
+                return
+            if len(lines) > 1:
+                print "grep_xml: WARNING several occurences of %s in file %s" % (tag, xml_file)
+            return lines[0]
+    except IOError:
+        print "grep_xml: the input file %s doesn't exist" % xml_file
+        sys.exit()
+
 
 
 def image_pix_dim(im):
@@ -155,6 +188,7 @@ def image_pix_dim(im):
 
     Args:
         im: path to the input image file
+
     Returns:
         number of channels of the image
     """
@@ -237,10 +271,10 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
         h = sz[1]
 
     # First, we need to make sure the dataset has a proper origin/spacing
-    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/f, -h/f, im, tmp))
+    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/float(f), -h/float(f), im, tmp))
 
     # do the zoom with gdalwarp
-    run('gdalwarp -r cubic -ts %d %d %s %s' %  (w/f, h/f, tmp, out))
+    run('gdalwarp -r cubic -ts %d %d %s %s' %  (w/float(f), h/float(f), tmp, out))
     return out
 
 
@@ -318,8 +352,22 @@ def image_qauto(im):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s 2> /dev/null' % (im, out))
-    #run('qauto %s %s 2> /dev/null' % (im, out))
+    run('qauto %s %s' % (im, out))
+    return out
+
+
+def image_qauto_gdal(im):
+    """
+    Uniform requantization between min and max intensity.
+
+    Args:
+        im: path to input image
+
+    Returns:
+        path of requantized image, saved as png
+    """
+    out = tmpfile('.png')
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s' % (im, out))
     return out
 
 
@@ -336,13 +384,31 @@ def image_qeasy(im, black, white):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s 2> /dev/null' % (black, white, im, out))
+    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s' % (black, white, im, out))
     return out
+
+
+def pansharpened_to_panchro(im, out=None):
+    """
+    Converts a RGBI pansharpened image to a graylevel image.
+
+    Args:
+        im: path to the input image
+        out (optional): path to the output image
+
+    Returns:
+        path to the output image
+    """
+    if out is None:
+        out = tmpfile('.tif')
+    run('plambda %s "x[0] x[1] x[2] x[3] + + + 4 /" -o %s' % (im, out))
+    return out
+
 
 
 def rgbi_to_rgb(im):
     """
-    Converts a 4-channel red, green, blue, infrared (rgbi) image to rgb.
+    Converts a 4-channel RGBI (I for infrared) image to rgb, with iio
 
     Args:
         im: path to the input image
@@ -351,26 +417,42 @@ def rgbi_to_rgb(im):
         output rgb image
     """
     out = tmpfile('.tif')
-    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s 2> /dev/null' %(im, out))
-    #run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
+    run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
     return out
 
 
-def image_sift_keypoints(im, keyfile='', max_nb=None):
+def rgbi_to_rgb_gdal(im):
+    """
+    Converts a 4-channel RGBI (I for infrared) image to rgb, using gdal
+
+    Args:
+        im: path to the input image
+
+    Returns:
+        output rgb image
+    """
+    out = tmpfile('.tif')
+    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s' %(im, out))
+    return out
+
+
+def image_sift_keypoints(im, keyfile=None, max_nb=None):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
     Args:
         im: path to the input image
-        keyfile: path to the file where to write the list of sift descriptors
-        max_nb: maximal number of keypoints. If more keypoints are detected,
-            those at smallest scales are discarded
+        keyfile (optional): path to the file where to write the list of sift
+            descriptors
+        max_nb (optional): maximal number of keypoints. If more keypoints are
+            detected, those at smallest scales are discarded
 
     Returns:
         path to the file containing the list of descriptors
     """
-    if (keyfile == ''):
+    if keyfile is None:
        keyfile = tmpfile('.txt')
+
     run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
 
     # remove header from keypoint files
@@ -379,7 +461,7 @@ def image_sift_keypoints(im, keyfile='', max_nb=None):
     run("cp %s %s" % (tmp, keyfile))
 
     # keep only the first max_nb points
-    if max_nb:
+    if max_nb is not None:
         run("head -n %d %s > %s" % (max_nb, keyfile, tmp))
         run("cp %s %s" % (tmp, keyfile))
     return keyfile

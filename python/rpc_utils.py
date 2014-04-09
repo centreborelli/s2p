@@ -1,12 +1,15 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+# Copyright (C) 2013, Enric Meinhardt <ellopsis@gmail.com>
 
+import datetime
 import subprocess
 import numpy as np
+from numpy import testing
+
 import estimation
 import geographiclib
 import common
-from numpy import testing
 
 
 def print_distance_between_vectors(u, v, msg):
@@ -190,15 +193,18 @@ def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
     assert lat_M < 60
     assert lat_m < lat_M
 
+    # width of srtm bin: 6000x6000 samples in a tile of 5x5 degrees, ie 3
+    # arcseconds (in degrees)
+    srtm_bin = 1.0/1200
+
     # round down lon_m, lat_m and round up lon_M, lat_M so they are integer
     # multiples of 3 arcseconds
-    lon_m, lon_M = round_updown(lon_m, lon_M, 1.0/1200.0)
-    lat_m, lat_M = round_updown(lat_m, lat_M, 1.0/1200.0)
+    lon_m, lon_M = round_updown(lon_m, lon_M, srtm_bin)
+    lat_m, lat_M = round_updown(lat_m, lat_M, srtm_bin)
 
-    # compute the samples
-    srtm_step = 1.0/1200 # 6000x6000 samples in a tile of 5x5 degrees
-    lons = np.arange(lon_m, lon_M, srtm_step)
-    lats = np.arange(lat_m, lat_M, srtm_step)
+    # compute the samples: one in the center of each srtm bin
+    lons = np.arange(lon_m, lon_M, srtm_bin) + .5 * srtm_bin
+    lats = np.arange(lat_m, lat_M, srtm_bin) + .5 * srtm_bin
 
     # put all the samples in an array. There should be a more pythonic way to
     # do this
@@ -243,7 +249,7 @@ def altitude_range_coarse(rpc):
     return m, M
 
 
-def altitude_range(rpc, x, y, w, h):
+def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
     """
     Computes an altitude range using SRTM data.
 
@@ -252,6 +258,9 @@ def altitude_range(rpc, x, y, w, h):
         x, y, w, h: four integers definig a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
+        margin_top: margin (in meters) to add to the upper bound of the range
+        margin_bottom: margin (usually negative) to add to the lower bound of
+            the range
 
     Returns:
         lower and upper bounds on the altitude of the world points that are
@@ -275,12 +284,16 @@ def altitude_range(rpc, x, y, w, h):
     srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
     srtm = np.ravel(srtm)
 
+    # TODO: choose between the two heuristics implemented here
     # srtm data may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
-    # respect to geoid is 0. But for safety we prefer to give up the precise
+    # respect to geoid is 0. Thus we replace the nans with 0.
+    srtm[np.isnan(srtm)] = 0
+
+    # But for safety we prefer to give up the precise
     # altitude estimation in these cases and use the coarse one.
-    if np.isnan(np.sum(srtm)):
-        return altitude_range_coarse(rpc)
+#    if np.isnan(np.sum(srtm)):
+#        return altitude_range_coarse(rpc)
 
     # offset srtm heights with the geoid - ellipsoid difference
     geoid = common.run_binary_on_list_of_points(np.fliplr(ellipsoid_points),
@@ -288,8 +301,8 @@ def altitude_range(rpc, x, y, w, h):
     h = geoid + srtm
 
     # extract extrema (and add a +-100m security margin)
-    h_m = -100 + np.round(h.min())
-    h_M =  100 + np.round(h.max())
+    h_m = np.round(h.min()) + margin_bottom
+    h_M = np.round(h.max()) + margin_top
 
     return h_m, h_M
 
@@ -366,7 +379,7 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
         to contain the projections of the 3D points that are visible in the
         input ROI.
     """
-    m, M = altitude_range(rpc1, x, y, w, h)
+    m, M = altitude_range(rpc1, x, y, w, h, 0, 0)
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
@@ -395,7 +408,7 @@ def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
     Returns:
         an array of matches, one per line, expressed as x1, y1, x2, y2.
     """
-    m, M = altitude_range(rpc1, x, y, w, h)
+    m, M = altitude_range(rpc1, x, y, w, h, 100, -100)
     lon, lat, alt = ground_control_points(rpc1, x, y, w, h, m, M, n)
     x1, y1, h1 = rpc1.inverse_estimate(lon, lat, alt)
     x2, y2, h2 = rpc2.inverse_estimate(lon, lat, alt)
@@ -418,7 +431,7 @@ def world_to_image_correspondences_from_rpc(rpc, x, y, w, h, n):
     Returns:
         an array of correspondences, one per line, expressed as X, Y, Z, x, y.
     """
-    m, M = altitude_range(rpc, x, y, w, h)
+    m, M = altitude_range(rpc, x, y, w, h, 100, -100)
     lon, lat, alt = ground_control_points(rpc, x, y, w, h, m, M, n)
     x, y, h = rpc.inverse_estimate(lon, lat, alt)
     X, Y, Z = geographiclib.geodetic_to_geocentric(lat, lon, alt)
@@ -461,7 +474,8 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     return disp
 
 
-def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_margin = 0, high_margin = 0):
+def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
+        margin_top=0, margin_bottom=0):
     """
     Args:
         rpc1: an instance of the rpc_model.RPCModel class for the reference
@@ -473,6 +487,8 @@ def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_marg
             (w, h) are the dimensions of the rectangle.
         H1, H2: rectifying homographies
         A (optional): pointing correction matrix
+        margin_top: margin (in meters) to add to the upper bound of the range
+        margin_bottom: margin (negative) to add to the lower bound of the range
 
     Returns:
         the min and max horizontal disparity observed on the 4 corners of the
@@ -480,10 +496,7 @@ def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_marg
         disparity is made horizontal thanks to the two rectifying homographies
         H1 and H2.
     """
-    m, M = altitude_range(rpc1, x, y, w, h)
-
-    m = m + low_margin
-    M = M + high_margin
+    m, M = altitude_range(rpc1, x, y, w, h, margin_top, margin_bottom)
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
@@ -495,3 +508,57 @@ def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A, low_marg
 
     # return min and max disparities
     return np.min(d), np.max(d)
+
+
+def compute_ms_panchro_offset(dim_pan, dim_ms):
+    """
+    Computes the offset, in panchro pixels,  between a panchro image and the
+    corresponding 4x zoomed ms image.
+
+    Args:
+        dim_pan: path to the xml file DIM_*.XML for the panchro image
+        dim_ms:  path to the xml file DIM_*.XML for the ms (ie color) image
+
+    Returns:
+        (off_col, off_row): the offset to apply to the ms image before fusion
+        with the panchro.
+    """
+    # column offset
+    first_col_ms = int(common.grep_xml(dim_ms, "FIRST_COL"))
+    first_col_pan = int(common.grep_xml(dim_pan, "FIRST_COL"))
+    off_col = 4 * first_col_ms - first_col_pan
+
+    # row offset
+    t_e_pan = float(common.grep_xml(dim_pan, "LINE_PERIOD"))
+    t_init_ms  = common.grep_xml(dim_ms, "START")
+    t_init_pan = common.grep_xml(dim_pan, "START")
+    t_ms =  datetime.datetime.strptime(t_init_ms[:26], "%Y-%m-%dT%H:%M:%S.%f")
+    t_pan = datetime.datetime.strptime(t_init_pan[:26], "%Y-%m-%dT%H:%M:%S.%f")
+
+    delta_t = 1000 * (t_ms - t_pan)
+    off_row = int(total_seconds(delta_t) / t_e_pan)
+
+    #print "t_e_pan: %f" % t_e_pan
+    #print "t_init_ms:  %s" % t_init_ms
+    #print "t_init_pan: %s" % t_init_pan
+    #print off_col, off_row
+
+    return off_col, off_row
+
+
+def total_seconds(td):
+    """
+    Return the total number of seconds contained in the duration.
+
+    Args:
+        td: datetime.timedelta object
+
+    Returns:
+        the equivalent time expressed in seconds
+
+    This function implements the timedelta.total_seconds() method available in
+    python 2.7, to make the compute_ms_panchro_offset usable even with python
+    2.6
+    """
+    return float((td.microseconds + (td.seconds + td.days * 24 * 3600) *
+        10**6)) / 10**6

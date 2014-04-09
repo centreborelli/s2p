@@ -14,13 +14,22 @@ build_dir:
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
 	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
 	height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
-	siftu srtm4 ransac colormesh
+	siftu srtm4 srtm4_which_tile ransac colormesh cldmask morsi watermask
 
 bin_dir:
 	mkdir -p $(BINDIR)
 
 bin2asc: bin2asc.c
 	cc -std=c99 bin2asc.c -o $(BINDIR)/bin2asc
+
+morsi: iio.o morsi.o
+	cc iio.o morsi.o -lpng -ltiff -ljpeg -o $(BINDIR)/morsi
+
+watermask: iio.o watermask.o
+	cc iio.o watermask.o -lpng -ltiff -ljpeg -o $(BINDIR)/watermask
+
+cldmask: iio.o cldmask.o
+	cc iio.o cldmask.o -lpng -ltiff -ljpeg -o $(BINDIR)/cldmask
 
 colormesh: iio.o rpc.o colormesh.o geographiclib_wrapper.o
 	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lGeographic -o $(BINDIR)/colormesh
@@ -88,8 +97,14 @@ siftu: siftu.o
 srtm4.o: srtm4.c iio.h
 	cc -c -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c
 
+srtm4_which_tile.o: srtm4.c
+	cc -c -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4_WHICH_TILE srtm4.c -o srtm4_which_tile.o
+
 srtm4: srtm4.o iio.o
 	cc srtm4.o iio.o -lm -lpng -ltiff -ljpeg -o $(BINDIR)/srtm4
+
+srtm4_which_tile: srtm4_which_tile.o iio.o
+	cc srtm4_which_tile.o iio.o -lm -lpng -ltiff -ljpeg -o $(BINDIR)/srtm4_which_tile
 
 ransac: ransac.o
 	cc ransac.o -lm -o $(BINDIR)/ransac
@@ -169,6 +184,15 @@ siftu.o: siftu.c siftie.c
 
 ransac.o: ransac.c fail.c xmalloc.c xfopen.c cmphomod.c ransac_cases.c parsenumbers.c
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN ransac.c
+
+cldmask.o: cldmask.c fail.c xmalloc.c xfopen.c parsenumbers.c drawsegment.c pickopt.c
+	cc -c -std=c99 -g -O3 cldmask.c
+
+watermask.o: watermask.c fail.c xmalloc.c pickopt.c rpc.c srtm4.c iio.h parsenumbers.c
+	cc -c -std=c99 -g -O3 -DDONT_USE_TEST_MAIN watermask.c
+
+morsi.o: morsi.c iio.h
+	cc -c -std=c99 -g -O3 morsi.c
 
 clean:
 	rm *.o

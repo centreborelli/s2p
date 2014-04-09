@@ -5,7 +5,7 @@
 
 import numpy as np
 import common
-import global_params
+from config import cfg
 
 def image_apply_pleiades_unsharpening_filter(im):
     """
@@ -19,7 +19,8 @@ def image_apply_pleiades_unsharpening_filter(im):
     return common.image_fftconvolve(im, tmp_mtf_large)
 
 
-def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
+def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1,
+        convert_to_gray=False):
     """
     Warps a piece of a Pleiades (panchro or ms) image with a homography.
 
@@ -28,11 +29,13 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
         im_in: path to the input (tif) full Pleiades image
         H: numpy array containing the 3x3 homography matrix
         w, h: size of the output image
-        subsampling_factor (optional, default=1): when set to z>1
-           will result in the application of the homography Z*H
-           where Z = diag(1/z, 1/z, 1)
-           So the output will be zoomed out by a factor z
-           The output image will be (w/z, h/z)
+        subsampling_factor (optional, default=1): when set to z>1,
+            will result in the application of the homography Z*H where Z =
+            diag(1/z, 1/z, 1), so the output will be zoomed out by a factor z.
+            The output image will be (w/z, h/z)
+        convert_to_gray (optional, default False): it set to True, and if the
+            input image has 4 channels, it is converted to gray before applying
+            zoom and homographies.
 
     Returns:
         nothing
@@ -57,10 +60,15 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1):
     # This filter is needed (for panchro images) because the original PLEAIDES
     # SENSOR PERFECT images are aliased
     if (common.image_pix_dim(crop_fullres) == 1 and subsampling_factor == 1 and
-            global_params.use_pleiades_unsharpening):
+            cfg['use_pleiades_unsharpening']):
         tmp = image_apply_pleiades_unsharpening_filter(crop_fullres)
         common.run('rm %s' % crop_fullres)
         crop_fullres = tmp
+
+    # convert to gray
+    if common.image_pix_dim(crop_fullres) == 4:
+        if convert_to_gray:
+            crop_fullres = common.pansharpened_to_panchro(crop_fullres)
 
     # compensate the homography with the translation induced by the preliminary
     # crop, then apply the homography and crop.
