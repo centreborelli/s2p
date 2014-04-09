@@ -106,6 +106,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             y, w, h)
         np.savetxt(pointing, A)
         np.savetxt(sift_matches, m)
+    else:
+        m = None
 
     ## rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
