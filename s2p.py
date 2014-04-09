@@ -304,12 +304,12 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
                 print "WARNING: %s failed. Retrying pointing correction..." % tile_dir
                 # estimate pointing correction matrix from neighbors and rerun
                 # the disparity map computation
-                A = pointing_correction.from_next_tiles(tiles, ntx, nty, j, i)
+                A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
                         row, tw, th, None, cld_msk, roi_msk, A)
 
     # compute global pointing correction
-    A = pointing_correction.global_from_local(tiles, ntx, nty)
+    A = pointing_accuracy.global_from_local(tiles, ntx, nty)
 
 #    # if several tiles, compute global pointing correction (on the whole ROI)
 #    A = None
