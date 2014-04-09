@@ -1,31 +1,33 @@
 # S2P - Satellite Stereo Pipeline
 
-This code implements a stereo pipeline for producing elevation models from
-Pleiades satellite images. It aims at automatically generating digital
-elevation models from tristereo sets (three images).
+This code implements a stereo pipeline which produces elevation models from
+images taken by high resolution satellites such as Pléiades, WorldView and
+QuickBird. It generates automatically digital elevation models from stereo
+pairs (two images) or tri-stereo sets (three images).
 
 The main language is Python, although several operations are handled by
 binaries written in C.
 
-The pipeline is implemented in the file `s2p.py`. The `s2p` module can be
-used to produce elevation models and 3D point clouds of arbitrarily large
-regions of interest. If needed, it cuts the region of interest in several
-small tiles and process them in parallel.
+The pipeline is implemented in the file `s2p.py`. The `s2p` module can be used
+to produce elevation models and 3D point clouds from arbitrarily large regions
+of interest or from complete images. If needed, it cuts the region of interest
+in several small tiles and process them in parallel.
 
 ## Usage
 
-Run the binary `s2p.py` from a shell, with a json configuration file as unique
-argument:
+The easiest way to use `s2p` is to run the binary `s2p.py` from a shell, with a
+json configuration file as unique argument:
 
     $ ./s2p.py config.json
 
 All the parameters of the algorithm, paths to input and output data are stored
 in the json file. See the provided `config.json.example` file for an example.
 
-You can also import the `s2p` module in a python session, and run the functions
-`process_pair` or `process_triplet`, depending on the kind of dataset you have
-(stereo pair or triplet), to generate a digital elevation model (DEM), and then
-generate a 3D point cloud from this DEM using the function `generate_cloud`.
+An other way is to import the `s2p` module in a python session, and run the
+functions `process_pair` or `process_triplet`, depending on the kind of dataset
+you have (stereo pair or triplet), to generate a digital elevation model (DEM),
+and then generate a 3D point cloud from this DEM using the function
+`generate_cloud`.
 
     python
     >>> import s2p
@@ -37,7 +39,7 @@ See the docstrings of the functions `process_pair`, `process_triplet` and
 
 ## Installation
 
-All the python modules are located in the `python` folder.  Some python
+All the python modules are located in the `python` folder. Some python
 functions of these modules rely on external binaries. Most of these binaries
 were written on purpose for the needs of the pipeline, and their source code is
 provided here in the `c` folder.
@@ -78,6 +80,20 @@ cmake:
 
     ~/local/sbin/geographiclib-get-geoids
 
+#### GDAL >= 1.10
+
+    cd 3rdparty
+    wget http://download.osgeo.org/gdal/1.10.1/gdal-1.10.1.tar.gz
+    tar xzf gdal-1.10.1.tar.gz
+    cd gdal-1.10.1
+    ./configure --prefix=$HOME/local
+    make install
+
+#### Sift
+
+    cd 3rdparty/sift_20130403
+    make
+
 #### SGBM (Semi-Global Block-Matching)
 
 It is a wrapper around the OpenCV implementation of semi-global block-matching,
@@ -103,22 +119,6 @@ Now you can compile the SGBM wrapper:
     mkdir build
     cd build
     cmake -D CMAKE_PREFIX_PATH=~/local ..
-    make
-
-#### GDAL >= 1.10
-
-In addition, the `gdal_translate` binary is needed. The version must be >= 1.10.
-
-    cd 3rdparty
-    wget http://download.osgeo.org/gdal/1.10.1/gdal-1.10.1.tar.gz
-    tar xzf gdal-1.10.1.tar.gz
-    cd gdal-1.10.1
-    ./configure --prefix=$HOME/local
-    make install
-
-#### Sift
-
-    cd 3rdparty/sift_20130403
     make
 
 #### piio
@@ -151,17 +151,15 @@ If GDAL or Geographic LIB was installed locally then also run:
     cp ~/local/bin/{CartConvert,GeoidEval,gdal_translate} .
 
 
-## Pleiades data
+## Satellite images datasets
 
-Several Pleiades stereoscopic datasets are available. We have pairs and
-triplets. Each image is accompanied by an `xml` file containing rpc
-coefficients.
+Each image must be accompanied by an `xml` file containing rpc coefficients.
 
-Due to storage limitations, the images are not available on this repository.
-If you want to run the s2p code, **you have to get a copy of our Pleiades
-dataset by other means.** The size of these images is around 40000 x 40000
-pixels, covering an area of 20km x 20km. The files weigh approximately 2GB
-each.
+Due to storage limitations, no images are available on this repository.  If you
+want to run the s2p code, **you have to get a copy of Pleiades, WorldView of
+QuickBird datasets by other means.** The typical size of a Pléiades image is
+around 40000 x 40000 pixels, covering an area of 20km x 20km. The files weigh
+approximately 2GB each.
 
 Run the script `data/pleiades/create_links.sh` to generate symbolic links to
 the images files and copy the `xml` files. The links will be located in the
