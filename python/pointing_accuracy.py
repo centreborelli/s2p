@@ -632,3 +632,37 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
         out_dict['correction_matrix'] = A
 
     return A, m
+
+
+def from_next_tiles(tiles, ntx, nty, col, row):
+    """
+    Computes the pointing correction of a specific tile using the pointing
+    corrections of its neighbors. We assume that all pointing corrections are
+    translations.
+
+    Args:
+        tiles: list of paths to folders associated to each tile
+        ntx: number of tiles in horizontal direction
+        nty: number of tiles in vertical direction
+        col: horizontal index (from 1 to ntx) of the current tile
+        row: horizontal index (from 1 to nty) of the current tile
+
+    Returns:
+        the estimated pointing correction for the specified tile
+    """
+    return np.eye(3)
+
+def global_from_local(tiles, ntx, nty):
+    """
+    Computes the pointing correction of a full roi using local corrections on
+    tiles.
+
+    Args:
+        tiles: list of paths to folders associated to each tile
+        ntx: number of tiles in horizontal direction
+        nty: number of tiles in vertical direction
+
+    Returns:
+        the estimated pointing correction for the specified tile
+    """
+    return np.eye(3)
