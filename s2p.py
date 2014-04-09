@@ -30,7 +30,7 @@ from python.config import cfg
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         w=None, h=None, prv1=None, cld_msk=None, roi_msk=None):
     """
-    Computes a height map from a Pair of Pleiades images, without tiling
+    Computes a disparity map from a Pair of Pleiades images, without tiling
 
     Args:
         out_dir: path to the output directory
@@ -67,7 +67,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
-    if os.path.isfile(dem) and cfg['skip_existing']:
+    if os.path.isfile(disp) and cfg['skip_existing']:
         print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
         if not cfg['debug']:
             sys.stdout = sys.__stdout__
@@ -183,7 +183,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
 
 def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
-        y=None, w=None, h=None, A_global=None, prv1=None, cld_msk=None,
+        y=None, w=None, h=None, prv1=None, cld_msk=None,
         roi_msk=None):
     """
     Safe call to process_pair_single_tile (all exceptions will be
@@ -196,19 +196,18 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     """
     dem = ""
     try:
-        dem = process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y,
-            w, h, A_global, prv1, cld_msk, roi_msk)
+        process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y,
+            w, h, prv1, cld_msk, roi_msk)
     # Catch all possible exceptions here
     except:
         e = sys.exc_info()[0]
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         print "Failed to generate tile %i %i %i %i: %s)" %(x,y,w,h,str(e))
-        # Append to the list of failed tiles
-        return dem
+        return
 
     print "Tile %i %i %i %i generated." %(x,y,w,h)
-    return dem
+    return
 
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         h=None, tw=None, th=None, ov=None, cld_msk=None, roi_msk=None):
