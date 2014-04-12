@@ -114,8 +114,8 @@ class RPCModel:
             else:
                 print 'unknown sensor type'
         elif b is not None:
-            if b.text == 'WV02':
-                self.satellite = 'worldview2'
+            if b.text == 'WV02' or b.text == 'WV01': 
+                self.satellite = 'worldview'
                 self.read_rpc_worldview(tree)
             else:
                 print 'unknown sensor type'
@@ -263,7 +263,7 @@ class RPCModel:
 
     def direct_estimate(self, col, lin, alt, return_normalized=False):
 
-        if self.satellite == 'worldview2':
+        if self.satellite == 'worldview':
             return self.direct_estimate_iterative(col, lin, alt, return_normalized)
 
         cCol = (col - self.colOff) / self.colScale
