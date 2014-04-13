@@ -12,6 +12,7 @@
 #include <cassert>
 #include <vector>
 #include <getopt.h>
+#include <unistd.h>
 
 
 extern "C" {

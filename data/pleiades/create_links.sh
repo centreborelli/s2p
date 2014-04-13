@@ -18,7 +18,8 @@ function create_links ()
             # preview
             abs_path=`dirname $image`/PREVIEW_*.JPG
             link_name=`printf prev%02d$suffix.jpg $i`
-            ln -sf $abs_path $dataset/$link_name
+            cp $abs_path $dataset/
+            ln -sf `basename $abs_path` $dataset/$link_name
             # rpc
             abs_path=`dirname $image`/RPC_*.XML
             link_name=`printf rpc%02d$suffix.xml $i`

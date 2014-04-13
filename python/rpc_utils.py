@@ -194,15 +194,18 @@ def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
     assert lat_M < 60
     assert lat_m < lat_M
 
+    # width of srtm bin: 6000x6000 samples in a tile of 5x5 degrees, ie 3
+    # arcseconds (in degrees)
+    srtm_bin = 1.0/1200
+
     # round down lon_m, lat_m and round up lon_M, lat_M so they are integer
     # multiples of 3 arcseconds
-    lon_m, lon_M = round_updown(lon_m, lon_M, 1.0/1200.0)
-    lat_m, lat_M = round_updown(lat_m, lat_M, 1.0/1200.0)
+    lon_m, lon_M = round_updown(lon_m, lon_M, srtm_bin)
+    lat_m, lat_M = round_updown(lat_m, lat_M, srtm_bin)
 
-    # compute the samples
-    srtm_step = 1.0/1200 # 6000x6000 samples in a tile of 5x5 degrees
-    lons = np.arange(lon_m, lon_M, srtm_step)
-    lats = np.arange(lat_m, lat_M, srtm_step)
+    # compute the samples: one in the center of each srtm bin
+    lons = np.arange(lon_m, lon_M, srtm_bin) + .5 * srtm_bin
+    lats = np.arange(lat_m, lat_M, srtm_bin) + .5 * srtm_bin
 
     # put all the samples in an array. There should be a more pythonic way to
     # do this
@@ -287,12 +290,16 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
     srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
     srtm = np.ravel(srtm)
 
+    # TODO: choose between the two heuristics implemented here
     # srtm data may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
-    # respect to geoid is 0. But for safety we prefer to give up the precise
+    # respect to geoid is 0. Thus we replace the nans with 0.
+    srtm[np.isnan(srtm)] = 0
+
+    # But for safety we prefer to give up the precise
     # altitude estimation in these cases and use the coarse one.
-    if np.isnan(np.sum(srtm)):
-        return altitude_range_coarse(rpc)
+#    if np.isnan(np.sum(srtm)):
+#        return altitude_range_coarse(rpc)
 
     # offset srtm heights with the geoid - ellipsoid difference
     geoid = common.run_binary_on_list_of_points(np.fliplr(ellipsoid_points),

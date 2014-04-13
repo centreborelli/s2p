@@ -56,15 +56,6 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
 
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'w', 0) # '0' is for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
-    # debug print
-    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
-
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
     rect2 = '%s/rectified_sec.tif' % (out_dir)
@@ -88,6 +79,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             sys.stderr = sys.__stderr__
             fout.close()
         return dem
+
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % out_dir, 'w', 0) # '0' is for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
+    # debug print
+    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
 
 
     ## select ROI
@@ -151,7 +151,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         cfg['matching_algorithm'], disp_min, disp_max)
 
-    ## update mask with cloud mask and roi mask
+    ## update mask with water mask, cloud mask and roi mask
+    triangulation.update_mask(mask, H1, rpc1, False, None, True)
     if cld_msk is not None:
         triangulation.update_mask(mask, H1, cld_msk, True)
     if roi_msk is not None:
@@ -517,7 +518,10 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             crop_color = common.image_qauto(crop_color)
     else:
         print 'no color data'
-        crop_color = crop_ref
+        if reduce(operator.mul, common.image_size(crop_ref)) > 1e8:
+            crop_color = common.image_qauto_gdal(crop_ref)
+        else:
+            crop_color = common.image_qauto(crop_ref)
 
     triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
             off_x, off_y)

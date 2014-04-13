@@ -18,7 +18,7 @@ set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
 #
 #
 
-set (LIBS "")
+set (LIBS "m")
 
 # IF AVAILABLE USE OPENEXR
 FIND_PACKAGE(OPENEXR) 

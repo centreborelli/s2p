@@ -102,6 +102,7 @@ class RPCModel:
         self.filepath = XMLfile
         tree = ElementTree()
         tree.parse(XMLfile)
+        self.tree = tree   # store the xml tree in the object
 
         # determine wether it's a pleiades or a worldview image
         a = tree.find('Metadata_Identification/METADATA_PROFILE') # PHR_SENSOR
@@ -113,8 +114,8 @@ class RPCModel:
             else:
                 print 'unknown sensor type'
         elif b is not None:
-            if b.text == 'WV02':
-                self.satellite = 'worldview2'
+            if b.text == 'WV02' or b.text == 'WV01': 
+                self.satellite = 'worldview'
                 self.read_rpc_worldview(tree)
             else:
                 print 'unknown sensor type'
@@ -206,9 +207,63 @@ class RPCModel:
         return col, lin, alt
 
 
+    def write_xml_pleiades(self, filename):
+        """
+        Writes a new XML file with the rpc parameters
+        If the read was performed on a pleiades RPC
+        write can only be done using the pleiades format.
+        """
+        import copy
+       
+        ## First transfer the coefficients back to the internal xml parsing tree
+        tree = copy.deepcopy(self.tree)
+
+        # list concatenation of direct model parameters
+        direct = self.directLonNum  + self.directLonDen + self.directLatNum + self.directLatDen + self.directBias
+        d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
+        for child,id in zip(d,range(82)):
+           child.text = str(direct[id])
+
+        # list concatenation of inverse model parameters
+        inverse = self.inverseColNum + self.inverseColDen + self.inverseLinNum + self.inverseLinDen + self.inverseBias
+        i = tree.find('Rational_Function_Model/Global_RFM/Inverse_Model')
+        for child,id in zip(i,range(82)):
+           child.text = str(inverse[id])
+
+        # validity domains
+        v = tree.find('Rational_Function_Model/Global_RFM/RFM_Validity')
+        vd = v.find('Direct_Model_Validity_Domain')
+        vd.find('FIRST_ROW').text = str( self.firstRow ) 
+        vd.find('FIRST_COL').text = str( self.firstCol ) 
+        vd.find('LAST_ROW').text  = str( self.lastRow  ) 
+        vd.find('LAST_COL').text  = str( self.lastCol  ) 
+
+        vi = v.find('Inverse_Model_Validity_Domain')
+        vi.find('FIRST_LON').text = str( self.firstLon ) 
+        vi.find('FIRST_LAT').text = str( self.firstLat ) 
+        vi.find('LAST_LON').text  = str( self.lastLon  ) 
+        vi.find('LAST_LAT').text  = str( self.lastLat  ) 
+
+        # scale and offset
+        v.find('LONG_SCALE').text  = str( self.lonScale ) 
+        v.find('LONG_OFF').text    = str( self.lonOff   ) 
+        v.find('LAT_SCALE').text   = str( self.latScale ) 
+        v.find('LAT_OFF').text     = str( self.latOff   ) 
+        v.find('HEIGHT_SCALE').text= str( self.altScale ) 
+        v.find('HEIGHT_OFF').text  = str( self.altOff   ) 
+        v.find('SAMP_SCALE').text  = str( self.colScale ) 
+        v.find('SAMP_OFF').text    = str( self.colOff   ) 
+        v.find('LINE_SCALE').text  = str( self.linScale ) 
+        v.find('LINE_OFF').text    = str( self.linOff   ) 
+
+        ## Write the XML file!
+        tree.write(filename)
+
+
+
     def direct_estimate(self, col, lin, alt, return_normalized=False):
 
-        if self.satellite == 'worldview2':
+        if self.satellite == 'worldview':
             return self.direct_estimate_iterative(col, lin, alt, return_normalized)
 
         cCol = (col - self.colOff) / self.colScale
