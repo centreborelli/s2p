@@ -10,6 +10,7 @@ from numpy import testing
 import estimation
 import geographiclib
 import common
+import rpc_model
 
 
 def print_distance_between_vectors(u, v, msg):
@@ -265,6 +266,11 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
         these bounds, we use SRTM data. The altitudes are computed with respect
         to the WGS84 reference ellipsoid.
     """
+    # TODO: iterate the procedure used here to get a finer estimation of the
+    # TODO: bounding box on the ellipsoid and thus of the altitude range. For flat
+    # TODO: regions it will not improve much, but for mountainous regions there is a
+    # TODO: lot to improve.
+
     # find bounding box on the ellipsoid (in geodesic coordinates)
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
 
