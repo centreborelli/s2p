@@ -2,6 +2,7 @@
 
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+# Copyright (C) 2013, Enric Meinhardt Llopis <enric.meinhardt@cmla.ens-cachan.fr>
 
 
 def procedure1(poly, a11, a22, b1, b2):
