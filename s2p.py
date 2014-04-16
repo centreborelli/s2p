@@ -63,6 +63,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     mask    = '%s/rectified_mask.png'   % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
+    center = '%s/center_keypts_sec.txt' % out_dir
     sift_matches = '%s/sift_matches.txt' % out_dir
     H_ref = '%s/H_ref.txt' % out_dir
     H_sec = '%s/H_sec.txt' % out_dir
@@ -106,6 +107,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             y, w, h)
         np.savetxt(pointing, A)
         np.savetxt(sift_matches, m)
+        np.savetxt(center, np.mean(m[:, 2:4], 0))
     else:
         m = None
 
