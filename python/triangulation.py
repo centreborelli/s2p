@@ -69,22 +69,20 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
 
     Args:
         rpc1, rpc2: paths to the xml files
-        H1, H2: two 3x3 numpy arrays defining the rectifying homographies
+        H1, H2: path to txt files containing two 3x3 numpy arrays defining
+            the rectifying homographies
         disp, mask: paths to the diparity and mask maps
         height: path to the output height map
         rpc_err: path to the output rpc_error of triangulation
         A (optional): pointing correction matrix for im2
     """
-    # save homographies to files
-    hom1 = common.tmpfile('.txt')
-    hom2 = common.tmpfile('.txt')
-    np.savetxt(hom1, H1)
     if A is not None:
-        np.savetxt(hom2, np.dot(H2, np.linalg.inv(A)))
+        HH2 = common.tmpfile('.txt')
+        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
     else:
-        np.savetxt(hom2, H2)
+        HH2 = H2
 
-    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, hom1, hom2,
+    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, HH2,
         disp, mask, height, rpc_err))
     return
 
@@ -97,7 +95,8 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     Args:
         in_map: path to the input map, usually a height map or a mask, sampled
             on the rectified grid
-        H: numpy 3x3 array containing the rectifying homography
+        H: path to txt file containing a numpy 3x3 array representing the
+            rectifying homography
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
@@ -112,7 +111,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # zoomed grid (the one we have for height)
     Z = np.diag([zoom, zoom, 1])
     A = common.matrix_translation(x, y)
-    HH = np.dot(H, np.dot(A, Z))
+    HH = np.dot(np.loadtxt(H), np.dot(A, Z))
 
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow

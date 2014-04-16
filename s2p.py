@@ -28,9 +28,9 @@ from python.config import cfg
 
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-        w=None, h=None, A_global=None, prv1=None, cld_msk=None, roi_msk=None):
+        w=None, h=None, prv1=None, cld_msk=None, roi_msk=None, A=None):
     """
-    Computes a height map from a Pair of Pleiades images, without tiling
+    Computes a disparity map from a Pair of Pleiades images, without tiling
 
     Args:
         out_dir: path to the output directory
@@ -43,15 +43,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        A_global (optional): global pointing correction matrix, used for
-            triangulation (but not for stereo-rectification)
         prv1 (optional): path to a preview of the reference image
         cld_msk (optional): path to a gml file containing a cloud mask
         roi_msk (optional): path to a gml file containing a mask defining the
             area contained in the full image.
+        A (optional, default None): pointing correction matrix. If None, it
+            will be estimated by this function.
 
     Returns:
-        path to the height map, resampled on the grid of the reference image.
+        nothing
     """
     # create a directory for the experiment
     common.run('mkdir -p %s' % out_dir)
@@ -59,26 +59,20 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
     rect2 = '%s/rectified_sec.tif' % (out_dir)
-    disp    = '%s/rectified_disp.pgm'   % (out_dir)
+    disp    = '%s/rectified_disp.tif'   % (out_dir)
     mask    = '%s/rectified_mask.png'   % (out_dir)
-    height  = '%s/rectified_height.tif' % (out_dir)
-    rpc_err = '%s/rpc_err.tif'% (out_dir)
-    dem     = '%s/dem.tif' % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
+    center = '%s/center_keypts_sec.txt' % out_dir
     sift_matches = '%s/sift_matches.txt' % out_dir
     H_ref = '%s/H_ref.txt' % out_dir
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
-    if os.path.isfile(dem) and cfg['skip_existing']:
+    if os.path.isfile(disp) and cfg['skip_existing']:
         print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
-        if not cfg['debug']:
-            sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
-            fout.close()
-        return dem
+        return
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
@@ -87,8 +81,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         sys.stderr = fout
 
     # debug print
-    print 'tile %d %d, running on process ' % (x, y), multiprocessing.current_process()
-
+    print 'tile %d %d running on process %s' % (x, y, multiprocessing.current_process())
 
     ## select ROI
     try:
@@ -109,25 +102,18 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     ## correct pointing error
     # A is the correction matrix and m is the list of sift matches
-    A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y,
-        w, h, first_guess=A_global)
+    if A is None:
+        A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
+            y, w, h)
+        np.savetxt(pointing, A)
+        np.savetxt(sift_matches, m)
+        np.savetxt(center, np.mean(m[:, 2:4], 0))
+    else:
+        m = None
 
     ## rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
         rpc2, x, y, w, h, rect1, rect2, A, m)
-
-    ## save the subsampling factor, the sift matches, the pointing
-    # correction matrix, the rectifying homographies and the disparity bounds
-    # ATTENTION if subsampling_factor is set the rectified images will be
-    # smaller, and the homography matrices and disparity range will reflect
-    # this fact
-    np.savetxt(subsampling, np.array([z]))
-    np.savetxt(pointing, A)
-    np.savetxt(sift_matches, m)
-    np.savetxt(H_ref, H1)
-    np.savetxt(H_sec, H2)
-    np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
-
 
     if cfg['disp_range_method'] in ["auto_srtm", "wider_sift_srtm"]:
         # Read models
@@ -158,12 +144,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     if roi_msk is not None:
         triangulation.update_mask(mask, H1, roi_msk, False, cfg['msk_erosion'])
 
-    ## triangulation
-    if A_global is not None:
-        A = A_global
-    triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height,
-        rpc_err, A)
-    triangulation.transfer_map(height, H1, x, y, w, h, z, dem)
+    ## save the subsampling factor, the rectifying homographies and the
+    # disparity bounds.
+    # ATTENTION if subsampling_factor is set the rectified images will be
+    # smaller, and the homography matrices and disparity range will reflect
+    # this fact
+    np.savetxt(subsampling, np.array([z]))
+    np.savetxt(H_ref, H1)
+    np.savetxt(H_sec, H2)
+    np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
 
     ## save json file with all the parameters needed to reproduce this tile
     tile_cfg = copy.deepcopy(cfg)
@@ -181,11 +170,11 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         sys.stderr = sys.__stderr__
         fout.close()
 
-    return dem
+    return
 
 
 def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
-        y=None, w=None, h=None, A_global=None, prv1=None, cld_msk=None,
+        y=None, w=None, h=None, prv1=None, cld_msk=None,
         roi_msk=None):
     """
     Safe call to process_pair_single_tile (all exceptions will be
@@ -198,19 +187,18 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     """
     dem = ""
     try:
-        dem = process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y,
-            w, h, A_global, prv1, cld_msk, roi_msk)
+        process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y,
+            w, h, prv1, cld_msk, roi_msk)
     # Catch all possible exceptions here
     except:
         e = sys.exc_info()[0]
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         print "Failed to generate tile %i %i %i %i: %s)" %(x,y,w,h,str(e))
-        # Append to the list of failed tiles
-        return dem
+        return
 
     print "Tile %i %i %i %i generated." %(x,y,w,h)
-    return dem
+    return
 
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         h=None, tw=None, th=None, ov=None, cld_msk=None, roi_msk=None):
@@ -282,30 +270,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
     print 'total number of tiles is %d' % (ntx * nty)
 
-    # if several tiles, compute global pointing correction (on the whole ROI)
-    A = None
-    if ntx * nty > 1:
-        # the global pointing correction is run in a subprocess. This is a
-        # workaround to a nasty bug affecting the Multiprocessing package when used
-        # with Numpy on osx, causing Python to 'quit unexpectedly':
-        # http://stackoverflow.com/questions/19705200/multiprocessing-with-numpy-makes-python-quit-unexpectedly-on-osx
-        manager = multiprocessing.Manager()
-        out_dict = manager.dict()
-        matrix_file = '%s/pointing_global.txt' % out_dir
-
-        if not os.path.isfile(matrix_file) or not cfg['skip_existing']:
-            p = multiprocessing.Process(target=pointing_accuracy.compute_correction,
-                    args=(img1, rpc1, img2, rpc2, x, y, w, h, out_dict))
-            p.start()
-            p.join()
-            if 'correction_matrix' in out_dict:
-                A = out_dict['correction_matrix']
-                np.savetxt(matrix_file, A)
-            else:
-                print """WARNING: global correction matrix not found. The
-            estimation process seems to have failed. No global correction will
-            be applied."""
-
     # create pool with less workers than available cores
     max_processes = multiprocessing.cpu_count()
     if cfg['max_nb_threads'] > 0:
@@ -317,43 +281,65 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     # process the tiles
     # don't parallellize if in debug mode
     tiles = []
-    for j in np.arange(y, y + h - ov, th - ov):
-        for i in np.arange(x, x + w - ov, tw - ov):
-            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
-            tiles.append('%s/dem.tif' % tile_dir)
+    for row in np.arange(y, y + h - ov, th - ov):
+        for col in np.arange(x, x + w - ov, tw - ov):
+            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            tiles.append(tile_dir)
             if cfg['debug']:
-                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
-                    j, tw, th, A, None, cld_msk, roi_msk)
+                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
+                        row, tw, th, None, cld_msk, roi_msk)
             else:
                 pool.apply_async(safe_process_pair_single_tile, args=(tile_dir,
-                    img1, rpc1, img2, rpc2, i, j, tw, th, A, None, cld_msk,
+                    img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk,
                     roi_msk))
 
     # wait for all the processes to terminate
     pool.close()
     pool.join()
 
-
     # Check if all tiles were computed
-    for j in np.arange(y, y + h - ov, th - ov):
-        for i in np.arange(x, x + w - ov, tw - ov):
-            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, i, j, tw, th)
-            dem = '%s/dem.tif' % tile_dir
+    # The only cause of a tile failure is a lack of sift matches, which breaks
+    # the pointing correction step. Thus it is enough to check if the pointing
+    # correction matrix was computed.
+    for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
+        for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
+            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            if not os.path.isfile('%s/pointing.txt' % tile_dir):
+                print "WARNING: %s failed. Retrying pointing correction..." % tile_dir
+                # estimate pointing correction matrix from neighbors and rerun
+                # the disparity map computation
+                A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
+                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
+                        row, tw, th, None, cld_msk, roi_msk, A)
 
-            if not os.path.isfile(dem):
-                print "WARNING: Tile %d %d %d %d failed. Retrying..." % (i, j,
-                        tw, th)
-                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, i,
-                        j, tw, th, A, None, cld_msk, roi_msk)
+    # compute global pointing correction
+    A = pointing_accuracy.global_from_local(tiles)
+    np.savetxt('%s/pointing.txt' % out_dir, A)
 
-    # tiles composition
+    ## triangulation TODO: parallelize
+    for row in np.arange(y, y + h - ov, th - ov):
+        for col in np.arange(x, x + w - ov, tw - ov):
+            tile = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            H1 = '%s/H_ref.txt' % tile
+            H2 = '%s/H_sec.txt' % tile
+            disp = '%s/rectified_disp.tif' % tile
+            mask = '%s/rectified_mask.png' % tile
+            height = '%s/rectified_height.png' % tile
+            rpc_err = '%s/rpc_err.tif' % tile
+            dem = '%s/dem.tif' % tile
+            triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
+                height, rpc_err, A)
+            triangulation.transfer_map(height, H1, col, row, tw, th, z, dem)
+
+    ## tiles composition
     out = '%s/dem.tif' % out_dir
+    tmp = ['%s/dem.tif' % t for t in tiles]
     if not os.path.isfile(out) or not cfg['skip_existing']:
         print "Mosaic method: %s" % cfg['mosaic_method']
         if cfg['mosaic_method'] == 'gdal':
-            tile_composer.mosaic_gdal(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
+            tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
         else:
-            tile_composer.mosaic(out, w/z, h/z, tiles, tw/z, th/z, ov/z)
+            tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
 
     # cleanup
     if cfg['clean_tmp']:

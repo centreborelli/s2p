@@ -346,7 +346,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
     pp2, T2 = center_2d_points(p2)
 
     print "step 2: estimate F (8-points algorithm) ----------------------------"
-    F = estimation.fundamental_matrix(np.hstack([pp1, pp2]))
+    F = estimation.affine_fundamental_matrix(np.hstack([pp1, pp2]))
 
     print "step 3: compute rectifying homographies (loop-zhang algorithm) -----"
     H1, H2 = estimation.loop_zhang(F, w, h)

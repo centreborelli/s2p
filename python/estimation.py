@@ -318,3 +318,54 @@ def affine_fundamental_matrix(matches):
     F[2, 2] = -np.dot(N, XX)
 
     return F
+
+
+def affine_transformation(x, xx):
+    """
+    Estimates an affine homography from a list of correspondences
+
+    Args:
+        x:  Nx2 numpy array, containing a list of points
+        xx: Nx2 numpy array, containing the list of corresponding points
+
+    Returns:
+        3x3 numpy array, representing (in homogeneous coordinates) an affine
+        homography that maps the points of x onto the points of xx.
+
+    This function implements the Gold-Standard algorithm for estimating an
+    affine homography, described in Hartley & Zisserman page 130 (second
+    edition).
+    """
+    # check that there are at least 3 points
+    if len(x) < 3:
+        print "ERROR: estimation.affine_transformation needs 3 correspondences"
+        return np.eye(3)
+
+    # translate the input points so that the centroid is at the origin.
+    t  = -np.mean(x,  0)
+    tt = -np.mean(xx, 0)
+    x  = x + t
+    xx = xx + tt
+
+    # compute the Nx4 matrix A
+    A = np.hstack((x, xx))
+
+    # two singular vectors corresponding to the two largest singular values of
+    # matrix A. See Hartley and Zissermann for details.  These are the first
+    # two lines of matrix V (because np.linalg.svd returns V^T)
+    U, S, V = np.linalg.svd(A)
+    v1 = V[0, :]
+    v2 = V[1, :]
+
+    # compute blocks B and C, then H
+    tmp = np.vstack((v1, v2)).T
+    assert(np.shape(tmp) == (4, 2))
+    B = tmp[0:2, :]
+    C = tmp[2:4, :]
+    H = np.dot(C, np.linalg.inv(B))
+
+    # return A
+    A = np.eye(3)
+    A[0:2, 0:2] = H
+    A[0:2, 2] = np.dot(H, t) - tt
+    return A
