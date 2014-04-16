@@ -601,7 +601,8 @@ def error_vectors(m, F):
     # compute the error vectors (going from the projection of xx on l to xx)
     n = np.multiply(xx[:, 0], l[:, 0]) + np.multiply(xx[:, 1], l[:, 1]) + l[:, 2]
     d = np.square(l[:, 0]) + np.square(l[:, 1])
-    return np.multiply(np.divide(n, d), l[:, 0:2])
+    a = np.divide(n, d)
+    return np.vstack((np.multiply(a, l[:, 0]), np.multiply(a, l[:, 1]))).T
     ##TODO: function to plot these error vectors
 
 
@@ -632,6 +633,7 @@ def local_translation(r1, r2, x, y, w, h, m):
 
     # compute the median: as the vectors are collinear (because F is affine)
     # computing the median of each component independently is correct
+    N = len(e)
     out_x = np.sort(e[:, 0])[int(N/2)]
     out_y = np.sort(e[:, 1])[int(N/2)]
 
