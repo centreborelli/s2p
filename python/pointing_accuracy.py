@@ -568,6 +568,80 @@ def optimize_pair_all_datasets(data):
         except Exception as e:
                 print e
 
+
+def error_vectors(m, F):
+    """
+    Computes the error vectors for a list of matches and a given fundamental
+    matrix.
+
+    Args:
+        m: Nx4 numpy array containing a list of matches, one per line. Each
+           match is given by (x, y, x', y') where (x, y) is a point of the
+           reference view and (x', y') is the corresponding point in the
+           secondary view.
+        F: fundamental matrix between the two views
+
+    Returns:
+        Nx2 numpy array containing a list of planar vectors. Each vector is
+        obtained as the difference between x' and its projection on the
+        epipolar line Fx.
+    """
+    # divide keypoints in two lists: x (first image) and xx (second image), and
+    # convert them to homogeneous coordinates
+    N  = len(m)
+    x  = np.ones((N, 3))
+    xx = np.ones((N, 3))
+    x [:, 0:2] = m[:, 0:2]
+    xx[:, 0:2] = m[:, 2:4]
+
+    # epipolar lines in the second image: 2D array of size Nx3, one epipolar
+    # line per row
+    l = np.dot(x, F.T)
+
+    # compute the error vectors (going from the projection of xx on l to xx)
+    n = np.multiply(xx[:, 0], l[:, 0]) + np.multiply(xx[:, 1], l[:, 1]) + l[:, 2]
+    d = np.square(l[:, 0]) + np.square(l[:, 1])
+    return np.multiply(np.divide(n, d), l[:, 0:2])
+    ##TODO: function to plot these error vectors
+
+
+def local_translation(r1, r2, x, y, w, h, m):
+    """
+    Estimates the optimal translation to minimise the relative pointing error
+    on a given tile.
+
+    Args:
+        r1, r2: two instances of the rpc_model.RPCModel class
+        x, y, w, h: region of interest in the reference image (r1)
+        m: Nx4 numpy array containing a list of matches, one per line. Each
+            match is given by (p1, p2, q1, q2) where (p1, p2) is a point of the
+            reference view and (q1, q2) is the corresponding point in the
+            secondary view.
+
+    Returns:
+        3x3 numpy array containing the homogeneous representation of the
+        optimal planar translation
+    """
+    # estimate the affine fundamental matrix between the two views
+    n = cfg['n_gcp_per_axis']
+    rpc_matches = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, n)
+    F = estimation.affine_fundamental_matrix(rpc_matches)
+
+    # compute the error vectors
+    e = error_vectors(m, F)
+
+    # compute the median: as the vectors are collinear (because F is affine)
+    # computing the median of each component independently is correct
+    out_x = np.sort(e[:, 0])[int(N/2)]
+    out_y = np.sort(e[:, 1])[int(N/2)]
+
+    # the correction to be applied to the second view is the opposite
+    A = np.array([[1, 0, -out_x],
+                  [0, 1, -out_y],
+                  [0, 0, 1]])
+    return A
+
+
 def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
         first_guess=None):
     """
@@ -624,7 +698,8 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
 
     cfg['subsampling_factor_registration'] = tmp
 
-    A = optimize_pair(img1, img2, r1, r2, None, m)
+    #A = optimize_pair(img1, img2, r1, r2, None, m)
+    A = local_translation(r1, r2, x, y, w, h, m)
 
     # needed to recover output value when launching the function in a
     # multiprocessing.Process object
@@ -650,19 +725,40 @@ def from_next_tiles(tiles, ntx, nty, col, row):
     Returns:
         the estimated pointing correction for the specified tile
     """
+    #TODO
     return np.eye(3)
 
-def global_from_local(tiles, ntx, nty):
+def global_from_local(tiles):
     """
     Computes the pointing correction of a full roi using local corrections on
     tiles.
 
     Args:
         tiles: list of paths to folders associated to each tile
-        ntx: number of tiles in horizontal direction
-        nty: number of tiles in vertical direction
 
     Returns:
         the estimated pointing correction for the specified tile
+
+    In each folder we expect to find the files pointing.txt and center.txt. The
+    file pointing.txt contains the local correction (a projective transform
+    given in homogeneous coordinates), and the file center.txt contains the
+    coordinates of the mean of the keypoints of the secondary image.
     """
-    return np.eye(3)
+    # lists of matching points
+    x  = []
+    xx = []
+
+    # loop over all the tiles
+    for f in tiles:
+        center = os.path.join(f, 'center_keypts_sec.txt')
+        pointing = os.path.join(f, 'pointing.txt')
+        if os.path.isfile(center) and os.path.isfile(pointing):
+            A = np.loadtxt(pointing)
+            p = np.loadtxt(center)
+            p = np.array(p[0], p[1], 1)
+            q = np.dot(A, p)
+            x.append(p)
+            xx.append(q)
+
+    # estimate an affine transformation transforming x in xx
+    return estimation.affine_transform(np.array(x), np.array(xx))
