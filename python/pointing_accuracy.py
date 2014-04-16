@@ -757,10 +757,17 @@ def global_from_local(tiles):
         if os.path.isfile(center) and os.path.isfile(pointing):
             A = np.loadtxt(pointing)
             p = np.loadtxt(center)
-            p = np.array(p[0], p[1], 1)
-            q = np.dot(A, p)
+            q = np.dot(A, np.array([p[0], p[1], 1]))
             x.append(p)
-            xx.append(q)
+            xx.append(q[0:2])
 
-    # estimate an affine transformation transforming x in xx
-    return estimation.affine_transform(np.array(x), np.array(xx))
+    if not x:
+        return np.eye(3)
+    elif len(x) == 1:
+        return A
+    elif len(x) == 2:
+        #TODO: compute the mean of the 2 available translations
+        return A
+    else:
+        # estimate an affine transformation transforming x in xx
+        return estimation.affine_transformation(np.array(x), np.array(xx))

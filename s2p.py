@@ -313,7 +313,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
                         row, tw, th, None, cld_msk, roi_msk, A)
 
     # compute global pointing correction
-    A = pointing_accuracy.global_from_local(tiles, ntx, nty)
+    A = pointing_accuracy.global_from_local(tiles)
     np.savetxt('%s/pointing.txt' % out_dir, A)
 
     ## triangulation TODO: parallelize

@@ -336,6 +336,11 @@ def affine_transformation(x, xx):
     affine homography, described in Hartley & Zisserman page 130 (second
     edition).
     """
+    # check that there are at least 3 points
+    if len(x) < 3:
+        print "ERROR: estimation.affine_transformation needs 3 correspondences"
+        return np.eye(3)
+
     # translate the input points so that the centroid is at the origin.
     t  = -np.mean(x,  0)
     tt = -np.mean(xx, 0)
