@@ -766,8 +766,8 @@ def global_from_local(tiles):
     elif len(x) == 1:
         return A
     elif len(x) == 2:
-        #TODO: compute the mean of the 2 available translations
-        return A
+        #TODO: replace translation with similarity
+        return estimation.translation(np.array(x), np.array(xx))
     else:
         # estimate an affine transformation transforming x in xx
         return estimation.affine_transformation(np.array(x), np.array(xx))

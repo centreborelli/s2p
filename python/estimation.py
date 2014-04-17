@@ -369,3 +369,24 @@ def affine_transformation(x, xx):
     A[0:2, 0:2] = H
     A[0:2, 2] = np.dot(H, t) - tt
     return A
+
+
+def translation(x, xx):
+    """
+    Estimates a planar translation from a list of correspondences
+
+    Args:
+        x:  Nx2 numpy array, containing a list of points
+        xx: Nx2 numpy array, containing the list of corresponding points
+
+    Returns:
+        3x3 numpy array, representing (in homogeneous coordinates) a planar
+        translation that maps the points of x onto the points of xx.
+    """
+    # compute the mean of the displacement vectors
+    t = np.mean(xx - x)
+
+    # return A
+    A = np.eye(3)
+    A[0:2, 2] = t
+    return A
