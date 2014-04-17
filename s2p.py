@@ -81,7 +81,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         sys.stderr = fout
 
     # debug print
-    print 'tile %d %d running on process %s' % (x, y, multiprocessing.current_process())
+    print 'tile %d %d running on process %s' % (x, y,
+            multiprocessing.current_process())
 
     ## select ROI
     try:
@@ -113,25 +114,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     ## rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
-        rpc2, x, y, w, h, rect1, rect2, A, m)
-
-    if cfg['disp_range_method'] in ["auto_srtm", "wider_sift_srtm"]:
-        # Read models
-        rpci1 = rpc_model.RPCModel(rpc1)
-        rpci2 = rpc_model.RPCModel(rpc2)
-        srtm_disp_min, srtm_disp_max = rpc_utils.rough_disparity_range_estimation(rpci1, rpci2, x, y, w, h,
-            H1, H2, A, cfg['disp_range_srtm_low_margin'], cfg['disp_range_srtm_high_margin'])
-
-        if cfg['disp_range_method'] == "auto_srtm":
-            disp_min = srtm_disp_min
-            disp_max = srtm_disp_max
-            print "Auto srtm disp range: [%s, %s]" % (disp_min, disp_max)
-        elif cfg['disp_range_method'] == "wider_sift_srtm":
-            disp_min = min(srtm_disp_min, disp_min)
-            disp_max = max(srtm_disp_max, disp_max)
-            print "Wider sift srtm disp range: [%s, %s]" % (disp_min, disp_max)
-    else:
-         print "Auto sift disp range:  [%s, %s]" % (disp_min, disp_max)
+            rpc2, x, y, w, h, rect1, rect2, A, m)
 
     ## block-matching
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
@@ -146,7 +129,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     ## save the subsampling factor, the rectifying homographies and the
     # disparity bounds.
-    # ATTENTION if subsampling_factor is set the rectified images will be
+    # ATTENTION if subsampling_factor is > 1 the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
     # this fact
     np.savetxt(subsampling, np.array([z]))
@@ -305,7 +288,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
             if not os.path.isfile('%s/pointing.txt' % tile_dir):
-                print "WARNING: %s failed. Retrying pointing correction..." % tile_dir
+                print "WARNING: %s failed. Retrying pointing corr..." % tile_dir
                 # estimate pointing correction matrix from neighbors and rerun
                 # the disparity map computation
                 A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)

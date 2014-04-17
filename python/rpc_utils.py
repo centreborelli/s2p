@@ -480,7 +480,7 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     return disp
 
 
-def rough_disparity_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
+def srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
         margin_top=0, margin_bottom=0):
     """
     Args:

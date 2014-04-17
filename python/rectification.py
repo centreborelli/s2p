@@ -144,6 +144,8 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
         the input list.
     """
     out = []
+    if not matches.size:
+        return np.array(out)
     #mask = np.zeros((len(matches), 1)) # for debug only
     for i in range(len(matches)):
         x  = np.array([matches[i, 0], matches[i, 1], 1])
@@ -243,8 +245,7 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     return H2, dispx_min, dispx_max
 
 
-def update_minmax_range_extrapolating_registration_affinity(matches, H1,
-        H2, w_roi, h_roi):
+def update_disp_range_extrapolating(matches, H1, H2, w_roi, h_roi):
     """
     Update the disparity range considering the extrapolation of the affine
     registration transformation. Extrapolate until the boundary of the region
@@ -377,38 +378,35 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
     if m is None:
         m = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
 
-    if len(m) < 2:
-        # 0 or 1 sift match
-        print """rectification.compute_rectification_homographies:
-        Less than 2 sift matches. No registration of images will be performed,
-        and we will use a rough estimation of disparity range based on srtm
-        data"""
-        disp_m, disp_M = rpc_utils.rough_disparity_range_estimation(rpc1, rpc2,
-                x, y, w, h, H1, H2, A, cfg['disp_range_srtm_high_margin'],
-                cfg['disp_range_srtm_low_margin'])
-        return H1, H2, disp_m, disp_M
-
     # filter sift matches with the known fundamental matrix
     # but first convert F for big images coordinate frame
     F = np.dot(T2.T, np.dot(F, T1))
+    print '%d sift matches before epipolar constraint filering', len(m)
     m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
-    print 'remaining sift matches', len(m)
+    print 'd sift matches after epipolar constraint filering', len(m)
     if len(m) < 2:
         # 0 or 1 sift match
-        print """rectification.compute_rectification_homographies: all the sift
-        matches have been discarded by the epipolar constraint. This is
-        probably due to the pointing error. Try with a bigger value for
-        epipolar_thresh. We will use a rough estimation of disparity range
-        based on srtm data"""
-        disp_m, disp_M = rpc_utils.rough_disparity_range_estimation(rpc1, rpc2,
-                x, y, w, h, H1, H2, A, cfg['disp_range_srtm_high_margin'],
+        print """rectification.compute_rectification_homographies: less than 2 sift
+        matches after filtering by the epipolar constraint. This may be due to
+        the pointing error, or to strong illumination changes between the input
+        images. No registration of the images will be performed."""
+    else:
+        H2, disp_m, disp_M = register_horizontally(m, H1, H2)
+        disp_m, disp_M = update_disp_range_extrapolating(m, H1, H2, w, h)
+
+    # expand disparity range with srtm according to cfg params
+    if cfg['disp_range_method'] is "auto_srtm" or len(m) < 2:
+        disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y,
+                w, h, H1, H2, A, cfg['disp_range_srtm_high_margin'],
                 cfg['disp_range_srtm_low_margin'])
-        return H1, H2, disp_m, disp_M
+    if cfg['disp_range_method'] is "wider_sift_srtm" and len(m) >= 2:
+        d_m, d_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h,
+                H1, H2, A, cfg['disp_range_srtm_high_margin'],
+                cfg['disp_range_srtm_low_margin'])
+        disp_m = min(disp_m, d_m)
+        disp_M = max(disp_M, d_M)
 
-    H2, disp_m, disp_M = register_horizontally(m, H1, H2)
-    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(m,
-        H1, H2, w, h)
-
+    print "disparity range:  [%s, %s]" % (disp_m, disp_M)
     return H1, H2, disp_m, disp_M
 
 
@@ -541,8 +539,7 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # add an horizontal translation to H2 to center the disparity range around
     H2, disp_m, disp_M = register_horizontally(matches, H1, H2)
-    disp_m, disp_M = update_minmax_range_extrapolating_registration_affinity(matches,
-        H1, H2, w, h)
+    disp_m, disp_M = update_disp_range_extrapolating(matches, H1, H2, w, h)
 
     return H1, H2, disp_m, disp_M
 
