@@ -389,5 +389,5 @@ def translation(x, xx):
     # return A
     A = np.eye(3)
     A[0, 2] = t[0]
-    A[0, 2] = t[1]
+    A[1, 2] = t[1]
     return A
