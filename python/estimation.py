@@ -384,9 +384,10 @@ def translation(x, xx):
         translation that maps the points of x onto the points of xx.
     """
     # compute the mean of the displacement vectors
-    t = np.mean(xx - x)
+    t = np.mean(xx - x, 0)
 
     # return A
     A = np.eye(3)
-    A[0:2, 2] = t
+    A[0, 2] = t[0]
+    A[0, 2] = t[1]
     return A
