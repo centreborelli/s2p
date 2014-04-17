@@ -130,6 +130,32 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     #common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
 
 
+def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
+        A=None):
+    """
+    Computes an altitude map, on the grid of the original reference image, from
+    a disparity map given on the grid of the rectified reference image.
+
+    Args:
+        out: path to the output file
+        x, y, w, h: four integers defining the rectangular ROI in the original
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
+        z: zoom factor (usually 1, 2 or 4) used to produce the input disparity
+            map
+        rpc1, rpc2: paths to the xml files
+        H1, H2: path to txt files containing two 3x3 numpy arrays defining
+            the rectifying homographies
+        disp, mask: paths to the diparity and mask maps
+        rpc_err: path to the output rpc_error of triangulation
+        A (optional): pointing correction matrix for im2
+
+    Returns:
+        nothing
+    """
+    tmp = common.tmpfile('.tif')
+    compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
+    transfer_map(tmp, H1, x, y, w, h, z, out)
 
 def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     """

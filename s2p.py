@@ -316,7 +316,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
     A = pointing_accuracy.global_from_local(tiles)
     np.savetxt('%s/pointing.txt' % out_dir, A)
 
-    ## triangulation TODO: parallelize
+    ## triangulation
+    pool = multiprocessing.Pool(max_processes)
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
             tile = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
@@ -324,12 +325,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
             H2 = '%s/H_sec.txt' % tile
             disp = '%s/rectified_disp.tif' % tile
             mask = '%s/rectified_mask.png' % tile
-            height = '%s/rectified_height.png' % tile
             rpc_err = '%s/rpc_err.tif' % tile
             dem = '%s/dem.tif' % tile
-            triangulation.compute_height_map(rpc1, rpc2, H1, H2, disp, mask,
-                height, rpc_err, A)
-            triangulation.transfer_map(height, H1, col, row, tw, th, z, dem)
+            if cfg['debug']:
+                triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
+                        H1, H2, disp, mask, rpc_err, A)
+            else:
+                pool.apply_async(triangulation.compute_dem, args=(dem, col,
+                    row, tw, th, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
+                    A))
+    pool.close()
+    pool.join()
 
     ## tiles composition
     out = '%s/dem.tif' % out_dir
