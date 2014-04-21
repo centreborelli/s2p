@@ -37,14 +37,11 @@ lr=${10}
 
 
 ## convert input images to png
-# HACK! make it invariant to illumination changes?
-plambda $a "x isnan 0 x if" | gblur 1 | plambda  - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + "  -o  $a.tif
-thresholds=`plambda $a.tif "x isnan 0 x if" | qauto - $a.png 2>&1 |  cut -f2 -d=`
-plambda $b "x isnan 0 x if" | gblur 1 | plambda  - " x 4 *    x(-1,0)  -1 *  +  x(1,0)  -1 * +  x(0,-1)  -1 * +    x(0,1)  -1 * + " | qeasy $thresholds - $b.png
-
+## HACK! local contrast equalization/enhancement
+plambda $a "x isnan 0 x if" | blur C 1 | qauto - $a.png
 a=$a.png
+plambda $b "x isnan 0 x if" | blur C 1 | qauto - $b.png
 b=$b.png
-
 
 #usage: ./build/SGBM im1 im2 out [mindisp(0) maxdisp(64) SADwindow(1) P1(0) P2(0) LRdiff(1)]
 echo "sgbm2 $a $b $disp $im $iM $SAD_win $P1 $P2 $lr"
