@@ -37,6 +37,13 @@ static void nan_rpc(struct rpc *p)
 		t[i] = NAN;
 }
 
+// set all the values of an array of doubles to NAN
+static void nan_array(double *x, int n)
+{
+	for (int i = 0; i < n; i++)
+		x[i] = NAN;
+}
+
 // like strcmp, but finds a needle
 static int strhas(char *haystack, char *needle)
 {
@@ -72,6 +79,7 @@ static void add_tag_to_rpc(struct rpc *p, char *tag, double x)
 {
 	int t;
 	if (false);
+    // pleiades tags
 	else if (0 == strhas(tag, "SAMP_OFF"))          p->offset [0] = x;
 	else if (0 == strhas(tag, "SAMP_SCALE"))        p->scale  [0] = x;
 	else if (0 == strhas(tag, "LINE_OFF"))          p->offset [1] = x;
@@ -100,6 +108,21 @@ static void add_tag_to_rpc(struct rpc *p, char *tag, double x)
 	else if (0 == strhas(tag, "FIRST_LAT"))         p->imval  [1] = x;
 	else if (0 == strhas(tag, "LAST_LON"))          p->imval  [2] = x;
 	else if (0 == strhas(tag, "LAST_LAT"))          p->imval  [3] = x;
+	// worldview tags
+	else if (0 == strhas(tag, "SAMPOFFSET"))        p->offset [0] = x;
+	else if (0 == strhas(tag, "SAMPSCALE"))         p->scale  [0] = x;
+	else if (0 == strhas(tag, "LINEOFFSET"))        p->offset [1] = x;
+	else if (0 == strhas(tag, "LINESCALE"))         p->scale  [1] = x;
+	else if (0 == strhas(tag, "HEIGHTOFFSET"))      p->offset [2] = x;
+	else if (0 == strhas(tag, "HEIGHTSCALE"))       p->scale  [2] = x;
+	else if (0 == strhas(tag, "LONGOFFSET"))        p->ioffset[0] = x;
+	else if (0 == strhas(tag, "LONGSCALE"))         p->iscale [0] = x;
+	else if (0 == strhas(tag, "LATOFFSET"))         p->ioffset[1] = x;
+	else if (0 == strhas(tag, "LATSCALE"))          p->iscale [1] = x;
+	else if (0 <= (t=pix(tag, "SAMPNUMCOEF_")))     p->inumx  [t] = x;
+	else if (0 <= (t=pix(tag, "SAMPDENCOEF_")))     p->idenx  [t] = x;
+	else if (0 <= (t=pix(tag, "LINENUMCOEF_")))     p->inumy  [t] = x;
+	else if (0 <= (t=pix(tag, "LINEDENCOEF_")))     p->ideny  [t] = x;
 }
 
 // process an input line
@@ -108,14 +131,27 @@ static double get_xml_tagged_number(char *tag, char *line)
 	char buf[0x100], buf2[0x100];
 	double x;
 	int r = sscanf(line, " <%[^>]>%lf</%[^>]>", buf, &x, buf2);
+	strcpy(tag, buf);
 	if (r == 3) {
-		strcpy(tag, buf);
 		return x;
 	} else return NAN;
 }
 
-// read an XML file specifying an RPC model
-void read_rpc_file_xml(struct rpc *p, char *filename)
+static double *get_xml_tagged_list(char *tag, char *line)
+{
+	char buf[0x100], buf2[0x100];
+	double x[20];
+	nan_array(x, 20);
+	// read 20 float values with sscanf
+	int r = sscanf(line, " <%[^>]>%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf"
+			"%lf %lf %lf %lf %lf %lf %lf %lf %lf</%[^>]>", buf, x, x+1, x+2,
+			x+3, x+4, x+5, x+6, x+7, x+8, x+9, x+10, x+11, x+12, x+13, x+14,
+			x+15, x+16, x+17, x+18, x+19, buf2);
+	strcpy(tag, buf);
+	return r < 22 ? 0 : x;
+}
+
+void read_rpc_file_xml_pleiades(struct rpc *p, char *filename)
 {
 	nan_rpc(p);
 	FILE *f = xfopen(filename, "r");
@@ -134,6 +170,54 @@ void read_rpc_file_xml(struct rpc *p, char *filename)
 	xfclose(f);
 	p->ioffset[2] = p->offset[2];
 	p->iscale[2] = p->scale[2];
+}
+
+void read_rpc_file_xml_worldview(struct rpc *p, char *filename)
+{
+	nan_rpc(p);
+	FILE *f = xfopen(filename, "r");
+	int n = 0x400;
+	while (1) {
+		char line[n], tag[n], *sl = fgets(line, n, f);;
+		if (!sl) break;
+		double x = get_xml_tagged_number(tag, line);
+		//fprintf(stderr, "%s: %g\n", tag, x);
+		if (isfinite(x)) {
+			add_tag_to_rpc(p, tag, x);
+		} else if (0 == strhas(tag, "COEF")) {
+			double *x = get_xml_tagged_list(tag, line);
+			if (x)
+				for (int i = 0; i < 20; i++) {
+					char tmp[4]; sprintf(tmp, "_%d", i+1);
+					char tag_i[16]; strcpy(tag_i, tag);
+					add_tag_to_rpc(p, strcat(tag_i, tmp), x[i]);
+				}
+		} else;
+	}
+	xfclose(f);
+	p->ioffset[2] = p->offset[2];
+	p->iscale[2] = p->scale[2];
+}
+
+// read an XML file specifying an RPC model
+void read_rpc_file_xml(struct rpc *p, char *filename)
+{
+	FILE *f = xfopen(filename, "r");
+	int n = 0x100, found = 0;
+	while (!found) {
+		char line[n], *sl = fgets(line, n, f);;
+		if (!sl) break;
+		if (0 == strhas(line, "<SATID>") && 0 == strhas(line, "WV0")) {
+			found = 1;
+			read_rpc_file_xml_worldview(p, filename);
+		}
+		if (0 == strhas(line, "<METADATA_PROFILE>") && 0 == strhas(line,
+					"PHR_SENSOR")) {
+			found = 1;
+			read_rpc_file_xml_pleiades(p, filename);
+		}
+	}
+	xfclose(f);
 }
 
 #define FORI(n) for (int i = 0; i < (n); i++)
@@ -267,7 +351,7 @@ void eval_rpci(double *result,
 	result[1] = tmp[1] * p->scale[1] + p->offset[1];
 }
 
-// evaluate a correspondence between to images given their rpc
+// evaluate a correspondence between two images given their rpc
 void eval_rpc_pair(double xprime[2],
 		struct rpc *pa, struct rpc *pb,
 		double x, double y, double z)
@@ -356,28 +440,28 @@ static int main_trial(int c, char *v[])
 	nan_rpc(p);
 	read_rpc_file_xml(p, "-");
 	print_rpc(stderr, p, "p");
-	for (int i = 0; i < 10; i++) {
-		double x = random_uniform();
-		double y = random_uniform();
-		double z = random_uniform();
-		double r[2], rr[2];
-		eval_nrpc(r, p, x, y, z);
-		eval_nrpci(rr, p, r[0], r[1], z);
-		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
-				x, y, z, r[0], r[1], rr[0], rr[1]);
-		//fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
-	}
-	for (int i = 0; i < 10; i++) {
-		double x = 10000+4000*random_uniform();
-		double y = 10000+4000*random_uniform();
-		double z = 1000*random_uniform();
-		double r[2], rr[2];
-		eval_rpc(r, p, x, y, z);
-		eval_rpci(rr, p, r[0], r[1], z);
-		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
-				x, y, z, r[0], r[1], rr[0], rr[1]);
-		//fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
-	}
+//	for (int i = 0; i < 10; i++) {
+//		double x = random_uniform();
+//		double y = random_uniform();
+//		double z = random_uniform();
+//		double r[2], rr[2];
+//		eval_nrpc(r, p, x, y, z);
+//		eval_nrpci(rr, p, r[0], r[1], z);
+//		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
+//				x, y, z, r[0], r[1], rr[0], rr[1]);
+//		//fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
+//	}
+//	for (int i = 0; i < 10; i++) {
+//		double x = 10000+4000*random_uniform();
+//		double y = 10000+4000*random_uniform();
+//		double z = 1000*random_uniform();
+//		double r[2], rr[2];
+//		eval_rpc(r, p, x, y, z);
+//		eval_rpci(rr, p, r[0], r[1], z);
+//		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
+//				x, y, z, r[0], r[1], rr[0], rr[1]);
+//		//fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
+//	}
 	return 0;
 }
 
@@ -453,9 +537,9 @@ static int main_rpcpair(int c, char *v[])
 #ifndef DONT_USE_TEST_MAIN
 int main(int c, char *v[])
 {
-	//return main_trial(c, v);
+	return main_trial(c, v);
 	//return main_trial2(c, v);
 	//return main_rpcline(c, v);
-	return main_rpcpair(c, v);
+//	return main_rpcpair(c, v);
 }
 #endif
