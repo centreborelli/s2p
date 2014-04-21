@@ -82,6 +82,9 @@ morphoop: iio.o morphoop.o
 gblur: iio.o gblur.o
 	cc iio.o gblur.o -lpng -ltiff -ljpeg -lm -lfftw3f -o $(BINDIR)/gblur
 
+blur: iio.o blur.c
+	cc iio.o -std=c99 blur.c -lpng -ltiff -ljpeg -lm -lfftw3f -o $(BINDIR)/blur
+
 fftconvolve: iio.o fftconvolve.o
 	cc iio.o fftconvolve.o -lpng -ltiff -ljpeg -lm -lfftw3f -o $(BINDIR)/fftconvolve
 
