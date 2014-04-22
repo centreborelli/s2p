@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 
 #include "xfopen.c"
 
@@ -137,10 +138,9 @@ static double get_xml_tagged_number(char *tag, char *line)
 	} else return NAN;
 }
 
-static double *get_xml_tagged_list(char *tag, char *line)
+static int get_xml_tagged_list(double *x, char *tag, char *line)
 {
 	char buf[0x100], buf2[0x100];
-	double x[20];
 	nan_array(x, 20);
 	// read 20 float values with sscanf
 	int r = sscanf(line, " <%[^>]>%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf"
@@ -148,7 +148,7 @@ static double *get_xml_tagged_list(char *tag, char *line)
 			x+3, x+4, x+5, x+6, x+7, x+8, x+9, x+10, x+11, x+12, x+13, x+14,
 			x+15, x+16, x+17, x+18, x+19, buf2);
 	strcpy(tag, buf);
-	return r < 22 ? 0 : x;
+	return r;
 }
 
 void read_rpc_file_xml_pleiades(struct rpc *p, char *filename)
@@ -178,21 +178,23 @@ void read_rpc_file_xml_worldview(struct rpc *p, char *filename)
 	FILE *f = xfopen(filename, "r");
 	int n = 0x400;
 	while (1) {
-		char line[n], tag[n], *sl = fgets(line, n, f);;
+		char line[n], tag[n], *sl = fgets(line, n, f);
 		if (!sl) break;
 		double x = get_xml_tagged_number(tag, line);
-		//fprintf(stderr, "%s: %g\n", tag, x);
 		if (isfinite(x)) {
 			add_tag_to_rpc(p, tag, x);
-		} else if (0 == strhas(tag, "COEF")) {
-			double *x = get_xml_tagged_list(tag, line);
-			if (x)
+			continue;
+		}
+		if (0 == strhas(tag, "COEF")) {
+			double y[20];
+			int r = get_xml_tagged_list(y, tag, line);
+			if (r == 22)
 				for (int i = 0; i < 20; i++) {
 					char tmp[4]; sprintf(tmp, "_%d", i+1);
 					char tag_i[16]; strcpy(tag_i, tag);
-					add_tag_to_rpc(p, strcat(tag_i, tmp), x[i]);
+					add_tag_to_rpc(p, strcat(tag_i, tmp), y[i]);
 				}
-		} else;
+		}
 	}
 	xfclose(f);
 	p->ioffset[2] = p->offset[2];
@@ -236,7 +238,6 @@ void print_rpc(FILE *f, struct rpc *p, char *n)
 	FORI(3)fprintf(stderr,"rpc(%s) offset[%d] = %.18lf\n",n,i,p->offset[i]);
 	FORI(3)fprintf(stderr,"rpc(%s) iscale[%d] = %.18lf\n",n,i,p->iscale[i]);
 	FORI(3)fprintf(stderr,"rpc(%s) ioffs[%d] = %.18lf\n",n,i,p->ioffset[i]);
-
 }
 
 // evaluate a polynomial of degree 3
@@ -297,20 +298,6 @@ double eval_pol20_dz(double c[20], double x, double y, double z)
 	return r;
 }
 
-// evaluate the normalized direct rpc model
-static void eval_nrpc(double *result,
-		struct rpc *p, double x, double y, double z)
-{
-	double numx = eval_pol20(p->numx, x, y, z);
-	double denx = eval_pol20(p->denx, x, y, z);
-	double numy = eval_pol20(p->numy, x, y, z);
-	double deny = eval_pol20(p->deny, x, y, z);
-	result[0] = numx/denx;
-	result[1] = numy/deny;
-	//fprintf(stderr, "\t\tnrpc{%p}(%g %g %g)=>(%g %g)\n", p, x, y, z, result[0], result[1]);
-
-}
-
 // evaluate the normalized inverse rpc model
 static void eval_nrpci(double *result,
 		struct rpc *p, double x, double y, double z)
@@ -323,6 +310,79 @@ static void eval_nrpci(double *result,
 	result[1] = numy/deny;
 	//fprintf(stderr, "\t\tnrpci{%p}(%g %g %g)=>",p,x,y,z);
 	//fprintf(stderr, "(%g %g)\n", result[0], result[1]);
+}
+
+static double l2_squared_dist(double a[2], double b[2])
+{
+	double d[2];
+	d[0] = a[0] - b[0];
+	d[1] = a[1] - b[1];
+	return d[0]*d[0] + d[1]*d[1];
+}
+
+// project x on the base (u, v): x = a*u + b*v
+// the exact computation is given by:
+//     M = np.vstack((u, v)).T
+// [a,b] = np.dot(np.linalg.inv(M), x)
+static void decompose_vector_basis(double a[2], double x[2], double u[2],
+        double v[2])
+{
+	double det = u[0]*v[1] - u[1]*v[0];
+	if (fabs(det) < FLT_MIN) {
+		fprintf(stderr, "ERROR: the given basis is not a basis\n");
+		fprintf(stderr, "\tu: (%g, %g), v: (%g, %g)\n", u[0], u[1], v[0], v[1]);
+	}
+	a[0] =  v[1]*x[0] - v[0]*x[1];
+	a[1] = -u[1]*x[0] + u[0]*x[1];
+	a[0] /= det;
+	a[1] /= det;
+}
+
+// evaluate the normalized direct rpc model, iteratively from the inverse rpc
+// model
+static void eval_nrpc_iterative(double *result,
+		struct rpc *p, double x, double y, double z)
+{
+	double a[2];
+	double x0[2];
+	double x1[2];
+	double x2[2];
+	double xf[2] = {x, y};
+	double lon = -1, lat = -1, eps = 2;
+	eval_nrpci(x0, p, lon, lat, z);
+	eval_nrpci(x1, p, lon + eps, lat, z);
+	eval_nrpci(x2, p, lon, lat + eps, z);
+	//fprintf(stderr, "x0: (%g, %g), x1: (%g, %g), x2: (%g, %g)\n", x0[0], x0[1],
+	//        x1[0], x1[1], x2[0], x2[1]);
+	while (l2_squared_dist(x0, xf) > 1e-18) {
+		double u [2] = {xf[0] - x0[0], xf[1] - x0[1]};
+		double e1[2] = {x1[0] - x0[0], x1[1] - x0[1]};
+		double e2[2] = {x2[0] - x0[0], x2[1] - x0[1]};
+		decompose_vector_basis(a, u, e1, e2);
+		lon += a[0] * eps;
+		lat += a[1] * eps;
+		eps = 0.1;
+		eval_nrpci(x0, p, lon, lat, z);
+		eval_nrpci(x1, p, lon + eps, lat, z);
+		eval_nrpci(x2, p, lon, lat + eps, z);
+	}
+	result[0] = lon;
+	result[1] = lat;
+}
+
+// evaluate the normalized direct rpc model
+static void eval_nrpc(double *result,
+		struct rpc *p, double x, double y, double z)
+{
+	if isfinite(p->numx[0]) {
+		double numx = eval_pol20(p->numx, x, y, z);
+		double denx = eval_pol20(p->denx, x, y, z);
+		double numy = eval_pol20(p->numy, x, y, z);
+		double deny = eval_pol20(p->deny, x, y, z);
+		result[0] = numx/denx;
+		result[1] = numy/deny;
+		//fprintf(stderr, "\t\tnrpc{%p}(%g %g %g)=>(%g %g)\n", p, x, y, z, result[0], result[1]);
+	} else eval_nrpc_iterative(result, p, x, y, z);
 }
 
 // evaluate the direct rpc model
@@ -414,6 +474,7 @@ static int main_trial2(int c, char *v[])
 	struct rpc p[1];
 	nan_rpc(p);
 	read_rpc_file_xml(p, "-");
+	print_rpc(stderr, p, "p");
 	double lx[][3] = { {1,1,0}, {41500,1,0}, {1,16992,0}, {41500,16992,0}};
 	for(int i = 0; i < 4; i++)
 	{
@@ -439,29 +500,29 @@ static int main_trial(int c, char *v[])
 	struct rpc p[1];
 	nan_rpc(p);
 	read_rpc_file_xml(p, "-");
-	print_rpc(stderr, p, "p");
-//	for (int i = 0; i < 10; i++) {
-//		double x = random_uniform();
-//		double y = random_uniform();
-//		double z = random_uniform();
-//		double r[2], rr[2];
-//		eval_nrpc(r, p, x, y, z);
-//		eval_nrpci(rr, p, r[0], r[1], z);
-//		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
-//				x, y, z, r[0], r[1], rr[0], rr[1]);
-//		//fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
-//	}
-//	for (int i = 0; i < 10; i++) {
-//		double x = 10000+4000*random_uniform();
-//		double y = 10000+4000*random_uniform();
-//		double z = 1000*random_uniform();
-//		double r[2], rr[2];
-//		eval_rpc(r, p, x, y, z);
-//		eval_rpci(rr, p, r[0], r[1], z);
-//		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
-//				x, y, z, r[0], r[1], rr[0], rr[1]);
-//		//fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
-//	}
+	//print_rpc(stderr, p, "p");
+	for (int i = 0; i < 10; i++) {
+		double x = random_uniform();
+		double y = random_uniform();
+		double z = random_uniform();
+		double r[2], rr[2];
+		eval_nrpc(r, p, x, y, z);
+		eval_nrpci(rr, p, r[0], r[1], z);
+		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
+				x, y, z, r[0], r[1], rr[0], rr[1]);
+		fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
+	}
+	for (int i = 0; i < 10; i++) {
+		double x = 10000+4000*random_uniform();
+		double y = 10000+4000*random_uniform();
+		double z = 1000*random_uniform();
+		double r[2], rr[2];
+		eval_rpc(r, p, x, y, z);
+		eval_rpci(rr, p, r[0], r[1], z);
+		fprintf(stderr, "(%g %g %g) => (%g %g) => (%g %g)\n",
+				x, y, z, r[0], r[1], rr[0], rr[1]);
+		fprintf(stderr, "%g\n", hypot(rr[0]-x, rr[1]-y));
+	}
 	return 0;
 }
 
@@ -537,9 +598,9 @@ static int main_rpcpair(int c, char *v[])
 #ifndef DONT_USE_TEST_MAIN
 int main(int c, char *v[])
 {
-	return main_trial(c, v);
+	//return main_trial(c, v);
 	//return main_trial2(c, v);
-	//return main_rpcline(c, v);
+	return main_rpcline(c, v);
 //	return main_rpcpair(c, v);
 }
 #endif
