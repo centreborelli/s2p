@@ -316,7 +316,7 @@ class RPCModel:
         y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat + EPS, lon, cAlt)
 
         n = 0
-        while not np.all((x0 - cCol) ** 2 + (y0 - cRow) ** 2 < 0.000001):
+        while not np.all((x0 - cCol) ** 2 + (y0 - cRow) ** 2 < 1e-18):
             X0 = np.vstack([x0, y0]).T
             X1 = np.vstack([x1, y1]).T
             X2 = np.vstack([x2, y2]).T
