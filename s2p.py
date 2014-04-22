@@ -18,6 +18,7 @@ from python import rpc_model
 from python import rpc_utils
 from python import geographiclib
 from python import pointing_accuracy
+from python import visualisation
 from python import rectification
 from python import block_matching
 from python import triangulation
@@ -65,6 +66,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     pointing = '%s/pointing.txt' % out_dir
     center = '%s/center_keypts_sec.txt' % out_dir
     sift_matches = '%s/sift_matches.txt' % out_dir
+    sift_matches_plot = '%s/sift_matches_plot.png' % out_dir
     H_ref = '%s/H_ref.txt' % out_dir
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
@@ -109,6 +111,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         np.savetxt(pointing, A)
         np.savetxt(sift_matches, m)
         np.savetxt(center, np.mean(m[:, 2:4], 0))
+        visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y, w,
+                h, sift_matches_plot)
     else:
         m = None
 

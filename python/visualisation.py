@@ -1,8 +1,15 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 
 import numpy as np
-import common
+import os
+
 import piio
+import common
+import estimation
+import rpc_model
+import rpc_utils
+import rectification
+import pointing_accuracy
 
 def plot_line(im, x1, y1, x2, y2, colour):
     """
@@ -87,40 +94,65 @@ def plot_matches(im1, im2, matches):
     return outfile
 
 
-def plot_matches_pleiades(im1, im2, matches):
+def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
+        w=None, h=None, outfile=None):
     """
     Plot matches on Pleiades images
 
     Args:
         im1, im2: paths to full Pleiades images
+        rpc1, rpc2: paths to xml files containing the rpc coefficients
         matches: 2D numpy array of size 4xN containing a list of matches (a
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2). The coordinates are given in the frame of the full images.
+        x, y, w, h (optional, default is None): ROI in the reference image
+        outfile (optional, default is None): path to the output file. If None,
+            the file image is displayed using the pvflip viewer
 
     Returns:
         path to the displayed output
     """
+    # read rpcs
+    r1 = rpc_model.RPCModel(rpc1)
+    r2 = rpc_model.RPCModel(rpc2)
+
     # determine regions to crop in im1 and im2
-    x1 = np.min(matches[:, 0])
-    w1 = np.max(matches[:, 0]) - x1
-    y1 = np.min(matches[:, 1])
-    h1 = np.max(matches[:, 1]) - y1
+    if x is not None:
+        x1 = x
+    else:
+        x1 = np.min(matches[:, 0])
 
-    x2 = np.min(matches[:, 2])
-    w2 = np.max(matches[:, 2]) - x2
-    y2 = np.min(matches[:, 3])
-    h2 = np.max(matches[:, 3]) - y2
+    if y is not None:
+        y1 = y
+    else:
+        y1 = np.min(matches[:, 1])
 
-    # add 20 pixels offset and round. The image_crop_TIFF function will round
-    # off the coordinates before it does the crops.
-    x1 -= 20; x1 = np.round(x1)
-    y1 -= 20; y1 = np.round(y1)
-    x2 -= 20; x2 = np.round(x2)
-    y2 -= 20; y2 = np.round(y2)
-    w1 += 40; w1 = np.round(w1)
-    h1 += 40; h1 = np.round(h1)
-    w2 += 40; w2 = np.round(w2)
-    h2 += 40; h2 = np.round(h2)
+    if w is not None:
+        w1 = w
+    else:
+        w1 = np.max(matches[:, 0]) - x1
+
+    if h is not None:
+        h1 = h
+    else:
+        h1 = np.max(matches[:, 1]) - y1
+
+    x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x1, y1, w1, h1)
+    # x2 = np.min(matches[:, 2])
+    # w2 = np.max(matches[:, 2]) - x2
+    # y2 = np.min(matches[:, 3])
+    # h2 = np.max(matches[:, 3]) - y2
+
+    # # add 20 pixels offset and round. The image_crop_TIFF function will round
+    # # off the coordinates before it does the crops.
+    # x1 -= 20; x1 = np.round(x1)
+    # y1 -= 20; y1 = np.round(y1)
+    # x2 -= 20; x2 = np.round(x2)
+    # y2 -= 20; y2 = np.round(y2)
+    # w1 += 40; w1 = np.round(w1)
+    # h1 += 40; h1 = np.round(h1)
+    # w2 += 40; w2 = np.round(w2)
+    # h2 += 40; h2 = np.round(h2)
 
     # do the crops
     crop1 = common.image_crop_TIFF(im1, x1, y1, w1, h1)
@@ -132,5 +164,72 @@ def plot_matches_pleiades(im1, im2, matches):
 
     # plot the matches on the two crops
     to_display = plot_matches(crop1, crop2, np.hstack((pts1, pts2)))
-    common.run('v %s' % (to_display))
+    if outfile is None:
+        os.system('v %s &' % (to_display))
+    else:
+        common.run('cp %s %s' % (to_display, outfile))
+
     return
+
+def plot_vectors(p, v, x, y, w, h, f=1):
+    """
+    Plots vectors on an image, using gnuplot
+
+    Args:
+        p: points (origins of vectors),represented as a numpy Nx2 array
+        v: vectors, represented as a numpy Nx2 array
+        x, y, w, h: rectangular ROI
+        1: exageration factor (optional, default value is 1)
+
+    Returns:
+        nothing, but opens a display
+    """
+    tmp = common.tmpfile('.txt')
+    data = np.hstack((p, v))
+    np.savetxt(tmp, data, fmt='%6f')
+    gp_string = 'set term png size %d,%d;unset key;unset tics;plot [%d:%d] [%d:%d] "%s" u($1):($2):(%d*$3):(%d*$4) w vectors head filled' % (w, h, x, x+w, y, y+h, tmp, f, f)
+
+    img_file = common.tmpfile('.png')
+    common.run("gnuplot -p -e '%s' > %s" % (gp_string, img_file))
+    os.system("v %s &" % img_file)
+
+def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h, f=100):
+    """
+    Args:
+        im1, im2: path to full pleiades images
+        rpc1, rcp2: path to associated rpc xml files
+        x, y, w, h: four integers defining the rectangular tile in the reference
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the tile.
+        f (optional, default is 100): exageration factor for the error vectors
+
+    Returns:
+        nothing, but opens a display
+    """
+    # read rpcs
+    r1 = rpc_model.RPCModel(rpc1)
+    r2 = rpc_model.RPCModel(rpc2)
+
+    # compute sift matches
+    msft = rectification.matches_from_sift_rpc_roi(im1, im2, r1, r2, x, y, w, h)
+
+    # compute rpc matches
+    mrpc = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, 5)
+
+    # estimate affine fundamental matrix
+    F = estimation.affine_fundamental_matrix(mrpc)
+
+    # compute error vectors
+    e = pointing_accuracy.error_vectors(msft, F, 'ref')
+
+    A = pointing_accuracy.local_translation(r1, r2, x, y, w, h, msft)
+    p = msft[:, 0:2]
+    q = msft[:, 2:4]
+    qq = common.points_apply_homography(np.linalg.inv(A), q)
+    ee = pointing_accuracy.error_vectors(np.hstack((p, qq)), F, 'ref')
+    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, None, msft)
+    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, np.linalg.inv(A), msft)
+
+    # plot the vectors: they go from the point x' to the line Fx
+    plot_vectors(msft[:, 2:4], -e, x, y, w, h, f)
+    plot_vectors(qq, -ee, x, y, w, h, f)
