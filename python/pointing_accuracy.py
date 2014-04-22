@@ -79,6 +79,7 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
+    print '%d sift matches' % len(matches)
 
     # apply pointing correction matrix, if available
     if A is not None:
@@ -86,7 +87,7 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
     # estimate the fundamental matrix between the two views
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
-    F = estimation.fundamental_matrix(rpc_matches)
+    F = estimation.affine_fundamental_matrix(rpc_matches)
 
     # compute the mean displacement from epipolar lines
     d_sum = 0
@@ -94,7 +95,8 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         x  = np.array([p1[i, 0], p1[i, 1], 1])
         xx = np.array([p2[i, 0], p2[i, 1], 1])
         ll  = F.dot(x)
-        d = np.sign(xx.dot(ll)) * evaluation.distance_point_to_line(xx, ll)
+        #d = np.sign(xx.dot(ll)) * evaluation.distance_point_to_line(xx, ll)
+        d = evaluation.distance_point_to_line(xx, ll)
         d_sum += d
     return d_sum/len(p1)
 
@@ -569,7 +571,7 @@ def optimize_pair_all_datasets(data):
                 print e
 
 
-def error_vectors(m, F):
+def error_vectors(m, F, ind='ref'):
     """
     Computes the error vectors for a list of matches and a given fundamental
     matrix.
@@ -580,6 +582,9 @@ def error_vectors(m, F):
            reference view and (x', y') is the corresponding point in the
            secondary view.
         F: fundamental matrix between the two views
+        ind (optional, default is 'ref'): index of the image on which the lines
+            are plotted to compute the error vectors. Must be either 'ref' or
+            'sec' (reference or secondary image)
 
     Returns:
         Nx2 numpy array containing a list of planar vectors. Each vector is
@@ -594,16 +599,23 @@ def error_vectors(m, F):
     x [:, 0:2] = m[:, 0:2]
     xx[:, 0:2] = m[:, 2:4]
 
-    # epipolar lines in the second image: 2D array of size Nx3, one epipolar
-    # line per row
-    l = np.dot(x, F.T)
+    # epipolar lines: 2D array of size Nx3, one epipolar line per row
+    if ind == 'sec':
+        l = np.dot(x, F.T)
+    elif ind == 'ref':
+        l = np.dot(xx, F)
+    else:
+        print "pointing_accuracy.error_vectors: invalid 'ind' argument"
 
-    # compute the error vectors (going from the projection of xx on l to xx)
-    n = np.multiply(xx[:, 0], l[:, 0]) + np.multiply(xx[:, 1], l[:, 1]) + l[:, 2]
+    # compute the error vectors (going from the projection of x or xx on l to x
+    # or xx)
+    if ind == 'sec':
+        n = np.multiply(xx[:, 0], l[:, 0]) + np.multiply(xx[:, 1], l[:, 1]) + l[:, 2]
+    else:
+        n = np.multiply(x[:, 0], l[:, 0]) + np.multiply(x[:, 1], l[:, 1]) + l[:, 2]
     d = np.square(l[:, 0]) + np.square(l[:, 1])
     a = np.divide(n, d)
     return np.vstack((np.multiply(a, l[:, 0]), np.multiply(a, l[:, 1]))).T
-    ##TODO: function to plot these error vectors
 
 
 def local_translation(r1, r2, x, y, w, h, m):
@@ -621,7 +633,8 @@ def local_translation(r1, r2, x, y, w, h, m):
 
     Returns:
         3x3 numpy array containing the homogeneous representation of the
-        optimal planar translation
+        optimal planar translation, to be applied to the secondary image in
+        order to correct the pointing error.
     """
     # estimate the affine fundamental matrix between the two views
     n = cfg['n_gcp_per_axis']
@@ -629,7 +642,7 @@ def local_translation(r1, r2, x, y, w, h, m):
     F = estimation.affine_fundamental_matrix(rpc_matches)
 
     # compute the error vectors
-    e = error_vectors(m, F)
+    e = error_vectors(m, F, 'sec')
 
     # compute the median: as the vectors are collinear (because F is affine)
     # computing the median of each component independently is correct
