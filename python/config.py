@@ -26,8 +26,8 @@ cfg['pointing_correction_rois_mode'] = 'automatic'
 
 cfg['use_pleiades_unsharpening'] = True
 
-# One of "auto_sift", "auto_srtm", "wider_sift_srtm"
-cfg['disp_range_method'] = "auto_sift"
+# One of "sift", "srtm", "wider_sift_srtm"
+cfg['disp_range_method'] = "sift"
 cfg['disp_range_srtm_low_margin'] = -10
 cfg['disp_range_srtm_high_margin'] = +100
 

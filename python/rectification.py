@@ -395,7 +395,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
         disp_m, disp_M = update_disp_range_extrapolating(m, H1, H2, w, h)
 
     # expand disparity range with srtm according to cfg params
-    if cfg['disp_range_method'] is "auto_srtm" or len(m) < 2:
+    if cfg['disp_range_method'] is "srtm" or len(m) < 2:
         disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y,
                 w, h, H1, H2, A, cfg['disp_range_srtm_high_margin'],
                 cfg['disp_range_srtm_low_margin'])
