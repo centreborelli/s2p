@@ -127,6 +127,18 @@ static void add_tag_to_rpc(struct rpc *p, char *tag, double x)
 }
 
 // process an input line
+static double get_tagged_number(char *tag, char *line)
+{
+	char buf[0x100];
+	double x;
+	int r = sscanf(line, "%[^:]: %lf", buf, &x);
+	strcpy(tag, buf);
+	if (r == 2) {
+		return x;
+	} else return NAN;
+}
+
+// process an input line (pleiades and worldview format)
 static double get_xml_tagged_number(char *tag, char *line)
 {
 	char buf[0x100], buf2[0x100];
@@ -138,6 +150,7 @@ static double get_xml_tagged_number(char *tag, char *line)
 	} else return NAN;
 }
 
+// process an input line (worldview rpc coefficients format)
 static int get_xml_tagged_list(double *x, char *tag, char *line)
 {
 	char buf[0x100], buf2[0x100];
@@ -151,9 +164,27 @@ static int get_xml_tagged_list(double *x, char *tag, char *line)
 	return r;
 }
 
+void read_rpc_file_ikonos(struct rpc *p, char *filename)
+{
+	FILE *f = xfopen(filename, "r");
+	int n = 0x100;
+	while (1) {
+		char line[n], tag[n], *sl = fgets(line, n, f);;
+		if (!sl) break;
+        tag[0] = 'i';
+		double x = get_tagged_number(tag+1, line);
+		if (isfinite(x)) {
+			//fprintf(stderr, "%s [%d]: %g\n", tag+o, o, x);
+			add_tag_to_rpc(p, tag, x);
+		}
+	}
+	xfclose(f);
+	p->ioffset[2] = p->offset[2];
+	p->iscale[2] = p->scale[2];
+}
+
 void read_rpc_file_xml_pleiades(struct rpc *p, char *filename)
 {
-	nan_rpc(p);
 	FILE *f = xfopen(filename, "r");
 	int n = 0x100, o = 1;
 	while (1) {
@@ -174,7 +205,6 @@ void read_rpc_file_xml_pleiades(struct rpc *p, char *filename)
 
 void read_rpc_file_xml_worldview(struct rpc *p, char *filename)
 {
-	nan_rpc(p);
 	FILE *f = xfopen(filename, "r");
 	int n = 0x400;
 	while (1) {
@@ -201,14 +231,22 @@ void read_rpc_file_xml_worldview(struct rpc *p, char *filename)
 	p->iscale[2] = p->scale[2];
 }
 
-// read an XML file specifying an RPC model
+
+// read a file specifying an RPC model
 void read_rpc_file_xml(struct rpc *p, char *filename)
 {
+	nan_rpc(p);
 	FILE *f = xfopen(filename, "r");
 	int n = 0x100, found = 0;
 	while (!found) {
 		char line[n], *sl = fgets(line, n, f);;
 		if (!sl) break;
+        if (0 == strhas(line, "LINE_OFF:")) {
+            found = 1; char tag[n];
+		    double x = get_tagged_number(tag, line);
+			if (isfinite(x)) add_tag_to_rpc(p, tag, x);
+            read_rpc_file_ikonos(p, filename);
+        }
 		if (0 == strhas(line, "<SATID>") && 0 == strhas(line, "WV0")) {
 			found = 1;
 			read_rpc_file_xml_worldview(p, filename);
@@ -500,7 +538,7 @@ static int main_trial(int c, char *v[])
 	struct rpc p[1];
 	nan_rpc(p);
 	read_rpc_file_xml(p, "-");
-	//print_rpc(stderr, p, "p");
+	print_rpc(stderr, p, "p");
 	for (int i = 0; i < 10; i++) {
 		double x = random_uniform();
 		double y = random_uniform();
@@ -598,9 +636,9 @@ static int main_rpcpair(int c, char *v[])
 #ifndef DONT_USE_TEST_MAIN
 int main(int c, char *v[])
 {
-	//return main_trial(c, v);
-	//return main_trial2(c, v);
-	return main_rpcline(c, v);
+	return main_trial(c, v);
+	return main_trial2(c, v);
+//	return main_rpcline(c, v);
 //	return main_rpcpair(c, v);
 }
 #endif
