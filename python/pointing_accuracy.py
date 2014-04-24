@@ -770,9 +770,10 @@ def global_from_local(tiles):
         if os.path.isfile(center) and os.path.isfile(pointing):
             A = np.loadtxt(pointing)
             p = np.loadtxt(center)
-            q = np.dot(A, np.array([p[0], p[1], 1]))
-            x.append(p)
-            xx.append(q[0:2])
+            if A.shape == (3, 3) and p.shape == (2,):
+                q = np.dot(A, np.array([p[0], p[1], 1]))
+                x.append(p)
+                xx.append(q[0:2])
 
     if not x:
         return np.eye(3)
