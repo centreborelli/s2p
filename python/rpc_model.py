@@ -152,8 +152,6 @@ class RPCModel:
                 elif a[0] == "LAT":    self.latScale = float(val)
                 elif a[0] == "LONG":   self.lonScale = float(val)
                 elif a[0] == "HEIGHT": self.altScale = float(val)
-            else:
-                print "ERROR: unknown tag ", tag
 
         elif len(a) == 4 and a[2] == "COEFF":
             # remove ':', convert to int and decrease the coeff index
@@ -161,17 +159,9 @@ class RPCModel:
             if a[0] == "LINE":
                 if   a[1] == "NUM": self.inverseLinNum[a[3]] = float(val)
                 elif a[1] == "DEN": self.inverseLinDen[a[3]] = float(val)
-                else: print "ERROR: unknown tag ", tag
             elif a[0] == "SAMP":
                 if   a[1] == "NUM": self.inverseColNum[a[3]] = float(val)
                 elif a[1] == "DEN": self.inverseColDen[a[3]] = float(val)
-                else: print "ERROR: unknown tag ", tag
-            else:
-                print "ERROR: unknown tag ", tag
-
-        else:
-            print "ERROR: unknown tag ", tag
-
 
     def read_rpc_xml(self, tree):
         # determine wether it's a pleiades or worldview image
