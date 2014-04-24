@@ -112,6 +112,11 @@ def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
     Returns:
         path to the displayed output
     """
+    # if no matches, no plot
+    if not matches.size:
+        print "visualisation.plot_matches_pleiades: nothing to plot"
+        return
+
     # read rpcs
     r1 = rpc_model.RPCModel(rpc1)
     r2 = rpc_model.RPCModel(rpc2)
