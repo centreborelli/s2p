@@ -2,6 +2,7 @@
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
 import sys
+import copy
 import numpy as np
 from xml.etree.ElementTree import ElementTree
 
@@ -166,7 +167,7 @@ class RPCModel:
     def read_rpc_xml(self, tree):
         # determine wether it's a pleiades or worldview image
         a = tree.find('Metadata_Identification/METADATA_PROFILE') # PHR_SENSOR
-        b = tree.find('IMD/IMAGE/SATID') # WV0
+        b = tree.find('IMD/IMAGE/SATID') # WorldView
         if a is not None:
             if a.text == 'PHR_SENSOR':
                 self.read_rpc_pleiades(tree)
@@ -212,16 +213,16 @@ class RPCModel:
         self.lastLat  = float(vi.find('LAST_LAT').text)
 
         # scale and offset
-        self.lonScale = float(v.find('LONG_SCALE').text)
-        self.lonOff   = float(v.find('LONG_OFF').text)
-        self.latScale = float(v.find('LAT_SCALE').text)
-        self.latOff   = float(v.find('LAT_OFF').text)
-        self.altScale = float(v.find('HEIGHT_SCALE').text)
-        self.altOff   = float(v.find('HEIGHT_OFF').text)
-        self.colScale = float(v.find('SAMP_SCALE').text)
-        self.colOff   = float(v.find('SAMP_OFF').text)
-        self.linScale = float(v.find('LINE_SCALE').text)
         self.linOff   = float(v.find('LINE_OFF').text)
+        self.colOff   = float(v.find('SAMP_OFF').text)
+        self.latOff   = float(v.find('LAT_OFF').text)
+        self.lonOff   = float(v.find('LONG_OFF').text)
+        self.altOff   = float(v.find('HEIGHT_OFF').text)
+        self.linScale = float(v.find('LINE_SCALE').text)
+        self.colScale = float(v.find('SAMP_SCALE').text)
+        self.latScale = float(v.find('LAT_SCALE').text)
+        self.lonScale = float(v.find('LONG_SCALE').text)
+        self.altScale = float(v.find('HEIGHT_SCALE').text)
 
     def read_rpc_worldview(self, tree):
         # inverse model
@@ -263,60 +264,6 @@ class RPCModel:
         col = cCol*self.colScale + self.colOff
         lin = cLin*self.linScale + self.linOff
         return col, lin, alt
-
-
-    def write_xml_pleiades(self, filename):
-        """
-        Writes a new XML file with the rpc parameters
-        If the read was performed on a pleiades RPC
-        write can only be done using the pleiades format.
-        """
-        import copy
-
-        ## First transfer the coefficients back to the internal xml parsing tree
-        tree = copy.deepcopy(self.tree)
-
-        # list concatenation of direct model parameters
-        direct = self.directLonNum  + self.directLonDen + self.directLatNum + self.directLatDen + self.directBias
-        d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
-        for child,id in zip(d,range(82)):
-           child.text = str(direct[id])
-
-        # list concatenation of inverse model parameters
-        inverse = self.inverseColNum + self.inverseColDen + self.inverseLinNum + self.inverseLinDen + self.inverseBias
-        i = tree.find('Rational_Function_Model/Global_RFM/Inverse_Model')
-        for child,id in zip(i,range(82)):
-           child.text = str(inverse[id])
-
-        # validity domains
-        v = tree.find('Rational_Function_Model/Global_RFM/RFM_Validity')
-        vd = v.find('Direct_Model_Validity_Domain')
-        vd.find('FIRST_ROW').text = str( self.firstRow )
-        vd.find('FIRST_COL').text = str( self.firstCol )
-        vd.find('LAST_ROW').text  = str( self.lastRow  )
-        vd.find('LAST_COL').text  = str( self.lastCol  )
-
-        vi = v.find('Inverse_Model_Validity_Domain')
-        vi.find('FIRST_LON').text = str( self.firstLon )
-        vi.find('FIRST_LAT').text = str( self.firstLat )
-        vi.find('LAST_LON').text  = str( self.lastLon  )
-        vi.find('LAST_LAT').text  = str( self.lastLat  )
-
-        # scale and offset
-        v.find('LONG_SCALE').text  = str( self.lonScale )
-        v.find('LONG_OFF').text    = str( self.lonOff   )
-        v.find('LAT_SCALE').text   = str( self.latScale )
-        v.find('LAT_OFF').text     = str( self.latOff   )
-        v.find('HEIGHT_SCALE').text= str( self.altScale )
-        v.find('HEIGHT_OFF').text  = str( self.altOff   )
-        v.find('SAMP_SCALE').text  = str( self.colScale )
-        v.find('SAMP_OFF').text    = str( self.colOff   )
-        v.find('LINE_SCALE').text  = str( self.linScale )
-        v.find('LINE_OFF').text    = str( self.linOff   )
-
-        ## Write the XML file!
-        tree.write(filename)
-
 
 
     def direct_estimate(self, col, lin, alt, return_normalized=False):
@@ -422,6 +369,131 @@ class RPCModel:
         lat = lat*self.latScale + self.latOff
         return lon, lat, alt
 
+
+    def write_xml_pleiades(self, filename):
+        """
+        Writes a new XML file with the rpc parameters
+        If the read was performed on a pleiades RPC
+        write can only be done using the pleiades format.
+        """
+        ## First transfer the coefficients back to the internal xml parsing tree
+        tree = copy.deepcopy(self.tree)
+
+        # list concatenation of direct model parameters
+        direct = self.directLonNum + self.directLonDen + self.directLatNum \
+            + self.directLatDen + self.directBias
+        d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
+        for child,id in zip(d,range(82)):
+           child.text = str(direct[id])
+
+        # list concatenation of inverse model parameters
+        inverse = self.inverseColNum + self.inverseColDen + self.inverseLinNum \
+            + self.inverseLinDen + self.inverseBias
+        i = tree.find('Rational_Function_Model/Global_RFM/Inverse_Model')
+        for child,id in zip(i,range(82)):
+           child.text = str(inverse[id])
+
+        # validity domains
+        v = tree.find('Rational_Function_Model/Global_RFM/RFM_Validity')
+        vd = v.find('Direct_Model_Validity_Domain')
+        vd.find('FIRST_ROW').text = str(self.firstRow)
+        vd.find('FIRST_COL').text = str(self.firstCol)
+        vd.find('LAST_ROW').text  = str(self.lastRow )
+        vd.find('LAST_COL').text  = str(self.lastCol )
+
+        vi = v.find('Inverse_Model_Validity_Domain')
+        vi.find('FIRST_LON').text = str(self.firstLon)
+        vi.find('FIRST_LAT').text = str(self.firstLat)
+        vi.find('LAST_LON').text  = str(self.lastLon )
+        vi.find('LAST_LAT').text  = str(self.lastLat )
+
+        # scale and offset
+        v.find('LINE_OFF').text     = str(self.linOff  )
+        v.find('SAMP_OFF').text     = str(self.colOff  )
+        v.find('LAT_OFF').text      = str(self.latOff  )
+        v.find('LONG_OFF').text     = str(self.lonOff  )
+        v.find('HEIGHT_OFF').text   = str(self.altOff  )
+        v.find('LINE_SCALE').text   = str(self.linScale)
+        v.find('SAMP_SCALE').text   = str(self.colScale)
+        v.find('LAT_SCALE').text    = str(self.latScale)
+        v.find('LONG_SCALE').text   = str(self.lonScale)
+        v.find('HEIGHT_SCALE').text = str(self.altScale)
+
+        ## Write the XML file!
+        tree.write(filename)
+
+
+    def write_xml_worldview(self, filename):
+        """
+        Writes a new XML file with the rpc parameters
+        If the read was performed on a worldview RPC
+        write can only be done using the worldview format.
+        """
+        ## First transfer the coefficients back to the internal xml parsing tree
+        tree = copy.deepcopy(self.tree)
+        v = tree.find('RPB/IMAGE')
+
+        # inverse model parameters
+        a = [str(x) for x in self.inverseLinNum]
+        b = [str(x) for x in self.inverseLinDen]
+        c = [str(x) for x in self.inverseColNum]
+        d = [str(x) for x in self.inverseColDen]
+        v.find('LINENUMCOEFList/LINENUMCOEF').text = ' '.join(a)
+        v.find('LINEDENCOEFList/LINEDENCOEF').text = ' '.join(b)
+        v.find('SAMPNUMCOEFList/SAMPNUMCOEF').text = ' '.join(c)
+        v.find('SAMPDENCOEFList/SAMPDENCOEF').text = ' '.join(d)
+
+        # scale and offset
+        v.find('LINEOFFSET').text   = str(self.linOff)
+        v.find('SAMPOFFSET').text   = str(self.colOff)
+        v.find('LATOFFSET').text    = str(self.latOff)
+        v.find('LONGOFFSET').text   = str(self.lonOff)
+        v.find('HEIGHTOFFSET').text = str(self.altOff)
+        v.find('LINESCALE').text    = str(self.linScale)
+        v.find('SAMPSCALE').text    = str(self.colScale)
+        v.find('LATSCALE').text     = str(self.latScale)
+        v.find('LONGSCALE').text    = str(self.lonScale)
+        v.find('HEIGHTSCALE').text  = str(self.altScale)
+
+        # image dimensions
+        tree.find('IMD/NUMROWS').text = str(self.lastRow)
+        tree.find('IMD/NUMCOLUMNS').text = str(self.lastCol)
+
+        ## Write the XML file!
+        tree.write(filename)
+
+
+    def write_ikonos(self, filename):
+        """
+        Writes a text file with the rpc parameters in the Ikonos format.
+
+        If the read was performed on an Ikonos RPC, write can only be done
+        using the Ikonos format.
+        """
+        f = open(filename, "w")
+
+        # scale and offset
+        f.write('LINE_OFF: %.12f pixels\n'     % self.linOff  )
+        f.write('SAMP_OFF: %.12f pixels\n'     % self.colOff  )
+        f.write('LAT_OFF: %.12f degrees\n'     % self.latOff  )
+        f.write('LONG_OFF: %.12f degrees\n'    % self.lonOff  )
+        f.write('HEIGHT_OFF: %.12f meters\n'   % self.altOff  )
+        f.write('LINE_SCALE: %.12f pixels\n'   % self.linScale)
+        f.write('SAMP_SCALE: %.12f pixels\n'   % self.colScale)
+        f.write('LAT_SCALE: %.12f degrees\n'   % self.latScale)
+        f.write('LONG_SCALE: %.12f degrees\n'  % self.lonScale)
+        f.write('HEIGHT_SCALE: %.12f meters\n' % self.altScale)
+
+        # inverse model parameters
+        for i in range(20):
+            f.write('LINE_NUM_COEFF_%d: %.12e\n' % (i+1, self.inverseLinNum[i]))
+        for i in range(20):
+            f.write('LINE_DEN_COEFF_%d: %.12e\n' % (i+1, self.inverseLinDen[i]))
+        for i in range(20):
+            f.write('SAMP_NUM_COEFF_%d: %.12e\n' % (i+1, self.inverseColNum[i]))
+        for i in range(20):
+            f.write('SAMP_DEN_COEFF_%d: %.12e\n' % (i+1, self.inverseLinDen[i]))
+        f.close()
 
 
     def __repr__(self):
