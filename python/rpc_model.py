@@ -111,10 +111,10 @@ class RPCModel:
         self.latScale = np.nan
         self.lonScale = np.nan
         self.altScale = np.nan
-        self.directLinNum = [np.nan] * 20
-        self.directLinDen = [np.nan] * 20
-        self.directColNum = [np.nan] * 20
-        self.directColDen = [np.nan] * 20
+        self.directLonNum = [np.nan] * 20
+        self.directLonDen = [np.nan] * 20
+        self.directLatNum = [np.nan] * 20
+        self.directLatDen = [np.nan] * 20
         self.inverseLinNum = [np.nan] * 20
         self.inverseLinDen = [np.nan] * 20
         self.inverseColNum = [np.nan] * 20
@@ -498,6 +498,12 @@ class RPCModel:
 
     def __repr__(self):
         return '''
+    ### Direct Model ###
+        directLatNum = {directLatNum}
+        directLatDen = {directLatDen}
+        directLonNum = {directLonNum}
+        directLonDen = {directLonDen}
+
     ### Inverse Model ###
         inverseColNum = {inverseColNum}
         inverseColDen = {inverseColDen}
@@ -515,6 +521,10 @@ class RPCModel:
         latScale = {latScale}
         lonScale = {lonScale}
         altScale = {altScale}'''.format(
+        directLatNum  = self.directLatNum,
+        directLatDen  = self.directLatDen,
+        directLonNum  = self.directLonNum,
+        directLonDen  = self.directLonDen,
         inverseColNum = self.inverseColNum,
         inverseColDen = self.inverseColDen,
         inverseLinNum = self.inverseLinNum,
