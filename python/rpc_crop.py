@@ -156,8 +156,14 @@ def main():
     r1 = rpc_model.RPCModel(rpc)
     r2 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x0,y0,w0,h0)
     os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x0, y0, w0,h0,im,imout) )
-    r2.write_xml_pleiades(rpcout)
+
+    # distinguish 3 cases: pleiades, worldview or ikonos formats
+    if hasattr(r1, 'tree') and isfinite(r1.directLatNum[0]):
+        r2.write_xml_pleiades(rpcout)
+    elif hasattr(r1, 'tree') and isnan(r1.directLatNum[0]):
+        r2.write_xml_worldview(rpcout)
+    else:
+        r2.write_ikonos(rpcout)
 
 
 if __name__ == '__main__': main()
-
