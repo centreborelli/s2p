@@ -95,27 +95,95 @@ def apply_rfm_numpy(num, den, x, y, z):
     return a/b
 
 class RPCModel:
-    def __init__(self, XMLfile):
-        self.read_rpc(XMLfile)
+    def __init__(self, rpc_file):
+        self.nan_rpc()
+        self.read_rpc(rpc_file)
 
-    def read_rpc(self, XMLfile):
-        self.filepath = XMLfile
-        tree = ElementTree()
-        tree.parse(XMLfile)
-        self.tree = tree   # store the xml tree in the object
+    def nan_rpc(self):
+        self.linOff = np.nan
+        self.colOff = np.nan
+        self.latOff = np.nan
+        self.lonOff = np.nan
+        self.altOff = np.nan
+        self.linScale = np.nan
+        self.colScale = np.nan
+        self.latScale = np.nan
+        self.lonScale = np.nan
+        self.altScale = np.nan
+        self.directLinNum = [np.nan] * 20
+        self.directLinDen = [np.nan] * 20
+        self.directColNum = [np.nan] * 20
+        self.directColDen = [np.nan] * 20
+        self.inverseLinNum = [np.nan] * 20
+        self.inverseLinDen = [np.nan] * 20
+        self.inverseColNum = [np.nan] * 20
+        self.inverseColDen = [np.nan] * 20
 
-        # determine wether it's a pleiades or a worldview image
+    def read_rpc(self, rpc_file):
+        self.filepath = rpc_file
+
+        if rpc_file.lower().endswith('xml'):
+            tree = ElementTree()
+            tree.parse(rpc_file)
+            self.tree = tree   # store the xml tree in the object
+            self.read_rpc_xml(tree)
+        else:
+            # we assume that non xml rpc files follow the ikonos convention
+            self.read_rpc_ikonos(rpc_file)
+
+    def read_rpc_ikonos(self, rpc_file):
+        lines = open(rpc_file).read().split('\n')
+        for l in lines:
+            ll = l.split()
+            if len(ll) > 1: self.add_tag_rpc(ll[0], ll[1])
+
+    def add_tag_rpc(self, tag, val):
+        a = tag.split('_')
+        if len(a) == 2:
+            if a[1] == "OFF:":
+                if   a[0] == "LINE":   self.linOff = float(val)
+                elif a[0] == "SAMP":   self.colOff = float(val)
+                elif a[0] == "LAT":    self.latOff = float(val)
+                elif a[0] == "LONG":   self.lonOff = float(val)
+                elif a[0] == "HEIGHT": self.altOff = float(val)
+            elif a[1] == "SCALE:":
+                if   a[0] == "LINE":   self.linScale = float(val)
+                elif a[0] == "SAMP":   self.colScale = float(val)
+                elif a[0] == "LAT":    self.latScale = float(val)
+                elif a[0] == "LONG":   self.lonScale = float(val)
+                elif a[0] == "HEIGHT": self.altScale = float(val)
+            else:
+                print "ERROR: unknown tag ", tag
+
+        elif len(a) == 4 and a[2] == "COEFF":
+            # remove ':', convert to int and decrease the coeff index
+            a[3] = int(a[3][:-1]) - 1
+            if a[0] == "LINE":
+                if   a[1] == "NUM": self.inverseLinNum[a[3]] = float(val)
+                elif a[1] == "DEN": self.inverseLinDen[a[3]] = float(val)
+                else: print "ERROR: unknown tag ", tag
+            elif a[0] == "SAMP":
+                if   a[1] == "NUM": self.inverseColNum[a[3]] = float(val)
+                elif a[1] == "DEN": self.inverseColDen[a[3]] = float(val)
+                else: print "ERROR: unknown tag ", tag
+            else:
+                print "ERROR: unknown tag ", tag
+
+        else:
+            print "ERROR: unknown tag ", tag
+
+
+    def read_rpc_xml(self, tree):
+        # determine wether it's a pleiades or worldview image
         a = tree.find('Metadata_Identification/METADATA_PROFILE') # PHR_SENSOR
-        b = tree.find('IMD/IMAGE/SATID') # WV02
+        b = tree.find('IMD/IMAGE/SATID') # WV0
         if a is not None:
             if a.text == 'PHR_SENSOR':
-                self.satellite = 'pleiades'
                 self.read_rpc_pleiades(tree)
             else:
                 print 'unknown sensor type'
         elif b is not None:
-            if b.text == 'WV02' or b.text == 'WV01': 
-                self.satellite = 'worldview'
+            if b.text == 'WV02' or b.text == 'WV01':
                 self.read_rpc_worldview(tree)
             else:
                 print 'unknown sensor type'
@@ -214,7 +282,7 @@ class RPCModel:
         write can only be done using the pleiades format.
         """
         import copy
-       
+
         ## First transfer the coefficients back to the internal xml parsing tree
         tree = copy.deepcopy(self.tree)
 
@@ -233,28 +301,28 @@ class RPCModel:
         # validity domains
         v = tree.find('Rational_Function_Model/Global_RFM/RFM_Validity')
         vd = v.find('Direct_Model_Validity_Domain')
-        vd.find('FIRST_ROW').text = str( self.firstRow ) 
-        vd.find('FIRST_COL').text = str( self.firstCol ) 
-        vd.find('LAST_ROW').text  = str( self.lastRow  ) 
-        vd.find('LAST_COL').text  = str( self.lastCol  ) 
+        vd.find('FIRST_ROW').text = str( self.firstRow )
+        vd.find('FIRST_COL').text = str( self.firstCol )
+        vd.find('LAST_ROW').text  = str( self.lastRow  )
+        vd.find('LAST_COL').text  = str( self.lastCol  )
 
         vi = v.find('Inverse_Model_Validity_Domain')
-        vi.find('FIRST_LON').text = str( self.firstLon ) 
-        vi.find('FIRST_LAT').text = str( self.firstLat ) 
-        vi.find('LAST_LON').text  = str( self.lastLon  ) 
-        vi.find('LAST_LAT').text  = str( self.lastLat  ) 
+        vi.find('FIRST_LON').text = str( self.firstLon )
+        vi.find('FIRST_LAT').text = str( self.firstLat )
+        vi.find('LAST_LON').text  = str( self.lastLon  )
+        vi.find('LAST_LAT').text  = str( self.lastLat  )
 
         # scale and offset
-        v.find('LONG_SCALE').text  = str( self.lonScale ) 
-        v.find('LONG_OFF').text    = str( self.lonOff   ) 
-        v.find('LAT_SCALE').text   = str( self.latScale ) 
-        v.find('LAT_OFF').text     = str( self.latOff   ) 
-        v.find('HEIGHT_SCALE').text= str( self.altScale ) 
-        v.find('HEIGHT_OFF').text  = str( self.altOff   ) 
-        v.find('SAMP_SCALE').text  = str( self.colScale ) 
-        v.find('SAMP_OFF').text    = str( self.colOff   ) 
-        v.find('LINE_SCALE').text  = str( self.linScale ) 
-        v.find('LINE_OFF').text    = str( self.linOff   ) 
+        v.find('LONG_SCALE').text  = str( self.lonScale )
+        v.find('LONG_OFF').text    = str( self.lonOff   )
+        v.find('LAT_SCALE').text   = str( self.latScale )
+        v.find('LAT_OFF').text     = str( self.latOff   )
+        v.find('HEIGHT_SCALE').text= str( self.altScale )
+        v.find('HEIGHT_OFF').text  = str( self.altOff   )
+        v.find('SAMP_SCALE').text  = str( self.colScale )
+        v.find('SAMP_OFF').text    = str( self.colOff   )
+        v.find('LINE_SCALE').text  = str( self.linScale )
+        v.find('LINE_OFF').text    = str( self.linOff   )
 
         ## Write the XML file!
         tree.write(filename)
@@ -263,7 +331,7 @@ class RPCModel:
 
     def direct_estimate(self, col, lin, alt, return_normalized=False):
 
-        if self.satellite == 'worldview':
+        if np.isnan(self.directLinNum[0]):
             return self.direct_estimate_iterative(col, lin, alt, return_normalized)
 
         cCol = (col - self.colOff) / self.colScale
@@ -373,24 +441,22 @@ class RPCModel:
         inverseColDen = {inverseColDen}
         inverseLinNum = {inverseLinNum}
         inverseLinDen = {inverseLinDen}
-        inverseBias   = {inverseBias}
 
     ### Scale and Offsets ###
-        lonScale = {lonScale}
-        lonOff   = {lonOff}
-        latScale = {latScale}
-        latOff   = {latOff}
-        altScale = {altScale}
-        altOff   = {altOff}
-        colScale = {colScale}
+        linOff   = {linOff}
         colOff   = {colOff}
+        latOff   = {latOff}
+        lonOff   = {lonOff}
+        altOff   = {altOff}
         linScale = {linScale}
-        linOff   = {linOff}'''.format(
+        colScale = {colScale}
+        latScale = {latScale}
+        lonScale = {lonScale}
+        altScale = {altScale}'''.format(
         inverseColNum = self.inverseColNum,
         inverseColDen = self.inverseColDen,
         inverseLinNum = self.inverseLinNum,
         inverseLinDen = self.inverseLinDen,
-        inverseBias   = self.inverseBias,
         lonScale      = self.lonScale,
         lonOff        = self.lonOff,
         latScale      = self.latScale,
