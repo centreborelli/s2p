@@ -8,7 +8,7 @@
 def procedure1(poly, a11, a22, b1, b2):
    """
    given the polynomial of degree three of three variables poly(x,y,z)
-   computes the polynomial coefficients implementing 
+   computes the polynomial coefficients implementing
    the variable change x = a11 x' + b1
                        y = a22 y' + b2
    here the variable z is height of the RPC model
@@ -41,12 +41,12 @@ def procedure1(poly, a11, a22, b1, b2):
 def poly_variable_change_in(polyNum, polyDen, a11, a22, b1, b2):
    """
    given the RPC polynomials polyNum(x,y,z)/polyDen(x,y,z)
-   computes the polynomial coefficients implementing 
+   computes the polynomial coefficients implementing
    the variable change x = a11 x' + b1
                        y = a22 y' + b2
    VERIFIED!
    """
-   print a11,a22,b1,b2
+   #print a11,a22,b1,b2
    newNum = procedure1(polyNum,a11, a22, b1, b2)
    newDen = procedure1(polyDen,a11, a22, b1, b2)
    return newNum, newDen
@@ -55,9 +55,9 @@ def poly_variable_change_in(polyNum, polyDen, a11, a22, b1, b2):
 def poly_variable_change_out(polyNum, polyDen, a11, b1):
    """
    given the RPC polynomials polyNum(x,y,z)/polyDen(x,y,z)
-   computes the polynomial coefficients implementing 
+   computes the polynomial coefficients implementing
    the operation   a11*(polyNum(x,y,z)/polyDen(x,y,z)) + b1
-   VERIFIED! 
+   VERIFIED!
    """
    import numpy as np
    import copy
@@ -71,7 +71,7 @@ def rpc_apply_crop_to_rpc_model(rpc, x0, y0, w, h):
    import copy
    rpcout = copy.deepcopy(rpc)
 
-   ## compute the scale and shift parameter for the normalized RPC 
+   ## compute the scale and shift parameter for the normalized RPC
    a11 = (float(w)/2) / (rpc.colScale)
    a22 = (float(h)/2) / (rpc.linScale)
 #   a11 = 1.0
@@ -84,7 +84,7 @@ def rpc_apply_crop_to_rpc_model(rpc, x0, y0, w, h):
 
 
    # scale the RPC domain (I'm not sure its [-1,1]^2)
-   #   # TODO correct RPC so that the validity domain is still the square [-1,1]^2 
+   #   # TODO correct RPC so that the validity domain is still the square [-1,1]^2
    rpcout.colScale= float(w)/2
    rpcout.linScale= float(h)/2
 #   rpcout.colScale= rpc.colScale  ## keep it unchanged (it also works)
@@ -98,7 +98,7 @@ def rpc_apply_crop_to_rpc_model(rpc, x0, y0, w, h):
    a22 = float(rpc.linScale)/float(rpcout.linScale)
 #   a11 = 1.0
 #   a22 = 1.0
-   ## apply the transform to the inverse polynomials 
+   ## apply the transform to the inverse polynomials
    rpcout.inverseColNum, rpcout.inverseColDen  =  poly_variable_change_out(rpcout.inverseColNum, rpcout.inverseColDen, a11, -b1)
    rpcout.inverseLinNum, rpcout.inverseLinDen  =  poly_variable_change_out(rpcout.inverseLinNum, rpcout.inverseLinDen, a22, -b2)
 
@@ -115,7 +115,7 @@ def test_me(rpcfile):
 
    #print "direct estimate error:"
    geo1 = np.array(r1.direct_estimate(11000,20100,10, return_normalized=False))
-   geo2 = np.array(r2.direct_estimate(1000,100,10, return_normalized=False)) 
+   geo2 = np.array(r2.direct_estimate(1000,100,10, return_normalized=False))
    print geo1 - geo2
 
    #print "inverse estimate error:"
@@ -130,6 +130,7 @@ def test_me(rpcfile):
 
 def main():
     import sys,os
+    import numpy as np
 
     # verify input
     if len(sys.argv) > 8:
@@ -158,9 +159,9 @@ def main():
     os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x0, y0, w0,h0,im,imout) )
 
     # distinguish 3 cases: pleiades, worldview or ikonos formats
-    if hasattr(r1, 'tree') and isfinite(r1.directLatNum[0]):
+    if hasattr(r1, 'tree') and np.isfinite(r1.directLatNum[0]):
         r2.write_xml_pleiades(rpcout)
-    elif hasattr(r1, 'tree') and isnan(r1.directLatNum[0]):
+    elif hasattr(r1, 'tree') and np.isnan(r1.directLatNum[0]):
         r2.write_xml_worldview(rpcout)
     else:
         r2.write_ikonos(rpcout)
