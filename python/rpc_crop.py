@@ -133,38 +133,44 @@ def main():
     import numpy as np
 
     # verify input
-    if len(sys.argv) > 8:
-       im  = sys.argv[1]
-       rpc = sys.argv[2]
-       imout  = sys.argv[3]
-       rpcout = sys.argv[4]
-       x0  = float(sys.argv[5])
-       y0  = float(sys.argv[6])
-       w0  = float(sys.argv[7])
-       h0  = float(sys.argv[8])
+    if len(sys.argv) > 12:
+       im1  = sys.argv[1]
+       rpc1 = sys.argv[2]
+       im2  = sys.argv[3]
+       rpc2 = sys.argv[4]
+       imout1  = sys.argv[5]
+       rpcout1 = sys.argv[6]
+       imout2  = sys.argv[7]
+       rpcout2 = sys.argv[8]
+       x0  = float(sys.argv[9])
+       y0  = float(sys.argv[10])
+       w0  = float(sys.argv[11])
+       h0  = float(sys.argv[12])
        try:
-          os.stat(im)
-          os.stat(rpc)
+          os.stat(im1)
+          os.stat(rpc1)
+          os.stat(im2)
+          os.stat(rpc2)
        except OSError:
           exit(1)
     else:
        print "Tool to crop an image and its RPC."
        print "Incorrect syntax, use:"
-       print '  > ' + sys.argv[0] + " inimage inrpc outimage outrpc x0 y0 w h"
+       print '  > ' + sys.argv[0] + " inimage1 inrpc1 inimage2 inrpc2 outimage1 outrpc1 outimage2 outrpc2 x0 y0 w h"
        exit(1)
 
     import rpc_model, rpc_crop
-    r1 = rpc_model.RPCModel(rpc)
-    r2 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x0,y0,w0,h0)
-    os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x0, y0, w0,h0,im,imout) )
+    r1 = rpc_model.RPCModel(rpc1)
+    out_r1 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x0,y0,w0,h0)
+    os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x0, y0, w0,h0,im1,imout1) )
 
     # distinguish 3 cases: pleiades, worldview or ikonos formats
     if hasattr(r1, 'tree') and np.isfinite(r1.directLatNum[0]):
-        r2.write_xml_pleiades(rpcout)
+        out_r1.write_xml_pleiades(rpcout1)
     elif hasattr(r1, 'tree') and np.isnan(r1.directLatNum[0]):
-        r2.write_xml_worldview(rpcout)
+        out_r1.write_xml_worldview(rpcout1)
     else:
-        r2.write_ikonos(rpcout)
+        out_r1.write_ikonos(rpcout1)
 
 
 if __name__ == '__main__': main()
