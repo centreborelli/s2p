@@ -148,6 +148,38 @@ def image_size_gdal(im):
         sys.exit()
 
 
+def image_size_tiffinfo(im):
+    """
+    Reads the width and height of an image, using tiffinfo.
+
+    Args:
+        im: path to the input tif image file
+    Returns:
+        a tuple of size 2, giving width and height
+    """
+    if not im.lower().endswith('.tif'):
+        print "image_size_tiffinfo function works only with TIF files"
+        print "use image_size_gdal or image_size instead"
+        sys.exit()
+    try:
+        with open(im):
+            # redirect stderr to /dev/null on tiffinfo call to discard noisy
+            # msg about unknown field with tag 42112
+            fnull = open(os.devnull, "w")
+            p1 = subprocess.Popen(['tiffinfo', im], stdout=subprocess.PIPE,
+                    stderr=fnull)
+            p2 = subprocess.Popen(['grep', 'Image Width'], stdin=p1.stdout,
+                    stdout=subprocess.PIPE)
+            line = p2.stdout.readline()
+            out = re.findall(r"[\w']+", line)
+            nc = int(out[2])
+            nr = int(out[5])
+            return (nc, nr)
+    except IOError:
+        print "image_size_tiffinfo: the input file %s doesn't exist" % str(im)
+        sys.exit()
+
+
 def grep_xml(xml_file, tag):
     """
     Reads the value of an element in an xml file.
