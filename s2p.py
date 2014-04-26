@@ -121,6 +121,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             rpc2, x, y, w, h, rect1, rect2, A, m)
 
     ## block-matching
+    if cfg['disp_min'] is not None: disp_min = cfg['disp_min']
+    if cfg['disp_max'] is not None: disp_max = cfg['disp_max']
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
         cfg['matching_algorithm'], disp_min, disp_max)
 
