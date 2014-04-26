@@ -268,7 +268,7 @@ class RPCModel:
 
     def direct_estimate(self, col, lin, alt, return_normalized=False):
 
-        if np.isnan(self.directLinNum[0]):
+        if np.isnan(self.directLatNum[0]):
             return self.direct_estimate_iterative(col, lin, alt, return_normalized)
 
         cCol = (col - self.colOff) / self.colScale
