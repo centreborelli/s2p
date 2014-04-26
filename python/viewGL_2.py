@@ -142,12 +142,9 @@ def mouseButtons(button, state, x,y):
 #       #os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d %s %s' %( x0, y0, w0,h0,I1,'out.tif') )
 #       os.system('./crop.py %s %s %s %s %d %d %d %d' %( I1, rpc1, Iout, rpcout, x0, y0, w0,h0) )
 
-       import rpc_model, rpc_crop, piio
-       r1 = rpc_model.RPCModel(rpc1)
-
+       import common, piio
        # read preview/full images dimensions
-       nc = int(r1.lastCol)
-       nr = int(r1.lastRow)
+       nc, nr = common.image_size_tiffinfo(im1)
        nr_preview, nc_preview, tmp = piio.read(I1).shape
 
 
@@ -157,10 +154,11 @@ def mouseButtons(button, state, x,y):
        w2= int(w0*nc/nc_preview)
        h2= int(h0*nr/nr_preview)
 
-       r2 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x2,y2,w2,h2)
-       print 'gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2)
-       os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2) )
-       r2.write_xml_pleiades(rpc2)
+       os.system('./rpc_crop.py "%s" "%s" "%s" "%s" %d %d %d %d' % (im1, rpc1, im2, rpc2, x2, y2, w2, h2))
+#       r2 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x2,y2,w2,h2)
+#       print 'gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2)
+#       os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2) )
+#       r2.write_xml_pleiades(rpc2)
 
 
        os.system('v.py %s &'%im2)
