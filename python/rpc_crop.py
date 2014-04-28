@@ -4,6 +4,13 @@
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 # Copyright (C) 2013, Enric Meinhardt Llopis <enric.meinhardt@cmla.ens-cachan.fr>
 
+import os
+import sys
+
+import rpc_model
+import rpc_utils
+import common
+
 
 def procedure1(poly, a11, a22, b1, b2):
    """
@@ -60,7 +67,6 @@ def poly_variable_change_out(polyNum, polyDen, a11, b1):
    VERIFIED!
    """
    import numpy as np
-   import copy
    newNum = list(float(a11) * np.array(polyNum) + float(b1) * np.array(polyDen))
    newDen = polyDen
    return newNum, newDen
@@ -105,7 +111,6 @@ def rpc_apply_crop_to_rpc_model(rpc, x0, y0, w, h):
    return rpcout
 
 
-
 def test_me(rpcfile):
    import numpy as np
    import rpc_model, rpc_crop
@@ -123,54 +128,102 @@ def test_me(rpcfile):
    pix2 = np.array(r2.inverse_estimate(geo1[0], geo1[1], geo1[2]))
    print pix1 - pix2
 
-   r2.write_xml_pleiades('cropped.xml')
+   r2.write('cropped.xml')
 
+
+def insert_suffix_filename(filename, suffix):
+    """
+    Inserts a suffix in a filename, just before the extension.
+
+    Args:
+        filename: input file name
+        suffix: suffix to be inserted
+
+    Returns:
+        The same file name, with the suffix inserted just before the extension
+    """
+    filename = os.path.basename(filename)
+    basename  = filename.split('.')[0]
+    extension = filename.split('.')[1]
+    return "%s%s.%s" % (basename, suffix, extension)
+
+
+def crop_rpc_and_image(out_dir, img, rpc, rpc_ref, x, y, w, h):
+    """
+    Args:
+        out_dir: path to the output directory. The cropped image and rpc files
+            will be written there.
+        img: path to the input image
+        rpc: path to the input rpc
+        rpc_ref: path to the rpc file of the reference image
+        x, y, w, h: 4 integers defining a rectangular ROI in the reference
+            image
+    """
+    r = rpc_model.RPCModel(rpc)
+
+    # recompute the roi if the input image is not the reference image
+    if rpc_ref is not rpc:
+        r_ref = rpc_model.RPCModel(rpc_ref)
+        x, y, w, h = rpc_utils.corresponding_roi(r_ref, r, x, y, w, h)
+
+    # output filenames
+    out_img_file = os.path.join(out_dir, insert_suffix_filename(img, "_crop"))
+    out_rpc_file = os.path.join(out_dir, insert_suffix_filename(rpc, "_crop"))
+
+    # do the crop
+    out_r = rpc_apply_crop_to_rpc_model(r, x, y, w, h)
+    out_r.write(out_rpc_file)
+    os.system('gdal_translate -srcwin %d %d %d %d "%s" "%s"' % (x, y, w, h, img, out_img_file))
 
 
 
 def main():
-    import sys,os
-    import numpy as np
 
     # verify input
-    if len(sys.argv) > 12:
-       im1  = sys.argv[1]
-       rpc1 = sys.argv[2]
-       im2  = sys.argv[3]
-       rpc2 = sys.argv[4]
-       imout1  = sys.argv[5]
-       rpcout1 = sys.argv[6]
-       imout2  = sys.argv[7]
-       rpcout2 = sys.argv[8]
-       x0  = float(sys.argv[9])
-       y0  = float(sys.argv[10])
-       w0  = float(sys.argv[11])
-       h0  = float(sys.argv[12])
-       try:
-          os.stat(im1)
-          os.stat(rpc1)
-          os.stat(im2)
-          os.stat(rpc2)
-       except OSError:
-          exit(1)
+    if len(sys.argv) in [10, 12]:
+       out_dir = sys.argv[1]
+       img1 = sys.argv[2]
+       rpc1 = sys.argv[3]
+       img2 = sys.argv[4]
+       rpc2 = sys.argv[5]
+       if len(sys.argv) == 10:
+           x = float(sys.argv[6])
+           y = float(sys.argv[7])
+           w = float(sys.argv[8])
+           h = float(sys.argv[9])
+       else:
+           img3 = sys.argv[6]
+           rpc3 = sys.argv[7]
+           x = float(sys.argv[8])
+           y = float(sys.argv[9])
+           w = float(sys.argv[10])
+           h = float(sys.argv[11])
     else:
        print "Tool to crop an image and its RPC."
        print "Incorrect syntax, use:"
-       print '  > ' + sys.argv[0] + " inimage1 inrpc1 inimage2 inrpc2 outimage1 outrpc1 outimage2 outrpc2 x0 y0 w h"
+       print "  >  %s out_dir img1 rpc1 img2 rpc2 [img3 rpc3] x y w h" % sys.argv[0]
        exit(1)
 
-    import rpc_model, rpc_crop
-    r1 = rpc_model.RPCModel(rpc1)
-    out_r1 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x0,y0,w0,h0)
-    os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x0, y0, w0,h0,im1,imout1) )
+    try:
+       os.stat(img1)
+       os.stat(rpc1)
+       os.stat(img2)
+       os.stat(rpc2)
+    except OSError:
+       exit(1)
 
-    # distinguish 3 cases: pleiades, worldview or ikonos formats
-    if hasattr(r1, 'tree') and np.isfinite(r1.directLatNum[0]):
-        out_r1.write_xml_pleiades(rpcout1)
-    elif hasattr(r1, 'tree') and np.isnan(r1.directLatNum[0]):
-        out_r1.write_xml_worldview(rpcout1)
-    else:
-        out_r1.write_ikonos(rpcout1)
+    # create output dir
+    os.system('mkdir -p %s' % out_dir)
+
+    # do the crops
+    crop_rpc_and_image(out_dir, img1, rpc1, rpc1, x, y, w, h)
+    crop_rpc_and_image(out_dir, img2, rpc2, rpc1, x, y, w, h)
+    if 'img3' in locals() and 'rpc3' in locals():
+        crop_rpc_and_image(out_dir, img3, rpc3, rpc1, x, y, w, h)
+
+    # clean tmp files
+    while common.garbage:
+        common.run('rm %s' % common.garbage.pop())
 
 
 if __name__ == '__main__': main()
