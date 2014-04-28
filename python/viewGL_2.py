@@ -137,17 +137,14 @@ def mouseButtons(button, state, x,y):
        w0,h0 = x-x0,y-y0
        b0state='released'
        print x0+dx, y0+dy, x+dx, y+dy
-       global I1, im1, im2, rpc1, rpc2
+       global I1, im1, im2, rpc1, rpc2, out1, out2, rpc_out1, rpc_out2
 
 #       #os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d %s %s' %( x0, y0, w0,h0,I1,'out.tif') )
 #       os.system('./crop.py %s %s %s %s %d %d %d %d' %( I1, rpc1, Iout, rpcout, x0, y0, w0,h0) )
 
-       import rpc_model, rpc_crop, piio
-       r1 = rpc_model.RPCModel(rpc1)
-
+       import common, piio
        # read preview/full images dimensions
-       nc = int(r1.lastCol)
-       nr = int(r1.lastRow)
+       nc, nr = common.image_size_tiffinfo(im1)
        nr_preview, nc_preview, tmp = piio.read(I1).shape
 
 
@@ -157,13 +154,14 @@ def mouseButtons(button, state, x,y):
        w2= int(w0*nc/nc_preview)
        h2= int(h0*nr/nr_preview)
 
-       r2 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x2,y2,w2,h2)
-       print 'gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2)
-       os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2) )
-       r2.write_xml_pleiades(rpc2)
+       os.system('./rpc_crop.py "%s" "%s" "%s" "%s" %s %s %s %s %d %d %d %d' % (im1, rpc1, im2, rpc2, out1, rpc_out1, out2, rpc_out2, x2, y2, w2, h2))
+#       r2 = rpc_crop.rpc_apply_crop_to_rpc_model(r1, x2,y2,w2,h2)
+#       print 'gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2)
+#       os.system('gdal_translate -co profile=baseline -srcwin %d %d %d %d "%s" "%s"' %( x2, y2, w2,h2,im1,im2) )
+#       r2.write_xml_pleiades(rpc2)
 
 
-       os.system('v.py %s &'%im2)
+       os.system('v.py %s %s &'% (out1, out2))
        #exit(0)
 
 
@@ -197,16 +195,20 @@ def keyboard2(key, x, y):
 
 def main():
     # verify input
-    global I1, im1, rpc1, im2, rpc2
-    if len(sys.argv) > 5:
+    global I1, im1, im2, rpc1, rpc2, out1, out2, rpc_out1, rpc_out2
+    if len(sys.argv) > 9:
        I1 = sys.argv[1]
        im1 = sys.argv[2]
        rpc1 = sys.argv[3]
        im2  = sys.argv[4]
        rpc2 = sys.argv[5]
+       out1 = sys.argv[6]
+       rpc_out1 = sys.argv[7]
+       out2  = sys.argv[8]
+       rpc_out2 = sys.argv[9]
     else:
        print "Incorrect syntax, use:"
-       print '  > ' + sys.argv[0] + " preview.jpg im.tif rpc.xml out.tif rpcout.xml"
+       print '  > ' + sys.argv[0] + " preview.jpg im1.tif rpc1.xml im2.tif rpc2.xml out1.tif rpcout1.xml out2.tif rpcout2.xml"
        # show default image if exists
        I1 = '/Users/facciolo/uiskentuie_standing_stone.png'
        try:

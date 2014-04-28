@@ -30,6 +30,8 @@ cfg['use_pleiades_unsharpening'] = True
 cfg['disp_range_method'] = "sift"
 cfg['disp_range_srtm_low_margin'] = -10
 cfg['disp_range_srtm_high_margin'] = +100
+cfg['disp_min'] = None
+cfg['disp_max'] = None
 
 # threshold (in meters) used for the fusion of two dems in triplet processing
 # It should be adapted to the zoom factor
