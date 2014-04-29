@@ -287,7 +287,16 @@ def image_safe_zoom_fft(im, f, out=None):
 
 def image_zoom_gdal(im, f, out=None, w=None, h=None):
     """
-    zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out.
+    Zooms an image using gdal (cubic interpolation)
+
+    Args:
+        im: path to the input image
+        f:  zoom factor. f in [0,1] for zoom in, f in [1 +inf] for zoom out.
+        out (optional): path to the ouput file
+        w, h (optional): input image dimensions
+
+    Returns:
+        path to the output image. In case f=1, the input image is returned
     """
     if f == 1:
         return im
@@ -298,7 +307,7 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
     tmp = tmpfile('.tif')
 
     if w is None or h is None:
-        sz = image_size(im)
+        sz = image_size_tiffinfo(im)
         w = sz[0]
         h = sz[1]
 
