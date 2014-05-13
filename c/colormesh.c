@@ -4,21 +4,22 @@
 #include <stdio.h>
 #include <math.h>
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338328
+#ifndef m_pi
+#define m_pi 3.14159265358979323846264338328
 #endif
 
 #include "iio.h"
 #include "fail.c"
 #include "rpc.h"
 #include "read_matrix.c"
+#include "pickopt.c"
 
 // static void mercator(double m[2], double x[2])
 // {
-//     double R = 6378100;
-//     double deg = M_PI/180;
-//     m[0] = R * x[0] * deg;
-//     m[1] = R * log( ( 1 + sin(x[1]*deg) ) / cos(x[1]*deg) );
+//     double r = 6378100;
+//     double deg = m_pi/180;
+//     m[0] = r * x[0] * deg;
+//     m[1] = r * log( ( 1 + sin(x[1]*deg) ) / cos(x[1]*deg) );
 // }
 //
 // static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
@@ -48,16 +49,16 @@ static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h,
 }
 
 
-static void apply_homography(double y[2], double H[3][3], double x[2])
+static void apply_homography(double y[2], double h[3][3], double x[2])
 {
-    double z = H[2][0]*x[0] + H[2][1]*x[1] + H[2][2];
-    y[0] = (H[0][0]*x[0] + H[0][1]*x[1] + H[0][2]) / z;
-    y[1] = (H[1][0]*x[0] + H[1][1]*x[1] + H[1][2]) / z;
+    double z = h[2][0]*x[0] + h[2][1]*x[1] + h[2][2];
+    y[0] = (h[0][0]*x[0] + h[0][1]*x[1] + h[0][2]) / z;
+    y[1] = (h[1][0]*x[0] + h[1][1]*x[1] + h[1][2]) / z;
 }
 
-static double invert_homography(double invH[3][3], double H[3][3])
+static double invert_homography(double invh[3][3], double h[3][3])
 {
-    double *a = H[0], *r = invH[0];
+    double *a = h[0], *r = invh[0];
     double det = a[0]*a[4]*a[8] + a[2]*a[3]*a[7] + a[1]*a[5]*a[6]
                - a[2]*a[4]*a[6] - a[1]*a[3]*a[8] - a[0]*a[5]*a[7];
     r[0] = (a[4]*a[8]-a[5]*a[7])/det;
@@ -85,7 +86,8 @@ static void normalize_vector_3d(double vec[3])
 }
 
 
-void write_ply_header(FILE* f, int npoints, int zone, bool hem) {
+void write_ply_header(FILE* f, int npoints, int zone, bool hem, bool normals)
+{
     fprintf(f, "ply\n");
     fprintf(f, "format ascii 1.0\n");
     fprintf(f, "comment created by S2P\n");
@@ -95,9 +97,11 @@ void write_ply_header(FILE* f, int npoints, int zone, bool hem) {
     fprintf(f, "property float x\n");
     fprintf(f, "property float y\n");
     fprintf(f, "property float z\n");
-    fprintf(f, "property float nx\n");
-    fprintf(f, "property float ny\n");
-    fprintf(f, "property float nz\n");
+    if (normals) {
+        fprintf(f, "property float nx\n");
+        fprintf(f, "property float ny\n");
+        fprintf(f, "property float nz\n");
+    }
     fprintf(f, "property uchar red\n");
     fprintf(f, "property uchar green\n");
     fprintf(f, "property uchar blue\n");
@@ -110,7 +114,9 @@ unsigned char test_little_endian( void )
       int x=1;   return (*(char*)&(x)==1);
 }
 
-void write_ply_header_binary(FILE* f, int npoints, int zone, bool hem) {
+void write_ply_header_binary(FILE* f, int npoints, int zone, bool hem, bool
+        normals)
+{
     if (!test_little_endian())
        for (int i = 1; i < 100; i++)
           printf("BINARY PLY NOT SUPPORTED ON BIG ENDIAN SYSTEMS!!\n");
@@ -123,9 +129,11 @@ void write_ply_header_binary(FILE* f, int npoints, int zone, bool hem) {
     fprintf(f, "property float x\n");
     fprintf(f, "property float y\n");
     fprintf(f, "property float z\n");
-    fprintf(f, "property float nx\n");
-    fprintf(f, "property float ny\n");
-    fprintf(f, "property float nz\n");
+    if (normals) {
+        fprintf(f, "property float nx\n");
+        fprintf(f, "property float ny\n");
+        fprintf(f, "property float nz\n");
+    }
     fprintf(f, "property uchar red\n");
     fprintf(f, "property uchar green\n");
     fprintf(f, "property uchar blue\n");
@@ -144,19 +152,24 @@ SMART_PARAMETER_SILENT(IJMESHFAC, 2)
 //     fprintf(stderr, "\t use -a flag to write an ascii ply (default: binary)\n");
 // }
 
-void print_help(char *bin_name) {
+void print_help(char *bin_name)
+{
     fprintf(stderr, "usage:\n\t"
-            "%s colors heights rpc Hfile.txt out.ply [x0 y0]\n", bin_name);
+            "%s colors heights rpc Hfile.txt out.ply [x0 y0]"
     //       0    1      2       3   4        5       6  7
+            " [--with-normals]\n", bin_name);
 }
 
 
 int main(int c, char *v[])
 {
-    if (c != 6 & c != 7 & c != 8 & c!= 5) {
+    if (c != 6 & c != 7 & c != 8 & c!= 9) {
         print_help(*v);
         return 1;
     }
+
+    // with_normals flag
+    bool normals = (pick_option(&c, &v, "-with-normals", NULL) != NULL);
 
     // binary | ascii flag
     int binary = 1;
@@ -237,9 +250,9 @@ int main(int c, char *v[])
 
     // print header for ply file
     if (binary)
-      write_ply_header_binary(out, npoints, zone, hem);
+      write_ply_header_binary(out, npoints, zone, hem, normals);
     else
-      write_ply_header(out, npoints, zone, hem);
+      write_ply_header(out, npoints, zone, hem, normals);
 
     // print points coordinates and values
     for (int j = 0; j < h; j++)
@@ -253,7 +266,8 @@ int main(int c, char *v[])
 
             // convert the pixel local coordinates (ie in the crop) to the
             // full image coordinates, then to mercator coordinates through
-            // the rpc_eval direct estimation function. Normals (ie unit 3D
+            // the rpc_eval direct estimation function.
+            // Normals (ie unit 3D
             // vector pointing in the direction of the camera) are saved
             // together with the coordinates of the 3D points.
             double xy[2] = {i, j}, pq[2];
@@ -263,12 +277,13 @@ int main(int c, char *v[])
             if (!IJMESH()) {
                 double tmp[3];
                 getxyz(xyz, r, pq[0], pq[1], height[j][i], zone);
-                getxyz(tmp, r, pq[0], pq[1], height[j][i] + 10, zone);
-                nrm[0] = tmp[0] - xyz[0];
-                nrm[1] = tmp[1] - xyz[1];
-                nrm[2] = tmp[2] - xyz[2];
-                normalize_vector_3d(nrm);
-
+                if (normals) {
+                    getxyz(tmp, r, pq[0], pq[1], height[j][i] + 10, zone);
+                    nrm[0] = tmp[0] - xyz[0];
+                    nrm[1] = tmp[1] - xyz[1];
+                    nrm[2] = tmp[2] - xyz[2];
+                    normalize_vector_3d(nrm);
+                }
                 // translate the x, y coordinates, to avoid
                 // visualisation problems
                 xyz[0] -= x0;
@@ -278,15 +293,18 @@ int main(int c, char *v[])
             // print the voxel in the ply output file
             if (binary) {
                float X[3] = {xyz[0], xyz[1], xyz[2]};
-               float N[3] = {nrm[0], nrm[1], nrm[2]};
-               unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
                fwrite(X, sizeof(float), 3, out);
-               fwrite(N, sizeof(float), 3, out);
+               if (normals) {
+                   float N[3] = {nrm[0], nrm[1], nrm[2]};
+                   fwrite(N, sizeof(float), 3, out);
+               }
+               unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
                fwrite(C, sizeof(unsigned char), 3, out);
             } else {
-               fprintf(out, "%.16lf %.16lf %.16lf %.16lf %.16lf %.16lf %d %d %d\n",
-                    xyz[0], xyz[1], xyz[2], nrm[0], nrm[1], nrm[2], rgb[0],
-                    rgb[1], rgb[2]);
+               fprintf(out, "%.16f %.16f %.16f ", xyz[0], xyz[1], xyz[2]);
+               if (normals)
+                   fprintf(out, "%.1f %.1f %.1f ", nrm[0], nrm[1], nrm[2]);
+               fprintf(out, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
             }
         }
 
