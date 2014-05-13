@@ -145,64 +145,30 @@ SMART_PARAMETER_SILENT(IJMESH, 0)
 SMART_PARAMETER_SILENT(IJMESHFAC, 2)
 
 
-// void print_help(char *bin_name) {
-//     fprintf(stderr, "usage:\n\t"
-//             "%s [-a] colors heights rpc Hfile.txt out.ply [x0 y0]\n", bin_name);
-//     //       0         1      2       3   4        5       6  7
-//     fprintf(stderr, "\t use -a flag to write an ascii ply (default: binary)\n");
-// }
-
 void print_help(char *bin_name)
 {
     fprintf(stderr, "usage:\n\t"
             "%s colors heights rpc Hfile.txt out.ply [x0 y0]"
     //       0    1      2       3   4        5       6  7
-            " [--with-normals]\n", bin_name);
+            " [--with-normals] [--ascii]\n", bin_name);
 }
 
 
 int main(int c, char *v[])
 {
-    if (c != 6 & c != 7 & c != 8 & c!= 9) {
+    if (c != 6 & c != 7 & c != 8 & c!= 9 & c != 10) {
         print_help(*v);
         return 1;
     }
 
-    // with_normals flag
+    // with_normals and ascii flags
     bool normals = (pick_option(&c, &v, "-with-normals", NULL) != NULL);
+    bool ascii   = (pick_option(&c, &v, "-ascii", NULL) != NULL);
 
-    // binary | ascii flag
-    int binary = 1;
-//    int k;
-//
-//    // parse args with getopt to search for the ascii '-a' flag
-//    while ((k = getopt (c, v, "a")) != -1)
-//        switch (k)
-//        {
-//            case 'a':
-//                binary = 0;
-//                printf("ascii\n");
-//                break;
-//            case '?':
-//                if (isprint (optopt))
-//                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-//                else
-//                    fprintf (stderr, "Unknown option character `\\x%x'.\n",
-//                            optopt);
-//                print_help(*v);
-//                return 1;
-//            default:
-//                fprintf(stderr, "default case\n");
-//                print_help(*v);
-//                abort ();
-//        }
-
-    // read the other arguments
     // x0 and y0 are meant to allow the user to choose the origin in the
     // mercator coordinates system, in order to avoid visualisation problems
     // due to huge values of the coordinates (for which float precision is
     // often not enough)
-//    int i = optind;
     int i = 1;
     char *fname_colors = v[i++];
     char *fname_heights = v[i++];
@@ -233,13 +199,10 @@ int main(int c, char *v[])
     int npoints = 0;
     for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
-            if (!isnan(height[j][i]))
-            {
+            if (!isnan(height[j][i])) {
                 npoints++;
-
                 // UTM Zone will be the zone of first not nan point
-                if (zone < 0)
-                {
+                if (zone < 0) {
                     double xy[2] = {i, j}, pq[2];
                     apply_homography(pq, invH, xy);
                     double lon_lat[2];
@@ -249,10 +212,10 @@ int main(int c, char *v[])
             }
 
     // print header for ply file
-    if (binary)
-      write_ply_header_binary(out, npoints, zone, hem, normals);
-    else
+    if (ascii)
       write_ply_header(out, npoints, zone, hem, normals);
+    else
+      write_ply_header_binary(out, npoints, zone, hem, normals);
 
     // print points coordinates and values
     for (int j = 0; j < h; j++)
@@ -291,7 +254,12 @@ int main(int c, char *v[])
             }
 
             // print the voxel in the ply output file
-            if (binary) {
+            if (ascii) {
+               fprintf(out, "%.16f %.16f %.16f ", xyz[0], xyz[1], xyz[2]);
+               if (normals)
+                   fprintf(out, "%.1f %.1f %.1f ", nrm[0], nrm[1], nrm[2]);
+               fprintf(out, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
+            } else {
                float X[3] = {xyz[0], xyz[1], xyz[2]};
                fwrite(X, sizeof(float), 3, out);
                if (normals) {
@@ -300,11 +268,6 @@ int main(int c, char *v[])
                }
                unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
                fwrite(C, sizeof(unsigned char), 3, out);
-            } else {
-               fprintf(out, "%.16f %.16f %.16f ", xyz[0], xyz[1], xyz[2]);
-               if (normals)
-                   fprintf(out, "%.1f %.1f %.1f ", nrm[0], nrm[1], nrm[2]);
-               fprintf(out, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
             }
         }
 
