@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "pickopt.c"
 
@@ -19,14 +20,18 @@ static void eat_until_this_line(FILE *f, char *lin)
 }
 
 // prints "f" on stdout until "lin" is found. Does not print "lin".
-static void print_until_this_line(FILE *f, char *lin)
+static int print_until_this_line(FILE *f, char *lin)
 {
+    int out = 0;
     char buf[FILENAME_MAX] = {0};
-    while (fgets(buf, FILENAME_MAX, f))
+    while (fgets(buf, FILENAME_MAX, f)) {
+        out++;
         if (0 == strcmp(buf, lin))
-            return;
+            break;
         else
             printf("%s", buf);
+    }
+    return out;
 }
 
 int main(int c, char *v[])
@@ -36,7 +41,7 @@ int main(int c, char *v[])
         return 1;
     }
 
-	char *strip_n = pick_option(&c, &v, "-strip-normals", NULL);
+	bool strip_n = (pick_option(&c, &v, "-strip-normals", NULL) != NULL);
 
     // read args
     const char *filename = v[1];
@@ -52,21 +57,24 @@ int main(int c, char *v[])
         print_until_this_line(f, "property float nx\n");
         eat_until_this_line(f, "property float nz\n");
     }
-    print_until_this_line(f, "end_header\n");
+    int nb_lines = print_until_this_line(f, "end_header\n");
     printf("end_header\n");
+    bool normals = strip_n | (nb_lines > 10) ;
 
     // then read the binary body of the file
-    // each 'line' contains position X = (x, y, z), normal N = (nx, ny, nz) and
-    // color C = (r, g, b)
+    // each 'line' contains a position X = (x, y, z), eventually a normal N =
+    // (nx, ny, nz) and color C = (r, g, b)
     float X[3];
     float N[3];
     unsigned char C[3];
+
     while (!feof(f)) {
         fread(X, sizeof(float), 3, f);
-        fread(N, sizeof(float), 3, f);
+        if (normals)
+            fread(N, sizeof(float), 3, f);
         fread(C, sizeof(unsigned char), 3, f);
         printf("%.10f %.10f %.10f ", X[0], X[1], X[2]);
-        if (!strip_n)
+        if (normals & !strip_n)
             printf("%.1f %.1f %.1f ", N[0], N[1], N[2]);
         printf("%d %d %d\n", C[0], C[1], C[2]);
     }
