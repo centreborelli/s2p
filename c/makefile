@@ -1,6 +1,6 @@
 BINDIR = ../bin
 
-all: geographiclib monasse sift imscript msmw sgbm tvl1
+all: geographiclib monasse sift imscript msmw tvl1 sgbm
 
 geographiclib:
 	mkdir -p ../bin/geographiclib_build
@@ -26,7 +26,7 @@ msmw:
 
 sgbm:
 	mkdir -p ../bin/sgbm_build
-	cd ../bin/sgbm_build; cmake ../../3rdparty/stereo_hirschmuller_2008; make
+	cd ../bin/sgbm_build; cmake -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; make
 	cp ../bin/sgbm_build/sgbm2 $(BINDIR)
 	cp ../bin/sgbm_build/SGBM $(BINDIR)
 	cp ../3rdparty/stereo_hirschmuller_2008/callSGBM.sh $(BINDIR)
