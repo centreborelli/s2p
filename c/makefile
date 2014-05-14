@@ -1,23 +1,42 @@
 BINDIR = ../bin
 
-all: geographiclib monasse imscript
+all: geographiclib monasse sift imscript msmw sgbm tvl1
 
-geographiclib: geographiclib_build_dir
+geographiclib:
+	mkdir -p ../bin/geographiclib_build
 	cd ../bin/geographiclib_build; cmake ../../3rdparty/GeographicLib-1.32; make
 	cp ../bin/geographiclib_build/tools/CartConvert $(BINDIR)
 	cp ../bin/geographiclib_build/tools/GeoidEval $(BINDIR)
 
-geographiclib_build_dir:
-	mkdir -p ../bin/geographiclib_build
-
-monasse: monasse_build_dir
+monasse:
+	mkdir -p ../bin/monasse_refactored_build
 	cd ../bin/monasse_refactored_build; cmake ../../c/monasse_refactored; make
 	cp ../bin/monasse_refactored_build/bin/homography $(BINDIR)
 	cp ../bin/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
 	cp ../bin/monasse_refactored_build/bin/sift_keypoints $(BINDIR)
 
-monasse_build_dir:
-	mkdir -p ../bin/monasse_refactored_build
+sift:
+	cd ../3rdparty/sift_20130403; make
+	cp ../3rdparty/sift_20130403/bin/matching $(BINDIR)
+
+msmw:
+	mkdir -p ../bin/msmw_build
+	cd ../bin/msmw_build; cmake ../../3rdparty/msmw; make
+	cp ../bin/msmw_build/libstereo/iip_stereo_correlation_multi_win2 $(BINDIR)
+
+sgbm:
+	mkdir -p ../bin/sgbm_build
+	cd ../bin/sgbm_build; cmake ../../3rdparty/stereo_hirschmuller_2008; make
+	cp ../bin/sgbm_build/sgbm2 $(BINDIR)
+	cp ../bin/sgbm_build/SGBM $(BINDIR)
+	cp ../3rdparty/stereo_hirschmuller_2008/callSGBM.sh $(BINDIR)
+	cp ../3rdparty/stereo_hirschmuller_2008/callSGBM_lap.sh $(BINDIR)
+	cp ../3rdparty/stereo_hirschmuller_2008/callSGBM_cauchy.sh $(BINDIR)
+
+tvl1:
+	cd ../3rdparty/tvl1flow_3; make
+	cp ../3rdparty/tvl1flow_3/tvl1flow $(BINDIR)
+	cp ../3rdparty/tvl1flow_3/callTVL1.sh $(BINDIR)
 
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
 	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
