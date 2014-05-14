@@ -287,7 +287,16 @@ def image_safe_zoom_fft(im, f, out=None):
 
 def image_zoom_gdal(im, f, out=None, w=None, h=None):
     """
-    zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out.
+    Zooms an image using gdal (cubic interpolation)
+
+    Args:
+        im: path to the input image
+        f:  zoom factor. f in [0,1] for zoom in, f in [1 +inf] for zoom out.
+        out (optional): path to the ouput file
+        w, h (optional): input image dimensions
+
+    Returns:
+        path to the output image. In case f=1, the input image is returned
     """
     if f == 1:
         return im
@@ -298,7 +307,7 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
     tmp = tmpfile('.tif')
 
     if w is None or h is None:
-        sz = image_size(im)
+        sz = image_size_tiffinfo(im)
         w = sz[0]
         h = sz[1]
 
@@ -696,36 +705,26 @@ def get_rectangle_coordinates(im):
     return x, y, w, h
 
 
-def get_roi_coordinates(rpc, preview):
+def get_roi_coordinates(img, preview):
     """
     Get the coordinates of a desired ROI in a Pleiades image from user's clicks.
 
     Args:
-        rpc: an instance of the rpc_model.RPCModel class, or the path to the
-            xml file containing the RPC coefficients.
-        preview: path to the preview image file associated to the Pleiades
-            image.
+        img: path to the full image file
+        preview: path to the preview image file
 
     Returns:
         x, y, w, h: coordinates of the ROI selected by the user, in the
-            Pleiades full image frame. x, y are the coordinates of the top-left
-            corner, while (w, h) is the size of the rectangle.
+            full image frame. x, y are the coordinates of the top-left corner,
+            while (w, h) is the size of the rectangle.
 
     A preview image is displayed, on which the user selects a rectangular
     region.
     """
 
-    # if 'rpc' is the path to a file, open it and read it, else go on
-    try:
-        with open(rpc):
-            rpc = rpc_model.RPCModel(rpc)
-    except TypeError:
-        pass
-
     # read preview/full images dimensions
-    nc = int(rpc.lastCol)
-    nr = int(rpc.lastRow)
-    nc_preview, nr_preview = image_size(preview)
+    nc, nr = image_size_gdal(img)
+    nc_preview, nr_preview = image_size_gdal(preview)
 
     # get the rectangle coordinates
     x, y, w, h = get_rectangle_coordinates(preview)

@@ -370,7 +370,7 @@ class RPCModel:
         return lon, lat, alt
 
 
-    def write_xml_pleiades(self, filename):
+    def __write_pleiades(self, filename):
         """
         Writes a new XML file with the rpc parameters
         If the read was performed on a pleiades RPC
@@ -423,7 +423,7 @@ class RPCModel:
         tree.write(filename)
 
 
-    def write_xml_worldview(self, filename):
+    def __write_worldview(self, filename):
         """
         Writes a new XML file with the rpc parameters
         If the read was performed on a worldview RPC
@@ -463,7 +463,7 @@ class RPCModel:
         tree.write(filename)
 
 
-    def write_ikonos(self, filename):
+    def __write_ikonos(self, filename):
         """
         Writes a text file with the rpc parameters in the Ikonos format.
 
@@ -494,6 +494,22 @@ class RPCModel:
         for i in range(20):
             f.write('SAMP_DEN_COEFF_%d: %.12e\n' % (i+1, self.inverseLinDen[i]))
         f.close()
+
+    def write(self, filename):
+        """
+        Saves an rpc object to a file, choosing the Pleiades/Worldview/Ikonos
+        format according to the type of the input rpc object
+
+        Args:
+            filename: path to the file
+        """
+        # distinguish 3 cases: pleiades, worldview or ikonos formats
+        if hasattr(self, 'tree') and np.isfinite(self.directLatNum[0]):
+            self.__write_pleiades(filename)
+        elif hasattr(self, 'tree') and np.isnan(self.directLatNum[0]):
+            self.__write_worldview(filename)
+        else:
+            self.__write_ikonos(filename)
 
 
     def __repr__(self):
