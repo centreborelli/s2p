@@ -122,7 +122,7 @@ colormesh.o: colormesh.c iio.h fail.c rpc.h read_matrix.c smapa.h
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN colormesh.c
 
 geographiclib_wrapper.o: geographiclib_wrapper.cpp
-	g++ -c -g -O3 geographiclib_wrapper.cpp
+	g++ -c -g -O3 geographiclib_wrapper.cpp -I../3rdparty/GeographicLib-1.32/include
 
 downsa.o: downsa.c fragments.c iio.h
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN downsa.c
