@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <string.h>
 
 /* option to use a local version of the libpng */
 #ifdef WITH_LOCAL_LIBPNG
