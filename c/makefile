@@ -1,14 +1,22 @@
 BINDIR = ../bin
 
-all: imscript monasse
+all: geographiclib monasse imscript
 
-monasse: build_dir
+geographiclib: geographiclib_build_dir
+	cd ../bin/geographiclib_build; cmake ../../3rdparty/GeographicLib-1.32; make
+	cp ../bin/geographiclib_build/tools/CartConvert $(BINDIR)
+	cp ../bin/geographiclib_build/tools/GeoidEval $(BINDIR)
+
+geographiclib_build_dir:
+	mkdir -p ../bin/geographiclib_build
+
+monasse: monasse_build_dir
 	cd ../bin/monasse_refactored_build; cmake ../../c/monasse_refactored; make
 	cp ../bin/monasse_refactored_build/bin/homography $(BINDIR)
 	cp ../bin/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
 	cp ../bin/monasse_refactored_build/bin/sift_keypoints $(BINDIR)
 
-build_dir:
+monasse_build_dir:
 	mkdir -p ../bin/monasse_refactored_build
 
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
@@ -32,7 +40,7 @@ cldmask: iio.o cldmask.o
 	cc iio.o cldmask.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/cldmask
 
 colormesh: iio.o rpc.o colormesh.o geographiclib_wrapper.o
-	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lm -lGeographic -lstdc++ -o $(BINDIR)/colormesh -L../3rdparty/GeographicLib-1.32/src/
+	cc iio.o rpc.o colormesh.o geographiclib_wrapper.o -lpng -ltiff -ljpeg -lm -lstdc++ -lGeographic -o $(BINDIR)/colormesh -L$(BINDIR)/geographiclib_build/src
 
 downsa: iio.o downsa.o
 	cc iio.o downsa.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/downsa
