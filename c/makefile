@@ -40,7 +40,7 @@ tvl1:
 
 imscript: bin_dir bin2asc downsa backflow synflow imprintf iion plambda qauto\
 	qeasy crop disp_to_h colormesh_projective disp_to_h_projective\
-	height_rpc_move veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
+	veco morphoop gblur fftconvolve zoom_zeropadding zoom_2d\
 	siftu srtm4 srtm4_which_tile ransac colormesh cldmask morsi watermask
 
 bin_dir:
@@ -96,9 +96,6 @@ colormesh_projective: iio.o colormesh_projective.o
 
 disp_to_h_projective: iio.o disp_to_h_projective.o
 	cc iio.o disp_to_h_projective.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/disp_to_h_projective
-
-height_rpc_move: iio.o rpc.o height_rpc_move.o
-	cc iio.o rpc.o height_rpc_move.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/height_rpc_move
 
 veco: iio.o veco.o
 	cc iio.o veco.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/veco
@@ -183,9 +180,6 @@ colormesh_projective.o: colormesh_projective.c iio.h fail.c read_matrix.c smapa.
 
 disp_to_h_projective.o: disp_to_h_projective.c vvector.h iio.h svd.c read_matrix.c
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN disp_to_h_projective.c
-
-height_rpc_move.o: height_rpc_move.c vvector.h iio.h rpc.h read_matrix.c
-	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN height_rpc_move.c
 
 veco.o: veco.c iio.h fail.c xmalloc.c random.c
 	cc -c -std=c99 -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN veco.c
