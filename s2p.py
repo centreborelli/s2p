@@ -127,11 +127,12 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         cfg['matching_algorithm'], disp_min, disp_max)
 
     ## update mask with water mask, cloud mask and roi mask
-    triangulation.update_mask(mask, H1, rpc1, False, None, True)
-    if cld_msk is not None:
-        triangulation.update_mask(mask, H1, cld_msk, True)
-    if roi_msk is not None:
-        triangulation.update_mask(mask, H1, roi_msk, False, cfg['msk_erosion'])
+    if cfg['build_additional_masks']:
+    	triangulation.update_mask(mask, H1, rpc1, False, None, True)
+    	if cld_msk is not None:
+        	triangulation.update_mask(mask, H1, cld_msk, True)
+    	if roi_msk is not None:
+        	triangulation.update_mask(mask, H1, roi_msk, False, cfg['msk_erosion'])
 
     ## save the subsampling factor, the rectifying homographies and the
     # disparity bounds.
