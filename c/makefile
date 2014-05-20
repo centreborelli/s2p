@@ -6,7 +6,6 @@ geographiclib:
 	mkdir -p ../bin/geographiclib_build
 	cd ../bin/geographiclib_build; cmake ../../3rdparty/GeographicLib-1.32; make
 	cp ../bin/geographiclib_build/tools/CartConvert $(BINDIR)
-	cp ../bin/geographiclib_build/tools/GeoidEval $(BINDIR)
 
 monasse:
 	mkdir -p ../bin/monasse_refactored_build
@@ -52,8 +51,8 @@ bin2asc: bin2asc.c
 morsi: iio.o morsi.o
 	cc iio.o morsi.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/morsi
 
-watermask: iio.o watermask.o
-	cc iio.o watermask.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/watermask
+watermask: iio.o watermask.o Geoid.o geoid_height_wrapper.o
+	cc iio.o watermask.o Geoid.o geoid_height_wrapper.o -lpng -ltiff -ljpeg -lm -lstdc++ -o $(BINDIR)/watermask
 
 cldmask: iio.o cldmask.o
 	cc iio.o cldmask.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/cldmask
@@ -121,17 +120,24 @@ zoom_2d: iio.o zoom_2d.o zoom_r2c.o
 siftu: siftu.o
 	cc siftu.o -lm -o $(BINDIR)/siftu
 
-srtm4.o: srtm4.c iio.h
-	cc -c -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4 srtm4.c
+srtm4_which_tile: srtm4_which_tile.o
+	gcc srtm4_which_tile.o geoid_height_wrapper.o Geoid.o -ltiff -lm -lstdc++ -o $(BINDIR)/srtm4_which_tile
+
+srtm4: Geoid.o geoid_height_wrapper.o srtm4.o
+	gcc srtm4.o geoid_height_wrapper.o Geoid.o -ltiff -lm -lstdc++ -o $(BINDIR)/srtm4
+
+Geoid.o: Geoid.cpp
+	g++ -c -g -O3 Geoid.cpp -I.
+
+geoid_height_wrapper.o: geoid_height_wrapper.cpp
+	g++ -c -g -O3 geoid_height_wrapper.cpp -I.
+
+srtm4.o: srtm4.c
+	gcc -c -g -O3 -std=c99 -DNDEBUG -DMAIN_SRTM4 srtm4.c
 
 srtm4_which_tile.o: srtm4.c
-	cc -c -std=c99 -g -O3 -DNDEBUG -DMAIN_SRTM4_WHICH_TILE srtm4.c -o srtm4_which_tile.o
+	gcc -c -g -O3 -std=c99 -DNDEBUG -DMAIN_SRTM4_WHICH_TILE srtm4.c -o srtm4_which_tile.o
 
-srtm4: srtm4.o iio.o
-	cc srtm4.o iio.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/srtm4
-
-srtm4_which_tile: srtm4_which_tile.o iio.o
-	cc srtm4_which_tile.o iio.o -lpng -ltiff -ljpeg -lm -o $(BINDIR)/srtm4_which_tile
 
 ransac: ransac.o
 	cc ransac.o -lm -o $(BINDIR)/ransac
