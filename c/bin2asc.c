@@ -6,17 +6,21 @@
 
 void print_help(char *bin_name)
 {
-    fprintf(stderr, "usage:\n\t" "%s binary_ply [--strip-normals] >"
-            " ascii_ply\n", bin_name);
+    fprintf(stderr, "usage:\n\t %s binary_ply [--strip-normals] "
+            "[--strip-colors] [--strip-header] > ascii_ply\n", bin_name);
 }
 
 // fast forward "f" until "lin" is found. "lin" is read.
-static void eat_until_this_line(FILE *f, char *lin)
+static int eat_until_this_line(FILE *f, char *lin)
 {
+    int out = 0;
     char buf[FILENAME_MAX] = {0};
-    while (fgets(buf, FILENAME_MAX, f))
+    while (fgets(buf, FILENAME_MAX, f)) {
+        out++;
         if (0 == strcmp(buf, lin))
-            return;
+            break;
+    }
+    return out;
 }
 
 // prints "f" on stdout until "lin" is found. Does not print "lin".
@@ -36,12 +40,14 @@ static int print_until_this_line(FILE *f, char *lin)
 
 int main(int c, char *v[])
 {
-    if (c != 2 && c != 3) {
+    if (c != 2 && c != 3 && c != 4 && c != 5) {
         print_help(*v);
         return 1;
     }
 
 	bool strip_n = (pick_option(&c, &v, "-strip-normals", NULL) != NULL);
+	bool strip_c = (pick_option(&c, &v, "-strip-colors", NULL) != NULL);
+	bool strip_h = (pick_option(&c, &v, "-strip-header", NULL) != NULL);
 
     // read args
     const char *filename = v[1];
@@ -49,16 +55,22 @@ int main(int c, char *v[])
     // open the input binary file
     FILE *f = fopen(filename, "rb");
 
-    // copy the header, replace the 'format' line, and remove the line about
-    // normals if needed
-    print_until_this_line(f, "format binary_little_endian 1.0\n");
-    printf("format ascii 1.0\n");
-    if (strip_n) {
-        print_until_this_line(f, "property float nx\n");
-        eat_until_this_line(f, "property float nz\n");
+    int nb_lines = 0;
+    if (strip_h) {
+        eat_until_this_line(f, "format binary_little_endian 1.0\n");
+        nb_lines = eat_until_this_line(f, "end_header\n");
+    } else {
+        // copy the header, replace the 'format' line, and remove the line about
+        // normals if needed
+        print_until_this_line(f, "format binary_little_endian 1.0\n");
+        printf("format ascii 1.0\n");
+        if (strip_n) {
+            print_until_this_line(f, "property float nx\n");
+            eat_until_this_line(f, "property float nz\n");
+        }
+        nb_lines = print_until_this_line(f, "end_header\n");
+        printf("end_header\n");
     }
-    int nb_lines = print_until_this_line(f, "end_header\n");
-    printf("end_header\n");
     bool normals = strip_n | (nb_lines > 10) ;
 
     // then read the binary body of the file
@@ -76,7 +88,8 @@ int main(int c, char *v[])
         printf("%.10f %.10f %.10f ", X[0], X[1], X[2]);
         if (normals & !strip_n)
             printf("%.1f %.1f %.1f ", N[0], N[1], N[2]);
-        printf("%d %d %d\n", C[0], C[1], C[2]);
+        if (!strip_c)
+            printf("%d %d %d\n", C[0], C[1], C[2]);
     }
 
     fclose(f);
