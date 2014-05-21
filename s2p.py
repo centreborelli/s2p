@@ -457,7 +457,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
     f = 1.0/z
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
-    trans = common.tmpfile('.txt')
+    trans = '%s/trans.txt' % out_dir
     np.savetxt(trans, A)
 
     # compute offset
