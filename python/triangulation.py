@@ -207,7 +207,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
 
 
 def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
-        off_y=0, ascii_ply=False):
+        off_y=0, ascii_ply=False, with_normals=False):
     """
     Computes a color point cloud from a height map.
 
@@ -226,7 +226,11 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
             ply file should be encoded in plain text (ascii).
     """
     if ascii_ply:
-        common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
+        if with_normals:
+            common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh -a %s %s %s %s %s %d %d--with-normals" % (crop_colorized,
+            heights, rpc, H, cloud, off_x, off_y))
+        else:
+            common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
             heights, rpc, H, cloud, off_x, off_y))
     else:
         common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
