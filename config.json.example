@@ -3,7 +3,8 @@
   "images" : [
     { "img" : "data/pleiades/toulouse/im02.tif",
       "rpc" : "data/pleiades/toulouse/rpc02.xml",
-      "clr" : "data/pleiades/toulouse/im02_color.tif" },
+      "clr" : "data/pleiades/toulouse/im02_color.tif",
+      "prv" : "data/pleiades/toulouse/prev02.jpg" },
     { "img" : "data/pleiades/toulouse/im01.tif",
       "rpc" : "data/pleiades/toulouse/rpc01.xml" },
     { "img" : "data/pleiades/toulouse/im03.tif",

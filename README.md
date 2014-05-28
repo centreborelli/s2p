@@ -15,6 +15,7 @@ in several small tiles and process them in parallel.
 
 ## Usage
 
+### From a shell
 The easiest way to use `s2p` is to run the binary `s2p.py` from a shell, with a
 json configuration file as unique argument:
 
@@ -23,6 +24,19 @@ json configuration file as unique argument:
 All the parameters of the algorithm, paths to input and output data are stored
 in the json file. See the provided `config.json.example` file for an example.
 
+#### ROI definition
+
+The processed Region of interest (ROI) is defined by the image coordinates (x,
+y) of its top-left corner, and its dimensions (w, h) in pixels. These four
+numbers must be given in the config.json file (as in the example). They can be
+omitted if the parameter `'full_img'` is set to `true`. In that case the full
+image will be processed. If neither the ROI definition or the `'full_img'` flag
+are present in the config file, then a preview of the reference image must be
+provided. The ROI will be selected interactively on that preview. The path of
+the preview file must be given by the key `'prv'` of the `'images'[0]`
+dictionary (as in the example).
+
+### From a python interpreter
 An other way is to import the `s2p` module in a python session, and run the
 functions `process_pair` or `process_triplet`, depending on the kind of dataset
 you have (stereo pair or triplet), to generate a digital elevation model (DEM),

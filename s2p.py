@@ -190,8 +190,8 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     print "Tile %i %i %i %i generated." %(x,y,w,h)
     return
 
-def process_pair(out_dir, img1, rpc1, img2, rpc2, x=None, y=None, w=None,
-        h=None, tw=None, th=None, ov=None, cld_msk=None, roi_msk=None):
+def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
+        ov=None, cld_msk=None, roi_msk=None):
     """
     Computes a height map from a Pair of Pleiades images, using tiles.
 
@@ -457,7 +457,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
     f = 1.0/z
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
-    trans = common.tmpfile('.txt')
+    trans = '%s/trans.txt' % out_dir
     np.savetxt(trans, A)
 
     # compute offset
@@ -526,8 +526,7 @@ def check_parameters(usr_cfg):
         nothing
     """
 
-    ## verify that i/o files and roi are defined
-    # i/o files
+    # verify that i/o files are defined
     if 'out_dir' not in usr_cfg:
         print "missing output dir: abort"
         sys.exit(1)
@@ -541,13 +540,14 @@ def check_parameters(usr_cfg):
         print "missing input data paths for image 1: abort"
         sys.exit(1)
 
-    # roi
+    # verify that roi or path to preview file are defined
     if ('full_img' not in usr_cfg) or (not usr_cfg['full_img']):
-        if 'roi' not in usr_cfg or ('x' not in usr_cfg['roi']) or ('y' not in
-                usr_cfg['roi']) or ('w' not in usr_cfg['roi']) or ('h' not in
-                        usr_cfg['roi']):
-            print "bad or missing roi definition: abort"
-            sys.exit(1)
+        if 'roi' not in usr_cfg or any(p not in usr_cfg['roi'] for p in ['x',
+            'y', 'w', 'h']):
+            if 'prv' not in usr_cfg['images'][0]:
+                print """missing or incomplete roi definition, and no preview
+                file is specified: abort"""
+                sys.exit(1)
 
     ## warn about unknown optional parameters: these parameters have no default
     # value in the global config.cfg dictionary, and thus they are not used
@@ -610,6 +610,19 @@ if __name__ == '__main__':
         cfg['roi']['y'] = 0
         cfg['roi']['w'] = sz[0]
         cfg['roi']['h'] = sz[1]
+
+    # check that the roi is well defined
+    if 'roi' not in cfg or any(p not in cfg['roi'] for p in ['x', 'y', 'w',
+        'h']):
+        print "missing or incomplete ROI definition"
+        print "ROI will be redefined by interactive selection"
+        x, y, w, h = common.get_roi_coordinates(cfg['images'][0]['img'],
+                cfg['images'][0]['prv'])
+        cfg['roi'] = {}
+        cfg['roi']['x'] = x
+        cfg['roi']['y'] = y
+        cfg['roi']['w'] = w
+        cfg['roi']['h'] = h
 
     # create output directory for the experiment, and store a json dump of the
     # config.cfg dictionary there
