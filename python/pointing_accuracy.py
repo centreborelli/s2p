@@ -14,7 +14,8 @@ import evaluation
 from config import cfg
 
 
-def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
+def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
+        matches=None):
     """
     Measures the maximal pointing error on a Pleiades' pair of images.
 
@@ -26,14 +27,18 @@ def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
             rectangle.
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2.
+        matches (optional): Nx4 numpy array containing a list of matches to use
+            to compute the pointing error
 
     Returns:
-        the highest pointing error, in the direction orthogonal to the epipolar
+        the mean pointing error, in the direction orthogonal to the epipolar
         lines. This error is measured in pixels.
     """
-    matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    if matches is None:
+        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
+    print '%d sift matches' % len(matches)
 
     # apply pointing correction matrix, if available
     if A is not None:
@@ -50,14 +55,14 @@ def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None):
     print "max, mean, min pointing error, from %d points:" % (len(matches))
     print np.max(e), np.mean(e), np.min(e)
 
-    # return the highest one
-    return np.max(np.abs(e))
+    # return the mean error
+    return np.mean(np.abs(e))
 
 
 def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         matches=None):
     """
-    Measures the pointing error on a Pleiades' pair of images.
+    Measures the pointing error on a Pleiades' pair of images, affine approx.
 
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
