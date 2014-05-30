@@ -176,7 +176,7 @@ def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
 
     return
 
-def plot_vectors(p, v, x, y, w, h, f=1):
+def plot_vectors(p, v, x, y, w, h, f=1, out_file=None):
     """
     Plots vectors on an image, using gnuplot
 
@@ -184,21 +184,28 @@ def plot_vectors(p, v, x, y, w, h, f=1):
         p: points (origins of vectors),represented as a numpy Nx2 array
         v: vectors, represented as a numpy Nx2 array
         x, y, w, h: rectangular ROI
-        1: exageration factor (optional, default value is 1)
+        f: (optional, default is 1) exageration factor
+        out_file: (optional, default is None) path to the output file
 
     Returns:
-        nothing, but opens a display
+        nothing, but opens a display or write a png file
     """
     tmp = common.tmpfile('.txt')
     data = np.hstack((p, v))
     np.savetxt(tmp, data, fmt='%6f')
     gp_string = 'set term png size %d,%d;unset key;unset tics;plot [%d:%d] [%d:%d] "%s" u($1):($2):(%d*$3):(%d*$4) w vectors head filled' % (w, h, x, x+w, y, y+h, tmp, f, f)
 
-    img_file = common.tmpfile('.png')
-    common.run("gnuplot -p -e '%s' > %s" % (gp_string, img_file))
-    os.system("v %s &" % img_file)
+    if out_file is None:
+        out_file = common.tmpfile('.png')
 
-def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h, f=100):
+    common.run("gnuplot -p -e '%s' > %s" % (gp_string, out_file))
+    print out_file
+
+    if out_file is None:
+        os.system("v %s &" % out_file)
+
+def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h,
+        matches_sift=None, f=100, out_files_pattern=None):
     """
     Args:
         im1, im2: path to full pleiades images
@@ -207,6 +214,8 @@ def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h, f=100):
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the tile.
         f (optional, default is 100): exageration factor for the error vectors
+        out_files_pattern (optional, default is None): pattern used to name the
+            two output files (plots of the pointing error)
 
     Returns:
         nothing, but opens a display
@@ -216,25 +225,27 @@ def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h, f=100):
     r2 = rpc_model.RPCModel(rpc2)
 
     # compute sift matches
-    msft = rectification.matches_from_sift_rpc_roi(im1, im2, r1, r2, x, y, w, h)
+    if matches_sift is None:
+        matches_sift = pointing_accuracy.filtered_sift_matches_roi(im1, im2,
+                r1, r2, x, y, w, h)
 
     # compute rpc matches
-    mrpc = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, 5)
+    matches_rpc = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, 5)
 
     # estimate affine fundamental matrix
-    F = estimation.affine_fundamental_matrix(mrpc)
+    F = estimation.affine_fundamental_matrix(matches_rpc)
 
     # compute error vectors
-    e = pointing_accuracy.error_vectors(msft, F, 'ref')
+    e = pointing_accuracy.error_vectors(matches_sift, F, 'ref')
 
-    A = pointing_accuracy.local_translation(r1, r2, x, y, w, h, msft)
-    p = msft[:, 0:2]
-    q = msft[:, 2:4]
-    qq = common.points_apply_homography(np.linalg.inv(A), q)
+    A = pointing_accuracy.local_translation(r1, r2, x, y, w, h, matches_sift)
+    p = matches_sift[:, 0:2]
+    q = matches_sift[:, 2:4]
+    qq = common.points_apply_homography(A, q)
     ee = pointing_accuracy.error_vectors(np.hstack((p, qq)), F, 'ref')
-    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, None, msft)
-    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, np.linalg.inv(A), msft)
+    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, None, matches_sift)
+    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, A, matches_sift)
 
-    # plot the vectors: they go from the point x' to the line Fx
-    plot_vectors(msft[:, 2:4], -e, x, y, w, h, f)
-    plot_vectors(qq, -ee, x, y, w, h, f)
+    # plot the vectors: they go from the point x to the line (F.T)x'
+    plot_vectors(p, -e, x, y, w, h, f, out_file='%s_before.png' % out_files_pattern)
+    plot_vectors(p, -ee, x, y, w, h, f, out_file='%s_after.png' % out_files_pattern)
