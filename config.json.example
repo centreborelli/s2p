@@ -37,5 +37,5 @@
   "disp_range_srtm_low_margin" : -20,
   "skip_existing" : false,
   "mosaic_method" : "piio",
-  "msk_erosion": 50
+  "msk_erosion": 0
 }

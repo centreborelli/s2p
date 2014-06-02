@@ -6,12 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <tiffio.h>
 
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#include "iio.h"
 
 
 //#define SRTM4_URL_ASC "ftp://xftp.jrc.it/pub/srtmV4/arcasci/srtm_%02d_%02d.zip"
@@ -22,6 +21,49 @@
 #define SRTM4_TIF "%s/srtm_%02d_%02d.tif"
 
 
+// headers
+void geoid_height(double *out, double lat, double lon);
+
+
+// read a TIFF int16 image
+static int16_t *readTIFF(TIFF *tif, int *nx, int *ny)
+{
+    uint32 w = 0, h = 0;
+    int16_t *data, *line;
+
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &h);
+    assert((size_t) TIFFScanlineSize(tif) == w * sizeof(int16_t));
+
+    data = (int16_t *) malloc(w*h*sizeof(int16_t));
+    *nx = (int) w;
+    *ny = (int) h;
+    for (int i = 0; i < h; i++) {
+        line = data + i * w;
+        if (TIFFReadScanline(tif, line, i, 0) < 0) {
+            fprintf(stderr, "readTIFF: error reading row %u\n", i);
+            free(data);
+            return NULL;
+        }
+    }
+
+    return data;
+}
+
+// load TIFF int16 image
+int16_t *read_tiff_int16_gray(const char *fname, int *nx, int *ny)
+{
+    int16_t *data;
+    TIFFSetWarningHandler(NULL); //suppress warnings
+    TIFF *tif = TIFFOpen(fname, "r");
+    if (!tif) {
+        fprintf(stderr, "Unable to read TIFF file %s\n", fname);
+        return NULL;
+    }
+    data = readTIFF(tif, nx, ny);
+    TIFFClose(tif);
+    return data;
+}
 
 // download the contents of an url into a file
 static int download(const char *to_file, const char *from_url)
@@ -252,6 +294,12 @@ static float *malloc_tile_data(char *tile_filename)
 	return t;
 }
 
+static void cast_int16_to_float(float *out, int16_t *in, int n)
+{
+    for (int i = 0; i < n; i++)
+        out[i] = (float) in[i];
+}
+
 static float *global_table_of_tiles[360][180] = {{0}};
 
 static float *produce_tile(int tlon, int tlat, bool tif)
@@ -265,9 +313,17 @@ static float *produce_tile(int tlon, int tlat, bool tif)
 			return NULL;
         if (tif) {
             int w, h;
-            t = iio_read_image_float(fname, &w, &h);
-            if ((w != 6000) || (h != 6000))
-               fprintf(stderr, "produce_tile: tif srtm file isn't 6000x6000\n");
+            int16_t *tmp = read_tiff_int16_gray(fname, &w, &h);
+            if (NULL == tmp) {
+                fprintf(stderr, "failed to read the tif file\n");
+                abort();
+            }
+            if ((w != 6000) || (h != 6000)) {
+                fprintf(stderr, "produce_tile: tif srtm file isn't 6000x6000\n");
+                abort();
+            }
+            t = malloc(w*h*sizeof*t);
+            cast_int16_to_float(t, tmp, w*h);
         }
         else
 		    t = malloc_tile_data(fname);
@@ -337,6 +393,30 @@ double srtm4_nn(double lon, double lat)
 	return nearest_neighbor_interpolation_at(t, 6000, 6000, xlon, xlat);
 }
 
+double srtm4_wrt_ellipsoid(double lon, double lat)
+{
+	int tlon, tlat;
+	float xlon, xlat;
+	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
+	float *t = produce_tile(tlon, tlat, true);
+	double srtm = bilinear_interpolation_at(t, 6000, 6000, xlon, xlat);
+    double geoid = 0;
+    geoid_height(&geoid, lat, lon);
+    return srtm + geoid;
+}
+
+double srtm4_nn_wrt_ellipsoid(double lon, double lat)
+{
+	int tlon, tlat;
+	float xlon, xlat;
+	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
+	float *t = produce_tile(tlon, tlat, true);
+	double srtm = nearest_neighbor_interpolation_at(t, 6000, 6000, xlon, xlat);
+    double geoid = 0;
+    geoid_height(&geoid, lat, lon);
+    return srtm + geoid;
+}
+
 void srtm4_free_tiles(void)
 {
 	for (int j = 0; j < 360; j++)
@@ -355,14 +435,14 @@ int main(int c, char *v[])
     if (c == 3) {
 	    double lon = atof(v[1]);
 	    double lat = atof(v[2]);
-	    double r = srtm4(lon, lat);
+	    double r = srtm4_wrt_ellipsoid(lon, lat);
 	    printf("%g\n", r);
 	    return 0;
     }
     else {
         double lon, lat, r;
         while(2 == scanf("%lf %lf\n", &lon, &lat)) {
-            r = srtm4_nn(lon, lat);
+            r = srtm4_nn_wrt_ellipsoid(lon, lat);
             printf("%g\n", r);
         }
     }
