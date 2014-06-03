@@ -145,6 +145,10 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h,
     elif model is 'homography':
         common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (inliers_file,
             matches_file))
+    elif model is 'hom_fund':
+        common.run("ransac hom 1000 2 4 /dev/null /dev/null %s < %s" % (inliers_file,
+            matches_file))
+        common.run("ransac fmn 1000 .2 7 %s < %s" % (inliers_file, inliers_file))
     else:
         print "filtered_sift_matches_roi: bad value for argument 'model'"
     inliers = np.loadtxt(inliers_file)
@@ -723,7 +727,7 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
         else:
             m = filtered_sift_matches_full_img(img1, img2, r1, r2,
                     cfg['pointing_correction_rois_mode'], None, 1000, x, y, w,
-                    h, filter_matches)
+                    h, model=filter_matches)
     except Exception as e:
         print e
         print """pointing_accuracy.compute_correction: no sift matches.
