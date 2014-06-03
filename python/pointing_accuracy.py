@@ -143,7 +143,8 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h,
     if model is 'fundamental':
         common.run("ransac fmn 1000 .3 7 %s < %s" % (inliers_file, matches_file))
     elif model is 'homography':
-        common.run("ransac hom 1000 .3 4 %s < %s" % (inliers_file, matches_file))
+        common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (inliers_file,
+            matches_file))
     else:
         print "filtered_sift_matches_roi: bad value for argument 'model'"
     inliers = np.loadtxt(inliers_file)
