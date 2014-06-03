@@ -107,7 +107,8 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
 
 
-def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):
+def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h,
+        model='fundamental'):
     """
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
@@ -115,6 +116,8 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):
         x, y, w, h: four integers defining the rectangular ROI in the first
             image.  (x, y) is the top-left corner, and (w, h) are the dimensions of
             the rectangle.
+        model (optional, default is 'fundamental'): model imposed by RANSAC
+            when searching the set of inliers
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -137,7 +140,13 @@ def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     np.savetxt(matches_file, matches)
 
     inliers_file = common.tmpfile('.txt')
-    common.run("ransac fmn 1000 .3 7 %s < %s" % (inliers_file, matches_file))
+    if model is 'fundamental':
+        common.run("ransac fmn 1000 .3 7 %s < %s" % (inliers_file, matches_file))
+    elif model is 'homography':
+        common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (inliers_file,
+            matches_file))
+    else:
+        print "filtered_sift_matches_roi: bad value for argument 'model'"
     inliers = np.loadtxt(inliers_file)
     if not inliers.size:
         raise Exception("no inliers")
@@ -287,7 +296,7 @@ def cost_function_linear(v, rpc1, rpc2, matches):
 
 
 def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
-        prev1=None, a=1000, x=None, y=None, w=None, h=None, outfile=None):
+        prev1=None, a=1000, x=None, y=None, w=None, h=None, outfile=None, model='fundamental'):
     """
     Computes a list of sift matches between two full Pleiades images.
 
@@ -304,6 +313,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x, y, w, h (optional): use a big ROI and extract the five tiles from
             there instead of from the full image.
         outfile (optional): path to a txt where to save the list of matches.
+        model (optional, default is 'fundamental'): model imposed by RANSAC
+            when searching the set of inliers
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -334,7 +345,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((w-a)/2) + x
         y0 = round((h-a)/2) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
+                    a, a, model)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the central zone"
@@ -344,7 +356,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((1*w - 2*a)/4) + x
         y0 = round((1*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
+                    a, a, model)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 1"
@@ -353,7 +366,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((3*w - 2*a)/4) + x
         y0 = round((1*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
+                    a, a, model)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 2"
@@ -362,7 +376,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((1*w - 2*a)/4) + x
         y0 = round((3*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
+                    a, a, model)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 3"
@@ -371,7 +386,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((3*w - 2*a)/4) + x
         y0 = round((3*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
+            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
+                    a, a, model)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 4"
@@ -381,7 +397,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         for i in range(5):
             x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
             try:
-                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y,
+                        w, h, model)
                 out = np.vstack((out, matches))
             except Exception as e:
                 print "no matches in the selected roi"
@@ -394,7 +411,8 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         for i in xrange(len(rois)):
             x, y, w, h = rois[i, :]
             try:
-                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y,
+                        w, h, model)
                 out = np.vstack((out, matches))
             except Exception as e:
                 print "no matches in the selected roi"
@@ -663,7 +681,7 @@ def local_translation(r1, r2, x, y, w, h, m):
 
 
 def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
-        first_guess=None):
+        first_guess=None, filter_matches='fundamental'):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -682,6 +700,8 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
         first_guess (optional): correction matrix that will be returned if
             there are not enough sift matches to estimate the actual correction
             matrix.
+        filter_matches (optional, default is 'fundamental'): model imposed by
+            RANSAC when searching the set of inliers
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to img2 in
@@ -698,10 +718,12 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
 
     try:
         if w*h < 2e6:
-            m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h)
+            m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h,
+                    filter_matches)
         else:
             m = filtered_sift_matches_full_img(img1, img2, r1, r2,
-                cfg['pointing_correction_rois_mode'], None, 1000, x, y, w, h)
+                    cfg['pointing_correction_rois_mode'], None, 1000, x, y, w,
+                    h, filter_matches)
     except Exception as e:
         print e
         print """pointing_accuracy.compute_correction: no sift matches.
