@@ -8,7 +8,7 @@ CV_IMGPROC_OBJS = filter.o smooth.o tables_imgproc.o utils.o
 all: sgbm
 
 sgbm: sgbm.cpp stereosgbm.cpp libiio.a libcv_core.a libcv_imgproc.a
-		$(CXX) -o sgbm -static sgbm.cpp stereosgbm.cpp -L. -liio -lcv_core -lcv_imgproc -lpng -ltiff -ljpeg -lz
+		$(CXX) -o sgbm sgbm.cpp stereosgbm.cpp -L. -liio -lcv_core -lcv_imgproc -lpng -ltiff -ljpeg -lz
 libiio.a: iio.o
 		ar rcs libiio.a iio.o
 libcv_core.a: $(CV_CORE_OBJS)
@@ -18,7 +18,7 @@ libcv_imgproc.a: $(CV_IMGPROC_OBJS)
 .cpp.o:
 		$(CXX) $(CPPFLAGS) -c $< -I.
 iio.o:
-		$(CC) $(CFLAGS) -c iio.c -o iio.o
+		$(CC) $(CFLAGS) -c iio.c -o iio.o -Wno-deprecated-declarations
 clean:
 		rm *.o
 		rm *.a
