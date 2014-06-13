@@ -24,6 +24,11 @@ msmw:
 	cp ../bin/msmw_build/libstereo/iip_stereo_correlation_multi_win2 $(BINDIR)
 
 sgbm:
+	cd ../3rdparty/sgbm; make
+	cp ../3rdparty/sgbm/sgbm $(BINDIR)
+	cp ../3rdparty/sgbm/call_sgbm.sh $(BINDIR)
+
+sgbm_opencv:
 	mkdir -p ../bin/sgbm_build
 	cd ../bin/sgbm_build; cmake -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; make
 	cp ../bin/sgbm_build/sgbm2 $(BINDIR)
