@@ -41,16 +41,28 @@ static void get_rminmax(float *rmin, float *rmax, float *x, int n)
 	free(tx);
 }
 
-uint8_t *qauto(float *x, int w, int h, int pd)
+uint8_t *qauto(float *x, int w, int h, int pd, float *rmin, float *rmax)
 {
-	float rmin, rmax;
-	get_rminmax(&rmin, &rmax, x, w*h*pd);
-	fprintf(stderr, "qauto: rminmax = %g %g\n", rmin, rmax);
+	get_rminmax(rmin, rmax, x, w*h*pd);
+	fprintf(stderr, "qauto: rminmax = %g %g\n", *rmin, *rmax);
 
 	uint8_t *y = (uint8_t *) malloc(w*h*pd);
 	for (int i = 0; i < w*h*pd; i++) {
 		float g = x[i];
-		g = floor(255 * (g - rmin)/(rmax - rmin));
+		g = floor(255 * (g - *rmin)/(*rmax - *rmin));
+		if (g < 0) g = 0;
+		if (g > 255) g = 255;
+		y[i] = g;
+	}
+    return y;
+}
+
+uint8_t *qeasy(float *x, int w, int h, int pd, float black, float white)
+{
+	uint8_t *y = (uint8_t *) malloc(w*h*pd);
+	for (int i = 0; i < w*h*pd; i++) {
+		float g = x[i];
+		g = floor(255 * (g - black)/(white - black));
 		if (g < 0) g = 0;
 		if (g > 255) g = 255;
 		y[i] = g;
@@ -137,9 +149,12 @@ int main(int c, char** v)
     float *im1 = iio_read_image_float(v[1], &w, &h);
     float *im2 = iio_read_image_float(v[2], &w, &h);
 
+    // requantize the images on 8 bits, with the same thresholds
+    float rmin, rmax;
+    uint8_t *im1_quantized = qauto(im1, w, h, 1, &rmin, &rmax);
+    uint8_t *im2_quantized = qeasy(im2, w, h, 1, rmin, rmax);
+
     // convert the input images into Mat objects
-    uint8_t *im1_quantized = qauto(im1, w, h, 1);
-    uint8_t *im2_quantized = qauto(im2, w, h, 1);
     Mat u1(h, w, CV_8UC1, (void *) im1_quantized);
     Mat u2(h, w, CV_8UC1, (void *) im2_quantized);
 
