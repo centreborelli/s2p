@@ -26,7 +26,7 @@ from python import tile_composer
 from python import fusion
 from python.config import cfg
 
-def is_tile_masked(x, y, w, h, rpc, roi_gml=None):
+def is_tile_masked(x, y, w, h, rpc, roi_gml=None, cld_gml=None):
     """
     Checks wether a given tile is masked by water or by the roi mask.
 
@@ -38,6 +38,8 @@ def is_tile_masked(x, y, w, h, rpc, roi_gml=None):
             reference image
         roi_gml (optional, default None): path to a gml file containing a mask
             defining the area contained in the full image.
+        cld_gml (optional, default None): path to a gml file containing a mask
+            defining the areas covered by clouds.
     """
     # coefficients of the homography (actually it's only a translation)
     # from full image coordinates to tile
@@ -48,17 +50,32 @@ def is_tile_masked(x, y, w, h, rpc, roi_gml=None):
         roi_msk = common.tmpfile('.png')
         common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, roi_gml,
             roi_msk))
+
+        # if we are already out, return
         if common.is_image_black(roi_msk):
             return True
+
+    # compute the cloud mask
+    if cld_gml is not None:
+        cld_msk = common.tmpfile('.png')
+        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, cld_gml,
+            cld_msk))
+        # cld msk has to be inverted.
+        # TODO: add flag to the cldmask binary, to avoid using read/write the
+        # msk one more time for this
+        common.run('plambda %s "255 x -" -o %s' % (cld_msk, cld_msk))
 
     # compute the water mask
     water_msk = common.tmpfile('.png')
     hij = '1 0 %d 0 1 %d 0 0 1' % (-x, -y)
     common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc, water_msk))
 
-    # compute the intersection between the 2 masks
+    # compute the intersection between the 3 masks
     if roi_gml is not None:
         common.run('plambda %s %s "x y 255 / *" -o %s' % (water_msk, roi_msk,
+            water_msk))
+    if cld_gml is not None:
+        common.run('plambda %s %s "x y 255 / *" -o %s' % (water_msk, cld_msk,
             water_msk))
 
     return common.is_image_black(water_msk)
@@ -140,7 +157,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         h = z * np.ceil(h / z)
 
     ## check if the ROI is completely masked (water, or outside the image domain)
-    if is_tile_masked(x, y, w, h, rpc1, roi_msk):
+    if is_tile_masked(x, y, w, h, rpc1, roi_msk, cld_msk):
         print "Tile masked by water or outside definition domain, skip"
         open("%s/pointing.txt" % out_dir, 'a').close() # don't retry this tile
         sys.stdout = sys.__stdout__
