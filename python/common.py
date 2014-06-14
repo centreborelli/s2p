@@ -735,3 +735,17 @@ def get_roi_coordinates(img, preview):
     w = int(w*nc/nc_preview)
     h = int(h*nr/nr_preview)
     return x, y, w, h
+
+
+def is_image_black(img):
+    """
+    Returns True if all the pixels of the image are 0.
+    """
+    try:
+        with open(img):
+            p = subprocess.Popen(['imprintf', '%e\n', img], stdout=subprocess.PIPE)
+            out = p.stdout.readline()
+            return (out == '0\n')
+    except IOError:
+        print "is_image_black: the input file %s doesn't exist" % str(im)
+        sys.exit()
