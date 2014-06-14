@@ -19,7 +19,7 @@ cfg['disp_range_extra_margin'] = 0.2
 cfg['n_gcp_per_axis'] = 5
 cfg['epipolar_thresh'] = 0.5
 
-# matching algorithm: 'tvl1', 'msmw', 'hirschmuller08', hirschmuller08_laplacian'
+# matching algorithm: 'tvl1', 'msmw', 'hirschmuller08', hirschmuller08_laplacian', 'sgbm'
 cfg['matching_algorithm'] = 'hirschmuller08'
 
 cfg['pointing_correction_rois_mode'] = 'automatic'

@@ -21,6 +21,9 @@ hirschmuller08_laplacian = '%s/../bin/callSGBM_lap.sh' % (
 hirschmuller08_cauchy = '%s/../bin/callSGBM_cauchy.sh' % (
     os.path.dirname(os.path.abspath(__file__)))
 
+sgbm = '%s/../bin/call_sgbm.sh' % (
+    os.path.dirname(os.path.abspath(__file__)))
+
 msmw = '%s/../bin/iip_stereo_correlation_multi_win2' % (
     os.path.dirname(os.path.abspath(__file__)))
 
@@ -36,7 +39,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         out_disp: path to the output diparity map
         out_mask: path to the output rejection mask
         algo: string used to indicate the desired binary. Currently it can be
-            one among 'hirschmuller02', 'hirschmuller08', 'hirschmuller08_laplacian', 'hirschmuller08_cauchy', and 'msmw'
+            one among 'hirschmuller02', 'hirschmuller08', 'hirschmuller08_laplacian', 'hirschmuller08_cauchy', 'sgbm', and 'msmw'
         disp_min : smallest disparity to consider
         disp_max : biggest disparity to consider
         extra_params: optional string with algorithm-dependent parameters
@@ -76,6 +79,11 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         #    regionRadius: radius of the window
         #    P1, P2 : regularization parameters
         #    LRdiff: maximum difference between left and right disparity maps
+
+    if (algo == 'sgbm'):
+        bm_binary = sgbm
+        common.run("%s %s %s %s %s %d %d %s" %(bm_binary, im1, im2, out_disp,
+            out_mask, disp_min, disp_max, extra_params))
 
     if (algo == 'tvl1'):
         bm_binary = tvl1
