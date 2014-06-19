@@ -177,7 +177,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     # The resulting transformation is the composition of:
     #   translation (-1 - x/4, -y/4)
     #   zoom 4/z
-    w, h = common.image_size_tiff(crop_panchro)
+    w, h = common.image_size_tiffinfo(crop_panchro)
     xx = np.floor(x / 4.0) + 1
     yy = np.floor(y / 4.0)
     ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
@@ -191,7 +191,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     x0 = x - 4*xx
     y0 = y - 4*yy
     crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
-    assert(common.image_size_tiff(crop_panchro) == common.image_size_tiff(crop_ms))
+    assert(common.image_size_tiffinfo(crop_panchro) == common.image_size_tiffinfo(crop_ms))
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
