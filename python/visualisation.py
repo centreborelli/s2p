@@ -61,6 +61,12 @@ def plot_matches(im1, im2, matches):
     img1 = piio.read(im1)
     img2 = piio.read(im2)
 
+    # if images have more than 3 channels, keep only the first 3
+    if img1.shape[2] > 3:
+        img1 = img1[:, :, 0:3]
+    if img2.shape[2] > 3:
+        img2 = img2[:, :, 0:3]
+
     # build the output image
     h1, w1 = img1.shape[:2]
     h2, w2 = img2.shape[:2]
