@@ -392,7 +392,8 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
     xx, yy = find_corresponding_point(rpc1, rpc2, a, b, c)[0:2]
 
     # return coordinates of the bounding box in im2
-    return common.bounding_box2D(np.vstack([xx, yy]).T)
+    out = common.bounding_box2D(np.vstack([xx, yy]).T)
+    return np.round(out)
 
 
 def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
