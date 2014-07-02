@@ -85,11 +85,13 @@ int main(int c, char *v[])
         if (normals)
             fread(N, sizeof(float), 3, f);
         fread(C, sizeof(unsigned char), 3, f);
-        printf("%.10f %.10f %.10f ", X[0], X[1], X[2]);
+        printf("%.10f %.10f %.10f", X[0], X[1], X[2]);
         if (normals & !strip_n)
-            printf("%.1f %.1f %.1f ", N[0], N[1], N[2]);
+            printf(" %.1f %.1f %.1f", N[0], N[1], N[2]);
         if (!strip_c)
-            printf("%d %d %d\n", C[0], C[1], C[2]);
+            printf(" %d %d %d\n", C[0], C[1], C[2]);
+        else
+            printf("\n");
     }
 
     fclose(f);
