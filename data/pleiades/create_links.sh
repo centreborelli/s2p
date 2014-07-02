@@ -15,7 +15,8 @@ function create_links ()
             # image
             link_name=`printf im%02d$suffix.tif $i`
             ln -sf $image $dataset/$link_name
-            # preview
+            # preview - the wildcard '*' does the job if we assume there is
+            # ONLY ONE image per folder
             abs_path=`dirname $image`/PREVIEW_*.JPG
             link_name=`printf prev%02d$suffix.jpg $i`
             cp $abs_path $dataset/
