@@ -1,9 +1,9 @@
 # S2P - Satellite Stereo Pipeline
 
 This code implements a stereo pipeline which produces elevation models from
-images taken by high resolution satellites such as Pléiades, WorldView and
-QuickBird. It generates automatically digital elevation models from stereo
-pairs (two images) or tri-stereo sets (three images).
+images taken by high resolution optical satellites such as Pléiades, Worldiew
+QuickBird, Spot or Ikonos. It generates automatically digital elevation models
+from stereo pairs (two images) or tri-stereo sets (three images).
 
 The main language is Python, although several operations are handled by
 binaries written in C.
@@ -28,8 +28,8 @@ in the json file. See the provided `config.json.example` file for an example.
 
 The processed Region of interest (ROI) is defined by the image coordinates (x,
 y) of its top-left corner, and its dimensions (w, h) in pixels. These four
-numbers must be given in the config.json file (as in the example). They can be
-omitted if the parameter `'full_img'` is set to `true`. In that case the full
+numbers must be given in the config.json file (as in the example). They are
+ignored if the parameter `'full_img'` is set to `true`. In that case the full
 image will be processed. If neither the ROI definition or the `'full_img'` flag
 are present in the config file, then a preview of the reference image must be
 provided. The ROI will be selected interactively on that preview. The path of
@@ -56,18 +56,34 @@ See the docstrings of the functions `process_pair`, `process_triplet` and
 All the python modules are located in the `python` folder. Some python
 functions of these modules rely on external binaries. Most of these binaries
 were written on purpose for the needs of the pipeline, and their source code is
-provided here in the `c` folder.
+provided here in the `c` folder. For the other binaries, the source code is
+provided in the `3rdparty` folder.
 
-### S2P binaries
+All the sources (ours and 3rdparties) are compiled from the same makefile. Just
+run `make` from the `s2p` folder to compile them.  This will create a `bin`
+directory containing all the needed binaries.
 
-The source code is in the `c` folder. To compile it:
+## Dependencies
 
-    cd c
-    make
+### GDAL >= 1.10
 
-This will create a `bin` directory containing all the s2p binaries.
+    cd 3rdparty
+    wget http://download.osgeo.org/gdal/1.10.1/gdal-1.10.1.tar.gz
+    tar xzf gdal-1.10.1.tar.gz
+    cd gdal-1.10.1
+    ./configure --prefix=$HOME/local
+    make install
 
-### 3rd party binaries
+### piio
+
+    cd 3rdparty
+    git clone https://github.com/carlodef/iio.git
+    cd piio_packaged
+    python setup.py install --prefix=~/local
+    export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
+
+
+### Old dependencies. Not required anymore
 
 A few other binaries are 3rd party. Their source code is located in the
 `3rdparty` directory. You must compile and install them before launching the
@@ -93,15 +109,6 @@ geoids data files by running the following script, which has been configured by
 cmake:
 
     ~/local/sbin/geographiclib-get-geoids
-
-#### GDAL >= 1.10
-
-    cd 3rdparty
-    wget http://download.osgeo.org/gdal/1.10.1/gdal-1.10.1.tar.gz
-    tar xzf gdal-1.10.1.tar.gz
-    cd gdal-1.10.1
-    ./configure --prefix=$HOME/local
-    make install
 
 #### Sift
 
@@ -135,14 +142,6 @@ Now you can compile the SGBM wrapper:
     cmake -D CMAKE_PREFIX_PATH=~/local ..
     make
 
-#### piio
-
-    cd 3rdparty
-    git clone https://github.com/carlodef/iio.git
-    cd piio_packaged
-    python setup.py install --prefix=~/local
-    export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
-
 #### numpy >= 1.6.1
 
     cd 3rdparty
@@ -153,7 +152,7 @@ Now you can compile the SGBM wrapper:
     python setup.py install --prefix=~/local/
 
 
-### Copy 3rd party binaries into bin
+#### Copy 3rd party binaries into bin
 
 To make the 3rd party binaries available to the s2p system run the following script
 
