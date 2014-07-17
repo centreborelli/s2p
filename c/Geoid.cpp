@@ -7,9 +7,9 @@
  * http://geographiclib.sourceforge.net/
  **********************************************************************/
 
-#include <GeographicLib/Geoid.hpp>
 #include <cstdlib>
-#include <GeographicLib/Utility.hpp>
+#include "GeographicLib/Geoid.hpp"
+#include "GeographicLib/Utility.hpp"
 
 #if !defined(GEOGRAPHICLIB_DATA)
 #  if defined(_MSC_VER)
