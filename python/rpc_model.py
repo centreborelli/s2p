@@ -213,8 +213,11 @@ class RPCModel:
         self.lastLat  = float(vi.find('LAST_LAT').text)
 
         # scale and offset
-        self.linOff   = float(v.find('LINE_OFF').text)
-        self.colOff   = float(v.find('SAMP_OFF').text)
+        # the -1 in line and column offsets is due to Pleiades RPC convention
+        # that states that the top-left pixel of an image has coordinates
+        # (1, 1)
+        self.linOff   = float(v.find('LINE_OFF').text) - 1
+        self.colOff   = float(v.find('SAMP_OFF').text) - 1
         self.latOff   = float(v.find('LAT_OFF').text)
         self.lonOff   = float(v.find('LONG_OFF').text)
         self.altOff   = float(v.find('HEIGHT_OFF').text)

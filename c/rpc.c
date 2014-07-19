@@ -199,6 +199,12 @@ void read_rpc_file_xml_pleiades(struct rpc *p, char *filename)
 		}
 	}
 	xfclose(f);
+
+    // pleiades rpcs use the convention that the top-left pixel is (1, 1) our
+    // convention is that the top left pixel is (0, 0). Thus here the line and
+    // columns offsets are decreased by one.
+    p->offset[0] -= 1;
+    p->offset[1] -= 1;
 	p->ioffset[2] = p->offset[2];
 	p->iscale[2] = p->scale[2];
 }
