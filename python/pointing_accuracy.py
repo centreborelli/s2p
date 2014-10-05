@@ -1,6 +1,7 @@
+#!/usr/bin/env python
+
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
-#!/usr/bin/env python
 
 import os
 import numpy as np
@@ -15,16 +16,16 @@ from config import cfg
 
 
 def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
-        matches=None):
+                         matches=None):
     """
     Measures the maximal pointing error on a Pleiades' pair of images.
 
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers defining the rectangular ROI in the first image.
-            (x, y) is the top-left corner, and (w, h) are the dimensions of the
-            rectangle.
+        x, y, w, h: four integers defining the rectangular ROI in the first
+            image.  (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2.
         matches (optional): Nx4 numpy array containing a list of matches to use
@@ -50,8 +51,8 @@ def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
     x2 = p2[:, 0]
     y2 = p2[:, 1]
     e = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)[1]
-#    matches = matches[e < 0.1, :]
-#    visualisation.plot_matches_pleiades(im1, im2, matches)
+    # matches = matches[e < 0.1, :]
+    # visualisation.plot_matches_pleiades(im1, im2, matches)
     print "max, mean, min pointing error, from %d points:" % (len(matches))
     print np.max(e), np.mean(e), np.min(e)
 
@@ -104,7 +105,6 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         d = evaluation.distance_point_to_line(xx, ll)
         d_sum += d
     return d_sum/len(p1)
-
 
 
 def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h,
@@ -431,6 +431,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
             np.savetxt(outfile, out[1:, :])
         return out[1:, :]
 
+
 def query_rois_save_to_file(im, n=5):
     """
     Save coordinates of the ROIs to use for pointing correction of a dataset.
@@ -455,6 +456,7 @@ def query_rois_save_to_file(im, n=5):
 
     np.savetxt(filename, out, '%d')
 
+
 def query_rois_all_datasets(data):
     """
     Run the query_rois_save_to_file function on all the datasets found in data.
@@ -468,6 +470,7 @@ def query_rois_all_datasets(data):
     """
     for f in os.listdir(data):
         query_rois_save_to_file(os.path.join(data, f))
+
 
 def save_sift_matches_all_datasets(data):
     """
@@ -508,6 +511,7 @@ def print_params(v):
     print 'rotation: %.3e, translation: (%.3e, %.3e), horizontal shear: %.3e' %(v[0],
         v[1], v[2], v[3])
 
+
 def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     """
     Runs the pointing correction on a pair of Pleiades images.
@@ -527,13 +531,14 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     """
 
     if matches is None:
-        matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2,
-            'load', prev1)
+        matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, 'load',
+                                                 prev1)
 
-#    # Don't use too many matches to keep the evaluation time of 'cost_function' reasonable
-#    if len(matches) > 1000:
-#        ind = np.linspace(0, len(matches), 1000, False)
-#        matches = matches[ind.astype(int), :]
+    # Don't use too many matches to keep the evaluation time of 'cost_function'
+    # reasonable
+    # if len(matches) > 1000:
+    #     ind = np.linspace(0, len(matches), 1000, False)
+    #     matches = matches[ind.astype(int), :]
 
     from scipy.optimize import fmin_l_bfgs_b
     print "running optimization using %d matches" % len(matches)
@@ -771,8 +776,9 @@ def from_next_tiles(tiles, ntx, nty, col, row):
     Returns:
         the estimated pointing correction for the specified tile
     """
-    #TODO
+    # TODO
     return np.eye(3)
+
 
 def global_from_local(tiles):
     """
