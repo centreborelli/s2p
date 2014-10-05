@@ -4,6 +4,7 @@
 import numpy as np
 import common
 
+
 def normalize_2d_points(pts):
     """
     Translates and scales 2D points.
@@ -42,9 +43,9 @@ def normalize_2d_points(pts):
 
     T = np.eye(3)
     T[0, 0] = s
-    T[1, 1] = s         #              s     0   -s*cx
-    T[0, 2] = -s*cx     # matrix T  =  0     s   -s*cy
-    T[1, 2] = -s*cy     #              0     0     1
+    T[1, 1] = s         # matrix T           s     0   -s*cx
+    T[0, 2] = -s*cx     # is given     T  =  0     s   -s*cy
+    T[1, 2] = -s*cy     # by                 0     0     1
 
     return np.vstack([new_x, new_y]).T, T
 
@@ -83,10 +84,10 @@ def normalize_3d_points(pts):
 
     U = np.eye(4)
     U[0, 0] = s
-    U[1, 1] = s         #              s     0      0    -s*cx
-    U[2, 2] = s         #              0     s      0    -s*cy
-    U[0, 3] = -s*cx     # matrix U  =  0     0      s    -s*cz
-    U[1, 3] = -s*cy     #              0     0      0      1
+    U[1, 1] = s         # matrix U             s     0      0    -s*cx
+    U[2, 2] = s         # is given             0     s      0    -s*cy
+    U[0, 3] = -s*cx     # by this        U  =  0     0      s    -s*cz
+    U[1, 3] = -s*cy     # formula              0     0      0      1
     U[2, 3] = -s*cz
 
     return np.vstack([new_x, new_y, new_z]).T, U
@@ -123,9 +124,9 @@ def camera_matrix(X, x):
 
     A = np.zeros((len(x)*2, 12))
     for i in xrange(len(x)):
-        A[2*i+0, 4:8]  =       -1*np.array([X[i, 0], X[i, 1], X[i, 2], 1])
-        A[2*i+0, 8:12] =  x[i, 1]*np.array([X[i, 0], X[i, 1], X[i, 2], 1])
-        A[2*i+1, 0:4]  =          np.array([X[i, 0], X[i, 1], X[i, 2], 1])
+        A[2*i+0, 4:8] = -1*np.array([X[i, 0], X[i, 1], X[i, 2], 1])
+        A[2*i+0, 8:12] = x[i, 1]*np.array([X[i, 0], X[i, 1], X[i, 2], 1])
+        A[2*i+1, 0:4] = np.array([X[i, 0], X[i, 1], X[i, 2], 1])
         A[2*i+1, 8:12] = -x[i, 0]*np.array([X[i, 0], X[i, 1], X[i, 2], 1])
 
     # the vector P we are looking for minimizes the norm of A*P, and satisfies
@@ -164,9 +165,9 @@ def fundamental_matrix(matches):
     # build the matrix, given by eq 11.3 (p279) in Hartley & Zisserman
     A = np.zeros((len(matches), 9))
     for i in xrange(len(matches)):
-        A[i, 0:3] = pts2[i, 0] * np.array([pts1[i, 0], pts1[i, 1], 1])
-        A[i, 3:6] = pts2[i, 1] * np.array([pts1[i, 0], pts1[i, 1], 1])
-        A[i, 6:9] =              np.array([pts1[i, 0], pts1[i, 1], 1])
+        A[i, 0:3] = np.array([pts1[i, 0], pts1[i, 1], 1]) * pts2[i, 0]
+        A[i, 3:6] = np.array([pts1[i, 0], pts1[i, 1], 1]) * pts2[i, 1]
+        A[i, 6:9] = np.array([pts1[i, 0], pts1[i, 1], 1])
 
     # the vector F we are looking for minimizes the norm of A*F, and satisfies
     # the constraint \norm{F}=1 (to avoid the trivial solution F=0). This
@@ -217,7 +218,7 @@ def fundamental_matrix_ransac(matches, precision=1.0):
         grep parameters |
         awk \'{ print "[ " $3 " " $4 " " $5 " ; " $6 " " $7 " " $8 " ; " $9 " " $10 " " $11 " ] " }\' |
         tail -1 > %s
-        """ % (precision, inliers, matchfile, Ffile) )
+        """ % (precision, inliers, matchfile, Ffile))
     common.matrix_write(Ffile, (common.matrix_read(Ffile, 3, 3)).transpose())
     return common.matrix_read(Ffile, 3, 3)
 
@@ -233,12 +234,12 @@ def fundamental_matrix_cameras(P1, P2):
         the computed fundamental matrix, given by the formula 17.3 (p. 412) in
         Hartley & Zisserman book (2nd ed.).
     """
-    X0 = P1[[1, 2], :];
-    X1 = P1[[2, 0], :];
-    X2 = P1[[0, 1], :];
-    Y0 = P2[[1, 2], :];
-    Y1 = P2[[2, 0], :];
-    Y2 = P2[[0, 1], :];
+    X0 = P1[[1, 2], :]
+    X1 = P1[[2, 0], :]
+    X2 = P1[[0, 1], :]
+    Y0 = P2[[1, 2], :]
+    Y1 = P2[[2, 0], :]
+    Y2 = P2[[0, 1], :]
 
     F = np.zeros((3, 3))
     F[0, 0] = np.linalg.det(np.vstack([X0, Y0]))
@@ -252,6 +253,7 @@ def fundamental_matrix_cameras(P1, P2):
     F[2, 2] = np.linalg.det(np.vstack([X2, Y2]))
 
     return F
+
 
 def loop_zhang(F, w, h):
     """
@@ -271,8 +273,9 @@ def loop_zhang(F, w, h):
     Haf = common.tmpfile('.txt')
     Hbf = common.tmpfile('.txt')
     common.matrix_write(Ffile, F)
-    common.run('rectify_mindistortion %s %d %d %s %s > /dev/null' %
-                                            (Ffile, w, h, Haf, Hbf))
+    common.run('rectify_mindistortion %s %d %d %s %s > /dev/null' % (Ffile, w,
+                                                                     h, Haf,
+                                                                     Hbf))
     Ha = common.matrix_read(Haf, 3, 3)
     Hb = common.matrix_read(Hbf, 3, 3)
     return Ha, Hb
@@ -303,8 +306,9 @@ def affine_fundamental_matrix(matches):
     # compute the Nx4 matrix A
     A = X - np.tile(XX, (N, 1))
 
-    # the solution is obtained as the singular vector corresponding to the smallest
-    # singular value of matrix A. See Hartley and Zissermann for details.
+    # the solution is obtained as the singular vector corresponding to the
+    # smallest singular value of matrix A. See Hartley and Zissermann for
+    # details.
     # It is the last line of matrix V (because np.linalg.svd returns V^T)
     U, S, V = np.linalg.svd(A)
     N = V[-1, :]
@@ -342,9 +346,9 @@ def affine_transformation(x, xx):
         return np.eye(3)
 
     # translate the input points so that the centroid is at the origin.
-    t  = -np.mean(x,  0)
+    t = -np.mean(x,  0)
     tt = -np.mean(xx, 0)
-    x  = x + t
+    x = x + t
     xx = xx + tt
 
     # compute the Nx4 matrix A
