@@ -2,7 +2,7 @@
 
 if [ "$3" == "" ]; then
    echo "Usage:"
-   echo "  $0 im1 im2 out_disp out_mask mindisp maxdisp win P1 P2 lr"
+   echo "  $0 im1 im2 out_disp out_cost out_mask mindisp maxdisp win P1 P2 lr"
    echo ""
    echo "  win: matched block size. It must be an odd number >=1."
    echo "  P1: The first parameter controlling the disparity smoothness."
@@ -23,17 +23,18 @@ fi
 a=$1
 b=$2
 disp=$3
-mask=$4
-im=$5
-iM=$6
-SAD_win=$7
-P1=$8
-P2=$9
-lr=${10}
+cost=$4
+mask=$5
+im=$6
+iM=$7
+SAD_win=$8
+P1=$9
+P2=${10}
+lr=${11}
 
 # run sgbm
-echo "sgbm $a $b $disp $im $iM $SAD_win $P1 $P2 $lr"
-sgbm $a $b $disp $im $iM $SAD_win $P1 $P2 $lr
+echo "sgbm $a $b $disp $cost $im $iM $SAD_win $P1 $P2 $lr"
+sgbm $a $b $disp $cost $im $iM $SAD_win $P1 $P2 $lr
 
 # create rejection mask. 0 means the pixel is rejected, 255 means the pixel is accepted.
 # the points are either unmatched or not present in the original images $1/$2, we remove these points
