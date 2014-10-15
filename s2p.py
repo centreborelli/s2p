@@ -26,6 +26,7 @@ from python import tile_composer
 from python import fusion
 from python.config import cfg
 
+
 def is_tile_masked(x, y, w, h, rpc, roi_gml=None, cld_gml=None):
     """
     Checks wether a given tile is masked by water or by the roi mask.
@@ -49,7 +50,7 @@ def is_tile_masked(x, y, w, h, rpc, roi_gml=None, cld_gml=None):
     if roi_gml is not None:
         roi_msk = common.tmpfile('.png')
         common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, roi_gml,
-            roi_msk))
+                                                    roi_msk))
 
         # if we are already out, return
         if common.is_image_black(roi_msk):
@@ -59,7 +60,7 @@ def is_tile_masked(x, y, w, h, rpc, roi_gml=None, cld_gml=None):
     if cld_gml is not None:
         cld_msk = common.tmpfile('.png')
         common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, cld_gml,
-            cld_msk))
+                                                    cld_msk))
         # cld msk has to be inverted.
         # TODO: add flag to the cldmask binary, to avoid using read/write the
         # msk one more time for this
@@ -73,16 +74,17 @@ def is_tile_masked(x, y, w, h, rpc, roi_gml=None, cld_gml=None):
     # compute the intersection between the 3 masks
     if roi_gml is not None:
         common.run('plambda %s %s "x y 255 / *" -o %s' % (water_msk, roi_msk,
-            water_msk))
+                                                          water_msk))
     if cld_gml is not None:
         common.run('plambda %s %s "x y 255 / *" -o %s' % (water_msk, cld_msk,
-            water_msk))
+                                                          water_msk))
 
     return common.is_image_black(water_msk)
 
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-        w=None, h=None, prv1=None, cld_msk=None, roi_msk=None, A=None):
+                             w=None, h=None, prv1=None, cld_msk=None,
+                             roi_msk=None, A=None):
     """
     Computes a disparity map from a Pair of Pleiades images, without tiling
 
@@ -113,8 +115,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
     rect2 = '%s/rectified_sec.tif' % (out_dir)
-    disp    = '%s/rectified_disp.tif'   % (out_dir)
-    mask    = '%s/rectified_mask.png'   % (out_dir)
+    disp = '%s/rectified_disp.tif' % (out_dir)
+    mask = '%s/rectified_mask.png' % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
     center = '%s/center_keypts_sec.txt' % out_dir
@@ -131,15 +133,15 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'w', 0) # '0' is for no buffering
+        fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
         sys.stdout = fout
         sys.stderr = fout
 
     # debug print
-    print 'tile %d %d running on process %s' % (x, y,
-            multiprocessing.current_process())
+    print 'tile %d %d running on process %s' % (
+        x, y, multiprocessing.current_process())
 
-    ## select ROI
+    # select ROI
     try:
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
     except TypeError:
@@ -156,47 +158,51 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         w = z * np.ceil(w / z)
         h = z * np.ceil(h / z)
 
-    ## check if the ROI is completely masked (water, or outside the image domain)
+    # check if the ROI is completely masked (water, or outside the image domain)
     if is_tile_masked(x, y, w, h, rpc1, roi_msk, cld_msk):
         print "Tile masked by water or outside definition domain, skip"
-        open("%s/pointing.txt" % out_dir, 'a').close() # don't retry this tile
+        open("%s/pointing.txt" % out_dir, 'a').close()  # don't retry this tile
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        if cfg['debug']: fout.close()
+        if cfg['debug']:
+            fout.close()
         return
 
-    ## correct pointing error
+    # correct pointing error
     # A is the correction matrix and m is the list of sift matches
     if A is None:
         A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
-            y, w, h)
+                                                    y, w, h)
         np.savetxt(pointing, A)
         np.savetxt(sift_matches, m)
         np.savetxt(center, np.mean(m[:, 2:4], 0))
         visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y, w,
-                h, sift_matches_plot)
+                                            h, sift_matches_plot)
     else:
         m = None
 
-    ## rectification
+    # rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
-            rpc2, x, y, w, h, rect1, rect2, A, m)
+                                                            rpc2, x, y, w, h,
+                                                            rect1, rect2, A, m)
 
-    ## block-matching
+    # block-matching
     if cfg['disp_min'] is not None: disp_min = cfg['disp_min']
     if cfg['disp_max'] is not None: disp_max = cfg['disp_max']
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        cfg['matching_algorithm'], disp_min, disp_max)
+                                         cfg['matching_algorithm'], disp_min,
+                                         disp_max)
 
-    ## update mask with water mask, cloud mask and roi mask
+    # update mask with water mask, cloud mask and roi mask
     if cfg['build_additional_masks']:
-    	triangulation.update_mask(mask, H1, rpc1, False, None, True)
-    	if cld_msk is not None:
-        	triangulation.update_mask(mask, H1, cld_msk, True)
-    	if roi_msk is not None:
-        	triangulation.update_mask(mask, H1, roi_msk, False, cfg['msk_erosion'])
+        triangulation.update_mask(mask, H1, rpc1, False, None, True)
+        if cld_msk is not None:
+            triangulation.update_mask(mask, H1, cld_msk, True)
+        if roi_msk is not None:
+            triangulation.update_mask(mask, H1, roi_msk, False,
+                                      cfg['msk_erosion'])
 
-    ## save the subsampling factor, the rectifying homographies and the
+    # save the subsampling factor, the rectifying homographies and the
     # disparity bounds.
     # ATTENTION if subsampling_factor is > 1 the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
@@ -206,7 +212,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     np.savetxt(H_sec, H2)
     np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
 
-    ## save json file with all the parameters needed to reproduce this tile
+    # save json file with all the parameters needed to reproduce this tile
     tile_cfg = copy.deepcopy(cfg)
     tile_cfg['roi']['x'] = x
     tile_cfg['roi']['y'] = y
@@ -226,8 +232,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
 
 def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
-        y=None, w=None, h=None, prv1=None, cld_msk=None,
-        roi_msk=None):
+                                  y=None, w=None, h=None, prv1=None,
+                                  cld_msk=None, roi_msk=None):
     """
     Safe call to process_pair_single_tile (all exceptions will be
     caught). Arguments are the same. This safe version is used when
@@ -237,10 +243,9 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     Returns:
     path to the height map, resampled on the grid of the reference image
     """
-    dem = ""
     try:
-        process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y,
-            w, h, prv1, cld_msk, roi_msk)
+        process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y, w, h,
+                                 prv1, cld_msk, roi_msk)
     # Catch all possible exceptions here
     except:
         sys.stdout = sys.__stdout__
@@ -249,11 +254,12 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
         print sys.exc_info()
         return
 
-    print "Tile %i %i %i %i generated." %(x,y,w,h)
+    print "Tile %i %i %i %i generated." % (x, y, w, h)
     return
 
+
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
-        ov=None, cld_msk=None, roi_msk=None):
+                 ov=None, cld_msk=None, roi_msk=None):
     """
     Computes a height map from a Pair of Pleiades images, using tiles.
 
@@ -305,15 +311,15 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             tw = w
         else:
             tw = z * cfg['tile_size']
-            #TODO: modify tiles size to be close do a divisor of w
-            #while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
+            # TODO: modify tiles size to be close do a divisor of w
+            # while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
             #    tw += 1
         if h <= z * cfg['tile_size']:
             th = h
         else:
             th = z * cfg['tile_size']
-            #TODO: modify tiles size to be close do a divisor of h
-            #hhile (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
+            # TODO: modify tiles size to be close do a divisor of h
+            # while (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
             #    th += 1
     ntx = np.ceil(float(w - ov) / (tw - ov))
     nty = np.ceil(float(h - ov) / (th - ov))
@@ -339,11 +345,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             tiles.append(tile_dir)
             if cfg['debug']:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
-                        row, tw, th, None, cld_msk, roi_msk)
+                                         row, tw, th, None, cld_msk, roi_msk)
             else:
                 pool.apply_async(safe_process_pair_single_tile, args=(tile_dir,
-                    img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk,
-                    roi_msk))
+                                                                      img1,
+                                                                      rpc1,
+                                                                      img2,
+                                                                      rpc2, col,
+                                                                      row, tw,
+                                                                      th, None,
+                                                                      cld_msk,
+                                                                      roi_msk))
 
     # wait for all the processes to terminate
     pool.close()
@@ -362,13 +374,13 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                 # the disparity map computation
                 A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
-                        row, tw, th, None, cld_msk, roi_msk, A)
+                                         row, tw, th, None, cld_msk, roi_msk, A)
 
     # compute global pointing correction
     A = pointing_accuracy.global_from_local(tiles)
     np.savetxt('%s/pointing.txt' % out_dir, A)
 
-    ## triangulation
+    # triangulation
     pool = multiprocessing.Pool(max_processes)
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
@@ -381,15 +393,18 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             dem = '%s/dem.tif' % tile
             if cfg['debug']:
                 triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
-                        H1, H2, disp, mask, rpc_err, A)
+                                          H1, H2, disp, mask, rpc_err, A)
             else:
-                pool.apply_async(triangulation.compute_dem, args=(dem, col,
-                    row, tw, th, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
-                    A))
+                pool.apply_async(triangulation.compute_dem, args=(dem, col, row,
+                                                                  tw, th, z,
+                                                                  rpc1, rpc2,
+                                                                  H1, H2, disp,
+                                                                  mask, rpc_err,
+                                                                  A))
     pool.close()
     pool.join()
 
-    ## tiles composition
+    # tiles composition
     out = '%s/dem.tif' % out_dir
     tmp = ['%s/dem.tif' % t for t in tiles]
     if not os.path.isfile(out) or not cfg['skip_existing']:
@@ -407,9 +422,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     return out
 
 
-def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
-        y=None, w=None, h=None, thresh=3, tile_w=None, tile_h=None,
-        overlap=None, prv1=None, cld_msk=None, roi_msk=None):
+def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
+                    w=None, h=None, thresh=3, tile_w=None, tile_h=None,
+                    overlap=None, prv1=None, cld_msk=None, roi_msk=None):
     """
     Computes a height map from three Pleiades images.
 
@@ -456,11 +471,11 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
     dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-            tile_w, tile_h, overlap, cld_msk, roi_msk)
+                            tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     out_dir_right = '%s/right' % out_dir
     dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-            tile_w, tile_h, overlap, cld_msk, roi_msk)
+                             tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     # merge the two digital elevation models
     dem = '%s/dem.tif' % out_dir
@@ -475,7 +490,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None,
 
 
 def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
-        do_offset=False):
+                   do_offset=False):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
@@ -568,7 +583,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             crop_color = common.image_qauto(crop_ref)
 
     triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
-            off_x, off_y)
+                                      off_x, off_y)
 
     # cleanup
     if cfg['clean_tmp']:
@@ -605,13 +620,15 @@ def check_parameters(usr_cfg):
     # verify that roi or path to preview file are defined
     if ('full_img' not in usr_cfg) or (not usr_cfg['full_img']):
         if 'roi' not in usr_cfg or any(p not in usr_cfg['roi'] for p in ['x',
-            'y', 'w', 'h']):
+                                                                         'y',
+                                                                         'w',
+                                                                         'h']):
             if 'prv' not in usr_cfg['images'][0]:
                 print """missing or incomplete roi definition, and no preview
                 file is specified: abort"""
                 sys.exit(1)
 
-    ## warn about unknown optional parameters: these parameters have no default
+    # warn about unknown optional parameters: these parameters have no default
     # value in the global config.cfg dictionary, and thus they are not used
     # anywhere.  They may appear in the usr_cfg because of a typo.
     l = usr_cfg.keys()
@@ -624,25 +641,18 @@ def check_parameters(usr_cfg):
 
     # check
     for k in l:
-        if not k in cfg:
+        if k not in cfg:
             print """parameter %s unknown: you should remove it from the input
             json file. It will be ignored.""" % k
 
 
-if __name__ == '__main__':
+def main(config_file):
+    """
+    Launches s2p with the parameters given by a json file.
 
-    if len(sys.argv) == 2:
-        config_file  = sys.argv[1]
-    else:
-        print """
-        Incorrect syntax, use:
-          > %s config.json
-
-          Launches the s2p pipeline. All the parameters, paths to input and
-          output files, are defined in the json configuration file.
-        """ % sys.argv[0]
-        sys.exit(1)
-
+    Args:
+        config_file: path to the config json file
+    """
     # read the json configuration file
     f = open(config_file)
     user_cfg = json.load(f)
@@ -675,11 +685,11 @@ if __name__ == '__main__':
 
     # check that the roi is well defined
     if 'roi' not in cfg or any(p not in cfg['roi'] for p in ['x', 'y', 'w',
-        'h']):
+                                                             'h']):
         print "missing or incomplete ROI definition"
         print "ROI will be redefined by interactive selection"
         x, y, w, h = common.get_roi_coordinates(cfg['images'][0]['img'],
-                cfg['images'][0]['prv'])
+                                                cfg['images'][0]['prv'])
         cfg['roi'] = {}
         cfg['roi']['x'] = x
         cfg['roi']['y'] = y
@@ -695,23 +705,39 @@ if __name__ == '__main__':
 
     # dem generation
     if len(cfg['images']) == 2:
-        dem = process_pair(cfg['out_dir'],
-            cfg['images'][0]['img'], cfg['images'][0]['rpc'],
-            cfg['images'][1]['img'], cfg['images'][1]['rpc'],
-            cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-            None, None, None, cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+                           cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                           cfg['images'][1]['rpc'], cfg['roi']['x'],
+                           cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                           None, None, None, cfg['images'][0]['cld'],
+                           cfg['images'][0]['roi'])
     else:
-        dem = process_triplet(cfg['out_dir'],
-            cfg['images'][0]['img'], cfg['images'][0]['rpc'],
-            cfg['images'][1]['img'], cfg['images'][1]['rpc'],
-            cfg['images'][2]['img'], cfg['images'][2]['rpc'],
-            cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-            cfg['fusion_thresh'], None, None, None, None,
-            cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+                              cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                              cfg['images'][1]['rpc'], cfg['images'][2]['img'],
+                              cfg['images'][2]['rpc'], cfg['roi']['x'],
+                              cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                              cfg['fusion_thresh'], None, None, None, None,
+                              cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
     # point cloud generation
-    generate_cloud(cfg['out_dir'],
-      cfg['images'][0]['img'], cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
-      cfg['images'][1]['img'], cfg['images'][1]['rpc'],
-      cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-      dem, cfg['offset_ply'])
+    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
+                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
+                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
+                   cfg['roi']['h'], dem, cfg['offset_ply'])
+
+
+if __name__ == '__main__':
+
+    if len(sys.argv) == 2:
+        main(sys.argv[1])
+    else:
+        print """
+        Incorrect syntax, use:
+          > %s config.json
+
+          Launches the s2p pipeline. All the parameters, paths to input and
+          output files, are defined in the json configuration file.
+        """ % sys.argv[0]
+        sys.exit(1)
