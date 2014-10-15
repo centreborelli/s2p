@@ -4,7 +4,6 @@
 #!/usr/bin/env python
 
 import os
-import numpy as np
 import common
 
 
@@ -82,8 +81,9 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
 
     if (algo == 'sgbm'):
         bm_binary = sgbm
-        common.run("%s %s %s %s %s %d %d %s" %(bm_binary, im1, im2, out_disp,
-            out_mask, disp_min, disp_max, extra_params))
+        out_cost = common.tmpfile('tif')
+        common.run("%s %s %s %s %s %s %d %d %s" %(bm_binary, im1, im2, out_disp,
+            out_cost, out_mask, disp_min, disp_max, extra_params))
 
     if (algo == 'tvl1'):
         bm_binary = tvl1
