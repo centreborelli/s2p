@@ -408,16 +408,17 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
     return H1, H2, disp_m, disp_M
 
 
-def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, flag='rpc'):
+def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None,
+                 flag='rpc'):
     """
     Rectify a ROI in a pair of Pleiades images.
 
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: paths to the two xml files containing RPC data
-        x, y, w, h: four integers defining the rectangular ROI in the first image.
-            (x, y) is the top-left corner, and (w, h) are the dimensions of the
-            rectangle.
+        x, y, w, h: four integers defining the rectangular ROI in the first
+            image.  (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
         out1, out2: paths to the output crops
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2. This matrix is usually estimated with the pointing_accuracy
@@ -445,8 +446,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, f
 
     # compute rectifying homographies
     if flag == 'rpc':
-        H1, H2, disp_min, disp_max = compute_rectification_homographies(im1,
-            im2, rpc1, rpc2, x, y, w, h, A, m)
+        H1, H2, disp_min, disp_max = compute_rectification_homographies(
+            im1, im2, rpc1, rpc2, x, y, w, h, A, m)
     else:
         H1, H2, disp_min, disp_max = compute_rectification_homographies_sift(
             im1, im2, rpc1, rpc2, x, y, w, h)
@@ -461,16 +462,18 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None, f
 
     # apply homographies and do the crops
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0,
-            cfg['subsampling_factor'], True)
+                                                 cfg['subsampling_factor'],
+                                                 True)
     homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0,
-            cfg['subsampling_factor'], True)
+                                                 cfg['subsampling_factor'],
+                                                 True)
 
     #  If subsampling_factor'] the homographies are altered to reflect the zoom
     if cfg['subsampling_factor'] != 1:
         from math import floor, ceil
         # update the H1 and H2 to reflect the zoom
-        Z = np.eye(3);
-        Z[0,0] = Z[1,1] = 1.0 / cfg['subsampling_factor']
+        Z = np.eye(3)
+        Z[0, 0] = Z[1, 1] = 1.0 / cfg['subsampling_factor']
 
         H1 = np.dot(Z, H1)
         H2 = np.dot(Z, H2)
