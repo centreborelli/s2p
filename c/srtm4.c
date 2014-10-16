@@ -12,13 +12,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-
-//#define SRTM4_URL_ASC "ftp://xftp.jrc.it/pub/srtmV4/arcasci/srtm_%02d_%02d.zip"
-//#define SRTM4_URL_TIF "ftp://xftp.jrc.it/pub/srtmV4/tiff/srtm_%02d_%02d.zip"
-#define SRTM4_URL_ASC "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/ASCII/srtm_%02d_%02d.zip"
-#define SRTM4_URL_TIF "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/GeoTIFF/srtm_%02d_%02d.zip"
+#define NO_DATA -32768  // this is the standard 'no data' flag in GIS
 #define SRTM4_ASC "%s/srtm_%02d_%02d.asc"
 #define SRTM4_TIF "%s/srtm_%02d_%02d.tif"
+#define SRTM4_URL_TIF "http://138.231.80.250:443/srtm/tiff/srtm_%02d_%02d.zip"
+#define SRTM4_URL_ASC "http://138.231.80.250:443/srtm/asc/srtm_%02d_%02d.zip"
+// #define SRTM4_URL_ASC "ftp://xftp.jrc.it/pub/srtmV4/arcasci/srtm_%02d_%02d.zip"
+// #define SRTM4_URL_TIF "ftp://xftp.jrc.it/pub/srtmV4/tiff/srtm_%02d_%02d.zip"
+// #define SRTM4_URL_ASC "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/ASCII/srtm_%02d_%02d.zip"
+// #define SRTM4_URL_TIF "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/GeoTIFF/srtm_%02d_%02d.zip"
 
 
 // headers
@@ -309,8 +311,10 @@ static float *produce_tile(int tlon, int tlat, bool tif)
 		char *fname = get_tile_filename(tlon, tlat, tif);
 		if (!file_exists(fname))
 			download_tile_file(tlon, tlat, tif);
-		if (!file_exists(fname))
-			return NULL;
+		if (!file_exists(fname)) {
+            fprintf(stderr, "WARNING: this srtm tile is not available\n");
+            return NULL;
+        }
         if (tif) {
             int w, h;
             int16_t *tmp = read_tiff_int16_gray(fname, &w, &h);
@@ -380,13 +384,16 @@ double srtm4(double lon, double lat)
 	if (lat > 60 || lat < -60) {
         fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
                 " between -60 and +60\n");
-        return -32768; // this is the standard 'no data' flag in GIS
+        return NO_DATA; // this is the standard 'no data' flag in GIS
     }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
 	float *t = produce_tile(tlon, tlat, true);
-	return bilinear_interpolation_at(t, 6000, 6000, xlon, xlat);
+    if (t == NULL)
+        return NO_DATA;
+    else
+	    return bilinear_interpolation_at(t, 6000, 6000, xlon, xlat);
 }
 
 double srtm4_nn(double lon, double lat)
@@ -394,13 +401,16 @@ double srtm4_nn(double lon, double lat)
 	if (lat > 60 || lat < -60) {
         fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
                 " between -60 and +60\n");
-        return -32768; // this is the standard 'no data' flag in GIS
+        return NO_DATA; // this is the standard 'no data' flag in GIS
     }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
 	float *t = produce_tile(tlon, tlat, true);
-	return nearest_neighbor_interpolation_at(t, 6000, 6000, xlon, xlat);
+    if (t == NULL)
+        return NO_DATA;
+    else
+	    return nearest_neighbor_interpolation_at(t, 6000, 6000, xlon, xlat);
 }
 
 double srtm4_wrt_ellipsoid(double lon, double lat)
@@ -408,13 +418,15 @@ double srtm4_wrt_ellipsoid(double lon, double lat)
 	if (lat > 60 || lat < -60) {
         fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
                 " between -60 and +60\n");
-        return -32768; // this is the standard 'no data' flag in GIS
+        return NO_DATA; // this is the standard 'no data' flag in GIS
     }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
 	float *t = produce_tile(tlon, tlat, true);
-	double srtm = bilinear_interpolation_at(t, 6000, 6000, xlon, xlat);
+    if (t == NULL)
+        return NO_DATA;
+    double srtm = bilinear_interpolation_at(t, 6000, 6000, xlon, xlat);
     double geoid = 0;
     geoid_height(&geoid, lat, lon);
     return srtm + geoid;
@@ -425,12 +437,14 @@ double srtm4_nn_wrt_ellipsoid(double lon, double lat)
 	if (lat > 60 || lat < -60) {
         fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
                 " between -60 and +60\n");
-        return -32768; // this is the standard 'no data' flag in GIS
+        return NO_DATA;
     }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
 	float *t = produce_tile(tlon, tlat, true);
+    if (t == NULL)
+        return NO_DATA;
 	double srtm = nearest_neighbor_interpolation_at(t, 6000, 6000, xlon, xlat);
     double geoid = 0;
     geoid_height(&geoid, lat, lon);
