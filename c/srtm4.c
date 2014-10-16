@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define NO_DATA -32768  // this is the standard 'no data' flag in GIS
+#define NO_DATA NAN
 #define SRTM4_ASC "%s/srtm_%02d_%02d.asc"
 #define SRTM4_TIF "%s/srtm_%02d_%02d.tif"
 #define SRTM4_URL_TIF "http://138.231.80.250:443/srtm/tiff/srtm_%02d_%02d.zip"
@@ -382,7 +382,7 @@ static float nearest_neighbor_interpolation_at(float *x,
 double srtm4(double lon, double lat)
 {
 	if (lat > 60 || lat < -60) {
-        return NO_DATA; // this is the standard 'no data' flag in GIS
+        return NO_DATA;
     }
 	int tlon, tlat;
 	float xlon, xlat;
@@ -397,7 +397,7 @@ double srtm4(double lon, double lat)
 double srtm4_nn(double lon, double lat)
 {
 	if (lat > 60 || lat < -60)
-        return NO_DATA; // this is the standard 'no data' flag in GIS
+        return NO_DATA;
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
@@ -411,7 +411,7 @@ double srtm4_nn(double lon, double lat)
 double srtm4_wrt_ellipsoid(double lon, double lat)
 {
 	if (lat > 60 || lat < -60)
-        return NO_DATA; // this is the standard 'no data' flag in GIS
+        return NO_DATA;
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
