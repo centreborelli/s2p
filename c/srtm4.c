@@ -382,8 +382,6 @@ static float nearest_neighbor_interpolation_at(float *x,
 double srtm4(double lon, double lat)
 {
 	if (lat > 60 || lat < -60) {
-        fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
-                " between -60 and +60\n");
         return NO_DATA; // this is the standard 'no data' flag in GIS
     }
 	int tlon, tlat;
@@ -398,11 +396,8 @@ double srtm4(double lon, double lat)
 
 double srtm4_nn(double lon, double lat)
 {
-	if (lat > 60 || lat < -60) {
-        fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
-                " between -60 and +60\n");
+	if (lat > 60 || lat < -60)
         return NO_DATA; // this is the standard 'no data' flag in GIS
-    }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
@@ -415,11 +410,8 @@ double srtm4_nn(double lon, double lat)
 
 double srtm4_wrt_ellipsoid(double lon, double lat)
 {
-	if (lat > 60 || lat < -60) {
-        fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
-                " between -60 and +60\n");
+	if (lat > 60 || lat < -60)
         return NO_DATA; // this is the standard 'no data' flag in GIS
-    }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
@@ -434,11 +426,8 @@ double srtm4_wrt_ellipsoid(double lon, double lat)
 
 double srtm4_nn_wrt_ellipsoid(double lon, double lat)
 {
-	if (lat > 60 || lat < -60) {
-        fprintf(stderr, "WARNING: srtm4 is defined only for latitudes"
-                " between -60 and +60\n");
+	if (lat > 60 || lat < -60)
         return NO_DATA;
-    }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
