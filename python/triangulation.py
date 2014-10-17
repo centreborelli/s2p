@@ -1,26 +1,27 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
-#!/usr/bin/env python
 
+import os
 import numpy as np
+
 import common
-import homography_cropper
+
 
 def update_mask(target_mask, H, ml_file, invert=False, erosion=None,
-        water=False):
+                water=False):
     """
-    Computes the intersection between an image mask and a gml mask
+    Computes the intersection between an image mask and a gml mask.
 
     Args:
         target_mask: path to the png file containing the image mask. This file
             will be overwritten.
         H: 3x3 numpy array defining the rectifying homography
         ml_file: path to the gml or xml file defining the mask on the full
-            image. For cloud or roi masks, it is a gml file containing polygons. In
-            case of a water mask, it is the rpc xml file.
-        invert: boolean flag. Set it to True if the mask is positive on
-            marked regions (it is the case for cloud masks, but not for roi masks)
+            image. For cloud or roi masks, it is a gml file containing polygons.
+            In case of a water mask, it is the rpc xml file.
+        invert: boolean flag. Set it to True if the mask is positive on marked
+            regions (it is the case for cloud masks, but not for roi masks)
         erosion (optional, default None): erosion parameter applied to the gml
             mask. Note that the mask should have been inverted (if needed) to
             mark accepted pixels with a positive value, and rejected pixels
@@ -51,7 +52,8 @@ def update_mask(target_mask, H, ml_file, invert=False, erosion=None,
         common.run('morsi disk%d erosion %s %s' % (int(erosion), msk, msk))
 
     # compute the intersection between target_mask and msk
-    common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk, target_mask))
+    common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk,
+                                                      target_mask))
 
     # save msk (for debug purposes)
     if water:
@@ -82,8 +84,8 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     else:
         HH2 = H2
 
-    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, HH2,
-        disp, mask, height, rpc_err))
+    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, HH2, disp,
+                                                      mask, height, rpc_err))
     return
 
 
@@ -116,7 +118,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow
     # to produce the flow, then backflow to apply it
-    # zero:256x256 is the iio way to create a 256x256 image with zeros everywhere
+    # zero:256x256 is the iio way to create a 256x256 image filled with zeros
     hij = ' '.join(['%r' % num for num in HH.flatten()])
     common.run('synflow hom "%s" zero:%dx%d /dev/null - | BILINEAR=1 backflow - %s %s' % (
         hij, w/zoom, h/zoom, in_map, out_map))
@@ -127,7 +129,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # replace the -inf with nan in the heights map, because colormesh filter
     # out nans but not infs
     # implements: if isinf(x) then nan, else x
-    #common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
+    # common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
 
 
 def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
@@ -157,6 +159,7 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
 
+
 def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     """
     Colorizes a Pleiades gray crop using low-resolution color information.
@@ -184,7 +187,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     hh = np.ceil((y + h * zoom) / 4.0) - yy
     crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
     crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
-    #crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
+    # crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
@@ -195,19 +198,20 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
-    #rgb      = common.image_qeasy(crop_rgb, 300, 3000)
-    #panchro  = common.image_qeasy(crop_panchro, 300, 3000)
-    rgb      = common.image_qauto_gdal(crop_rgb)
-    panchro  = common.image_qauto_gdal(crop_panchro)
+    # rgb      = common.image_qeasy(crop_rgb, 300, 3000)
+    # panchro  = common.image_qeasy(crop_panchro, 300, 3000)
+    rgb = common.image_qauto_gdal(crop_rgb)
+    panchro = common.image_qauto_gdal(crop_panchro)
 
     # 2. Combine linearly the intensity and the color to obtain the result
-    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' %
-        (panchro, rgb, out_colorized))
+    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' % (panchro,
+                                                                        rgb,
+                                                                        out_colorized))
     return
 
 
 def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
-        off_y=0, ascii_ply=False, with_normals=False):
+                        off_y=0, ascii_ply=False, with_normals=False):
     """
     Computes a color point cloud from a height map.
 
@@ -227,14 +231,17 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
     """
     if ascii_ply:
         if with_normals:
-            common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh -a %s %s %s %s %s %d %d--with-normals" % (crop_colorized,
-            heights, rpc, H, cloud, off_x, off_y))
+            common.run("colormesh -a %s %s %s %s %s %d %d--with-normals" %
+                       (crop_colorized, heights, rpc, H, cloud, off_x, off_y))
         else:
-            common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
-            heights, rpc, H, cloud, off_x, off_y))
+            common.run("colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
+                                                              heights, rpc, H,
+                                                              cloud, off_x,
+                                                              off_y))
     else:
-        common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
-            rpc, H, cloud, off_x, off_y))
+        common.run("colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
+                                                       rpc, H, cloud, off_x,
+                                                       off_y))
 
     # if LidarViewer is installed, convert the point cloud to its format
     # this is useful for huge point clouds
