@@ -749,3 +749,36 @@ def is_image_black(img):
     except IOError:
         print "is_image_black: the input file %s doesn't exist" % str(im)
         sys.exit()
+
+
+def is_exe(fpath):
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+
+def which(program):
+    """
+    Test if a program exists, and returns its path.
+
+    Args:
+        program: name of the binary, or its full path. For example, "ls", or
+            "/bin/ls".
+
+    Returns:
+        full path to the binary if it exists, None if it doesn't.
+
+    This function was copied from:
+    http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+    """
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
