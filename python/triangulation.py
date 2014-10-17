@@ -235,4 +235,10 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
     else:
         common.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
             rpc, H, cloud, off_x, off_y))
+
+    # if LidarViewer is installed, convert the point cloud to its format
+    # this is useful for huge point clouds
+    if common.which('LidarPreprocessor'):
+        cloud_lidar_viewer = "%s.lidar_viewer" % os.path.splitext(cloud)[0]
+        common.run("LidarPreprocessor %s -o %s" % (cloud, cloud_lidar_viewer))
     return
