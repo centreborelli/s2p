@@ -51,18 +51,21 @@ def matches_from_sift(im1, im2):
     """
     Computes a list of sift matches between two images.
 
+    This function uses the parameter subsampling_factor_registration from the
+    config module. If factor > 1 then the registration is performed over
+    subsampled images, but the resulting keypoints are then scaled back to
+    cancel the subsampling.
+
+    Two implementations of sift are used: first the one by Pascal Monasse, and
+    if we get less than 10 matches we use the one from ipol, which usually
+    detects more keypoints.
+
     Args:
         im1, im2: paths to the two images
-
-        This function uses the parameter subsampling_factor_registration
-        from the config module. If factor > 1 then the registration
-        is performed over subsampled images, but the resulting keypoints
-        are then scaled back to conceal the subsampling
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
             contains one pair of points, ordered as x1 y1 x2 y2.
-            The coordinate system is that of the big images.
     """
     # convert to gray
     if common.image_pix_dim(im1) == 4:
@@ -76,13 +79,20 @@ def matches_from_sift(im1, im2):
         im1 = common.image_safe_zoom_fft(im1, zoom)
         im2 = common.image_safe_zoom_fft(im2, zoom)
 
-    # apply sift, then transport keypoints coordinates in the big images frame
-    p1 = common.image_sift_keypoints(im1)
-    p2 = common.image_sift_keypoints(im2)
+    # apply sift (monasse implementation first)
+    p1 = common.image_sift_keypoints(im1, None, None, 'monasse')
+    p2 = common.image_sift_keypoints(im2, None, None, 'monasse')
     matches = common.sift_keypoints_match(p1, p2, 'relative',
-            cfg['sift_match_thresh'])
+                                          cfg['sift_match_thresh'])
 
-    # compensate coordinates for the crop and the zoom
+    # if less than 10 matches, use ipol implementation
+    if matches.shape[0] < 10:
+        p1 = common.image_sift_keypoints(im1, None, None, 'ipol')
+        p2 = common.image_sift_keypoints(im2, None, None, 'ipol')
+        matches = common.sift_keypoints_match(p1, p2, 'relative',
+                                              cfg['sift_match_thresh'])
+
+    # compensate coordinates for the zoom
     return matches * zoom
 
 
@@ -116,7 +126,7 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     T1 = common.matrix_translation(x1, y1)
     T2 = common.matrix_translation(x2, y2)
 
-    # call sift matches for the images
+    # compute sift matches for the images
     matches = matches_from_sift(crop1, crop2)
 
     if matches.size:
