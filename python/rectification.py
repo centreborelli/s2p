@@ -79,7 +79,8 @@ def matches_from_sift(im1, im2):
     # apply sift, then transport keypoints coordinates in the big images frame
     p1 = common.image_sift_keypoints(im1)
     p2 = common.image_sift_keypoints(im2)
-    matches = common.sift_keypoints_match(p1, p2, 1, cfg['sift_match_thresh'])
+    matches = common.sift_keypoints_match(p1, p2, 'relative',
+            cfg['sift_match_thresh'])
 
     # compensate coordinates for the crop and the zoom
     return matches * zoom
