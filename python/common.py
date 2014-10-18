@@ -477,7 +477,8 @@ def rgbi_to_rgb_gdal(im):
     return out
 
 
-def image_sift_keypoints(im, keyfile=None, max_nb=None):
+def image_sift_keypoints(im, keyfile=None, max_nb=None,
+        implementation='monasse'):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
@@ -487,6 +488,9 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None):
             descriptors
         max_nb (optional): maximal number of keypoints. If more keypoints are
             detected, those at smallest scales are discarded
+        implementation (optional, default is 'monasse'): option to choose which
+            implementation of SIFT to use. Two options are supported: 'ipol'
+            and 'monasse'
 
     Returns:
         path to the file containing the list of descriptors
@@ -494,12 +498,19 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None):
     if keyfile is None:
        keyfile = tmpfile('.txt')
 
-    run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
+    if implementation is 'monasse':
+        run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
 
-    # remove header from keypoint files
-    tmp = tmpfile('.txt')
-    run("awk \'{if (NR!=1) {print}}\' %s > %s" % (keyfile, tmp))
-    run("cp %s %s" % (tmp, keyfile))
+        # remove the first line (header) from keypoint files
+        tmp = tmpfile('.txt')
+        run("tail -n +2 %s > %s" % (keyfile, tmp))
+        run("cp %s %s" % (tmp, keyfile))
+
+    elif implementation is 'ipol':
+        run("sift_cli %s > %s" % (image_qauto(im), keyfile))
+
+    else:
+        print "ERROR: image_sift_keypoints bad 'implementation' argument"
 
     # keep only the first max_nb points
     if max_nb is not None:
