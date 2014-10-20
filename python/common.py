@@ -477,7 +477,8 @@ def rgbi_to_rgb_gdal(im):
     return out
 
 
-def image_sift_keypoints(im, keyfile=None, max_nb=None):
+def image_sift_keypoints(im, keyfile=None, max_nb=None,
+        implementation='monasse', extra_params=''):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
@@ -487,6 +488,11 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None):
             descriptors
         max_nb (optional): maximal number of keypoints. If more keypoints are
             detected, those at smallest scales are discarded
+        implementation (optional, default is 'monasse'): option to choose which
+            implementation of SIFT to use. Two options are supported: 'ipol'
+            and 'monasse'
+        extra_params (optional, default is ''): extra parameters to be passed
+            to the 'ipol' implementation
 
     Returns:
         path to the file containing the list of descriptors
@@ -494,12 +500,22 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None):
     if keyfile is None:
        keyfile = tmpfile('.txt')
 
-    run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
+    if implementation is 'monasse':
+        run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
 
-    # remove header from keypoint files
-    tmp = tmpfile('.txt')
-    run("awk \'{if (NR!=1) {print}}\' %s > %s" % (keyfile, tmp))
-    run("cp %s %s" % (tmp, keyfile))
+        # remove the first line (header) from keypoint files
+        tmp = tmpfile('.txt')
+        run("tail -n +2 %s > %s" % (keyfile, tmp))
+        run("cp %s %s" % (tmp, keyfile))
+
+    elif implementation is 'ipol':
+        # the awk call is used to swap the first two columns of the output
+        # to print the keypoint coordinates in that order: x, y
+        run("sift_cli %s %s|awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
+            image_qauto(im), extra_params, keyfile))
+
+    else:
+        print "ERROR: image_sift_keypoints bad 'implementation' argument"
 
     # keep only the first max_nb points
     if max_nb is not None:
@@ -508,20 +524,21 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None):
     return keyfile
 
 
-def sift_keypoints_match(k1, k2, method, thresh):
+def sift_keypoints_match(k1, k2, method='relative', thresh=0.6):
     """
     Find matches among two lists of sift keypoints.
 
     Args:
         k1, k2: paths to text files containing the lists of sift descriptors
-        method: flag (0 or 1) indicating wether to use absolute distance (0) or
-            relative distance (1)
-        thresh: threshold for distance between SIFT descriptors. These
-            descriptors are 128-vectors, whose coefficients range from 0 to 255,
-            thus with absolute distance a reasonable value for this threshold
-            is between 200 and 300. With relative distance (ie ratio between
-            distance to nearest and distance to second nearest), the commonly
-            used value for the threshold is 0.6.
+        method (optional, default is 'relative'): flag ('relative' or
+            'absolute') indicating wether to use absolute distance or relative
+            distance
+        thresh (optional, default is 0.6): threshold for distance between SIFT
+            descriptors. These descriptors are 128-vectors, whose coefficients
+            range from 0 to 255, thus with absolute distance a reasonable value
+            for this threshold is between 200 and 300. With relative distance
+            (ie ratio between distance to nearest and distance to second
+            nearest), the commonly used value for the threshold is 0.6.
 
     Returns:
         a numpy 2D array containing the list of matches
@@ -529,7 +546,7 @@ def sift_keypoints_match(k1, k2, method, thresh):
     It uses Ives' matching binary, from the IPOL http://www.ipol.im/pub/pre/82/
     """
     matchfile = tmpfile('.txt')
-    run("matching %s %s %d %f 4 8 36 > %s" % (k1, k2, method, thresh, matchfile))
+    run("match_cli %s %s -%s %f > %s" % (k1, k2, method, thresh, matchfile))
     matches = np.loadtxt(matchfile)
     if matches.size == 0:
         # no matches
