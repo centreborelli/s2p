@@ -507,7 +507,10 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
         run("cp %s %s" % (tmp, keyfile))
 
     elif implementation is 'ipol':
-        run("sift_cli %s > %s" % (image_qauto(im), keyfile))
+        # the awk call is used to swap the first two columns of the output
+        # to print the keypoint coordinates in that order: x, y
+        run("sift_cli %s | awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
+            image_qauto(im), keyfile))
 
     else:
         print "ERROR: image_sift_keypoints bad 'implementation' argument"
