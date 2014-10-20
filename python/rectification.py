@@ -92,6 +92,14 @@ def matches_from_sift(im1, im2):
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
+    # if still less than 10 matches, lower the thresh_dog for the sift call of
+    # the secondary image. Default value for thresh_dog is 0.0133
+    if matches.shape[0] < 10:
+        p2 = common.image_sift_keypoints(im2, None, None, 'ipol',
+                                         '-thresh_dog 0.0066')
+        matches = common.sift_keypoints_match(p1, p2, 'relative',
+                                              cfg['sift_match_thresh'])
+
     # compensate coordinates for the zoom
     return matches * zoom
 

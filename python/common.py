@@ -478,7 +478,7 @@ def rgbi_to_rgb_gdal(im):
 
 
 def image_sift_keypoints(im, keyfile=None, max_nb=None,
-        implementation='monasse'):
+        implementation='monasse', extra_params=''):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
@@ -491,6 +491,8 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
         implementation (optional, default is 'monasse'): option to choose which
             implementation of SIFT to use. Two options are supported: 'ipol'
             and 'monasse'
+        extra_params (optional, default is ''): extra parameters to be passed
+            to the 'ipol' implementation
 
     Returns:
         path to the file containing the list of descriptors
@@ -509,8 +511,8 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
     elif implementation is 'ipol':
         # the awk call is used to swap the first two columns of the output
         # to print the keypoint coordinates in that order: x, y
-        run("sift_cli %s | awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
-            image_qauto(im), keyfile))
+        run("sift_cli %s %s|awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
+            image_qauto(im), extra_params, keyfile))
 
     else:
         print "ERROR: image_sift_keypoints bad 'implementation' argument"
