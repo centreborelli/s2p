@@ -1,5 +1,5 @@
 #include <string>
-#include <GeographicLib/GeoCoords.hpp>
+#include "c/GeographicLib/GeoCoords.hpp"
 
 extern "C" void utm(double *out, double lat, double lon)
 {

@@ -7,9 +7,9 @@
  * http://geographiclib.sourceforge.net/
  **********************************************************************/
 
-#include <GeographicLib/GeoCoords.hpp>
-#include <GeographicLib/MGRS.hpp>
-#include <GeographicLib/DMS.hpp>
+#include "c/GeographicLib/GeoCoords.hpp"
+#include "c/GeographicLib/MGRS.hpp"
+#include "c/GeographicLib/DMS.hpp"
 
 namespace GeographicLib {
 

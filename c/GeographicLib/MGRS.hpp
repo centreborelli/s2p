@@ -10,8 +10,8 @@
 #if !defined(GEOGRAPHICLIB_MGRS_HPP)
 #define GEOGRAPHICLIB_MGRS_HPP 1
 
-#include <GeographicLib/Constants.hpp>
-#include <GeographicLib/UTMUPS.hpp>
+#include "c/GeographicLib/Constants.hpp"
+#include "c/GeographicLib/UTMUPS.hpp"
 
 #if defined(_MSC_VER)
 // Squelch warnings about dll vs string

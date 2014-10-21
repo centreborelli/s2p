@@ -7,8 +7,8 @@
  * http://geographiclib.sourceforge.net/
  **********************************************************************/
 
-#include <GeographicLib/DMS.hpp>
-#include <GeographicLib/Utility.hpp>
+#include "c/GeographicLib/DMS.hpp"
+#include "c/GeographicLib/Utility.hpp"
 
 #if defined(_MSC_VER)
 // Squelch warnings about constant conditional expressions

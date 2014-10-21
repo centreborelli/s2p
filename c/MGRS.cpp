@@ -7,8 +7,8 @@
  * http://geographiclib.sourceforge.net/
  **********************************************************************/
 
-#include <GeographicLib/MGRS.hpp>
-#include <GeographicLib/Utility.hpp>
+#include "c/GeographicLib/MGRS.hpp"
+#include "c/GeographicLib/Utility.hpp"
 
 namespace GeographicLib {
 

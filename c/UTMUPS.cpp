@@ -7,11 +7,11 @@
  * http://geographiclib.sourceforge.net/
  **********************************************************************/
 
-#include <GeographicLib/UTMUPS.hpp>
-#include <GeographicLib/MGRS.hpp>
-#include <GeographicLib/PolarStereographic.hpp>
-#include <GeographicLib/TransverseMercator.hpp>
-#include <GeographicLib/Utility.hpp>
+#include "c/GeographicLib/UTMUPS.hpp"
+#include "c/GeographicLib/MGRS.hpp"
+#include "c/GeographicLib/PolarStereographic.hpp"
+#include "c/GeographicLib/TransverseMercator.hpp"
+#include "c/GeographicLib/Utility.hpp"
 
 namespace GeographicLib {
 

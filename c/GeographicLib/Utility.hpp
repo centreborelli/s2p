@@ -10,7 +10,7 @@
 #if !defined(GEOGRAPHICLIB_UTILITY_HPP)
 #define GEOGRAPHICLIB_UTILITY_HPP 1
 
-#include <GeographicLib/Constants.hpp>
+#include "c/GeographicLib/Constants.hpp"
 #include <iomanip>
 #include <vector>
 #include <sstream>

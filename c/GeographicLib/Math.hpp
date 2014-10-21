@@ -9,7 +9,7 @@
 
 // Constants.hpp includes Math.hpp.  Place this include outside Math.hpp's
 // include guard to enforce this ordering.
-#include <GeographicLib/Constants.hpp>
+#include "c/GeographicLib/Constants.hpp"
 
 #if !defined(GEOGRAPHICLIB_MATH_HPP)
 #define GEOGRAPHICLIB_MATH_HPP 1
