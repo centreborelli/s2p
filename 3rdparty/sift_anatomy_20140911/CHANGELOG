@@ -1,0 +1,106 @@
+sift_anatomy_20140420_extra.tar.gz
+ - first to contain describe_keys.c
+
+sift_anatomy_20140530.tar.gz
+ - Review pascal Getreuer part 1.
+ - const variable
+ - lib_util.c (max tab)..
+ - assert
+
+
+sift_anatomy_20140609.tar.gz
+ - Review Pascal Getreuer part 2.
+
+// 20140609
+- Bug in the normalization of the feature vector.
+This is not bin*255/max(bins) but bin*512/norml2(bins)
+
+// 20140611
+- sqrt(2) replace by a define
+- bug in assert tests comparing floats that can be equal
+  correction use FLOAT_EPSILON to include the equality case.
+  in lib_descriptor in assert M_PI
+- M_PI was defined twice with various number of decimals
+- fmod to express the gradient in 0 2pi (atan2 gives in -pi pi)
+   the problem fmod(x+10*M_PI,2*M_PI) -> fmod(x+2*M_PI,2*M_PI)
+- Extrema interpolation. Possible difference between anatomy and lowe binaries.
+  If the offset in scale is larger than 0.5 (the half distance between two
+  scale samples) Lowe doesn't (I believe) jump to the next scale. Only, change
+  sin position are implemented.  Observations: With this sampling parameters
+  the threshold over the offset has an impact on the keypoint location (number
+  of keypoints position) Visually, our results are more similar to Lowe's if we
+  don't
+
+// 20140616
+ - in a few assert. replaced FLT_FLOAT with a larger constant EPSILON.
+ - in lib_util linear_conversion : response in [0,1]. skip the normalization if the vector
+   is constant (0 division)
+ - array_max
+ - array_min
+ - find_array_max
+ - fixed index in description  (s+1) -> s. This is the index used to chose the
+   layer of the octace (gradient).
+
+// 20140618
+ - bug, find two first minima of an array
+ - new functions in lib_util.c (euclidean_distance  euclidean_distance_square)
+ - TODO, the comparison should be performed on the squared euclidean distance
+   (for speed and precision).  tested it gives the same result than euclidean
+   distance and exactly the same result as Lowe's code (siftDemoV4/match.c).
+
+// 20140630
+ - in lib_sift.c replace hardcoded default parameters with a call to the
+   sift_assign_default_parameters function
+ - in demo_extract_patch.c  remove printImage definition
+ - in demo_extract_patch.c  function thumbnail_ori rewritten
+ - in demo_extract_patch.c  remove not used functions gradient_field_ori() and
+   gradient_field_descr()
+ - sprintf() is replaced with snprintf() The functions snprintf() and
+   vsnprintf() write at most size bytes (including the terminating null byte
+   ('\0')) to str.
+ - remove 'count' output for functions accumulating histograms,
+   sift_extract_feature_vector and sift_accumulate_orientation_histogram,
+   they now return void
+
+// 20140801 - Major change in the interface
+ sift_cli
+ - new parameter parser pick_option() (inspired by enric's implementation).
+ - each parameter is adjustable individually
+ - the help menu and README are changed accordingly
+ TODO:
+ - add an option to do only detection
+ - remove a few useless output files (extra_????.txt), namely ..REJ.. ..MULT..
+ - euclidean_distance() uses euclidean_distance()
+ - replace ceil by floor+1 !!! in lib_description.
+
+// 20140808 _Leo_F_
+ - new function fprintf_one_keypoint(). This will guaranty consistency between sift_cli and match_cli.
+ - refactoring match_cli, the useless 'pair' structure is replaced by three sift_keypoints structure and a list of doubles
+ - sift_keypoints structure: the list of pointers to keypoint structures is replaced by a list of keypoints.
+
+// 20140819
+ - fixed BUG segmentation fault (realloc_sift_keypoints - bad comparison size and capacity)
+ - fixed memory leaks in filtering question (the copy of the keypoint was allocated regardeless of the test results)
+ - fixed BUG affecting sift_find_ori_and_fill_descriptors and sift_anatomy_orientation_and_description:
+         sx instead of sy in keypoints_attribute_one_orientation
+
+// 20140901
+ - two example codes that use the lib_sift.o: example.c and sift_cli_standard.c
+   (requested by the reviewer)
+ - unnecessary casts from (void*), as in the return value of malloc, can be
+   avoided.
+ - UNDONE printing the keypoints starting with keypoints with the largest
+   scale.
+ - FIXED BUG in the orientation histogram peak interpolation. The wrong formula
+   led to a quantified set of principal orientations.
+
+// 20140909
+ - computation of number of octave (now put aside in a static function)
+ - threshold adaptation to scalespace discretization (now put aside in a static function)
+
+
+// 20140911
+ - update io_png.c (it includes the string.h library that defines strcmp).
+ - anatomy2lowe script to convert orientations and descriptors
+ - FIXED BUG in match_cli, a segfault was raised in the absence of any match.
+ - Check if all input filenames are valid

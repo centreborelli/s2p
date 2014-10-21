@@ -13,7 +13,7 @@ cfg['subsampling_factor'] = 1
 cfg['subsampling_factor_registration'] = 1
 
 # other parameters
-cfg['sift_match_thresh'] = 0.4
+cfg['sift_match_thresh'] = 0.6
 cfg['disp_range_extra_margin'] = 0.2
 # number of ground control points per axis in matches from rpc generation
 cfg['n_gcp_per_axis'] = 5

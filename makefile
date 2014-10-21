@@ -34,8 +34,9 @@ monasse:
 	cp $(BINDIR)/monasse_refactored_build/bin/sift_keypoints $(BINDIR)
 
 sift: $(BINDIR)
-	cd 3rdparty/sift_20130403; make
-	cp 3rdparty/sift_20130403/bin/matching $(BINDIR)
+	cd 3rdparty/sift_anatomy_20140911; make
+	cp 3rdparty/sift_anatomy_20140911/bin/sift_cli $(BINDIR)
+	cp 3rdparty/sift_anatomy_20140911/bin/match_cli $(BINDIR)
 
 sgbm:
 	cd 3rdparty/sgbm; make
