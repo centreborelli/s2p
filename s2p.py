@@ -110,7 +110,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         nothing
     """
     # create a directory for the experiment
-    common.run('mkdir -p %s' % out_dir)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
@@ -128,7 +129,8 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     config = '%s/config.json' % out_dir
 
     if os.path.isfile(disp) and cfg['skip_existing']:
-        print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
+        sys.stderr.write("Tile %d, %d, %d, %d already exists, skip\n" % (x, y,
+                                                                         w, h))
         return
 
     # redirect stdout and stderr to log file
@@ -250,18 +252,16 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     except:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        print "Failed to generate tile %i %i %i %i: %s)" % (x, y, w, h)
-        print sys.exc_info()
-        return
-
-    print "Tile %i %i %i %i generated." % (x, y, w, h)
+        sys.stderr.write("Failed to generate tile %i %i %i %i:\n" % (x, y, w,
+                                                                     h))
+        sys.stderr.write(sys.exc_info())
     return
 
 
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                  ov=None, cld_msk=None, roi_msk=None):
     """
-    Computes a height map from a Pair of Pleiades images, using tiles.
+    Computes a height map from a Pair of pushbroom images, using tiles.
 
     Args:
         out_dir: path to the output directory
@@ -286,7 +286,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         reference image.
     """
     # create a directory for the experiment
-    common.run('mkdir -p %s' % out_dir)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
     # duplicate stdout and stderr to log file
     log = tee.Tee('%s/stdout.log' % out_dir, 'w')
@@ -323,18 +324,19 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             #    th += 1
     ntx = np.ceil(float(w - ov) / (tw - ov))
     nty = np.ceil(float(h - ov) / (th - ov))
+    nt = ntx * nty
 
     print 'tiles size is tw, th = (%d, %d)' % (tw, th)
     print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
-    print 'total number of tiles is %d' % (ntx * nty)
+    print 'total number of tiles is %d' % nt
 
     # create pool with less workers than available cores
-    max_processes = multiprocessing.cpu_count()
+    nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads'] > 0:
-        max_processes = min(max_processes, cfg['max_nb_threads'])
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
-    print 'Creating pool with %d processes\n' % max_processes
-    pool = multiprocessing.Pool(max_processes)
+    print 'Creating pool with %d workers\n' % nb_workers
+    pool = multiprocessing.Pool(nb_workers)
 
     # process the tiles
     # don't parallellize if in debug mode
@@ -343,6 +345,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         for col in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
             tiles.append(tile_dir)
+            print "Processing tile number %d / %d\r" % (len(tiles), nt),
+            log.stdout.flush()
             if cfg['debug']:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
                                          row, tw, th, None, cld_msk, roi_msk)
@@ -381,7 +385,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     np.savetxt('%s/pointing.txt' % out_dir, A)
 
     # triangulation
-    pool = multiprocessing.Pool(max_processes)
+    pool = multiprocessing.Pool(nb_workers)
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
             tile = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
@@ -456,10 +460,11 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
         reference image.
     """
     # create a directory for the experiment
-    common.run('mkdir -p %s' % out_dir)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
     # duplicate stdout and stderr to log file
-    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
+    tee.Tee('%s/stdout.log' % out_dir, 'w')
 
     # select ROI
     try:
@@ -512,11 +517,12 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             huge numbers)
     """
     # output files
-    common.run('mkdir -p %s' % out_dir)
     crop_color = '%s/roi_color_ref.tif' % out_dir
     crop_ref = '%s/roi_ref.tif' % out_dir
     crop_sec = '%s/roi_sec.tif' % out_dir
     cloud = '%s/cloud.ply' % out_dir
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
@@ -698,7 +704,8 @@ def main(config_file):
 
     # create output directory for the experiment, and store a json dump of the
     # config.cfg dictionary there
-    common.run('mkdir -p %s' % cfg['out_dir'])
+    if not os.path.exists(cfg['out_dir']):
+        os.makedirs(cfg['out_dir'])
     f = open('%s/config.json' % cfg['out_dir'], 'w')
     json.dump(cfg, f, indent=2)
     f.close()
