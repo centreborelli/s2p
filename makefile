@@ -85,7 +85,7 @@ $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_w
 
 # WITH IIO ONLY:
 SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
-	veco morphoop cldmask disp_to_h_projective colormesh_projective
+	veco morphoop cldmask disp_to_h_projective colormesh_projective plyflatten
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRC = $(SRCIIO) $(SRCFFT)
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
