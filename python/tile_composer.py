@@ -42,8 +42,11 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
             y0 = j * (th - ov)
             x1 = min(x0 + tw - ov, w)
             y1 = min(y0 + th - ov, h)
-            tile_fname = list_tiles[j * ntx + i]
-            if os.path.isfile(tile_fname):
+            f = list_tiles[j * ntx + i]
+            if os.path.isfile(f):
+                # remove first dir name from path
+                tile_fname = os.path.join(os.path.split(os.path.dirname(f))[1],
+                                                        os.path.basename(f))
                 vrtfile.write("\t\t<SimpleSource>\n")
                 vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n" % tile_fname)
                 vrtfile.write("\t\t\t<SourceBand>1</SourceBand>\n")
