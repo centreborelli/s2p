@@ -7,7 +7,7 @@
  * http://geographiclib.sourceforge.net/
  **********************************************************************/
 
-#include <GeographicLib/PolarStereographic.hpp>
+#include "c/GeographicLib/PolarStereographic.hpp"
 
 namespace GeographicLib {
 

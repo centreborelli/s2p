@@ -10,8 +10,8 @@
 #if !defined(GEOGRAPHICLIB_DMS_HPP)
 #define GEOGRAPHICLIB_DMS_HPP 1
 
-#include <GeographicLib/Constants.hpp>
-#include <GeographicLib/Utility.hpp>
+#include "c/GeographicLib/Constants.hpp"
+#include "c/GeographicLib/Utility.hpp"
 
 #if defined(_MSC_VER)
 // Squelch warnings about dll vs vector and constant conditional expressions

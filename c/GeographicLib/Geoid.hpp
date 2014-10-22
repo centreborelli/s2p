@@ -12,7 +12,7 @@
 
 #include <vector>
 #include <fstream>
-#include <GeographicLib/Constants.hpp>
+#include "c/GeographicLib/Constants.hpp"
 
 #if defined(_MSC_VER)
 // Squelch warnings about dll vs vector and constant conditional expressions

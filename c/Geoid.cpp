@@ -8,8 +8,8 @@
  **********************************************************************/
 
 #include <cstdlib>
-#include "GeographicLib/Geoid.hpp"
-#include "GeographicLib/Utility.hpp"
+#include "c/GeographicLib/Geoid.hpp"
+#include "c/GeographicLib/Utility.hpp"
 
 #if !defined(GEOGRAPHICLIB_DATA)
 #  if defined(_MSC_VER)

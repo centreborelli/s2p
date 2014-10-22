@@ -10,7 +10,7 @@
 #if !defined(GEOGRAPHICLIB_CONSTANTS_HPP)
 #define GEOGRAPHICLIB_CONSTANTS_HPP 1
 
-#include <GeographicLib/Config.h>
+#include "c/GeographicLib/Config.h"
 
 /**
  * A compile-time assert.  Use C++11 static_assert, if available.
@@ -38,7 +38,7 @@
 
 #include <stdexcept>
 #include <string>
-#include <GeographicLib/Math.hpp>
+#include "c/GeographicLib/Math.hpp"
 
 /**
  * \brief Namespace for %GeographicLib
