@@ -7,8 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xmalloc.c"
 #include "smapa.h"
+#include "xmalloc.c"
+#include "iio.h"
+#include "lists.c"
 SMART_PARAMETER(PLY_RECORD_LENGTH, 27)
 
 
@@ -19,6 +21,12 @@ static void eat_until_this_line(FILE *f, char *lin)
 	while (fgets(buf, FILENAME_MAX, f))
 		if (0 == strcmp(buf, lin))
 			return;
+}
+
+static void update_min_max(float *min, float *max, float x)
+{
+    if (x < *min) *min = x;
+    if (x > *max) *max = x;
 }
 
 // re-scale a float between 0 and w
@@ -46,6 +54,31 @@ static void add_height_to_images(struct images *x, int i, int j, float v)
 	x->max[k] = fmax(x->max[k], v);
 	x->avg[k] = (v + x->cnt[k] * x->avg[k]) / (1 + x->cnt[k]);
 	x->cnt[k] += 1;
+}
+
+// open a ply file and update the known extrema
+static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
+        float *ymax, char *fname)
+{
+	FILE *f = fopen(fname, "r");
+	if (!f) {
+		fprintf(stderr, "WARNING: can not open file \"%s\"\n", fname);
+		return;
+	}
+
+	eat_until_this_line(f, "end_header\n");
+
+	size_t n = PLY_RECORD_LENGTH();
+	char cbuf[n];
+	float *fbuf = (void*) cbuf;
+	while (n == fread(cbuf, 1, n, f))
+	{
+        update_min_max(xmin, xmax, fbuf[0]);
+        update_min_max(ymin, ymax, fbuf[1]);
+		//fprintf(stderr, "\t%f %f\n", fbuf[0], fbuf[1]);
+	}
+
+	fclose(f);
 }
 
 // open a ply file, and accumulata its points to the image
@@ -77,23 +110,23 @@ static void add_ply_points_to_images(struct images *x,
 }
 
 
-#include "iio.h"
 int main(int c, char *v[])
 {
 	// process input arguments
-	if (c != 8) {
+	if (c != 4) {
 		fprintf(stderr, "usage:\n\t"
-				"ls files|%s x0 xf y0 yf w h out.tiff\n", *v);
-		//                         0 1  2  3  4  5 6 7
+				"ls files | %s w h out.tif\n", *v);
 		return 1;
 	}
-	float xmin = atof(v[1]);
-	float xmax = atof(v[2]);
-	float ymin = atof(v[3]);
-	float ymax = atof(v[4]);
-	int w = atoi(v[5]);
-	int h = atoi(v[6]);
-	char *filename_out = v[7];
+	int w = atoi(v[1]);
+	int h = atoi(v[2]);
+	char *filename_out = v[3];
+
+    // initialize x,y extrema values
+    float xmin = INFINITY;
+    float xmax = -INFINITY;
+    float ymin = INFINITY;
+    float ymax = -INFINITY;
 
 	// allocate and initialize output images
 	struct images x;
@@ -111,13 +144,27 @@ int main(int c, char *v[])
 		x.avg[i] = 0;
 	}
 
-	// process each filename from stdin
+	// process each filename from stdin to determine x,y extremas
 	char fname[FILENAME_MAX];
+    struct list *l = NULL;
 	while (fgets(fname, FILENAME_MAX, stdin))
 	{
 		strtok(fname, "\n");
 		printf("FILENAME: \"%s\"\n", fname);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, fname);
+        l = push(l, fname);
+		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, fname);
+	}
+
+    // fprintf(stderr, "xmin: %f, xmax: %f, ymin: %f, ymax: %f\n", xmin, xmax,
+    //         ymin, ymax);
+    // list_print(l);
+
+	// process each filename to accumulate points in the dem
+	while (l != NULL)
+	{
+		printf("FILENAME: \"%s\"\n", l->current);
+		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, l->current);
+        l = l->next;
 	}
 
 	// set unknown values to NAN
@@ -127,10 +174,6 @@ int main(int c, char *v[])
 
 	// save output image
 	iio_save_image_float(filename_out, x.avg, w, h);
-	//iio_save_image_float("/tmp/flattened_min.tiff", x.min, w, h);
-	//iio_save_image_float("/tmp/flattened_max.tiff", x.max, w, h);
-	//iio_save_image_float("/tmp/flattened_cnt.tiff", x.cnt, w, h);
-	//iio_save_image_float("/tmp/flattened_avg.tiff", x.avg, w, h);
 
 	// cleanup and exit
 	free(x.min);
