@@ -110,23 +110,48 @@ static void add_ply_points_to_images(struct images *x,
 }
 
 
+void help(char *s)
+{
+    fprintf(stderr, "usage:\n\t"
+            "ls files | %s resolution out.tif\n", *s);
+    fprintf(stderr, "\t the resolution is in meters per pixel\n");
+}
+
 int main(int c, char *v[])
 {
 	// process input arguments
-	if (c != 4) {
-		fprintf(stderr, "usage:\n\t"
-				"ls files | %s w h out.tif\n", *v);
+	if (c != 3) {
+        help(*v);
 		return 1;
 	}
-	int w = atoi(v[1]);
-	int h = atoi(v[2]);
-	char *filename_out = v[3];
+	int resolution = atoi(v[1]);
+	char *filename_out = v[2];
 
     // initialize x,y extrema values
     float xmin = INFINITY;
     float xmax = -INFINITY;
     float ymin = INFINITY;
     float ymax = -INFINITY;
+
+    // process each filename from stdin to determine x,y extremas and store the
+    // filenames in a list of strings, to be able to open the files again
+	char fname[FILENAME_MAX];
+    struct list *l = NULL;
+	while (fgets(fname, FILENAME_MAX, stdin))
+	{
+		strtok(fname, "\n");
+		// printf("FILENAME: \"%s\"\n", fname);
+        l = push(l, fname);
+		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, fname);
+	}
+    // fprintf(stderr, "xmin: %f, xmax: %f, ymin: %f, ymax: %f\n", xmin, xmax,
+    //         ymin, ymax);
+    // list_print(l);
+
+
+    // compute output image dimensions
+    int w = 1 + (xmax - xmin) / resolution;
+    int h = 1 + (ymax - ymin) / resolution;
 
 	// allocate and initialize output images
 	struct images x;
@@ -144,20 +169,6 @@ int main(int c, char *v[])
 		x.avg[i] = 0;
 	}
 
-	// process each filename from stdin to determine x,y extremas
-	char fname[FILENAME_MAX];
-    struct list *l = NULL;
-	while (fgets(fname, FILENAME_MAX, stdin))
-	{
-		strtok(fname, "\n");
-		printf("FILENAME: \"%s\"\n", fname);
-        l = push(l, fname);
-		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, fname);
-	}
-
-    // fprintf(stderr, "xmin: %f, xmax: %f, ymin: %f, ymax: %f\n", xmin, xmax,
-    //         ymin, ymax);
-    // list_print(l);
 
 	// process each filename to accumulate points in the dem
 	while (l != NULL)
