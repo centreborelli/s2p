@@ -81,7 +81,7 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 	fclose(f);
 }
 
-// open a ply file, and accumulata its points to the image
+// open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
 		float xmin, float xmax, float ymin, float ymax,
 		char *fname)
@@ -113,7 +113,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
     fprintf(stderr, "usage:\n\t"
-            "ls files | %s resolution out.tif\n", *s);
+            "ls files | %s resolution out.tif\n", s);
     fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
