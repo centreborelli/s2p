@@ -160,6 +160,45 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     transfer_map(tmp, H1, x, y, w, h, z, out)
 
 
+def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
+    """
+    Computes a 3D point cloud from a disparity map.
+
+    Args:
+        out: path to the output ply file
+        rpc1, rpc2: paths to the xml files
+        H1, H2: path to txt files containing two 3x3 numpy arrays defining
+            the rectifying homographies
+        disp, mask: paths to the diparity and mask maps
+        img: path to the png image containing the colors
+        A (optional): pointing correction matrix for im2
+    """
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        log_file = '%s/stdout.log' % os.path.dirname(out)
+        fout = open(log_file, 'a', 0)  # 'a' for append, 0 for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
+    # apply correction matrix
+    if A is not None:
+        HH2 = common.tmpfile('.txt')
+        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
+    else:
+        HH2 = H2
+
+    # do the job
+    common.run("disp2ply %s %s %s %s %s %s %s %s" % (out, disp,  mask, H1, HH2,
+                                                     rpc1, rpc2, img))
+    # close logs
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
+
+    return
+
+
 def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     """
     Colorizes a Pleiades gray crop using low-resolution color information.
