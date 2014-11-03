@@ -597,6 +597,19 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             common.run('rm ' + common.garbage.pop())
 
 
+def generate_dem(out, point_clouds_list, resolution):
+    """
+    Args:
+        out: output geotiff file
+        point_clouds_list: list of ply files
+        resolution: in meters per pixel
+
+    The point clouds are supposed to contain points in the same UTM zones.
+    """
+    files = ' '.join(point_clouds_list)
+    common.run("ls %s | plyflatten %f %s" % (files, resolution, out))
+
+
 def check_parameters(usr_cfg):
     """
     Checks that the provided dictionary defines all the mandatory
