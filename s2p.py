@@ -29,14 +29,13 @@ from python.config import cfg
 
 def is_tile_masked(x, y, w, h, rpc, roi_gml=None, cld_gml=None):
     """
-    Checks wether a given tile is masked by water or by the roi mask.
+    Checks wether a given tile is masked by water, clouds, or by the roi mask.
 
     Args:
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        rpc1: paths to the xml file containing the rpc coefficients of the
-            reference image
+        rpc: paths to the xml file containing the rpc coefficients of the image
         roi_gml (optional, default None): path to a gml file containing a mask
             defining the area contained in the full image.
         cld_gml (optional, default None): path to a gml file containing a mask
@@ -192,13 +191,12 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
                                          disp_max)
 
     # update mask with water mask, cloud mask and roi mask
-    if cfg['build_additional_masks']:
-        triangulation.update_mask(mask, H1, rpc1, False, None, True)
-        if cld_msk is not None:
-            triangulation.update_mask(mask, H1, cld_msk, True)
-        if roi_msk is not None:
-            triangulation.update_mask(mask, H1, roi_msk, False,
-                                      cfg['msk_erosion'])
+    triangulation.update_mask(mask, H1, rpc1, False, None, True)
+    if cld_msk is not None:
+        triangulation.update_mask(mask, H1, cld_msk, True)
+    if roi_msk is not None:
+        triangulation.update_mask(mask, H1, roi_msk, False,
+                                  cfg['msk_erosion'])
 
     # save the subsampling factor, the rectifying homographies and the
     # disparity bounds.
