@@ -345,6 +345,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         for col in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
             tiles.append(tile_dir)
+            # TODO: fix this broken print
             print "Processing tile number %d / %d\r" % (len(tiles), nt),
             log.stdout.flush()
             if cfg['debug']:
@@ -393,30 +394,28 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             H2 = '%s/H_sec.txt' % tile
             disp = '%s/rectified_disp.tif' % tile
             mask = '%s/rectified_mask.png' % tile
-            rpc_err = '%s/rpc_err.tif' % tile
-            dem = '%s/dem.tif' % tile
+            ply = '%s/cloud.ply' % tile
+            img_ref = '%s/rectified_ref.tif.png' % tile
             if cfg['debug']:
-                triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
-                                          H1, H2, disp, mask, rpc_err, A)
+                triangulation.compute_ply(ply, rpc1, rpc2, H1, H2, disp, mask,
+                                          img_ref, A)
             else:
-                pool.apply_async(triangulation.compute_dem, args=(dem, col, row,
-                                                                  tw, th, z,
-                                                                  rpc1, rpc2,
-                                                                  H1, H2, disp,
-                                                                  mask, rpc_err,
-                                                                  A))
+                pool.apply_async(triangulation.compute_ply, args=(ply, rpc1,
+                                                                  rpc2, H1, H2,
+                                                                  disp, mask,
+                                                                  img_ref, A))
     pool.close()
     pool.join()
 
-    # tiles composition
-    out = '%s/dem.tif' % out_dir
-    tmp = ['%s/dem.tif' % t for t in tiles]
-    if not os.path.isfile(out) or not cfg['skip_existing']:
-        print "Mosaic method: %s" % cfg['mosaic_method']
-        if cfg['mosaic_method'] == 'gdal':
-            tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-        else:
-            tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
+#    # tiles composition
+#    out = '%s/dem.tif' % out_dir
+#    tmp = ['%s/dem.tif' % t for t in tiles]
+#    if not os.path.isfile(out) or not cfg['skip_existing']:
+#        print "Mosaic method: %s" % cfg['mosaic_method']
+#        if cfg['mosaic_method'] == 'gdal':
+#            tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
+#        else:
+#            tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
 
     # cleanup
     if cfg['clean_tmp']:
@@ -483,8 +482,10 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
                              tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     # merge the two digital elevation models
-    dem = '%s/dem.tif' % out_dir
-    fusion.merge(dem_left, dem_right, thresh, dem)
+    # TODO: implement a merging procedure that merges the two clouds tile by
+    # tile
+#    dem = '%s/dem.tif' % out_dir
+#    fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
     if cfg['clean_tmp']:
@@ -723,7 +724,7 @@ def main(config_file):
     json.dump(cfg, f, indent=2)
     f.close()
 
-    # dem generation
+    # point cloud generation
     if len(cfg['images']) == 2:
         dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
                            cfg['images'][0]['rpc'], cfg['images'][1]['img'],
@@ -740,12 +741,13 @@ def main(config_file):
                               cfg['fusion_thresh'], None, None, None, None,
                               cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
-    # point cloud generation
-    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
-                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
-                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
-                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   cfg['roi']['h'], dem, cfg['offset_ply'])
+#    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
+#                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
+#                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+#                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
+#                   cfg['roi']['h'], dem, cfg['offset_ply'])
+
+    # TODO generate DSM
 
 
 if __name__ == '__main__':

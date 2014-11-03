@@ -22,10 +22,10 @@ static char *pick_option(int *c, char ***v, char *o, char *d)
 }
 
 // char *oval = pick_option(&argc, &argv, "o", "37");
-// returns "37" or the value of the option, removes 2 or 0 arguments
+// returns "37" or the value of the option, removes 0 or 2 arguments
 //
 // bool o = pick_option(&argc, &argv, "o", NULL);
-// returns NULL or the value of the option, removes 1 or 0 arguments
+// returns NULL or true, removes 0 or 1 arguments
 //
 
 #ifdef MAIN_PICKOPT

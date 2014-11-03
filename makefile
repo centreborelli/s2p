@@ -89,7 +89,7 @@ SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRC = $(SRCIIO) $(SRCFFT)
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
-imscript: $(BINDIR) $(PROGRAMS) $(addprefix $(BINDIR)/, watermask disp_to_h colormesh bin2asc siftu ransac srtm4 srtm4_which_tile)
+imscript: $(BINDIR) $(PROGRAMS) $(addprefix $(BINDIR)/, watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4 srtm4_which_tile)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
 	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
@@ -123,6 +123,13 @@ $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wra
 	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o \
 	$(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c \
 	$(LDLIBS) -lstdc++ -o $(BINDIR)/colormesh
+
+$(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
+	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c c/iio.h\
+	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o \
+	$(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c \
+	$(LDLIBS) -lstdc++ -o $(BINDIR)/disp2ply
 
 # GEOGRAPHICLIB STUFF
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
