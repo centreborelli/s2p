@@ -422,7 +422,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
 
-    return out
+    return
 
 
 def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
@@ -474,12 +474,12 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
-    dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-                            tile_w, tile_h, overlap, cld_msk, roi_msk)
+    process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h, tile_w,
+                 tile_h, overlap, cld_msk, roi_msk)
 
     out_dir_right = '%s/right' % out_dir
-    dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-                             tile_w, tile_h, overlap, cld_msk, roi_msk)
+    process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h, tile_w,
+                 tile_h, overlap, cld_msk, roi_msk)
 
     # merge the two digital elevation models
     # TODO: implement a merging procedure that merges the two clouds tile by
@@ -713,20 +713,19 @@ def main(config_file):
 
     # point cloud generation
     if len(cfg['images']) == 2:
-        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
-                           cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                           cfg['images'][1]['rpc'], cfg['roi']['x'],
-                           cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-                           None, None, None, cfg['images'][0]['cld'],
-                           cfg['images'][0]['roi'])
+        process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+                     cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                     cfg['images'][1]['rpc'], cfg['roi']['x'], cfg['roi']['y'],
+                     cfg['roi']['w'], cfg['roi']['h'], None, None, None,
+                     cfg['images'][0]['cld'], cfg['images'][0]['roi'])
     else:
-        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
-                              cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                              cfg['images'][1]['rpc'], cfg['images'][2]['img'],
-                              cfg['images'][2]['rpc'], cfg['roi']['x'],
-                              cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-                              cfg['fusion_thresh'], None, None, None, None,
-                              cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+        process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+                        cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                        cfg['images'][1]['rpc'], cfg['images'][2]['img'],
+                        cfg['images'][2]['rpc'], cfg['roi']['x'],
+                        cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                        cfg['fusion_thresh'], None, None, None, None,
+                        cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
 #    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
 #                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
