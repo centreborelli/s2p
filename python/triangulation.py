@@ -127,7 +127,7 @@ def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
 
     # apply correction matrix
     if A is not None:
-        HH2 = common.tmpfile('.txt')
+        HH2 = '%s/H_sec_corrected.txt' % os.path.dirname(out)
         np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
     else:
         HH2 = H2
