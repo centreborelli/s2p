@@ -46,4 +46,6 @@ cfg['debug'] = False
 cfg['skip_existing'] = False
 cfg['mosaic_method'] = 'piio'
 cfg['offset_ply'] = False
-cfg['msk_erosion'] = 50
+
+# radius for erosion of valid disparity areas. Ignored if less than 2
+cfg['msk_erosion'] = 2

@@ -143,7 +143,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
                                          disp_max)
 
     # intersect mask with the cloud_water_image_domain mask
-    masking.cloud_water_image_domain(cwid_msk, w, h, H1, rpc1, roi_msk, cld_msk)
+    ww, hh = common.image_size(rect1)
+    masking.cloud_water_image_domain(cwid_msk, ww, hh, H1, rpc1, roi_msk,
+                                     cld_msk)
     masking.intersection(mask, mask, cwid_msk)
     masking.erosion(mask, mask, cfg['msk_erosion'])
 
@@ -224,8 +226,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             area contained in the full image.
 
     Returns:
-        path to the digital elevation model (dem), resampled on the grid of the
-        reference image.
+        Nothing
     """
     # create a directory for the experiment
     if not os.path.exists(out_dir):
@@ -337,7 +338,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             disp = '%s/rectified_disp.tif' % tile
             mask = '%s/rectified_mask.png' % tile
             ply = '%s/cloud.ply' % tile
-            img_ref = '%s/rectified_ref.tif.png' % tile
+            img_ref = '%s/rectified_ref.tif' % tile
             if cfg['debug']:
                 triangulation.compute_ply(ply, rpc1, rpc2, H1, H2, disp, mask,
                                           img_ref, A)
@@ -363,8 +364,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     if cfg['clean_tmp']:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
-
-    return out
 
 
 def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
@@ -397,8 +396,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
             area contained in the full image.
 
     Returns:
-        path to the digital elevaton model (dem), resampled on the grid of the
-        reference image.
+        Nothing
     """
     # create a directory for the experiment
     if not os.path.exists(out_dir):
@@ -433,8 +431,6 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
     if cfg['clean_tmp']:
         while common.garbage:
             common.run('rm ' + common.garbage.pop())
-
-    return dem
 
 
 def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
