@@ -8,6 +8,10 @@
 # they won't have a default value.
 
 cfg = {}
+
+# resolution of the output digital surface model, in meters per pixel
+cfg['dsm_resolution'] = 4
+
 cfg['subsampling_factor'] = 1
 # register using subsampled image
 cfg['subsampling_factor_registration'] = 1

@@ -11,6 +11,7 @@ import numpy as np
 import os.path
 import copy
 import operator
+import glob
 
 from python import tee
 from python import common
@@ -338,22 +339,11 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                 triangulation.compute_ply(ply, rpc1, rpc2, H1, H2, disp, mask,
                                           img_ref_png, A)
             else:
-                pool.apply_async(triangulation.compute_ply, args=(ply, rpc1,
-                                                                  rpc2, H1, H2,
-                                                                  disp, mask,
-                                                                  img_ref_png, A))
+                pool.apply_async(triangulation.compute_ply,
+                                 args=(ply, rpc1, rpc2, H1, H2, disp, mask,
+                                       img_ref_png, A))
     pool.close()
     pool.join()
-
-#    # tiles composition
-#    out = '%s/dem.tif' % out_dir
-#    tmp = ['%s/dem.tif' % t for t in tiles]
-#    if not os.path.isfile(out) or not cfg['skip_existing']:
-#        print "Mosaic method: %s" % cfg['mosaic_method']
-#        if cfg['mosaic_method'] == 'gdal':
-#            tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-#        else:
-#            tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
 
     # cleanup
     if cfg['clean_tmp']:
@@ -409,18 +399,16 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
-    dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-                            tile_w, tile_h, overlap, cld_msk, roi_msk)
+    process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h, tile_w,
+                 tile_h, overlap, cld_msk, roi_msk)
 
     out_dir_right = '%s/right' % out_dir
-    dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-                             tile_w, tile_h, overlap, cld_msk, roi_msk)
+    process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h, tile_w,
+                 tile_h, overlap, cld_msk, roi_msk)
 
     # merge the two digital elevation models
     # TODO: implement a merging procedure that merges the two clouds tile by
     # tile
-#    dem = '%s/dem.tif' % out_dir
-#    fusion.merge(dem_left, dem_right, thresh, dem)
 
     # cleanup
     if cfg['clean_tmp']:
@@ -657,22 +645,21 @@ def main(config_file):
     json.dump(cfg, f, indent=2)
     f.close()
 
-    # point cloud generation
+    # point cloud generation, tilewise
     if len(cfg['images']) == 2:
-        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
-                           cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                           cfg['images'][1]['rpc'], cfg['roi']['x'],
-                           cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-                           None, None, None, cfg['images'][0]['cld'],
-                           cfg['images'][0]['roi'])
+        process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+                     cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                     cfg['images'][1]['rpc'], cfg['roi']['x'], cfg['roi']['y'],
+                     cfg['roi']['w'], cfg['roi']['h'], None, None, None,
+                     cfg['images'][0]['cld'], cfg['images'][0]['roi'])
     else:
-        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
-                              cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                              cfg['images'][1]['rpc'], cfg['images'][2]['img'],
-                              cfg['images'][2]['rpc'], cfg['roi']['x'],
-                              cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-                              cfg['fusion_thresh'], None, None, None, None,
-                              cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+        process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+                        cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                        cfg['images'][1]['rpc'], cfg['images'][2]['img'],
+                        cfg['images'][2]['rpc'], cfg['roi']['x'],
+                        cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                        cfg['fusion_thresh'], None, None, None, None,
+                        cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
 #    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
 #                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
@@ -680,7 +667,10 @@ def main(config_file):
 #                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
 #                   cfg['roi']['h'], dem, cfg['offset_ply'])
 
-    # TODO generate DSM
+    # TODO this only work for pairs, not for triplets
+    out_dsm = '%s/dsm.tif' % cfg['out_dir']
+    point_clouds_list = glob.glob('%s/tile_*/cloud.ply' % cfg['out_dir'])
+    generate_dem(out_dsm, point_clouds_list, cfg['dsm_resolution'])
 
 
 if __name__ == '__main__':
