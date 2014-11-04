@@ -10,63 +10,6 @@ import common
 from config import cfg
 
 
-def update_mask(target_mask, H, ml_file, invert=False, erosion=None,
-                water=False):
-    """
-    Computes the intersection between an image mask and a gml mask.
-
-    Args:
-        target_mask: path to the png file containing the image mask. This file
-            will be overwritten.
-        H: 3x3 numpy array defining the rectifying homography
-        ml_file: path to the gml or xml file defining the mask on the full
-            image. For cloud or roi masks, it is a gml file containing polygons.
-            In case of a water mask, it is the rpc xml file.
-        invert: boolean flag. Set it to True if the mask is positive on marked
-            regions (it is the case for cloud masks, but not for roi masks)
-        erosion (optional, default None): erosion parameter applied to the gml
-            mask. Note that the mask should have been inverted (if needed) to
-            mark accepted pixels with a positive value, and rejected pixels
-            with 0.
-        water (optional, default False): boolean flag to tell if the mask to be
-            applied is a water mask
-
-    Returns:
-        nothing. The file target_mask is modified.
-    """
-    msk = common.tmpfile('.png')
-    w, h = common.image_size_gdal(target_mask)
-
-    # write the 9 coefficients of the homography to a string, then call cldmask
-    # or watermask
-    hij = ' '.join(['%r' % num for num in H.flatten()])
-    if water:
-        common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, ml_file, msk))
-    else:
-        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, ml_file, msk))
-
-    # invert mask
-    if invert:
-        common.run('plambda %s "255 x -" -o %s' % (msk, msk))
-
-    # apply erosion
-    if erosion is not None:
-        common.run('morsi disk%d erosion %s %s' % (int(erosion), msk, msk))
-
-    # compute the intersection between target_mask and msk
-    common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk,
-                                                      target_mask))
-
-    # save msk (for debug purposes)
-    if water:
-        common.run('cp %s %s.water.png' % (msk, target_mask))
-    elif invert:
-        common.run('cp %s %s.cloud.png' % (msk, target_mask))
-    else:
-        common.run('cp %s %s.roi.png' % (msk, target_mask))
-    return
-
-
 def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     """
     Computes a height map from a disparity map, using rpc.
