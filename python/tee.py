@@ -5,6 +5,7 @@
 import sys
 
 class Tee(object):
+
     def __init__(self, name, mode):
         self.file = open(name, mode, 0) # '0' is for no buffering
         self.fileno = self.file.fileno
@@ -13,10 +14,12 @@ class Tee(object):
         self.stderr = sys.stderr
         sys.stdout = self
         sys.stderr = self
-    def __del__(self):
+
+    def delete(self):
         sys.stdout = self.stdout
         sys.stderr = self.stderr
         self.file.close()
+
     def write(self, data):
         self.file.write(data)
         self.stdout.write(data)

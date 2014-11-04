@@ -193,12 +193,9 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     # Catch all possible exceptions here
     except:
         sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        print "Failed to generate tile %i %i %i %i: %s)" % (x, y, w, h)
+        sys.stderr = sys.__stdout__
         print sys.exc_info()
-        return
-
-    print "Tile %i %i %i %i generated." % (x, y, w, h)
+        print "failed to generate tile %i %i %i %i\n" % (x, y, w, h)
     return
 
 
