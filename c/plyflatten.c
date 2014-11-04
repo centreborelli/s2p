@@ -124,10 +124,10 @@ int main(int c, char *v[])
         help(*v);
 		return 1;
 	}
-	int resolution = atoi(v[1]);
+	float resolution = atof(v[1]);
 	char *filename_out = v[2];
 
-    // initialize x,y extrema values
+    // initialize x, y extrema values
     float xmin = INFINITY;
     float xmax = -INFINITY;
     float ymin = INFINITY;
