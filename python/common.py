@@ -382,17 +382,19 @@ def median_filter(im, w, n):
 
 
 
-def image_qauto(im):
+def image_qauto(im, out=None):
     """
     Uniform requantization between min and max intensity.
 
     Args:
         im: path to input image
+        out (optional, default is None): path to output image
 
     Returns:
         path of requantized image, saved as png
     """
-    out = tmpfile('.png')
+    if out is None:
+        out = tmpfile('.png')
     run('qauto %s %s' % (im, out))
     return out
 

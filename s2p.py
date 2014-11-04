@@ -178,7 +178,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     return
 
 
-def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
+def safe_process_pair_single_tile(i, n, out_dir, img1, rpc1, img2, rpc2, x=None,
                                   y=None, w=None, h=None, prv1=None,
                                   cld_msk=None, roi_msk=None):
     """
@@ -193,10 +193,11 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     try:
         process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y, w, h,
                                  prv1, cld_msk, roi_msk)
+        sys.__stdout__.write("Processed tile number %d / %d\r" % (i, n))
+        sys.__stdout__.flush()
     # Catch all possible exceptions here
     except:
         sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stdout__
         print sys.exc_info()
         print "Failed to generate tile %i %i %i %i:\n" % (x, y, w, h)
     return
@@ -288,22 +289,14 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         for col in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
             tiles.append(tile_dir)
-            # TODO: fix this broken print
-            print "Processing tile number %d / %d\r" % (len(tiles), nt),
-            log.stdout.flush()
             if cfg['debug']:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
                                          row, tw, th, None, cld_msk, roi_msk)
             else:
-                pool.apply_async(safe_process_pair_single_tile, args=(tile_dir,
-                                                                      img1,
-                                                                      rpc1,
-                                                                      img2,
-                                                                      rpc2, col,
-                                                                      row, tw,
-                                                                      th, None,
-                                                                      cld_msk,
-                                                                      roi_msk))
+                pool.apply_async(safe_process_pair_single_tile,
+                                 args=(len(tiles), nt, tile_dir, img1, rpc1,
+                                       img2, rpc2, col, row, tw, th, None,
+                                       cld_msk, roi_msk))
 
     # wait for all the processes to terminate
     pool.close()
@@ -339,14 +332,16 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             mask = '%s/rectified_mask.png' % tile
             ply = '%s/cloud.ply' % tile
             img_ref = '%s/rectified_ref.tif' % tile
+            img_ref_png = '%s/rectified_ref.png' % tile
+            common.image_qauto(img_ref, img_ref_png)
             if cfg['debug']:
                 triangulation.compute_ply(ply, rpc1, rpc2, H1, H2, disp, mask,
-                                          img_ref, A)
+                                          img_ref_png, A)
             else:
                 pool.apply_async(triangulation.compute_ply, args=(ply, rpc1,
                                                                   rpc2, H1, H2,
                                                                   disp, mask,
-                                                                  img_ref, A))
+                                                                  img_ref_png, A))
     pool.close()
     pool.join()
 
