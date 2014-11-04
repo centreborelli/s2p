@@ -62,9 +62,29 @@ tvl1:
 	cp 3rdparty/tvl1flow_3/tvl1flow $(BINDIR)
 	cp 3rdparty/tvl1flow_3/callTVL1.sh $(BINDIR)
 
-# WITHOUT IIO:
-# bin2asc siftu srtm4 srtm4_which_tile ransac
-#
+PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
+SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
+SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
+	veco morphoop cldmask disp_to_h_projective colormesh_projective plyflatten
+SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
+SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
+	srtm4_which_tile
+
+imscript: $(BINDIR) $(PROGRAMS)
+
+$(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
+	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
+
+$(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
+	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
+
+$(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
+	$(CC) $(CFLAGS) -c -Wno-deprecated-declarations $< -o $@
+
+$(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
+	$(CC) $(CFLAGS) -c c/rpc.c -o $(SRCDIR)/rpc.o
+
+
 $(BINDIR)/bin2asc: c/bin2asc.c
 	$(CC) $(CFLAGS) c/bin2asc.c -o $(BINDIR)/bin2asc
 
@@ -83,36 +103,10 @@ $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_w
 	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o \
 	$(SRCDIR)/Geoid.o -ltiff -lm -lstdc++ -o $(BINDIR)/srtm4_which_tile
 
-# WITH IIO ONLY:
-SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
-	veco morphoop cldmask disp_to_h_projective colormesh_projective plyflatten
-SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
-SRC = $(SRCIIO) $(SRCFFT)
-PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
-imscript: $(BINDIR) $(PROGRAMS) $(addprefix $(BINDIR)/, watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4 srtm4_which_tile)
-
-$(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
-
-$(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
-
-$(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
-	$(CC) $(CFLAGS) -c -Wno-deprecated-declarations $< -o $@
-
 $(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o c/watermask.c c/fail.c\
 	c/xmalloc.c c/pickopt.c c/rpc.c c/srtm4.c c/iio.h c/parsenumbers.c
 	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o c/watermask.c \
 	$(LDLIBS) -lstdc++ -o $(BINDIR)/watermask
-
-
-
-
-# WITH IIO AND  RPC:
-#   disp_to_h colormesh
-#
-$(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
-	$(CC) $(CFLAGS) -c c/rpc.c -o $(SRCDIR)/rpc.o
 
 $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/iio.h c/rpc.h c/read_matrix.c
 	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(LDLIBS) -o $(BINDIR)/disp_to_h
@@ -130,6 +124,7 @@ $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrap
 	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o \
 	$(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c \
 	$(LDLIBS) -lstdc++ -o $(BINDIR)/disp2ply
+
 
 # GEOGRAPHICLIB STUFF
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
@@ -164,5 +159,11 @@ clean:
 	rm c/*.o
 	rm -r bin
 
+clean_imscript:
+	rm $(PROGRAMS)
+	rm $(SRCDIR)/iio.o
+	rm $(SRCDIR)/rpc.o
+	#rm -r $(addsuffix .dSYM, $(PROGRAMS))
+
 .PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
-	imscript clean
+	imscript clean clean_imscript
