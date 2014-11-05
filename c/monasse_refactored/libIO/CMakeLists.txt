@@ -36,7 +36,7 @@ TARGET_LINK_LIBRARIES(IO ${TIFF_LIBRARIES} ${PNG_LIBRARIES})
 
 IF(UNIX)
     SET_TARGET_PROPERTIES(IO PROPERTIES
-                          COMPILE_FLAGS "-Wall -Wextra -Werror")
+                          COMPILE_FLAGS "-Wall")
 ENDIF(UNIX)
 
 INSTALL(FILES CMakeLists.txt ${SRC} DESTINATION src/libIO)
