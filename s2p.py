@@ -277,7 +277,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
 
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
-    if cfg['max_nb_threads'] > 0:
+    if cfg['max_nb_threads']:
         nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
     print 'Creating pool with %d workers\n' % nb_workers
