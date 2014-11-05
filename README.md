@@ -5,6 +5,8 @@ images taken by high resolution optical satellites such as Pléiades, Worldiew
 QuickBird, Spot or Ikonos. It generates automatically digital elevation models
 from stereo pairs (two images) or tri-stereo sets (three images).
 
+UPDATE: tri-stereo is currently *not supported*
+
 The main language is Python, although several operations are handled by
 binaries written in C.
 
@@ -39,14 +41,14 @@ dictionary (as in the example).
 ### From a python interpreter
 An other way is to import the `s2p` module in a python session, and run the
 functions `process_pair` or `process_triplet`, depending on the kind of dataset
-you have (stereo pair or triplet), to generate a digital elevation model (DEM),
-and then generate a 3D point cloud from this DEM using the function
+you have (stereo pair or triplet), to generate an altitude map,
+and then generate a 3D point cloud from this altitude map using the function
 `generate_cloud`.
 
     python
     >>> import s2p
-    >>> dem = s2p.process_triplet('test', 'pan1.tif', 'rpc1.xml', 'pan2.tif', 'rpc2.xml', 'pan3.tif', 'rpc3.xml', 25150, 24250, 300, 300, 3)
-    >>> s2p.generate_cloud('test', 'pan1.tif', 'rpc1.xml', 'xs1.tif', 25150, 24250, 300, 300, dem)
+    >>> alt_map = s2p.process_triplet('test', 'pan1.tif', 'rpc1.xml', 'pan2.tif', 'rpc2.xml', 'pan3.tif', 'rpc3.xml', 25150, 24250, 300, 300, 3)
+    >>> s2p.generate_cloud('test', 'pan1.tif', 'rpc1.xml', 'xs1.tif', 25150, 24250, 300, 300, alt_map)
 
 See the docstrings of the functions `process_pair`, `process_triplet` and
 `generate_cloud` for a complete description of their arguments.
@@ -73,15 +75,6 @@ directory containing all the needed binaries.
     cd gdal-1.10.1
     ./configure --prefix=$HOME/local
     make install
-
-### piio
-
-    cd 3rdparty
-    git clone https://github.com/carlodef/iio.git
-    cd piio_packaged
-    python setup.py install --prefix=~/local
-    export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
-
 
 ### Old dependencies. Not required anymore
 
@@ -150,6 +143,15 @@ Now you can compile the SGBM wrapper:
     cd numpy-1.6.1
     python setup.py build --fcompiler=gnu95 <!---check the README.txt of numpy for the compiler options-->
     python setup.py install --prefix=~/local/
+
+#### piio
+
+    cd 3rdparty
+    git clone https://github.com/carlodef/iio.git
+    cd piio_packaged
+    python setup.py install --prefix=~/local
+    export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
+
 
 
 #### Copy 3rd party binaries into bin
