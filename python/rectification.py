@@ -79,7 +79,7 @@ def matches_from_sift(im1, im2):
         im1 = common.image_safe_zoom_fft(im1, zoom)
         im2 = common.image_safe_zoom_fft(im2, zoom)
 
-    # apply sift (monasse implementation first)
+    # apply sift (monasse implementation first, because faster)
     p1 = common.image_sift_keypoints(im1, None, None, 'monasse')
     p2 = common.image_sift_keypoints(im2, None, None, 'monasse')
     matches = common.sift_keypoints_match(p1, p2, 'relative',
@@ -92,11 +92,17 @@ def matches_from_sift(im1, im2):
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
-    # if still less than 10 matches, lower the thresh_dog for the sift call of
-    # the secondary image. Default value for thresh_dog is 0.0133
-    if matches.shape[0] < 10:
+    # if still less than 10 matches, lower the thresh_dog for the sift calls.
+    # Default value for thresh_dog is 0.0133
+    thresh_dog = 0.0133
+    nb_sift_tries = 2
+    while (matches.shape[0] < 10 and nb_sift_tries < 6):
+        nb_sift_tries += 1
+        thresh_dog /= 2.0
+        p1 = common.image_sift_keypoints(im1, None, None, 'ipol',
+                                         '-thresh_dog %f' % thresh_dog)
         p2 = common.image_sift_keypoints(im2, None, None, 'ipol',
-                                         '-thresh_dog 0.0066')
+                                         '-thresh_dog %f' % thresh_dog)
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
