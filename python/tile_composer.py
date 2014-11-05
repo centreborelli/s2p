@@ -40,8 +40,8 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
         for i in range(ntx):
             x0 = i * (tw - ov)
             y0 = j * (th - ov)
-            x1 = min(x0 + tw - ov, w)
-            y1 = min(y0 + th - ov, h)
+            x1 = min(x0 + tw, w)
+            y1 = min(y0 + th, h)
             f = list_tiles[j * ntx + i]
             if os.path.isfile(f):
                 # remove first dir name from path
