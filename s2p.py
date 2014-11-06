@@ -345,10 +345,12 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             # check if the tile is already done, or masked
             if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
                 if cfg['skip_existing']:
-                    print "Tile %d %d %d %d already done, skip" % (x, y, w, h)
+                    print "Tile %d %d %d %d already done, skip" % (col, row, tw,
+                                                                   th)
                     continue
             if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                print "Tile %d %d %d %d already masked, skip" % (x, y, w, h)
+                print "Tile %d %d %d %d already masked, skip" % (col, row, tw,
+                                                                 th)
                 continue
 
             # process the tile
