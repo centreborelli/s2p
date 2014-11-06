@@ -1283,7 +1283,8 @@ static int read_whole_tiff(struct iio_image *x, const char *filename)
 	IIO_DEBUG("sls(r) = %d\n", (int)sls);
 	assert((int)scanline_size == sls);
 	scanline_size = sls;
-	uint8_t *data = xmalloc(w * h * spp * rbps);
+	uint64_t nb_bytes = (uint64_t) w * h * spp * rbps;
+	uint8_t *data = xmalloc(nb_bytes);
 	uint8_t *buf = xmalloc(scanline_size);
 
 	// use a particular reader for tiled tiff
