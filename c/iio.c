@@ -1308,8 +1308,8 @@ static int read_whole_tiff(struct iio_image *x, const char *filename)
 			for (uint16_t l = 0; l < spp; l++)
 			for (int b = 0; b < Bps; b++)
 			{
-				uint32_t ii = i + tx;
-				uint32_t jj = j + ty;
+				uint64_t ii = i + tx;
+				uint64_t jj = j + ty;
 				if (ii < w && jj < h)
 				{
 				uint8_t s = tbuf[((j*tilewidth+i)*spp+l)*Bps+b];
