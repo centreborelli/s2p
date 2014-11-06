@@ -3,9 +3,11 @@
 
 
 import os
+import sys
 import numpy as np
 
 import common
+from config import cfg
 
 
 def update_mask(target_mask, H, ml_file, invert=False, erosion=None,
@@ -133,7 +135,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
 
 
 def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
-        A=None):
+                A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -155,9 +157,23 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     Returns:
         nothing
     """
+    out_dir = os.path.dirname(out)
+
+    # redirect stdout and stderr to log file, in append mode
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % out_dir, 'a', 0)  # '0' for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
     tmp = common.tmpfile('.tif')
     compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
+
+    # close logs
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
 
 
 def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
