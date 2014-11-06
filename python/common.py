@@ -235,6 +235,37 @@ def image_pix_dim(im):
         sys.exit()
 
 
+def image_pix_dim_tiffinfo(im):
+    """
+    Reads the number of channels of an image, using tiffinfo
+
+    Args:
+        im: path to the input tif image file
+
+    Returns:
+        number of channels of the image
+    """
+    if not im.lower().endswith('.tif'):
+        print "image_pix_dim_tiffinfo function works only with TIF files"
+        print "use image_pix_dim instead"
+        sys.exit()
+    try:
+        with open(im):
+            # redirect stderr to /dev/null on tiffinfo call to discard noisy
+            # msg about unknown field with tag 42112
+            fnull = open(os.devnull, "w")
+            p1 = subprocess.Popen(['tiffinfo', im], stdout=subprocess.PIPE,
+                    stderr=fnull)
+            p2 = subprocess.Popen(['grep', 'Samples/Pixel'], stdin=p1.stdout,
+                    stdout=subprocess.PIPE)
+            line = p2.stdout.readline()
+            out = re.findall(r"[\w']+", line)
+            n = int(out[2])
+            return n
+    except IOError:
+        print "image_pix_dim_tiffinfo: file %s doesn't exist" % str(im)
+        sys.exit()
+
 def image_crop(im, x, y, w, h, out=None):
     if (out == None):
         out = tmpfile('.tif')

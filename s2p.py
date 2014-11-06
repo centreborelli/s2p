@@ -555,29 +555,33 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
         off_x, off_y = 0, 0
 
     # crop the ROI in ref and sec images, then zoom
-    r1 = rpc_model.RPCModel(rpc1)
-    r2 = rpc_model.RPCModel(rpc2)
-    x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x, y, w, h)
-    if z == 1:
-        common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
-        common.image_crop_TIFF(im2, x2, y2, w2, h2, crop_sec)
+    if cfg['full_img'] and z == 1:
+        crop_ref = im1
+        crop_sec = im2
     else:
-        # gdal is used for the zoom because it handles BigTIFF files, and
-        # before the zoom out the image may be that big
-        tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
-        common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
-        tmp_crop = common.image_crop_TIFF(im2, x2, y2, w2, h2)
-        common.image_zoom_gdal(tmp_crop, z, crop_sec, w2, h2)
+        r1 = rpc_model.RPCModel(rpc1)
+        r2 = rpc_model.RPCModel(rpc2)
+        x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x, y, w, h)
+        if z == 1:
+            common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
+            common.image_crop_TIFF(im2, x2, y2, w2, h2, crop_sec)
+        else:
+            # gdal is used for the zoom because it handles BigTIFF files, and
+            # before the zoom out the image may be that big
+            tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
+            common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
+            tmp_crop = common.image_crop_TIFF(im2, x2, y2, w2, h2)
+            common.image_zoom_gdal(tmp_crop, z, crop_sec, w2, h2)
 
     # colorize, then generate point cloud
     if clr is not None:
         print 'colorizing...'
         triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
-    elif common.image_pix_dim(crop_ref) == 4:
+    elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
         print 'the image is pansharpened fusioned'
 
         # if the image is big, use gdal
-        if reduce(operator.mul, common.image_size(crop_ref)) > 1e8:
+        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
             crop_color = common.rgbi_to_rgb_gdal(crop_ref)
             crop_color = common.image_qauto_gdal(crop_color)
         else:
@@ -585,7 +589,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             crop_color = common.image_qauto(crop_color)
     else:
         print 'no color data'
-        if reduce(operator.mul, common.image_size(crop_ref)) > 1e8:
+        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
             crop_color = common.image_qauto_gdal(crop_ref)
         else:
             crop_color = common.image_qauto(crop_ref)
@@ -684,7 +688,7 @@ def main(config_file):
 
     # update roi definition if the full_img flag is set to true
     if ('full_img' in cfg) and cfg['full_img']:
-        sz = common.image_size_gdal(cfg['images'][0]['img'])
+        sz = common.image_size_tiffinfo(cfg['images'][0]['img'])
         cfg['roi'] = {}
         cfg['roi']['x'] = 0
         cfg['roi']['y'] = 0
