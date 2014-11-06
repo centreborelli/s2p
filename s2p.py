@@ -173,11 +173,13 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     if A is None:
         A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
                                                     y, w, h)
-        np.savetxt(pointing, A)
-        np.savetxt(sift_matches, m)
-        np.savetxt(center, np.mean(m[:, 2:4], 0))
-        visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y, w,
-                                            h, sift_matches_plot)
+        if A:
+            np.savetxt(pointing, A)
+        if m:
+            np.savetxt(sift_matches, m)
+            np.savetxt(center, np.mean(m[:, 2:4], 0))
+            visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y,
+                                                w, h, sift_matches_plot)
     else:
         m = None
 

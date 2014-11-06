@@ -689,8 +689,8 @@ def local_translation(r1, r2, x, y, w, h, m):
     return A
 
 
-def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
-        first_guess=None, filter_matches='fundamental'):
+def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
+                       filter_matches='fundamental'):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -705,10 +705,6 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want. If bigger than
             1 Mpix, only five crops will be used to compute sift matches.
-        out_dict (optional): dictionary in which to write the correction matrix
-        first_guess (optional): correction matrix that will be returned if
-            there are not enough sift matches to estimate the actual correction
-            matrix.
         filter_matches (optional, default is 'fundamental'): model imposed by
             RANSAC when searching the set of inliers
 
@@ -721,41 +717,31 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h, out_dict=None,
     r1 = rpc_model.RPCModel(rpc1)
     r2 = rpc_model.RPCModel(rpc2)
 
-    ## correct pointing error - no subsampling!
+    # correct pointing error - no subsampling!
     tmp = cfg['subsampling_factor_registration']
     cfg['subsampling_factor_registration'] = 1
 
     try:
         if w*h < 2e6:
             m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h,
-                    filter_matches)
+                                          filter_matches)
         else:
             m = filtered_sift_matches_full_img(img1, img2, r1, r2,
-                    cfg['pointing_correction_rois_mode'], None, 1000, x, y, w,
-                    h, model=filter_matches)
+                                               cfg['pointing_correction_rois_mode'],
+                                               None, 1000, x, y, w, h,
+                                               model=filter_matches)
     except Exception as e:
         print e
-        print """pointing_accuracy.compute_correction: no sift matches.
-        Returning with the 'first guess' correction matrix (ie the global
-        correction matrix, or identity)."""
-        m = np.array([[]])
-        if first_guess is not None:
-            A = first_guess
-        else:
-            A = np.eye(3)
-        if out_dict is not None:
-            out_dict['correction_matrix'] = A
-        return A, m
+        print "WARNING: pointing_accuracy.compute_correction: no sift matches."
+        m = None
 
     cfg['subsampling_factor_registration'] = tmp
 
-    #A = optimize_pair(img1, img2, r1, r2, None, m)
-    A = local_translation(r1, r2, x, y, w, h, m)
-
-    # needed to recover output value when launching the function in a
-    # multiprocessing.Process object
-    if out_dict is not None:
-        out_dict['correction_matrix'] = A
+    # A = optimize_pair(img1, img2, r1, r2, None, m)
+    if m:
+        A = local_translation(r1, r2, x, y, w, h, m)
+    else:
+        A = None
 
     return A, m
 
