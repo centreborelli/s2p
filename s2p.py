@@ -127,10 +127,6 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
-    if os.path.isfile(disp) and cfg['skip_existing']:
-        print "Tile %d, %d, %d, %d already generated, skipping" % (x, y, w, h)
-        return
-
     # redirect stdout and stderr to log file
     if not cfg['debug']:
         fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
@@ -161,10 +157,10 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # check if the ROI is completely masked (water, or outside the image domain)
     if is_tile_masked(x, y, w, h, rpc1, roi_msk, cld_msk):
         print "Tile masked by water or outside definition domain, skip"
-        open("%s/pointing.txt" % out_dir, 'a').close()  # don't retry this tile
+        open("%s/this_tile_is_masked.txt" % out_dir, 'a').close()
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        if cfg['debug']:
+        if not cfg['debug']:
             fout.close()
         return
 
@@ -173,9 +169,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     if A is None:
         A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
                                                     y, w, h)
-        if A:
+        if A is not None:
             np.savetxt(pointing, A)
-        if m:
+        if m is not None:
             np.savetxt(sift_matches, m)
             np.savetxt(center, np.mean(m[:, 2:4], 0))
             visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y,
@@ -345,23 +341,32 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         for col in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
             tiles.append(tile_dir)
+
+            # check if the tile is already done, or masked
+            if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
+                if cfg['skip_existing']:
+                    print "Tile %d %d %d %d already done, skip" % (x, y, w, h)
+                    continue
+            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                print "Tile %d %d %d %d already masked, skip" % (x, y, w, h)
+                continue
+
+            # process the tile
             if cfg['debug']:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
                                          row, tw, th, None, cld_msk, roi_msk)
             else:
-                pool.apply_async(safe_process_pair_single_tile, args=(tile_dir,
-                                                                      img1,
-                                                                      rpc1,
-                                                                      img2,
-                                                                      rpc2, col,
-                                                                      row, tw,
-                                                                      th, None,
-                                                                      cld_msk,
-                                                                      roi_msk))
+                pool.apply_async(safe_process_pair_single_tile,
+                                 args=(tile_dir, img1, rpc1, img2, rpc2, col,
+                                       row, tw, th, None, cld_msk, roi_msk))
 
     # wait for all the processes to terminate
     pool.close()
     pool.join()
+
+    # compute global pointing correction
+    A_global = pointing_accuracy.global_from_local(tiles)
+    np.savetxt('%s/pointing.txt' % out_dir, A_global)
 
     # Check if all tiles were computed
     # The only cause of a tile failure is a lack of sift matches, which breaks
@@ -370,17 +375,18 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
             tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
-            if not os.path.isfile('%s/pointing.txt' % tile_dir):
-                print "WARNING: %s failed. Retrying pointing corr..." % tile_dir
-                # estimate pointing correction matrix from neighbors and rerun
-                # the disparity map computation
-                A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
-                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
-                                         row, tw, th, None, cld_msk, roi_msk, A)
-
-    # compute global pointing correction
-    A = pointing_accuracy.global_from_local(tiles)
-    np.savetxt('%s/pointing.txt' % out_dir, A)
+            if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                if not os.path.isfile('%s/pointing.txt' % tile_dir):
+                    print "%s retrying pointing corr..." % tile_dir
+                    # estimate pointing correction matrix from neighbors, if it
+                    # fails use A_global, then rerun the disparity map
+                    # computation
+                    A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
+                    if A is None:
+                        A = A_global
+                    process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2,
+                                             col, row, tw, th, None, cld_msk,
+                                             roi_msk, A)
 
     # triangulation
     pool = multiprocessing.Pool(max_processes)
@@ -395,14 +401,14 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             dem = '%s/dem.tif' % tile
             if cfg['debug']:
                 triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
-                                          H1, H2, disp, mask, rpc_err, A)
+                                          H1, H2, disp, mask, rpc_err, A_global)
             else:
                 pool.apply_async(triangulation.compute_dem, args=(dem, col, row,
                                                                   tw, th, z,
                                                                   rpc1, rpc2,
                                                                   H1, H2, disp,
                                                                   mask, rpc_err,
-                                                                  A))
+                                                                  A_global))
     pool.close()
     pool.join()
 

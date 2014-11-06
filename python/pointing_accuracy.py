@@ -738,7 +738,7 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
     cfg['subsampling_factor_registration'] = tmp
 
     # A = optimize_pair(img1, img2, r1, r2, None, m)
-    if m:
+    if m is not None:
         A = local_translation(r1, r2, x, y, w, h, m)
     else:
         A = None
@@ -763,7 +763,7 @@ def from_next_tiles(tiles, ntx, nty, col, row):
         the estimated pointing correction for the specified tile
     """
     # TODO
-    return np.eye(3)
+    return None
 
 
 def global_from_local(tiles):
