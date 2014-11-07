@@ -301,24 +301,16 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         h = z * np.ceil(float(h) / z)
 
     # TODO: automatically compute optimal size for tiles
-    # TODO: impose the constraint that ntx*nty is inferior to or equal to a
-    # multiple of the number of cores
     if tw is None and th is None and ov is None:
         ov = z * 100
         if w <= z * cfg['tile_size']:
             tw = w
         else:
             tw = z * cfg['tile_size']
-            # TODO: modify tiles size to be close do a divisor of w
-            # while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
-            #    tw += 1
         if h <= z * cfg['tile_size']:
             th = h
         else:
             th = z * cfg['tile_size']
-            # TODO: modify tiles size to be close do a divisor of h
-            # while (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
-            #    th += 1
     ntx = np.ceil(float(w - ov) / (tw - ov))
     nty = np.ceil(float(h - ov) / (th - ov))
 
@@ -365,6 +357,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # wait for all the processes to terminate
     pool.close()
     pool.join()
+    common.garbage_cleanup() 
 
     # compute global pointing correction
     A_global = pointing_accuracy.global_from_local(tiles)
@@ -389,6 +382,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                     process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2,
                                              col, row, tw, th, None, cld_msk,
                                              roi_msk, A)
+    common.garbage_cleanup() 
 
     # triangulation
     pool = multiprocessing.Pool(max_processes)
@@ -413,6 +407,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                                                                   A_global))
     pool.close()
     pool.join()
+    common.garbage_cleanup() 
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
@@ -423,11 +418,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
         else:
             tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-
-    # cleanup
-    if cfg['clean_tmp']:
-        while common.garbage:
-            common.run('rm ' + common.garbage.pop())
+    common.garbage_cleanup() 
 
     return out
 
@@ -491,11 +482,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
     dem = '%s/dem.tif' % out_dir
     fusion.merge(dem_left, dem_right, thresh, dem)
 
-    # cleanup
-    if cfg['clean_tmp']:
-        while common.garbage:
-            common.run('rm ' + common.garbage.pop())
-
+    common.garbage_cleanup()
     return dem
 
 
@@ -599,10 +586,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
     triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
                                       off_x, off_y)
 
-    # cleanup
-    if cfg['clean_tmp']:
-        while common.garbage:
-            common.run('rm ' + common.garbage.pop())
+    common.garbage_cleanup()
 
 
 def check_parameters(usr_cfg):
