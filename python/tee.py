@@ -16,7 +16,7 @@ class Tee(object):
         sys.stdout = self
         sys.stderr = self
 
-    def __del__(self):
+    def delete(self):
         sys.stdout = self.stdout
         sys.stderr = self.stderr
         self.file.close()

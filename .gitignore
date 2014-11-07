@@ -11,3 +11,8 @@ iterate.dat
 3rdparty/stereo_hirschmuller_2008/testdata/
 ipynb
 data/pleiades/*/*
+3rdparty/tvl1flow_3/backflow
+3rdparty/tvl1flow_3/tvl1flow
+snapshots
+to_debug
+licence_examples
