@@ -338,12 +338,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             # check if the tile is already done, or masked
             if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
                 if cfg['skip_existing']:
-                    print "Tile %d %d %d %d already done, skip" % (col, row, tw,
-                                                                   th)
+                    print "stereo on tile %d %d already done, skip" % (col, row)
                     continue
             if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                print "Tile %d %d %d %d already masked, skip" % (col, row, tw,
-                                                                 th)
+                print "tile %d %d already masked, skip" % (col, row)
                 continue
 
             # process the tile
@@ -397,6 +395,18 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             mask = '%s/rectified_mask.png' % tile
             rpc_err = '%s/rpc_err.tif' % tile
             dem = '%s/dem.tif' % tile
+
+            # check if the tile is already done, or masked
+            if os.path.isfile('%s/dem.tif' % tile_dir):
+                if cfg['skip_existing']:
+                    print "triangulation on tile %d %d is done, skip" % (col,
+                                                                         row)
+                    continue
+            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                print "tile %d %d already masked, skip" % (col, row)
+                continue
+
+            # process the tile
             if cfg['debug']:
                 triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
                                           H1, H2, disp, mask, rpc_err, A_global)
