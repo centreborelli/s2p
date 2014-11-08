@@ -331,7 +331,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     tiles = []
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
-            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
+                    th)
             tiles.append(tile_dir)
 
             # check if the tile is already done, or masked
@@ -369,7 +370,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # correction matrix was computed.
     for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
+                    th)
             if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
                 if not os.path.isfile('%s/pointing.txt' % tile_dir):
                     print "%s retrying pointing corr..." % tile_dir
@@ -388,7 +390,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     pool = multiprocessing.Pool(max_processes)
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
-            tile = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            tile = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw, th)
             H1 = '%s/H_ref.txt' % tile
             H2 = '%s/H_sec.txt' % tile
             disp = '%s/rectified_disp.tif' % tile
