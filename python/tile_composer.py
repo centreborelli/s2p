@@ -1,10 +1,14 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
+import gc
+import sys
 import os.path
 import numpy as np
+
 import piio
 import common
+from config import cfg
 
 
 def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
@@ -82,12 +86,16 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
     nty = np.ceil(float(h - ov) / (th - ov)).astype(int)
     assert(ntx * nty == N)
 
-    out = np.zeros([h, w])
-    count = np.zeros([h, w])
+    # default numpy datatype is float64, useless as the ouput file will be
+    # stored with float32
+    out = np.zeros([h, w], dtype=np.float32)
+    count = np.zeros([h, w], dtype=np.uint8)
 
     # loop over all the tiles
     for j in range(nty):
         for i in range(ntx):
+            sys.stdout.write("Pasting tile %02d %02d\r" % (j, i))
+            sys.stdout.flush()
             # top-left and bottom-right corners of the tile in the output full
             # image
             x0 = i * (tw - ov)
@@ -100,7 +108,7 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
             # value 'nan' in the output full image.
             tile_fname = list_tiles[j * ntx + i]
             if os.path.isfile(tile_fname):
-                tile = piio.read(tile_fname)[:, :, 0]
+                tile = piio.read(tile_fname).astype(np.float32)[:, :, 0]
                 assert(np.shape(tile) == (th, tw))
 
                 # count the pixels different from nan and inf
@@ -112,9 +120,49 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
                 tile[~ind] = 0
                 out[y0:y1, x0:x1] += tile[:y1 - y0, :x1 - x0]
 
+    # free mem
+    del tile
+    del ind
+    gc.collect()
+
+    sys.stdout.write('\n')
     # put nan where count is zero, and take the average where count is nonzero.
+    sys.stdout.write('Counting...\n')
+    sys.stdout.flush()
     ind = (count > 0)
-    out[ind] = out[ind] / count[ind]
+
+    sys.stdout.write('Averaging...\n')
+    sys.stdout.flush()
+    out[ind] /= count[ind]
+
+    sys.stdout.write('Putting nans on empty pixels...\n')
+    sys.stdout.flush()
     out[~ind] = np.nan
 
-    piio.write(fout, out)
+    del count
+
+    # saving the 'out' numpy array in TIFF with piio requires to much memory
+    # (something like twice de file size) because tiled tiff image writing is
+    # not implemented yet in iio.
+    # As an alternative, the numpy array is stored in raw and the libtiff util
+    # 'raw2tiff' is used to produce a tiff file from it.
+    print 'writing raw data to disk...'
+    raw_file = '%s/s2p_numpy_large_image_file' % cfg['temporary_dir']
+    out.tofile(raw_file)
+    common.run('raw2tiff -w %d -l %d -d float -c zip %s %s' % (w, h, raw_file,
+                                                               fout))
+
+
+    # sys.stdout.write('Writing output file...')
+    # sys.stdout.flush()
+    # piio.write(fout, out)
+
+
+
+# How prepare the list of tiles to launch this function from ipython:
+# import glob
+# tiles = glob.glob('tile_*').sort()
+# ind = []
+# line = range(0, (nx-1)*ny+1, ny)
+# for y in range(ny): ind = ind + [y+x for x in line]
+# tiles_sorted = [tiles[i] for i in ind]
