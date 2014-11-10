@@ -302,7 +302,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # wait for all the processes to terminate
     pool.close()
     pool.join()
-    common.garbage_cleanup() 
+    common.garbage_cleanup()
 
     # compute global pointing correction
     A_global = pointing_accuracy.global_from_local(tiles)
@@ -328,7 +328,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                     process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2,
                                              col, row, tw, th, None, cld_msk,
                                              roi_msk, A)
-    common.garbage_cleanup() 
+    common.garbage_cleanup()
 
     # triangulation
     pool = multiprocessing.Pool(max_processes)
@@ -365,7 +365,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                                                                   A_global))
     pool.close()
     pool.join()
-    common.garbage_cleanup() 
+    common.garbage_cleanup()
 
     # tiles composition
     out = '%s/dem.tif' % out_dir
@@ -376,7 +376,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
         else:
             tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-    common.garbage_cleanup() 
+    common.garbage_cleanup()
 
     return out
 
