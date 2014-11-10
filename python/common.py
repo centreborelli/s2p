@@ -123,6 +123,11 @@ def image_size(im):
     Returns:
         a tuple of size 2, giving width and height
     """
+    # if tiff, use tiffinfo
+    if im.lower().endswith(('.tif', '.tiff')):
+        return image_size_tiffinfo(im)
+
+    # else use imprintf (slower)
     try:
         with open(im):
             out = tmpfile('.txt')
@@ -166,7 +171,7 @@ def image_size_tiffinfo(im):
     Returns:
         a tuple of size 2, giving width and height
     """
-    if not im.lower().endswith('.tif'):
+    if not im.lower().endswith(('.tif', '.tiff')):
         print "image_size_tiffinfo function works only with TIF files"
         print "use image_size_gdal or image_size instead"
         sys.exit()
@@ -233,6 +238,11 @@ def image_pix_dim(im):
     Returns:
         number of channels of the image
     """
+    # if tiff, use tiffinfo
+    if im.lower().endswith(('.tif', '.tiff')):
+        return image_pix_dim_tiffinfo(im)
+
+    # else use imprintf (slower)
     try:
         with open(im):
             out = tmpfile('.txt')
