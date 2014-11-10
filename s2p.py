@@ -140,7 +140,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
                                          disp_max)
 
     # intersect mask with the cloud_water_image_domain mask
-    masking.cloud_water_image_domain(cwid_msk, w, h, H1, rpc1, roi_msk, cld_msk)
+    ww, hh = common.image_size(rect1)
+    masking.cloud_water_image_domain(cwid_msk, ww, hh, H1, rpc1, roi_msk,
+                                     cld_msk)
     masking.intersection(mask, mask, cwid_msk)
     masking.erosion(mask, mask, cfg['msk_erosion'])
 
