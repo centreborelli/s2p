@@ -343,12 +343,12 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             dem = '%s/dem.tif' % tile
 
             # check if the tile is already done, or masked
-            if os.path.isfile('%s/dem.tif' % tile_dir):
+            if os.path.isfile('%s/dem.tif' % tile):
                 if cfg['skip_existing']:
                     print "triangulation on tile %d %d is done, skip" % (col,
                                                                          row)
                     continue
-            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+            if os.path.isfile('%s/this_tile_is_masked.txt' % tile):
                 print "tile %d %d already masked, skip" % (col, row)
                 continue
 
