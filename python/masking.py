@@ -74,4 +74,5 @@ def erosion(out, msk, radius):
         msk: path to the input mask image file
         radius (in pixels): size of the disk used for the erosion
     """
-    common.run('morsi disk%d erosion %s %s' % (int(erosion), msk, out))
+    if radius >= 2:
+        common.run('morsi disk%d erosion %s %s' % (int(radius), msk, out))
