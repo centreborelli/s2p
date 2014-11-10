@@ -121,8 +121,10 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
                 out[y0:y1, x0:x1] += tile[:y1 - y0, :x1 - x0]
 
     # free mem
-    del tile
-    del ind
+    if 'tile' in locals():
+        del tile
+    if 'ind' in locals():
+        del ind
     gc.collect()
 
     sys.stdout.write('\n')

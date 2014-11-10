@@ -23,6 +23,7 @@ from python import visualisation
 from python import rectification
 from python import block_matching
 from python import triangulation
+from python import tile_composer
 from python.config import cfg
 
 
