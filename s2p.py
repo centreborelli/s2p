@@ -143,8 +143,11 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     ww, hh = common.image_size(rect1)
     masking.cloud_water_image_domain(cwid_msk, ww, hh, H1, rpc1, roi_msk,
                                      cld_msk)
-    masking.intersection(mask, mask, cwid_msk)
-    masking.erosion(mask, mask, cfg['msk_erosion'])
+    try:
+        masking.intersection(mask, mask, cwid_msk)
+        masking.erosion(mask, mask, cfg['msk_erosion'])
+    except OSError:
+        print "file %s not produced" % mask
 
     # save the subsampling factor, the rectifying homographies and the
     # disparity bounds.
