@@ -551,7 +551,7 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
        keyfile = tmpfile('.txt')
 
     if implementation is 'monasse':
-        run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
+        run("sift_keypoints %s %s" % (im, keyfile))
 
         # remove the first line (header) from keypoint files
         tmp = tmpfile('.txt')
@@ -562,7 +562,7 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
         # the awk call is used to swap the first two columns of the output
         # to print the keypoint coordinates in that order: x, y
         run("sift_cli %s %s|awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
-            image_qauto(im), extra_params, keyfile))
+            im, extra_params, keyfile))
 
     else:
         print "ERROR: image_sift_keypoints bad 'implementation' argument"

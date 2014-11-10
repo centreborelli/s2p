@@ -79,16 +79,20 @@ def matches_from_sift(im1, im2):
         im1 = common.image_safe_zoom_fft(im1, zoom)
         im2 = common.image_safe_zoom_fft(im2, zoom)
 
+    # rescale on 8 bits
+    im1_8b = common.image_qauto(im1)
+    im2_8b = common.image_qauto(im2)
+
     # apply sift (monasse implementation first, because faster)
-    p1 = common.image_sift_keypoints(im1, None, None, 'monasse')
-    p2 = common.image_sift_keypoints(im2, None, None, 'monasse')
+    p1 = common.image_sift_keypoints(im1_8b, None, None, 'monasse')
+    p2 = common.image_sift_keypoints(im2_8b, None, None, 'monasse')
     matches = common.sift_keypoints_match(p1, p2, 'relative',
                                           cfg['sift_match_thresh'])
 
     # if less than 10 matches, use ipol implementation
     if matches.shape[0] < 10:
-        p1 = common.image_sift_keypoints(im1, None, None, 'ipol')
-        p2 = common.image_sift_keypoints(im2, None, None, 'ipol')
+        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol')
+        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol')
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
@@ -99,9 +103,9 @@ def matches_from_sift(im1, im2):
     while (matches.shape[0] < 10 and nb_sift_tries < 6):
         nb_sift_tries += 1
         thresh_dog /= 2.0
-        p1 = common.image_sift_keypoints(im1, None, None, 'ipol',
+        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol',
                                          '-thresh_dog %f' % thresh_dog)
-        p2 = common.image_sift_keypoints(im2, None, None, 'ipol',
+        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol',
                                          '-thresh_dog %f' % thresh_dog)
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
