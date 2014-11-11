@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdbool.h>
 
 // @c pointer to original argc
 // @v pointer to original argv
@@ -41,8 +42,9 @@ int main(int c, char **v)
 {
 	printf("arguments before processing:\n");
 	print_args(c, v);
-	char *o = pick_option(&c, &v, "o", "42");
-	printf("o = \"%s\"\n", o);
+//	char *o = pick_option(&c, &v, "o", "42");
+//	printf("o = \"%s\"\n", o);
+	printf("pick_option 'o' is: \"%d\"\n", (bool) pick_option(&c, &v, "o", NULL));
 	printf("arguments after processing:\n");
 	print_args(c, v);
 	return 0;
