@@ -236,6 +236,8 @@ int main(int c, char *v[])
     // a 3D point is produced for each 'non Nan' height
     for (int row = 0; row < h; row++)
     for (int col = 0; col < w; col++) {
+        if (row % 1000 == 0)
+            printf("processing row %06d...\r", row);
         uint64_t pix = (uint64_t) row * w + col;
         if (!isnan(height[pix])) {
 
