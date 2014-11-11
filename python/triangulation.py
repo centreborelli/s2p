@@ -188,19 +188,11 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
         ascii_ply (optional, default false): boolean flag to tell if the output
             ply file should be encoded in plain text (ascii).
     """
-    if ascii_ply:
-        if with_normals:
-            common.run("colormesh -a %s %s %s %s %s %d %d--with-normals" %
-                       (crop_colorized, heights, rpc, H, cloud, off_x, off_y))
-        else:
-            common.run("colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
-                                                              heights, rpc, H,
-                                                              cloud, off_x,
-                                                              off_y))
-    else:
-        common.run("colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
-                                                       rpc, H, cloud, off_x,
-                                                       off_y))
+    hij = ' '.join(['%f' % x for x in H.flatten()])
+    asc = ascii_ply ? "--ascii" : ""
+    nrm = with_normals ? "--with-normals" : ""
+    common.run("colormesh %s %s %s %s -h %s --offset_x %d --offset y %d %s %s" % (
+        cloud, heights, rpc, crop_colorized, hij, off_x, off_y, asc, nrm))
 
     # if LidarViewer is installed, convert the point cloud to its format
     # this is useful for huge point clouds
