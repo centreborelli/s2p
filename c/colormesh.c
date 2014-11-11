@@ -209,6 +209,7 @@ int main(int c, char *v[])
 
     // count number of valid pixels
     int npoints = 0;
+    printf("counting valid points...\r");
     for (int row = 0; row < h; row++)
     for (int col = 0; col < w; col++) {
         uint64_t pix = (uint64_t) row * w + col;
@@ -226,6 +227,7 @@ int main(int c, char *v[])
             }
         }
     }
+    printf("found %06d valid points\n", npoints);
 
     // print header for ply file
     FILE *ply_file = fopen(fname_ply, "w");
