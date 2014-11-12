@@ -11,26 +11,10 @@
 #include "iio.h"
 #include "fail.c"
 #include "rpc.h"
-#include "read_matrix.c"
+#include "parsenumbers.c"
 #include "pickopt.c"
 
-// static void mercator(double m[2], double x[2])
-// {
-//     double r = 6378100;
-//     double deg = m_pi/180;
-//     m[0] = r * x[0] * deg;
-//     m[1] = r * log( ( 1 + sin(x[1]*deg) ) / cos(x[1]*deg) );
-// }
-//
-// static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h)
-// {
-//     double tmp[2];
-//     eval_rpc(tmp, r, i, j, h);
-//     mercator(xyz, tmp);
-//     xyz[2] = h;
-// }
 
-void utm(double *out, double lat, double lon);
 void utm_alt_zone(double *out, double lat, double lon, int zone);
 void utm_zone(int *zone, bool *northp, double lat, double lon);
 
@@ -40,36 +24,37 @@ static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h,
 {
     double lon_lat[2];
     eval_rpc(lon_lat, r, i, j, h);
-    if (zone >= 0)
-        utm_alt_zone(xyz, lon_lat[1], lon_lat[0], zone);
-    else
-        utm(xyz, lon_lat[1], lon_lat[0]);
+    utm_alt_zone(xyz, lon_lat[1], lon_lat[0], zone);
     xyz[2] = h;
     //printf("%f %f\n", xyz[0], xyz[1]);
 }
 
 
-static void apply_homography(double y[2], double h[3][3], double x[2])
+static void apply_homography(double y[2], double h[9], double x[2])
 {
-    double z = h[2][0]*x[0] + h[2][1]*x[1] + h[2][2];
-    y[0] = (h[0][0]*x[0] + h[0][1]*x[1] + h[0][2]) / z;
-    y[1] = (h[1][0]*x[0] + h[1][1]*x[1] + h[1][2]) / z;
+    //                    h[0] h[1] h[2]
+    // The convention is: h[3] h[4] h[5]
+    //                    h[6] h[7] h[8]
+    double z = h[6]*x[0] + h[7]*x[1] + h[8];
+    double tmp = x[0];  // to enable calls like 'apply_homography(x, h, x)'
+    y[0] = (h[0]*x[0] + h[1]*x[1] + h[2]) / z;
+    y[1] = (h[3]*tmp  + h[4]*x[1] + h[5]) / z;
 }
 
-static double invert_homography(double invh[3][3], double h[3][3])
+
+static double invert_homography(double o[9], double i[9])
 {
-    double *a = h[0], *r = invh[0];
-    double det = a[0]*a[4]*a[8] + a[2]*a[3]*a[7] + a[1]*a[5]*a[6]
-               - a[2]*a[4]*a[6] - a[1]*a[3]*a[8] - a[0]*a[5]*a[7];
-    r[0] = (a[4]*a[8]-a[5]*a[7])/det;
-    r[1] = (a[2]*a[7]-a[1]*a[8])/det;
-    r[2] = (a[1]*a[5]-a[2]*a[4])/det;
-    r[3] = (a[5]*a[6]-a[3]*a[8])/det;
-    r[4] = (a[0]*a[8]-a[2]*a[6])/det;
-    r[5] = (a[2]*a[3]-a[0]*a[5])/det;
-    r[6] = (a[3]*a[7]-a[4]*a[6])/det;
-    r[7] = (a[1]*a[6]-a[0]*a[7])/det;
-    r[8] = (a[0]*a[4]-a[1]*a[3])/det;
+    double det = i[0]*i[4]*i[8] + i[2]*i[3]*i[7] + i[1]*i[5]*i[6]
+               - i[2]*i[4]*i[6] - i[1]*i[3]*i[8] - i[0]*i[5]*i[7];
+    o[0] = (i[4]*i[8] - i[5]*i[7]) / det;
+    o[1] = (i[2]*i[7] - i[1]*i[8]) / det;
+    o[2] = (i[1]*i[5] - i[2]*i[4]) / det;
+    o[3] = (i[5]*i[6] - i[3]*i[8]) / det;
+    o[4] = (i[0]*i[8] - i[2]*i[6]) / det;
+    o[5] = (i[2]*i[3] - i[0]*i[5]) / det;
+    o[6] = (i[3]*i[7] - i[4]*i[6]) / det;
+    o[7] = (i[1]*i[6] - i[0]*i[7]) / det;
+    o[8] = (i[0]*i[4] - i[1]*i[3]) / det;
     return det;
 }
 
@@ -86,10 +71,26 @@ static void normalize_vector_3d(double vec[3])
 }
 
 
-void write_ply_header(FILE* f, int npoints, int zone, bool hem, bool normals)
+unsigned char test_little_endian(void)
 {
+    int x = 1;
+    return (*(char*) & (x) == 1);
+}
+
+
+void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
+        bool colors, bool normals)
+{
+    if (!ascii)
+        if (!test_little_endian())
+              fail("BINARY PLY NOT SUPPORTED ON BIG ENDIAN SYSTEMS!\n");
+
     fprintf(f, "ply\n");
-    fprintf(f, "format ascii 1.0\n");
+    if (ascii)
+        fprintf(f, "format ascii 1.0\n");
+    else
+        fprintf(f, "format binary_little_endian 1.0\n");
+
     fprintf(f, "comment created by S2P\n");
     if (zone >= 0)
         fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
@@ -102,174 +103,194 @@ void write_ply_header(FILE* f, int npoints, int zone, bool hem, bool normals)
         fprintf(f, "property float ny\n");
         fprintf(f, "property float nz\n");
     }
-    fprintf(f, "property uchar red\n");
-    fprintf(f, "property uchar green\n");
-    fprintf(f, "property uchar blue\n");
-    fprintf(f, "end_header\n");
-}
-
-
-unsigned char test_little_endian( void )
-{
-      int x=1;   return (*(char*)&(x)==1);
-}
-
-void write_ply_header_binary(FILE* f, int npoints, int zone, bool hem, bool
-        normals)
-{
-    if (!test_little_endian())
-       for (int i = 1; i < 100; i++)
-          printf("BINARY PLY NOT SUPPORTED ON BIG ENDIAN SYSTEMS!!\n");
-    fprintf(f, "ply\n");
-    fprintf(f, "format binary_little_endian 1.0\n");
-    fprintf(f, "comment created by S2P\n");
-    if (zone >= 0)
-        fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
-    fprintf(f, "element vertex %d\n", npoints);
-    fprintf(f, "property float x\n");
-    fprintf(f, "property float y\n");
-    fprintf(f, "property float z\n");
-    if (normals) {
-        fprintf(f, "property float nx\n");
-        fprintf(f, "property float ny\n");
-        fprintf(f, "property float nz\n");
+    if (colors) {
+        fprintf(f, "property uchar red\n");
+        fprintf(f, "property uchar green\n");
+        fprintf(f, "property uchar blue\n");
     }
-    fprintf(f, "property uchar red\n");
-    fprintf(f, "property uchar green\n");
-    fprintf(f, "property uchar blue\n");
     fprintf(f, "end_header\n");
 }
 
-#include "smapa.h"
-SMART_PARAMETER_SILENT(IJMESH, 0)
-SMART_PARAMETER_SILENT(IJMESHFAC, 2)
 
-
-void print_help(char *bin_name)
+static void parse_utm_string(int *zone, bool *hem, char *s)
 {
-    fprintf(stderr, "usage:\n\t"
-            "%s colors heights rpc Hfile.txt out.ply [x0 y0]"
-    //       0    1      2       3   4        5       6  7
-            " [--with-normals] [--ascii]\n", bin_name);
+    if (s == "no_utm_zone") {
+        *zone = -1;
+        return;
+    }
+    char hem_string[FILENAME_MAX];
+    if (2 == sscanf(s, "%02d%s", zone, hem_string)) {
+        // hem_string must be equal to "N" or "S"
+        if (hem_string[1] == '\0') {
+            if (hem_string[0] == 'N' || hem_string[0] == 'S') {
+                *hem = (hem_string[0] == 'N');
+                return;
+            }
+        }
+    }
+    fprintf(stderr, "zone: %d\themisphere: %s\n", *zone, hem_string);
+    fprintf(stderr, "incorrect value for --utm-zone."
+            " It must look like '27N'\n");
+    *zone = -1;
+}
+
+
+static void help(char *s)
+{
+    fprintf(stderr, "\t usage: %s out.ply heights.tif rpc.xml "
+            "[colors.png] [-h \"h1 ... h9\"] [--utm-zone ZONE] "
+            "[--offset_x x0] [--offset_y y0] [--with-normals] [--ascii]\n", s);
+
+    // offset allows the user to choose the origin of the coordinates system,
+    // in order to avoid visualisation problems due to huge values of the
+    // coordinates (for which float precision is often not enough)
 }
 
 
 int main(int c, char *v[])
 {
-    if (c != 6 & c != 7 & c != 8 & c!= 9 & c != 10) {
-        print_help(*v);
+    if (c < 4 || c > 15) {
+        help(*v);
         return 1;
     }
 
     // with_normals and ascii flags
-    bool normals = (pick_option(&c, &v, "-with-normals", NULL) != NULL);
-    bool ascii   = (pick_option(&c, &v, "-ascii", NULL) != NULL);
+    bool normals = pick_option(&c, &v, "-with-normals", NULL);
+    bool ascii   = pick_option(&c, &v, "-ascii", NULL);
 
-    // x0 and y0 are meant to allow the user to choose the origin in the
-    // mercator coordinates system, in order to avoid visualisation problems
-    // due to huge values of the coordinates (for which float precision is
-    // often not enough)
-    int i = 1;
-    char *fname_colors = v[i++];
-    char *fname_heights = v[i++];
-    char *fname_rpc = v[i++];
-    double H[3][3], invH[3][3];
-    read_matrix(H, v[i++]);
-    FILE *out = fopen(v[i++], "w");
-    invert_homography(invH, H);
+    // offset
+    char *offset_x = pick_option(&c, &v, "-offset_x", "0");
+    char *offset_y = pick_option(&c, &v, "-offset_y", "0");
+    int x0 = atoi(offset_x);
+    int y0 = atoi(offset_y);
+    bool there_is_an_offset = x0 != 0 || y0 != 0;
 
-    int x0 = c > i ? atoi(v[i++]) : 0;
-    int y0 = c > i ? atoi(v[i]) : 0;
+    // utm zone and hemisphere: true for 'N' and false for 'S'
+    int zone;
+    bool hem;
+    char *utm_string = pick_option(&c, &v, "-utm-zone", "no_utm_zone");
+    parse_utm_string(&zone, &hem, utm_string);
 
-    int w, h, pd, ww, hh;
-    uint8_t *colors = iio_read_image_uint8_vec(fname_colors, &w, &h, &pd);
-    float *heights = iio_read_image_float(fname_heights, &ww, &hh);
-    if (w != ww || h != hh) fail("color and height image size mismatch");
-    if (pd != 1 && pd != 3) fail("expecting a gray or color image");
+    // rectifying homography. If not provided, it is identity (ie full images)
+    char *hom_string = pick_option(&c, &v, "h", "");
+    bool there_is_a_homography = *hom_string;
+    double inv_hom[9];
+    if (there_is_a_homography) {
+        int n_hom;
+        double *hom = alloc_parse_doubles(9, hom_string, &n_hom);
+        if (n_hom != 9)
+            fail("can not read 3x3 matrix from \"%s\"", hom_string);
+        invert_homography(inv_hom, hom);
+    }
 
-    struct rpc r[1]; read_rpc_file_xml(r, fname_rpc);
+    // parse the remaining arguments
+    char *fname_ply = v[1];
+    char *fname_heights = v[2];
+    char *fname_rpc = v[3];
+    char *fname_colors = NULL;
+    bool there_is_color = c > 4;
+    if (there_is_color)
+        fname_colors = v[4];
 
-    uint8_t (*color)[w][pd] = (void*)colors;
-    float (*height)[w] = (void*)heights;
+    // read input images
+    int w, h, pd;
+    float *height = iio_read_image_float(fname_heights, &w, &h);
+    uint8_t *color = NULL;
+    if (there_is_color) {
+        int ww, hh;
+        color = iio_read_image_uint8_vec(fname_colors, &ww, &hh, &pd);
+        if (w != ww || h != hh) fail("color and height image size mismatch");
+        if (pd != 1 && pd != 3) fail("expecting a gray or color image");
+    }
 
-    int zone = -1;
-    bool hem = true;
+    // read rpc
+    struct rpc r[1];
+    read_rpc_file_xml(r, fname_rpc);
 
     // count number of valid pixels
     int npoints = 0;
-    for (int j = 0; j < h; j++)
-        for (int i = 0; i < w; i++)
-            if (!isnan(height[j][i])) {
-                npoints++;
-                // UTM Zone will be the zone of first not nan point
-                if (zone < 0) {
-                    double xy[2] = {i, j}, pq[2];
-                    apply_homography(pq, invH, xy);
-                    double lon_lat[2];
-                    eval_rpc(lon_lat, r, pq[0], pq[1], height[j][i]);
-                    utm_zone(&zone, &hem, lon_lat[1], lon_lat[0]);
-                }
+    printf("counting valid points...\r");
+    for (int row = 0; row < h; row++)
+    for (int col = 0; col < w; col++) {
+        uint64_t pix = (uint64_t) row * w + col;
+        if (!isnan(height[pix])) {
+            npoints++;
+
+            // UTM Zone will be the zone of first 'not NaN' point
+            if (zone < 0) {
+                double xy[2] = {col, row};
+                if (there_is_a_homography)
+                    apply_homography(xy, inv_hom, xy);
+                double lon_lat[2];
+                eval_rpc(lon_lat, r, xy[0], xy[1], height[pix]);
+                utm_zone(&zone, &hem, lon_lat[1], lon_lat[0]);
             }
+        }
+    }
+    printf("found %06d valid points\n", npoints);
 
     // print header for ply file
-    if (ascii)
-      write_ply_header(out, npoints, zone, hem, normals);
-    else
-      write_ply_header_binary(out, npoints, zone, hem, normals);
+    FILE *ply_file = fopen(fname_ply, "w");
+    write_ply_header(ply_file, ascii, npoints, zone, hem, there_is_color,
+            normals);
 
-    // print points coordinates and values
-    for (int j = 0; j < h; j++)
-    for (int i = 0; i < w; i++)
-        if (!isnan(height[j][i])) {
-            // if it is a greyscale image, copy the grey level on each one
-            // of the rgb channels
-            uint8_t rgb[3];
-            for (int k = 0; k < pd; k++) rgb[k] = color[j][i][k];
-            for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
+    // loop over all the pixels of the input height map
+    // a 3D point is produced for each 'non Nan' height
+    for (int row = 0; row < h; row++)
+    for (int col = 0; col < w; col++) {
+        if (row % 1000 == 0)
+            printf("processing row %06d...\r", row);
+        uint64_t pix = (uint64_t) row * w + col;
+        if (!isnan(height[pix])) {
 
-            // convert the pixel local coordinates (ie in the crop) to the
-            // full image coordinates, then to mercator coordinates through
-            // the rpc_eval direct estimation function.
-            // Normals (ie unit 3D
-            // vector pointing in the direction of the camera) are saved
-            // together with the coordinates of the 3D points.
-            double xy[2] = {i, j}, pq[2];
-            apply_homography(pq, invH, xy);
-            double xyz[3] = {pq[1], pq[0], IJMESHFAC() * height[j][i]};
-            double nrm[3] = {0, 0, 1};
-            if (!IJMESH()) {
-                double tmp[3];
-                getxyz(xyz, r, pq[0], pq[1], height[j][i], zone);
-                if (normals) {
-                    getxyz(tmp, r, pq[0], pq[1], height[j][i] + 10, zone);
-                    nrm[0] = tmp[0] - xyz[0];
-                    nrm[1] = tmp[1] - xyz[1];
-                    nrm[2] = tmp[2] - xyz[2];
-                    normalize_vector_3d(nrm);
-                }
-                // translate the x, y coordinates, to avoid
-                // visualisation problems
+            // compute coordinates of pix in the big image
+            double xy[2] = {col, row};
+            if (there_is_a_homography)
+                apply_homography(xy, inv_hom, xy);
+
+            // compute utm coordinates
+            double xyz[3], nrm[3], tmp[3];
+            getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
+
+            // compute the normal (unit 3D vector with direction of the camera)
+            if (normals) {
+                getxyz(tmp, r, xy[0], xy[1], height[pix] + 10, zone);
+                nrm[0] = tmp[0] - xyz[0];
+                nrm[1] = tmp[1] - xyz[1];
+                nrm[2] = tmp[2] - xyz[2];
+                normalize_vector_3d(nrm);
+            }
+            if (there_is_an_offset) {
                 xyz[0] -= x0;
                 xyz[1] -= y0;
             }
 
-            // print the voxel in the ply output file
+            // colorization: if greyscale, copy the grey level on each channel
+            uint8_t rgb[3];
+            if (there_is_color) {
+                for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
+                for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
+            }
+
+            // write to ply
             if (ascii) {
-               fprintf(out, "%.16f %.16f %.16f ", xyz[0], xyz[1], xyz[2]);
+               fprintf(ply_file, "%.16f %.16f %.16f ", xyz[0], xyz[1], xyz[2]);
                if (normals)
-                   fprintf(out, "%.1f %.1f %.1f ", nrm[0], nrm[1], nrm[2]);
-               fprintf(out, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
+                   fprintf(ply_file, "%.1f %.1f %.1f ", nrm[0], nrm[1], nrm[2]);
+               fprintf(ply_file, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
             } else {
                float X[3] = {xyz[0], xyz[1], xyz[2]};
-               fwrite(X, sizeof(float), 3, out);
+               fwrite(X, sizeof(float), 3, ply_file);
                if (normals) {
                    float N[3] = {nrm[0], nrm[1], nrm[2]};
-                   fwrite(N, sizeof(float), 3, out);
+                   fwrite(N, sizeof(float), 3, ply_file);
                }
-               unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
-               fwrite(C, sizeof(unsigned char), 3, out);
+               if (there_is_color)
+                   fwrite(rgb, sizeof(uint8_t), 3, ply_file);
             }
         }
+    }
 
+    fclose(ply_file);
     return 0;
 }

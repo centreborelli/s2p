@@ -65,9 +65,9 @@ tvl1:
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
-	veco morphoop cldmask disp_to_h_projective colormesh_projective plyflatten
+	veco morphoop cldmask disp_to_h_projective colormesh_projective
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
-SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
+SRCKKK = watermask disp_to_h colormesh bin2asc siftu ransac srtm4\
 	srtm4_which_tile
 
 imscript: $(BINDIR) $(PROGRAMS)
