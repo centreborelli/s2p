@@ -209,7 +209,7 @@ int main(int c, char *v[])
 
     // count number of valid pixels
     int npoints = 0;
-    printf("counting valid points...\r");
+    printf("counting valid points...\n");
     for (int row = 0; row < h; row++)
     for (int col = 0; col < w; col++) {
         uint64_t pix = (uint64_t) row * w + col;
@@ -236,57 +236,59 @@ int main(int c, char *v[])
 
     // loop over all the pixels of the input height map
     // a 3D point is produced for each 'non Nan' height
-    for (int row = 0; row < h; row++)
-    for (int col = 0; col < w; col++) {
-        if (row % 1000 == 0)
-            printf("processing row %06d...\r", row);
-        uint64_t pix = (uint64_t) row * w + col;
-        if (!isnan(height[pix])) {
+    for (int row = 0; row < h; row++) {
+        if (row % 5000 == 0) printf("processing row %06d...\n", row);
+        for (int col = 0; col < w; col++) {
+            uint64_t pix = (uint64_t) row * w + col;
+            if (!isnan(height[pix])) {
 
-            // compute coordinates of pix in the big image
-            double xy[2] = {col, row};
-            if (there_is_a_homography)
-                apply_homography(xy, inv_hom, xy);
+                // compute coordinates of pix in the big image
+                double xy[2] = {col, row};
+                if (there_is_a_homography)
+                    apply_homography(xy, inv_hom, xy);
 
-            // compute utm coordinates
-            double xyz[3], nrm[3], tmp[3];
-            getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
+                // compute utm coordinates
+                double xyz[3], nrm[3], tmp[3];
+                getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
 
-            // compute the normal (unit 3D vector with direction of the camera)
-            if (normals) {
-                getxyz(tmp, r, xy[0], xy[1], height[pix] + 10, zone);
-                nrm[0] = tmp[0] - xyz[0];
-                nrm[1] = tmp[1] - xyz[1];
-                nrm[2] = tmp[2] - xyz[2];
-                normalize_vector_3d(nrm);
-            }
-            if (there_is_an_offset) {
-                xyz[0] -= x0;
-                xyz[1] -= y0;
-            }
+                // compute normal (unit 3D vector with direction of the camera)
+                if (normals) {
+                    getxyz(tmp, r, xy[0], xy[1], height[pix] + 10, zone);
+                    nrm[0] = tmp[0] - xyz[0];
+                    nrm[1] = tmp[1] - xyz[1];
+                    nrm[2] = tmp[2] - xyz[2];
+                    normalize_vector_3d(nrm);
+                }
+                if (there_is_an_offset) {
+                    xyz[0] -= x0;
+                    xyz[1] -= y0;
+                }
 
-            // colorization: if greyscale, copy the grey level on each channel
-            uint8_t rgb[3];
-            if (there_is_color) {
-                for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
-                for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
-            }
+                // colorization: if greyscale, copy the grey on each channel
+                uint8_t rgb[3];
+                if (there_is_color) {
+                    for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
+                    for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
+                }
 
-            // write to ply
-            if (ascii) {
-               fprintf(ply_file, "%.16f %.16f %.16f ", xyz[0], xyz[1], xyz[2]);
-               if (normals)
-                   fprintf(ply_file, "%.1f %.1f %.1f ", nrm[0], nrm[1], nrm[2]);
-               fprintf(ply_file, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
-            } else {
-               float X[3] = {xyz[0], xyz[1], xyz[2]};
-               fwrite(X, sizeof(float), 3, ply_file);
-               if (normals) {
-                   float N[3] = {nrm[0], nrm[1], nrm[2]};
-                   fwrite(N, sizeof(float), 3, ply_file);
-               }
-               if (there_is_color)
-                   fwrite(rgb, sizeof(uint8_t), 3, ply_file);
+                // write to ply
+                if (ascii) {
+                   fprintf(ply_file, "%.16f %.16f %.16f ", xyz[0], xyz[1],
+                           xyz[2]);
+                   if (normals)
+                       fprintf(ply_file, "%.1f %.1f %.1f ", nrm[0], nrm[1],
+                               nrm[2]);
+                   fprintf(ply_file, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
+                } else {
+                   float X[3] = {xyz[0], xyz[1], xyz[2]};
+                   fwrite(X, sizeof(float), 3, ply_file);
+                   if (normals) {
+                       float N[3] = {nrm[0], nrm[1], nrm[2]};
+                       fwrite(N, sizeof(float), 3, ply_file);
+                   }
+                   if (there_is_color)
+                       fwrite(rgb, sizeof(uint8_t), 3, ply_file);
+                }
             }
         }
     }
