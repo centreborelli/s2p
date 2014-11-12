@@ -58,7 +58,7 @@ static double invert_homography(double o[9], double i[9])
     return det;
 }
 
-// normalize in place a 3d vector
+
 static void normalize_vector_3d(double vec[3])
 {
     const int dim = 3;
@@ -288,5 +288,6 @@ int main(int c, char *v[])
     }
 
     fclose(ply_file);
+    fclose(out);
     return 0;
 }
