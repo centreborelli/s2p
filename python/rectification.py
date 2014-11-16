@@ -79,24 +79,34 @@ def matches_from_sift(im1, im2):
         im1 = common.image_safe_zoom_fft(im1, zoom)
         im2 = common.image_safe_zoom_fft(im2, zoom)
 
-    # apply sift (monasse implementation first)
-    p1 = common.image_sift_keypoints(im1, None, None, 'monasse')
-    p2 = common.image_sift_keypoints(im2, None, None, 'monasse')
+    # rescale on 8 bits
+    im1_8b = common.image_qauto(im1)
+    im2_8b = common.image_qauto(im2)
+
+    # apply sift (monasse implementation first, because faster)
+    p1 = common.image_sift_keypoints(im1_8b, None, None, 'monasse')
+    p2 = common.image_sift_keypoints(im2_8b, None, None, 'monasse')
     matches = common.sift_keypoints_match(p1, p2, 'relative',
                                           cfg['sift_match_thresh'])
 
     # if less than 10 matches, use ipol implementation
     if matches.shape[0] < 10:
-        p1 = common.image_sift_keypoints(im1, None, None, 'ipol')
-        p2 = common.image_sift_keypoints(im2, None, None, 'ipol')
+        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol')
+        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol')
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
-    # if still less than 10 matches, lower the thresh_dog for the sift call of
-    # the secondary image. Default value for thresh_dog is 0.0133
-    if matches.shape[0] < 10:
-        p2 = common.image_sift_keypoints(im2, None, None, 'ipol',
-                                         '-thresh_dog 0.0066')
+    # if still less than 10 matches, lower the thresh_dog for the sift calls.
+    # Default value for thresh_dog is 0.0133
+    thresh_dog = 0.0133
+    nb_sift_tries = 2
+    while (matches.shape[0] < 10 and nb_sift_tries < 6):
+        nb_sift_tries += 1
+        thresh_dog /= 2.0
+        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol',
+                                         '-thresh_dog %f' % thresh_dog)
+        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol',
+                                         '-thresh_dog %f' % thresh_dog)
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
@@ -345,7 +355,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
     # in brief: use 8-pts normalized algo to estimate F, then use loop-zhang to
     # estimate rectifying homographies.
 
-    print "step 1: find matches, and center them ------------------------------"
+    print "step 1: find virtual matches, and center them ----------------------"
     n = cfg['n_gcp_per_axis']
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, n)
     p1 = rpc_matches[:, 0:2]
@@ -391,32 +401,33 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
 
     # add an horizontal translation to H2 to center the disparity range around
     # the origin, if sift matches are available
-    print "step 5: horizontal registration ------------------------------------"
-    if m is None:
-        m = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    if m is not None:
+        print "step 5: horizontal registration --------------------------------"
 
-    # filter sift matches with the known fundamental matrix
-    # but first convert F for big images coordinate frame
-    F = np.dot(T2.T, np.dot(F, T1))
-    print '%d sift matches before epipolar constraint filering', len(m)
-    m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
-    print 'd sift matches after epipolar constraint filering', len(m)
-    if len(m) < 2:
-        # 0 or 1 sift match
-        print """rectification.compute_rectification_homographies: less than 2 sift
-        matches after filtering by the epipolar constraint. This may be due to
-        the pointing error, or to strong illumination changes between the input
-        images. No registration of the images will be performed."""
-    else:
-        H2, disp_m, disp_M = register_horizontally(m, H1, H2)
-        disp_m, disp_M = update_disp_range_extrapolating(m, H1, H2, w, h)
+        # filter sift matches with the known fundamental matrix
+        # but first convert F for big images coordinate frame
+        F = np.dot(T2.T, np.dot(F, T1))
+        print '%d sift matches before epipolar constraint filering', len(m)
+        m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
+        print 'd sift matches after epipolar constraint filering', len(m)
+        if len(m) < 2:
+            # 0 or 1 sift match
+            print 'rectification.compute_rectification_homographies: less than'
+            print '2 sift matches after filtering by the epipolar constraint.'
+            print 'This may be due to the pointing error, or to strong'
+            print 'illumination changes between the input images.'
+            print 'No registration will be performed.'
+        else:
+            H2, disp_m, disp_M = register_horizontally(m, H1, H2)
+            disp_m, disp_M = update_disp_range_extrapolating(m, H1, H2, w, h)
 
     # expand disparity range with srtm according to cfg params
-    if cfg['disp_range_method'] is "srtm" or len(m) < 2:
+    if (cfg['disp_range_method'] is "srtm") or (m is None) or (len(m) < 2):
         disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y,
                 w, h, H1, H2, A, cfg['disp_range_srtm_high_margin'],
                 cfg['disp_range_srtm_low_margin'])
-    if cfg['disp_range_method'] is "wider_sift_srtm" and len(m) >= 2:
+    if (cfg['disp_range_method'] is "wider_sift_srtm") and (m is not None) and (
+        len(m) >= 2):
         d_m, d_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h,
                 H1, H2, A, cfg['disp_range_srtm_high_margin'],
                 cfg['disp_range_srtm_low_margin'])

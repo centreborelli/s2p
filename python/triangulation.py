@@ -78,7 +78,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
 
 
 def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
-        A=None):
+                A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -100,9 +100,23 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     Returns:
         nothing
     """
+    out_dir = os.path.dirname(out)
+
+    # redirect stdout and stderr to log file, in append mode
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % out_dir, 'a', 0)  # '0' for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
     tmp = common.tmpfile('.tif')
     compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
+
+    # close logs
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
 
 
 def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
@@ -213,10 +227,11 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
         ascii_ply (optional, default false): boolean flag to tell if the output
             ply file should be encoded in plain text (ascii).
     """
-    hij = ' '.join(['%f' % x for x in H.flatten()])
-    asc = ascii_ply ? "--ascii" : ""
-    nrm = with_normals ? "--with-normals" : ""
-    common.run("colormesh %s %s %s %s -h %s --offset_x %d --offset y %d %s %s" % (
+    hom = np.loadtxt(H)
+    hij = ' '.join(['%f' % x for x in hom.flatten()])
+    asc = "--ascii" if ascii_ply else ""
+    nrm = "--with-normals" if with_normals else ""
+    common.run("colormesh %s %s %s %s -h \"%s\" --offset_x %d --offset y %d %s %s" % (
         cloud, heights, rpc, crop_colorized, hij, off_x, off_y, asc, nrm))
 
     # if LidarViewer is installed, convert the point cloud to its format
