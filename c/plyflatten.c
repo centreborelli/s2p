@@ -1,17 +1,14 @@
 // take a series of ply files and produce a digital elevation map
 
-
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "smapa.h"
 #include "xmalloc.c"
 #include "iio.h"
 #include "lists.c"
-SMART_PARAMETER(PLY_RECORD_LENGTH, 27)
 
 
 // fast forward "f" until "lin" is found
@@ -21,6 +18,25 @@ static void eat_until_this_line(FILE *f, char *lin)
 	while (fgets(buf, FILENAME_MAX, f))
 		if (0 == strcmp(buf, lin))
 			return;
+}
+
+// fast forward "f" until "last_line" is found
+// returns the sum of 'properties' byte length
+// ie the numer of bytes used to store one 3D point in the ply file
+static size_t eat_header_and_get_record_length(FILE *f, char *last_line)
+{
+	char buf[FILENAME_MAX] = {0};
+    size_t n = 0;
+	while (fgets(buf, FILENAME_MAX, f)) {
+		if (0 == strcmp(buf, last_line))
+			return n;
+        if (0 == strncmp(buf, "property ", 9)) {
+            if (0 == strncmp(buf+9, "float", 5))
+                n += sizeof(float);
+            if (0 == strncmp(buf+9, "uchar", 5))
+                n += sizeof(unsigned char);
+        }
+    }
 }
 
 static void update_min_max(float *min, float *max, float x)
@@ -66,9 +82,9 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 		return;
 	}
 
-	eat_until_this_line(f, "end_header\n");
+    size_t n = eat_header_and_get_record_length(f, "end_header\n");
+    //fprintf(stderr, "%d\n", n);
 
-	size_t n = PLY_RECORD_LENGTH();
 	char cbuf[n];
 	float *fbuf = (void*) cbuf;
 	while (n == fread(cbuf, 1, n, f))
@@ -92,18 +108,17 @@ static void add_ply_points_to_images(struct images *x,
 		return;
 	}
 
-	eat_until_this_line(f, "end_header\n");
+    size_t n = eat_header_and_get_record_length(f, "end_header\n");
 
-	size_t n = PLY_RECORD_LENGTH();
 	char cbuf[n];
 	float *fbuf = (void*)cbuf;
 	while (n == fread(cbuf, 1, n, f))
 	{
 		int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
 		int j = rescale_float_to_int(fbuf[1], ymin, ymax, x->h);
+		add_height_to_images(x, i, j, fbuf[2]);
 		//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
 		//		fbuf[0], fbuf[1], fbuf[2], i, j);
-		add_height_to_images(x, i, j, fbuf[2]);
 	}
 
 	fclose(f);
@@ -133,21 +148,18 @@ int main(int c, char *v[])
     float ymin = INFINITY;
     float ymax = -INFINITY;
 
-    // process each filename from stdin to determine x,y extremas and store the
+    // process each filename from stdin to determine x, y extremas and store the
     // filenames in a list of strings, to be able to open the files again
 	char fname[FILENAME_MAX];
     struct list *l = NULL;
 	while (fgets(fname, FILENAME_MAX, stdin))
 	{
 		strtok(fname, "\n");
-		// printf("FILENAME: \"%s\"\n", fname);
         l = push(l, fname);
 		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, fname);
 	}
     // fprintf(stderr, "xmin: %f, xmax: %f, ymin: %f, ymax: %f\n", xmin, xmax,
     //         ymin, ymax);
-    // list_print(l);
-
 
     // compute output image dimensions
     int w = 1 + (xmax - xmin) / resolution;
@@ -169,11 +181,10 @@ int main(int c, char *v[])
 		x.avg[i] = 0;
 	}
 
-
 	// process each filename to accumulate points in the dem
 	while (l != NULL)
 	{
-		printf("FILENAME: \"%s\"\n", l->current);
+		// printf("FILENAME: \"%s\"\n", l->current);
 		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, l->current);
         l = l->next;
 	}
