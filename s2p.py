@@ -180,7 +180,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     return
 
 
-def safe_process_pair_single_tile(i, n, out_dir, img1, rpc1, img2, rpc2, x=None,
+def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
                                   y=None, w=None, h=None, prv1=None,
                                   cld_msk=None, roi_msk=None):
     """
@@ -195,8 +195,6 @@ def safe_process_pair_single_tile(i, n, out_dir, img1, rpc1, img2, rpc2, x=None,
     try:
         process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y, w, h,
                                  prv1, cld_msk, roi_msk)
-        sys.__stdout__.write("Processed tile number %d / %d\r" % (i, n))
-        sys.__stdout__.flush()
     # Catch all possible exceptions here
     except:
         sys.stdout = sys.__stdout__
@@ -383,6 +381,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
 
     common.garbage_cleanup()
+    return out
 
 
 def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
@@ -677,15 +676,15 @@ def main(config_file):
     json.dump(cfg, f, indent=2)
     f.close()
 
-    # point cloud generation, tilewise
+    # height map
     if len(cfg['images']) == 2:
-        process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
                      cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                      cfg['images'][1]['rpc'], cfg['roi']['x'], cfg['roi']['y'],
                      cfg['roi']['w'], cfg['roi']['h'], None, None, None,
                      cfg['images'][0]['cld'], cfg['images'][0]['roi'])
     else:
-        process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
                         cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                         cfg['images'][1]['rpc'], cfg['images'][2]['img'],
                         cfg['images'][2]['rpc'], cfg['roi']['x'],
@@ -693,15 +692,17 @@ def main(config_file):
                         cfg['fusion_thresh'], None, None, None, None,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
-#    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
-#                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
-#                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
-#                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-#                   cfg['roi']['h'], dem, cfg['offset_ply'])
+    # point cloud
+    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
+                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
+                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
+                   cfg['roi']['h'], dem, cfg['offset_ply'])
 
-    # TODO this only work for pairs, not for triplets
+
+    # digital surface model
     out_dsm = '%s/dsm.tif' % cfg['out_dir']
-    point_clouds_list = glob.glob('%s/tile_*/cloud.ply' % cfg['out_dir'])
+    point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
     generate_dem(out_dsm, point_clouds_list, cfg['dsm_resolution'])
 
 
