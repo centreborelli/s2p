@@ -17,7 +17,7 @@ all: $(BINDIR) geographiclib monasse sift imscript msmw tvl1 sgbm
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-geographiclib: $(BINDIR)/CartConvert
+geographiclib: $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
 $(BINDIR)/CartConvert: $(BINDIR) $(GEODIR)/tools/CartConvert.cpp\
 	$(GEODIR)/src/DMS.cpp $(GEODIR)/src/Geocentric.cpp\
@@ -25,6 +25,16 @@ $(BINDIR)/CartConvert: $(BINDIR) $(GEODIR)/tools/CartConvert.cpp\
 	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/CartConvert\
 		$(GEODIR)/tools/CartConvert.cpp $(GEODIR)/src/DMS.cpp\
 		$(GEODIR)/src/Geocentric.cpp $(GEODIR)/src/LocalCartesian.cpp
+
+$(BINDIR)/GeoConvert: $(BINDIR) $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
+	$(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp\
+	$(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp\
+	$(GEODIR)/src/UTMUPS.cpp
+	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/GeoConvert\
+		$(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
+		$(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp\
+		$(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp\
+		$(GEODIR)/src/UTMUPS.cpp
 
 monasse:
 	mkdir -p $(BINDIR)/monasse_refactored_build
