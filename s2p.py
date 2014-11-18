@@ -265,9 +265,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     print 'total number of tiles is %d' % (ntx * nty)
 
     # create pool with less workers than available cores
-    max_processes = multiprocessing.cpu_count()
-    if cfg['max_nb_threads'] > 0:
-        max_processes = min(max_processes, cfg['max_nb_threads'])
+    nb_workers = multiprocessing.cpu_count()
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
     print 'Creating pool with %d processes\n' % max_processes
     pool = multiprocessing.Pool(max_processes)
