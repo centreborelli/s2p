@@ -2,16 +2,15 @@
 
 This code implements a stereo pipeline which produces elevation models from
 images taken by high resolution optical satellites such as Pléiades, Worldiew
-QuickBird, Spot or Ikonos. It generates automatically digital elevation models
-from stereo pairs (two images) or tri-stereo sets (three images).
-
-UPDATE: tri-stereo is currently *not supported*
+QuickBird, Spot or Ikonos. It generates automatically 3D point clouds and
+digital surface models from stereo pairs (two images) or tri-stereo sets (three
+images).
 
 The main language is Python, although several operations are handled by
 binaries written in C.
 
 The pipeline is implemented in the file `s2p.py`. The `s2p` module can be used
-to produce elevation models and 3D point clouds from arbitrarily large regions
+to produce surface models and 3D point clouds from arbitrarily large regions
 of interest or from complete images. If needed, it cuts the region of interest
 in several small tiles and process them in parallel.
 
@@ -24,7 +23,9 @@ json configuration file as unique argument:
     $ ./s2p.py config.json
 
 All the parameters of the algorithm, paths to input and output data are stored
-in the json file. See the provided `config.json.example` file for an example.
+in the json file. See the provided `config.json.example` file for an example,
+and the comments in the file `python/config.py` for some explanations about
+the roles of these parameters.
 
 #### ROI definition
 
@@ -41,17 +42,20 @@ dictionary (as in the example).
 ### From a python interpreter
 An other way is to import the `s2p` module in a python session, and run the
 functions `process_pair` or `process_triplet`, depending on the kind of dataset
-you have (stereo pair or triplet), to generate an altitude map,
-and then generate a 3D point cloud from this altitude map using the function
-`generate_cloud`.
+you have (stereo pair or triplet), to generate an altitude map.  A 3D point
+cloud can be generated from this altitude map using the function
+`generate_cloud`, and then a raster digital surface model map can be generated
+from the 3D point cloud.
 
     python
     >>> import s2p
     >>> alt_map = s2p.process_triplet('test', 'pan1.tif', 'rpc1.xml', 'pan2.tif', 'rpc2.xml', 'pan3.tif', 'rpc3.xml', 25150, 24250, 300, 300, 3)
     >>> s2p.generate_cloud('test', 'pan1.tif', 'rpc1.xml', 'xs1.tif', 25150, 24250, 300, 300, alt_map)
+    >>> s2p.generate_dsm('test/dsm.tif', ['test/cloud.ply'], 4)
 
-See the docstrings of the functions `process_pair`, `process_triplet` and
-`generate_cloud` for a complete description of their arguments.
+See the docstrings of the functions `process_pair`, `process_triplet`,
+`generate_cloud` and `generate_dsm` for a complete description of their
+arguments.
 
 ## Installation
 
@@ -67,6 +71,9 @@ directory containing all the needed binaries.
 
 ## Dependencies
 
+The only required dependency is `gdal`. Comments about dependencies that were
+required in previous versions of `s2p` are still here just in case...
+
 ### GDAL >= 1.10
 
     cd 3rdparty
@@ -78,10 +85,8 @@ directory containing all the needed binaries.
 
 ### Old dependencies. Not required anymore
 
-A few other binaries are 3rd party. Their source code is located in the
-`3rdparty` directory. You must compile and install them before launching the
-script, using the provided makefiles. Here are the instuctions to install them
-in a local folder, without root privileges. First create a local folder:
+Here are the instuctions to install them in a local folder, without root
+privileges. First create a local folder:
 
     mkdir ~/local
 
@@ -103,10 +108,6 @@ cmake:
 
     ~/local/sbin/geographiclib-get-geoids
 
-#### Sift
-
-    cd 3rdparty/sift_20130403
-    make
 
 #### SGBM (Semi-Global Block-Matching)
 
