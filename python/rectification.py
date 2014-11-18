@@ -1,7 +1,6 @@
 # Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
 # Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
 
-#!/usr/bin/env python
 
 import sys
 import numpy as np
@@ -44,7 +43,6 @@ def center_2d_points(pts):
     T[1, 2] = -cy     #              0     0     1
 
     return np.vstack([new_x, new_y]).T, T
-
 
 
 def matches_from_sift(im1, im2):
@@ -114,9 +112,9 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers defining the rectangular ROI in the first image.
-            (x, y) is the top-left corner, and (w, h) are the dimensions of the
-            rectangle.
+        x, y, w, h: four integers defining the rectangular ROI in the first
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
 
         This function uses the parameter subsampling_factor_registration
         from the config module. If factor > 1 then the registration
@@ -166,20 +164,17 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     out = []
     if not matches.size:
         return np.array(out)
-    #mask = np.zeros((len(matches), 1)) # for debug only
     for i in range(len(matches)):
-        x  = np.array([matches[i, 0], matches[i, 1], 1])
+        x = np.array([matches[i, 0], matches[i, 1], 1])
         xx = np.array([matches[i, 2], matches[i, 3], 1])
-        l  = np.dot(F.T, xx)
+        l = np.dot(F.T, xx)
         ll = np.dot(F, x)
         d1 = evaluation.distance_point_to_line(x, l)
         d2 = evaluation.distance_point_to_line(xx, ll)
         d = max(d1, d2)
         if (d < thresh):
             out.append(matches[i, :])
-    #        mask[i] = 1 # for debug only
 
-    #np.savetxt('/tmp/sift_F_msk', mask, '%d') # for debug only
     return np.array(out)
 
 
@@ -200,14 +195,12 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
 
     Returns:
         H2: corrected homography H2
-        disp_min, disp_max: horizontal disparity range
 
     The matches are provided in the original images coordinate system. By
     transforming these coordinates with the provided homographies, we obtain
     matches whose disparity is only along the x-axis. The second homography H2
     is corrected with a horizontal translation to obtain the desired property
-    on the disparity range.  The minimum and maximal disparities over the set
-    of matches are extracted, with a security margin of 20 percent.
+    on the disparity range.
     """
     # transform the matches according to the homographies
     pt1 = common.points_apply_homography(H1, matches[:, 0:2])
@@ -226,8 +219,8 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     # it is a least squares minimisation problem
     if do_shear:
         A = np.vstack((y2, y2*0+1)).T
-        b = x1 - x2
-        z = np.linalg.lstsq(A, b)[0]
+        B = x1 - x2
+        z = np.linalg.lstsq(A, B)[0]
         s = z[0]
         b = z[1]
         H2 = np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
@@ -245,11 +238,55 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
 
     # correct H2 with a translation
     H2 = np.dot(common.matrix_translation(-t, 0), H2)
-    x2 = x2 - t
+    return H2
 
-    # extract min and max disparities
-    dispx_min = np.floor((np.min(x2 - x1)))
-    dispx_max = np.ceil((np.max(x2 - x1)))
+
+def update_disp_range(matches, H1, H2, w, h):
+    """
+    Update the disparity range considering the extrapolation of the affine
+    registration estimated from the matches. Extrapolate on the whole region
+    of the region of interest.
+
+    Args:
+        matches: list of pairs of 2D points, stored as a Nx4 numpy array
+        H1, H2: two rectifying homographies, stored as numpy 3x3 matrices
+        w, h: width and height of the region of interest
+
+    Returns:
+        disp_min, disp_max: horizontal disparity range
+    """
+    # transform the matches according to the homographies
+    pt1 = common.points_apply_homography(H1, matches[:, 0:2])
+    x1 = pt1[:, 0]
+    pt2 = common.points_apply_homography(H2, matches[:, 2:4])
+    x2 = pt2[:, 0]
+    y2 = pt2[:, 1]
+
+    # estimate an affine transformation (tilt, shear and bias)
+    # that maps pt1 on pt2
+    A = np.vstack((x2, y2, y2*0+1)).T
+    B = x1
+    z = np.linalg.lstsq(A, B)[0]
+    t, s, b = z[0:3]
+
+    # corners of ROI
+    xx2 = np.array([0, w, 0, w])
+    yy2 = np.array([0, 0, h, h])
+
+    # compute the max and min disparity values according to the estimated
+    # model. The min/max disp values are necessarily obtained at the ROI
+    # corners
+    roi_disparities_by_the_affine_model = (xx2*t + yy2*s + b) - xx2
+    max_roi = np.max(roi_disparities_by_the_affine_model)
+    min_roi = np.min(roi_disparities_by_the_affine_model)
+
+    # min/max disparities according to the keypoints
+    max_kpt = np.max(x2 - x1)
+    min_kpt = np.min(x2 - x1)
+
+    # compute the range with the extracted min and max disparities
+    dispx_min = np.floor(min(min_roi, min_kpt))
+    dispx_max = np.floor(max(max_roi, max_kpt))
 
     # add a security margin to the disp range
     d = cfg['disp_range_extra_margin']
@@ -262,78 +299,20 @@ def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
     else:
         dispx_max = (1 - d) * dispx_max
 
-    return H2, dispx_min, dispx_max
-
-
-def update_disp_range_extrapolating(matches, H1, H2, w_roi, h_roi):
-    """
-    Update the disparity range considering the extrapolation of the affine
-    registration transformation. Extrapolate until the boundary of the region
-    of interest.
-
-    Args:
-        matches: list of pairs of 2D points, stored as a Nx4 numpy array
-        H1, H2: two homographies, stored as numpy 3x3 matrices
-        roi_w/h: width and height of the region of interest
-
-    Returns:
-        disp_min, disp_max: horizontal disparity range
-    """
-    # transform the matches according to the homographies
-    pt1 = common.points_apply_homography(H1, matches[:, 0:2])
-    x1 = pt1[:, 0]
-    y1 = pt1[:, 1]
-    pt2 = common.points_apply_homography(H2, matches[:, 2:4])
-    x2 = pt2[:, 0]
-    y2 = pt2[:, 1]
-
-    # estimate an affine transformation (tilt, shear and bias)
-    # from the matched keypoints
-    A = np.vstack((x2, y2, y2*0+1)).T
-#    A = x2[:, np.newaxis]
-    b = x1
-    z = np.linalg.lstsq(A, b)[0]
-    t,s,dx = z[0:3]
-
-    # corners of ROI
-    xx2 = np.array([0,w_roi,0,w_roi])
-    yy2 = np.array([0,0,h_roi,h_roi])
-
-    # compute the max and min disparity values (according to
-    # the estimated model) at the ROI corners
-    roi_disparities_by_the_affine_model = (xx2*t + yy2*s + dx) - xx2
-    maxb = np.max(roi_disparities_by_the_affine_model)
-    minb = np.min(roi_disparities_by_the_affine_model)
-    #print minb,maxb
-
-    # compute the rage with the extract min and max disparities
-    dispx_min = np.floor(minb + np.min(x2 - x1))
-    dispx_max = np.ceil(maxb + np.max(x2 - x1))
-
-    # add 20% security margin
-    if (dispx_min < 0):
-        dispx_min = 1.2 * dispx_min
-    else:
-        dispx_min = 0.8 * dispx_min
-    if (dispx_max > 0):
-        dispx_max = 1.2 * dispx_max
-    else:
-        dispx_max = 0.8 * dispx_max
-
     return dispx_min, dispx_max
 
 
-def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
-        A=None, m=None):
+def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
+                                       m=None):
     """
     Computes rectifying homographies for a ROI in a pair of Pleiades images.
 
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig the rectangular ROI in the first image.
-            (x, y) is the top-left corner, and (w, h) are the dimensions of the
-            rectangle.
+        x, y, w, h: four integers definig the rectangular ROI in the first
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
         A (optional): 3x3 numpy array containing the pointing error correction
             for im2. This matrix is usually estimated with the pointing_accuracy
             module.
@@ -366,7 +345,7 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
     pp1, T1 = center_2d_points(p1)
     pp2, T2 = center_2d_points(p2)
 
-    print "step 2: estimate F (Gold standard algorithm) ----------------------------"
+    print "step 2: estimate F (Gold standard algorithm) -----------------------"
     F = estimation.affine_fundamental_matrix(np.hstack([pp1, pp2]))
 
     print "step 3: compute rectifying homographies (loop-zhang algorithm) -----"
@@ -411,19 +390,21 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h,
             print 'illumination changes between the input images.'
             print 'No registration will be performed.'
         else:
-            H2, disp_m, disp_M = register_horizontally(m, H1, H2)
-            disp_m, disp_M = update_disp_range_extrapolating(m, H1, H2, w, h)
+            H2 = register_horizontally(m, H1, H2)
+            disp_m, disp_M = update_disp_range(m, H1, H2, w, h)
 
     # expand disparity range with srtm according to cfg params
     if (cfg['disp_range_method'] is "srtm") or (m is None) or (len(m) < 2):
-        disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y,
-                w, h, H1, H2, A, cfg['disp_range_srtm_high_margin'],
-                cfg['disp_range_srtm_low_margin'])
-    if (cfg['disp_range_method'] is "wider_sift_srtm") and (m is not None) and (
-        len(m) >= 2):
-        d_m, d_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h,
-                H1, H2, A, cfg['disp_range_srtm_high_margin'],
-                cfg['disp_range_srtm_low_margin'])
+        disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(
+            rpc1, rpc2, x, y, w, h, H1, H2, A,
+            cfg['disp_range_srtm_high_margin'],
+            cfg['disp_range_srtm_low_margin'])
+    if ((cfg['disp_range_method'] is "wider_sift_srtm") and (m is not None) and
+            (len(m) >= 2)):
+        d_m, d_M = rpc_utils.srtm_disp_range_estimation(
+            rpc1, rpc2, x, y, w, h, H1, H2, A,
+            cfg['disp_range_srtm_high_margin'],
+            cfg['disp_range_srtm_low_margin'])
         disp_m = min(disp_m, d_m)
         disp_M = max(disp_M, d_M)
 
@@ -513,13 +494,13 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig the rectangular ROI in the first image.
-            (x, y) is the top-left corner, and (w, h) are the dimensions of the
-            rectangle.
+        x, y, w, h: four integers definig the rectangular ROI in the first
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
 
     Returns:
-        H1, H2: Two 3x3 matrices representing the rectifying homographies to be applied
-            to the two images.
+        H1, H2: Two 3x3 matrices representing the rectifying homographies to be
+            applied to the two images.
         disp_min, disp_max: horizontal disparity range, computed on a set of
             sift matches
     """
@@ -545,7 +526,7 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     H2 = np.dot(H2, T2)
 
     # for debug
-    print "max, min, mean rectification error on sift matches ------------------"
+    print "max, min, mean rectification error on sift matches ----------------"
     tmp = common.points_apply_homography(H1, p1)
     y1 = tmp[:, 1]
     tmp = common.points_apply_homography(H2, p2)
@@ -562,8 +543,8 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     H2 = np.dot(T, H2)
 
     # add an horizontal translation to H2 to center the disparity range around
-    H2, disp_m, disp_M = register_horizontally(matches, H1, H2)
-    disp_m, disp_M = update_disp_range_extrapolating(matches, H1, H2, w, h)
+    H2 = register_horizontally(matches, H1, H2)
+    disp_m, disp_M = update_disp_range(matches, H1, H2, w, h)
 
     return H1, H2, disp_m, disp_M
 
@@ -571,37 +552,37 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
 def main():
 
     if len(sys.argv) > 12:
-      im1  = sys.argv[1]
-      im2  = sys.argv[2]
-      rpc1 = sys.argv[3]
-      rpc2 = sys.argv[4]
-      x    = int(sys.argv[5])
-      y    = int(sys.argv[6])
-      w    = int(sys.argv[7])
-      h    = int(sys.argv[8])
-      H1f  = sys.argv[9]
-      H2f  = sys.argv[10]
-      out1  = sys.argv[11]
-      out2  = sys.argv[12]
+        im1 = sys.argv[1]
+        im2 = sys.argv[2]
+        rpc1 = sys.argv[3]
+        rpc2 = sys.argv[4]
+        x = int(sys.argv[5])
+        y = int(sys.argv[6])
+        w = int(sys.argv[7])
+        h = int(sys.argv[8])
+        H1f = sys.argv[9]
+        H2f = sys.argv[10]
+        out1 = sys.argv[11]
+        out2 = sys.argv[12]
     else:
-      print """
-      Incorrect syntax, use:
-        > %s im1 im2 rpc1 rpc2 x y w h H1 H2 out1 out2
-        Computes rectification homographies for two pleiades images, using
-        a region of interest ROI (x, y, w, h) defined over the first image.
-        The area in the second image corresponding to the ROI is determined
-        from the RPC metadata (height range), and, if available, from SRTM
-        data. The rectified crops are computed and saved in files out1 out2
-        Uses 8-points algorithm for F estimation, and Loop-Zhang for
-        rectification.
-        im1/2:        paths to the two Pleiades images (usually jp2 or tif)
-        rpc1/2:       RPCs xml files associated to the two images
-        x y w h:      ROI of first image used to compute the rectification
-        H1/H2:        output rectification homographies in the
-                      coordinate systems of the two BIG images
-        out1/2:       paths to output crops
-      """ % sys.argv[0]
-      sys.exit(1)
+        print """
+        Incorrect syntax, use:
+          > %s im1 im2 rpc1 rpc2 x y w h H1 H2 out1 out2
+          Computes rectification homographies for two pleiades images, using
+          a region of interest ROI (x, y, w, h) defined over the first image.
+          The area in the second image corresponding to the ROI is determined
+          from the RPC metadata (height range), and, if available, from SRTM
+          data. The rectified crops are computed and saved in files out1 out2
+          Uses 8-points algorithm for F estimation, and Loop-Zhang for
+          rectification.
+          im1/2:        paths to the two Pleiades images (usually jp2 or tif)
+          rpc1/2:       RPCs xml files associated to the two images
+          x y w h:      ROI of first image used to compute the rectification
+          H1/H2:        output rectification homographies in the
+                        coordinate systems of the two BIG images
+          out1/2:       paths to output crops
+        """ % sys.argv[0]
+        sys.exit(1)
 
     H1, H2, dm, dM = rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2)
     np.savetxt(H1f, H1)
@@ -610,4 +591,5 @@ def main():
     return
 
 # main call
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main()
