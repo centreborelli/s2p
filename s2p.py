@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
-# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
-# Copyright (C) 2013, Enric Meinhardt Llopis <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright 2013, Gabriele Facciolo <gfacciol@gmail.com>
+# Copyright 2013, Enric Meinhardt Llopis <enric.meinhardt@cmla.ens-cachan.fr>
 
 import multiprocessing
 import sys
@@ -25,6 +25,7 @@ from python import rectification
 from python import block_matching
 from python import triangulation
 from python import tile_composer
+from python import fusion
 from python.config import cfg
 
 
@@ -135,8 +136,10 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
                                                             rect1, rect2, A, m)
 
     # block-matching
-    if cfg['disp_min'] is not None: disp_min = cfg['disp_min']
-    if cfg['disp_max'] is not None: disp_max = cfg['disp_max']
+    if cfg['disp_min'] is not None:
+        disp_min = cfg['disp_min']
+    if cfg['disp_max'] is not None:
+        disp_max = cfg['disp_max']
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
                                          cfg['matching_algorithm'], disp_min,
                                          disp_max)
@@ -235,7 +238,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         os.makedirs(out_dir)
 
     # duplicate stdout and stderr to log file
-    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
+    tee.Tee('%s/stdout.log' % out_dir, 'w')
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
@@ -281,7 +284,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
-                    th)
+                                                        th)
             tiles.append(tile_dir)
 
             # check if the tile is already done, or masked
@@ -318,7 +321,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
             tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
-                    th)
+                                                        th)
             if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
                 if not os.path.isfile('%s/pointing.txt' % tile_dir):
                     print "%s retrying pointing corr..." % tile_dir
@@ -379,8 +382,9 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
         else:
             tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-
     common.garbage_cleanup()
+    common.garbage_cleanup()
+
     return out
 
 
@@ -441,7 +445,8 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # merge the two digital elevation models
     dem = '%s/dem.tif' % out_dir
-    fusion.merge(dem_left, dem_right, cfg['fusion_thresh'], dem)
+    fusion.merge(dem_left, dem_right, thresh, dem)
+
     common.garbage_cleanup()
     return dem
 
@@ -679,18 +684,19 @@ def main(config_file):
     # height map
     if len(cfg['images']) == 2:
         dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
-                     cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                     cfg['images'][1]['rpc'], cfg['roi']['x'], cfg['roi']['y'],
-                     cfg['roi']['w'], cfg['roi']['h'], None, None, None,
-                     cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+                           cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                           cfg['images'][1]['rpc'], cfg['roi']['x'],
+                           cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                           None, None, None, cfg['images'][0]['cld'],
+                           cfg['images'][0]['roi'])
     else:
         dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
-                        cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                        cfg['images'][1]['rpc'], cfg['images'][2]['img'],
-                        cfg['images'][2]['rpc'], cfg['roi']['x'],
-                        cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-                        cfg['fusion_thresh'], None, None, None, None,
-                        cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+                              cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                              cfg['images'][1]['rpc'], cfg['images'][2]['img'],
+                              cfg['images'][2]['rpc'], cfg['roi']['x'],
+                              cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                              cfg['fusion_thresh'], None, None, None, None,
+                              cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
     # point cloud
     generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
@@ -698,7 +704,6 @@ def main(config_file):
                    cfg['images'][1]['img'], cfg['images'][1]['rpc'],
                    cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
                    cfg['roi']['h'], dem, cfg['offset_ply'])
-
 
     # digital surface model
     out_dsm = '%s/dsm.tif' % cfg['out_dir']

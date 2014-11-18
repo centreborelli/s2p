@@ -192,7 +192,8 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     x0 = x - 4*xx
     y0 = y - 4*yy
     crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
-    assert(common.image_size_gdal(crop_panchro) == common.image_size_gdal(crop_ms))
+    assert(common.image_size_gdal(crop_panchro) ==
+           common.image_size_gdal(crop_ms))
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
@@ -202,14 +203,13 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     panchro = common.image_qauto_gdal(crop_panchro)
 
     # 2. Combine linearly the intensity and the color to obtain the result
-    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' % (panchro,
-                                                                        rgb,
-                                                                        out_colorized))
+    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' % (
+        panchro, rgb, out_colorized))
     return
 
 
-def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
-                        off_y=0, ascii_ply=False, with_normals=False):
+def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=None,
+                        off_y=None, ascii_ply=False, with_normals=False):
     """
     Computes a color point cloud from a height map.
 
@@ -222,7 +222,7 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
             transforming the coordinates system of the original full size image
             into the coordinates system of the crop we are dealing with.
         cloud: path to the output points cloud (ply format)
-        off_{x,y} (optional, default 0): coordinates of the point we want to
+        off_{x,y} (optional, default None): coordinates of the point we want to
             use as origin in the local coordinate system of the computed cloud
         ascii_ply (optional, default false): boolean flag to tell if the output
             ply file should be encoded in plain text (ascii).
@@ -231,8 +231,14 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
     hij = ' '.join(['%f' % x for x in hom.flatten()])
     asc = "--ascii" if ascii_ply else ""
     nrm = "--with-normals" if with_normals else ""
-    common.run("colormesh %s %s %s %s -h \"%s\" --offset_x %d --offset y %d %s %s" % (
-        cloud, heights, rpc, crop_colorized, hij, off_x, off_y, asc, nrm))
+    command = "colormesh %s %s %s %s -h \"%s\" %s %s" % (cloud, heights, rpc,
+                                                         crop_colorized, hij,
+                                                         asc, nrm)
+    if off_x:
+        command += " --offset_x %d" % off_x
+    if off_y:
+        command += " --offset_y %d" % off_y
+    common.run(command)
 
     # if LidarViewer is installed, convert the point cloud to its format
     # this is useful for huge point clouds
