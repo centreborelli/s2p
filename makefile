@@ -31,7 +31,6 @@ monasse:
 	cd $(BINDIR)/monasse_refactored_build; cmake ../../c/monasse_refactored; make
 	cp $(BINDIR)/monasse_refactored_build/bin/homography $(BINDIR)
 	cp $(BINDIR)/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
-	cp $(BINDIR)/monasse_refactored_build/bin/sift_keypoints $(BINDIR)
 
 sift: $(BINDIR)
 	cd 3rdparty/sift_anatomy_20140911; make

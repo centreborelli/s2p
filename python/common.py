@@ -529,8 +529,7 @@ def rgbi_to_rgb_gdal(im):
     return out
 
 
-def image_sift_keypoints(im, keyfile=None, max_nb=None,
-        implementation='monasse', extra_params=''):
+def image_sift_keypoints(im, keyfile=None, max_nb=None, extra_params=''):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
@@ -540,37 +539,23 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
             descriptors
         max_nb (optional): maximal number of keypoints. If more keypoints are
             detected, those at smallest scales are discarded
-        implementation (optional, default is 'monasse'): option to choose which
-            implementation of SIFT to use. Two options are supported: 'ipol'
-            and 'monasse'
         extra_params (optional, default is ''): extra parameters to be passed
-            to the 'ipol' implementation
+            to the sift binary (ipol implementation)
 
     Returns:
         path to the file containing the list of descriptors
     """
     if keyfile is None:
-       keyfile = tmpfile('.txt')
+        keyfile = tmpfile('.txt')
 
-    if implementation is 'monasse':
-        run("sift_keypoints %s %s" % (im, keyfile))
-
-        # remove the first line (header) from keypoint files
-        tmp = tmpfile('.txt')
-        run("tail -n +2 %s > %s" % (keyfile, tmp))
-        run("cp %s %s" % (tmp, keyfile))
-
-    elif implementation is 'ipol':
-        # the awk call is used to swap the first two columns of the output
-        # to print the keypoint coordinates in that order: x, y
-        run("sift_cli %s %s|awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
-            im, extra_params, keyfile))
-
-    else:
-        print "ERROR: image_sift_keypoints bad 'implementation' argument"
+    # the awk call is used to swap the first two columns of the output
+    # to print the keypoint coordinates in that order: x, y
+    run("sift_cli %s %s | awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
+        im, extra_params, keyfile))
 
     # keep only the first max_nb points
     if max_nb is not None:
+        tmp = tmpfile('.txt')
         run("head -n %d %s > %s" % (max_nb, keyfile, tmp))
         run("cp %s %s" % (tmp, keyfile))
     return keyfile
