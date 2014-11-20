@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <xtiffio.h>
-#include <geotiffio.h>
-#include <geo_tiffp.h>
+#include <geotiff/xtiffio.h>
+#include <geotiff/geotiffio.h>
+#include <geotiff/geo_tiffp.h>
 
 #include "iio.h"
 #include "lists.c"
@@ -184,7 +184,7 @@ static void add_ply_points_to_images(struct images *x,
 	while (n == fread(cbuf, 1, n, f))
 	{
 		int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(fbuf[1], ymin, ymax, x->h);
+		int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
 		add_height_to_images(x, i, j, fbuf[2]);
 		//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
 		//		fbuf[0], fbuf[1], fbuf[2], i, j);
