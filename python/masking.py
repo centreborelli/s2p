@@ -64,8 +64,10 @@ def intersection(out, in1, in2):
         out: path to the ouput mask image file
         in1, in2: paths to the input mask image files
 
-    The masks are binary. Pixels may have value 0 or 255. As 0 is the rejection
-    value, the intersection is equivalent to a pixelwise product.
+    The masks are binary. Pixels may have value 0 or 255, 0 being the rejection
+    value. The output mask rejects any pixel that is rejected in one input mask,
+    or in both input masks. As 0 is the rejection value, the intersection is
+    equivalent to a pixelwise product.
     """
     common.run('plambda %s %s "x y 255 / *" -o %s' % (in1, in2, out))
 
