@@ -283,6 +283,82 @@ def loop_zhang(F, w, h):
     return Ha, Hb
 
 
+def get_angle_from_cos_and_sin(c, s):
+    """
+    Computes x in ]-pi, pi] such that cos(x) = c and sin(x) = s.
+    """
+    if s >= 0:
+        return np.arccos(c)
+    else:
+        return -np.arccos(c)
+
+
+def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
+    """
+    Computes two similarities from an affine fundamental matrix.
+
+    Args:
+        F: 3x3 numpy array representing the input fundamental matrix
+        debug (optional, default is False): boolean flag to activate verbose
+            mode
+
+    Returns:
+        S, S': two similarities such that, when used to resample the two images
+            related by the fundamental matrix, the resampled images are
+            stereo-rectified.
+    """
+    # check that the input matrix is an affine fundamental matrix
+    assert(np.shape(F) == (3, 3))
+    assert(np.linalg.matrix_rank(F) == 2)
+    assert(F[0, 0] == 0)
+    assert(F[0, 1] == 0)
+    assert(F[1, 0] == 0)
+    assert(F[1, 1] == 0)
+
+    # notations
+    a = F[2, 0]
+    b = F[2, 1]
+    c = F[0, 2]
+    d = F[1, 2]
+    e = F[2, 2]
+
+    # rotations
+    r = np.sqrt(a*a + b*b)
+    s = np.sqrt(c*c + d*d)
+    R1 = (1.0 / r) * np.array([[b, -a], [a, b]])
+    R2 = (1.0 / s) * np.array([[-d, c], [-c, -d]])
+
+    # zoom and translation
+    z = np.sqrt(r / s)
+    t = 0.5 * e / np.sqrt(r * s)
+
+    if debug:
+        theta_1 = get_angle_from_cos_and_sin(b, a)
+        print "reference image:"
+        print "\trotation: %f deg " % np.rad2deg(theta_1)
+        print "\tzoom: %f " % z
+        print "\tvertical translation: %f" % t
+        print
+        theta_2 = get_angle_from_cos_and_sin(-d, -c)
+        print "secondary image:"
+        print "\trotation: %f deg " % np.rad2deg(theta_2)
+        print "\tzoom: %f " % (1.0 / z)
+        print "\tvertical translation: %f" % -t
+
+    # output similarities
+    S1 = np.zeros((3, 3))
+    S1[0:2, 0:2] = z * R1
+    S1[1, 2] = t
+    S1[2, 2] = 1
+
+    S2 = np.zeros((3, 3))
+    S2[0:2, 0:2] = (1.0 / z) * R2
+    S2[1, 2] = -t
+    S2[2, 2] = 1
+
+    return S1, S2
+
+
 def affine_fundamental_matrix(matches):
     """
     Estimates the affine fundamental matrix given a set of point

@@ -351,6 +351,13 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
     print "step 3: compute rectifying homographies (loop-zhang algorithm) -----"
     H1, H2 = estimation.loop_zhang(F, w, h)
+    S1, S2 = estimation.rectifying_similarities_from_affine_fundamental_matrix(
+        F, True)
+    print "F\n", F, "\n"
+    print "H1\n", H1, "\n"
+    print "S1\n", S1, "\n"
+    print "H2\n", H2, "\n"
+    print "S2\n", S2, "\n"
     # compose with previous translations to get H1, H2 in the big images frame
     H1 = np.dot(H1, T1)
     H2 = np.dot(H2, T2)
