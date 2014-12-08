@@ -1,4 +1,8 @@
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
+# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
+
 
 import numpy as np
 import os
@@ -8,7 +12,6 @@ import common
 import estimation
 import rpc_model
 import rpc_utils
-import rectification
 import pointing_accuracy
 
 def plot_line(im, x1, y1, x2, y2, colour):
@@ -58,8 +61,8 @@ def plot_matches(im1, im2, matches):
         path to the resulting image, to be displayed
     """
     # load images
-    img1 = piio.read(im1)
-    img2 = piio.read(im2)
+    img1 = piio.read(im1).astype(np.uint8)
+    img2 = piio.read(im2).astype(np.uint8)
 
     # if images have more than 3 channels, keep only the first 3
     if img1.shape[2] > 3:
@@ -72,7 +75,7 @@ def plot_matches(im1, im2, matches):
     h2, w2 = img2.shape[:2]
     w = w1 + w2
     h = max(h1, h2)
-    out = np.zeros((h, w, 3), np.float32)
+    out = np.zeros((h, w, 3), np.uint8)
     out[:h1, :w1] = img1
     out[:h2, w1:w] = img2
 
@@ -95,7 +98,7 @@ def plot_matches(im1, im2, matches):
         out[y2, x2] = green
 
     # save the output image, and return its path
-    outfile = common.tmpfile('.tif')
+    outfile = common.tmpfile('.png')
     piio.write(outfile, out)
     return outfile
 
@@ -166,8 +169,8 @@ def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
     # h2 += 40; h2 = np.round(h2)
 
     # do the crops
-    crop1 = common.image_crop_TIFF(im1, x1, y1, w1, h1)
-    crop2 = common.image_crop_TIFF(im2, x2, y2, w2, h2)
+    crop1 = common.image_qauto(common.image_crop_TIFF(im1, x1, y1, w1, h1))
+    crop2 = common.image_qauto(common.image_crop_TIFF(im2, x2, y2, w2, h2))
 
     # compute matches coordinates in the cropped images
     pts1 = matches[:, 0:2] - [x1, y1]

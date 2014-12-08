@@ -1,11 +1,10 @@
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
-# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
-# Copyright (C) 2013, Enric Meinhardt <ellopsis@gmail.com>
+# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
 import datetime
-import subprocess
 import numpy as np
-from numpy import testing
 
 import estimation
 import geographiclib
@@ -371,7 +370,8 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
     specified ROI of im1.
 
     Args:
-        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        rpc1, rpc2: two instances of the rpc_model.RPCModel class, or paths to
+            the xml files
         x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the first view. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
@@ -381,6 +381,11 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
         to contain the projections of the 3D points that are visible in the
         input ROI.
     """
+    # read rpc files 
+    if not isinstance(rpc1, rpc_model.RPCModel):
+        rpc1 = rpc_model.RPCModel(rpc1)
+    if not isinstance(rpc2, rpc_model.RPCModel):
+        rpc2 = rpc_model.RPCModel(rpc2)
     m, M = altitude_range(rpc1, x, y, w, h, 0, 0)
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]

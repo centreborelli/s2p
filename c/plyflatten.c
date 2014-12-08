@@ -1,26 +1,106 @@
 // take a series of ply files and produce a digital elevation map
 
-
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "smapa.h"
-#include "xmalloc.c"
+#include <geotiff/xtiffio.h>
+#include <geotiff/geotiffio.h>
+#include <geotiff/geo_tiffp.h>
+
 #include "iio.h"
 #include "lists.c"
-SMART_PARAMETER(PLY_RECORD_LENGTH, 27)
+#include "fail.c"
+#include "xmalloc.c"
 
 
-// fast forward "f" until "lin" is found
-static void eat_until_this_line(FILE *f, char *lin)
+static void parse_utm_string(int *zone, bool *hem, char *s)
+{
+    char hem_string[FILENAME_MAX];
+    if (2 == sscanf(s, "%02d%s", zone, hem_string)) {
+        // hem_string must be equal to "N" or "S"
+        if (hem_string[1] == '\0')
+            if (hem_string[0] == 'N' || hem_string[0] == 'S') {
+                *hem = (hem_string[0] == 'N');
+                fprintf(stderr, "zone: %d\them: %s\n", *zone, hem_string);
+                return;
+            }
+    }
+}
+
+// convert string like '28N' into a number like 32628, according to:
+// WGS84 / UTM northern hemisphere: 326zz where zz is UTM zone number
+// WGS84 / UTM southern hemisphere: 327zz where zz is UTM zone number
+// http://www.remotesensing.org/geotiff/spec/geotiff6.html#6.3.3.1
+static int get_utm_zone_index_for_geotiff(char *utm_zone)
+{
+    int out = 32000;
+    if (utm_zone[2] == 'N')
+        out += 600;
+    else if (utm_zone[2] == 'S')
+        out += 700;
+    else
+        fprintf(stderr, "error: bad utm zone value: %s\n", utm_zone);
+    utm_zone[2] = '\0';
+    out += atoi(utm_zone);
+    return out;
+}
+
+void set_geotif_header(char *tiff_fname, char *utm_zone, float xoff,
+        float yoff, float scale)
+{
+    // open tiff file
+    TIFF *tif = XTIFFOpen(tiff_fname, "r+");
+    if (!tif)
+        fail("failed in XTIFFOpen\n");
+
+    GTIF *gtif = GTIFNew(tif);
+    if (!gtif)
+        fail("failed in GTIFNew\n");
+
+    // write TIFF tags
+    double pixsize[3] = {scale, scale, 0.0};
+    TIFFSetField(tif, GTIFF_PIXELSCALE, 3, pixsize);
+
+    double tiepoint[6] = {0.0, 0.0, 0.0, xoff, yoff, 0.0};
+    TIFFSetField(tif, GTIFF_TIEPOINTS, 6, tiepoint);
+
+    // write GEOTIFF keys
+    int utm_ind = get_utm_zone_index_for_geotiff(utm_zone);
+    GTIFKeySet(gtif, ProjectedCSTypeGeoKey, TYPE_SHORT, 1, utm_ind);
+    GTIFWriteKeys(gtif);
+
+    // free and close
+    GTIFFree(gtif);
+    XTIFFClose(tif);
+}
+
+// fast forward "f" until "last_line" is found
+// returns the sum of 'properties' byte length
+// ie the numer of bytes used to store one 3D point in the ply file
+// and reads the utm zone
+static size_t header_get_record_length_and_utm_zone(FILE *f, char *utm,
+        char *last_line)
 {
 	char buf[FILENAME_MAX] = {0};
-	while (fgets(buf, FILENAME_MAX, f))
-		if (0 == strcmp(buf, lin))
-			return;
+    size_t n = 0;
+	while (fgets(buf, FILENAME_MAX, f)) {
+		if (0 == strcmp(buf, last_line))
+			return n;
+        if (0 == strncmp(buf, "property ", 9)) {
+            if (0 == strncmp(buf+9, "float", 5))
+                n += sizeof(float);
+            else if (0 == strncmp(buf+9, "uchar", 5))
+                n += sizeof(unsigned char);
+            else
+                fprintf(stderr, "error: property must be float or uchar\n");
+        }
+        else if (0 == strncmp(buf, "comment projection:", 19)) {
+            sscanf(buf, "comment projection: UTM %s", utm);
+        }
+    }
 }
 
 static void update_min_max(float *min, float *max, float x)
@@ -56,9 +136,9 @@ static void add_height_to_images(struct images *x, int i, int j, float v)
 	x->cnt[k] += 1;
 }
 
-// open a ply file and update the known extrema
+// open a ply file, read utm zone in the header, and update the known extrema
 static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
-        float *ymax, char *fname)
+        float *ymax, char *utm, char *fname)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -66,9 +146,10 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 		return;
 	}
 
-	eat_until_this_line(f, "end_header\n");
+    size_t n = header_get_record_length_and_utm_zone(f, utm, "end_header\n");
+    //fprintf(stderr, "%d\n", n);
+    //fprintf(stderr, "%s\n", utm);
 
-	size_t n = PLY_RECORD_LENGTH();
 	char cbuf[n];
 	float *fbuf = (void*) cbuf;
 	while (n == fread(cbuf, 1, n, f))
@@ -84,7 +165,7 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 // open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
 		float xmin, float xmax, float ymin, float ymax,
-		char *fname)
+		char utm_zone[3], char *fname)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -92,18 +173,21 @@ static void add_ply_points_to_images(struct images *x,
 		return;
 	}
 
-	eat_until_this_line(f, "end_header\n");
+    // check that the utm zone is the same as the provided one
+    char utm[3];
+    size_t n = header_get_record_length_and_utm_zone(f, utm, "end_header\n");
+    if (0 != strncmp(utm_zone, utm, 3))
+        fprintf(stderr, "error: different UTM zones among ply files\n");
 
-	size_t n = PLY_RECORD_LENGTH();
 	char cbuf[n];
 	float *fbuf = (void*)cbuf;
 	while (n == fread(cbuf, 1, n, f))
 	{
 		int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(fbuf[1], ymin, ymax, x->h);
+		int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
+		add_height_to_images(x, i, j, fbuf[2]);
 		//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
 		//		fbuf[0], fbuf[1], fbuf[2], i, j);
-		add_height_to_images(x, i, j, fbuf[2]);
 	}
 
 	fclose(f);
@@ -133,21 +217,18 @@ int main(int c, char *v[])
     float ymin = INFINITY;
     float ymax = -INFINITY;
 
-    // process each filename from stdin to determine x,y extremas and store the
+    // process each filename from stdin to determine x, y extremas and store the
     // filenames in a list of strings, to be able to open the files again
-	char fname[FILENAME_MAX];
+	char fname[FILENAME_MAX], utm[3];
     struct list *l = NULL;
 	while (fgets(fname, FILENAME_MAX, stdin))
 	{
 		strtok(fname, "\n");
-		// printf("FILENAME: \"%s\"\n", fname);
         l = push(l, fname);
-		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, fname);
+        parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, fname);
 	}
-    // fprintf(stderr, "xmin: %f, xmax: %f, ymin: %f, ymax: %f\n", xmin, xmax,
-    //         ymin, ymax);
-    // list_print(l);
-
+    //fprintf(stderr, "xmin: %f, xmax: %f, ymin: %f, ymax: %f\n", xmin, xmax,
+    //        ymin, ymax);
 
     // compute output image dimensions
     int w = 1 + (xmax - xmin) / resolution;
@@ -169,12 +250,11 @@ int main(int c, char *v[])
 		x.avg[i] = 0;
 	}
 
-
 	// process each filename to accumulate points in the dem
 	while (l != NULL)
 	{
-		printf("FILENAME: \"%s\"\n", l->current);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, l->current);
+		// printf("FILENAME: \"%s\"\n", l->current);
+		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current);
         l = l->next;
 	}
 
@@ -185,6 +265,7 @@ int main(int c, char *v[])
 
 	// save output image
 	iio_save_image_float(filename_out, x.avg, w, h);
+    set_geotif_header(filename_out, utm, xmin, ymax, resolution);
 
 	// cleanup and exit
 	free(x.min);

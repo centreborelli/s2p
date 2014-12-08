@@ -1,7 +1,9 @@
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
-# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
-# This Python file uses the following encoding: utf-8
+
 import numpy as np
 import os
 import sys
@@ -9,7 +11,6 @@ import subprocess
 import tempfile
 import re
 
-import rpc_model
 from config import cfg
 
 
@@ -123,6 +124,11 @@ def image_size(im):
     Returns:
         a tuple of size 2, giving width and height
     """
+    # if tiff, use tiffinfo
+    if im.lower().endswith(('.tif', '.tiff')):
+        return image_size_tiffinfo(im)
+
+    # else use imprintf (slower)
     try:
         with open(im):
             out = tmpfile('.txt')
@@ -166,7 +172,7 @@ def image_size_tiffinfo(im):
     Returns:
         a tuple of size 2, giving width and height
     """
-    if not im.lower().endswith('.tif'):
+    if not im.lower().endswith(('.tif', '.tiff')):
         print "image_size_tiffinfo function works only with TIF files"
         print "use image_size_gdal or image_size instead"
         sys.exit()
@@ -233,6 +239,11 @@ def image_pix_dim(im):
     Returns:
         number of channels of the image
     """
+    # if tiff, use tiffinfo
+    if im.lower().endswith(('.tif', '.tiff')):
+        return image_pix_dim_tiffinfo(im)
+
+    # else use imprintf (slower)
     try:
         with open(im):
             out = tmpfile('.txt')
@@ -543,7 +554,7 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
        keyfile = tmpfile('.txt')
 
     if implementation is 'monasse':
-        run("sift_keypoints %s %s" % (image_qauto(im), keyfile))
+        run("sift_keypoints %s %s" % (im, keyfile))
 
         # remove the first line (header) from keypoint files
         tmp = tmpfile('.txt')
@@ -554,7 +565,7 @@ def image_sift_keypoints(im, keyfile=None, max_nb=None,
         # the awk call is used to swap the first two columns of the output
         # to print the keypoint coordinates in that order: x, y
         run("sift_cli %s %s|awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
-            image_qauto(im), extra_params, keyfile))
+            im, extra_params, keyfile))
 
     else:
         print "ERROR: image_sift_keypoints bad 'implementation' argument"
@@ -589,17 +600,15 @@ def sift_keypoints_match(k1, k2, method='relative', thresh=0.6):
     """
     matchfile = tmpfile('.txt')
     run("match_cli %s %s -%s %f > %s" % (k1, k2, method, thresh, matchfile))
-    matches = np.loadtxt(matchfile)
-    if matches.size == 0:
-        # no matches
+    if os.stat(matchfile).st_size:  # test if file is empty
+        matches = np.loadtxt(matchfile)
+        if len(matches.shape) == 1:
+            # only one match. Discard scale and orientation, then return
+            return matches[[0, 1, 4, 5]].reshape(1, 4)
+        # last case, 'matches' is already a 2D array
+        return matches[:, [0, 1, 4, 5]]
+    else:
         return np.array([[]])
-    if len(matches.shape) == 1:
-        # only one match
-        # discard scale and orientation, then return
-        return matches[[0, 1, 4, 5]].reshape(1, 4)
-
-    # last case, 'matches' is already a 2D array
-    return matches[:, [0, 1, 4, 5]]
 
 
 def points_apply_homography(H, pts):

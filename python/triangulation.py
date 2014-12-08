@@ -1,6 +1,7 @@
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
-# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
-
+# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
 import os
 import sys
@@ -8,63 +9,6 @@ import numpy as np
 
 import common
 from config import cfg
-
-
-def update_mask(target_mask, H, ml_file, invert=False, erosion=None,
-                water=False):
-    """
-    Computes the intersection between an image mask and a gml mask.
-
-    Args:
-        target_mask: path to the png file containing the image mask. This file
-            will be overwritten.
-        H: 3x3 numpy array defining the rectifying homography
-        ml_file: path to the gml or xml file defining the mask on the full
-            image. For cloud or roi masks, it is a gml file containing polygons.
-            In case of a water mask, it is the rpc xml file.
-        invert: boolean flag. Set it to True if the mask is positive on marked
-            regions (it is the case for cloud masks, but not for roi masks)
-        erosion (optional, default None): erosion parameter applied to the gml
-            mask. Note that the mask should have been inverted (if needed) to
-            mark accepted pixels with a positive value, and rejected pixels
-            with 0.
-        water (optional, default False): boolean flag to tell if the mask to be
-            applied is a water mask
-
-    Returns:
-        nothing. The file target_mask is modified.
-    """
-    msk = common.tmpfile('.png')
-    w, h = common.image_size_gdal(target_mask)
-
-    # write the 9 coefficients of the homography to a string, then call cldmask
-    # or watermask
-    hij = ' '.join(['%r' % num for num in H.flatten()])
-    if water:
-        common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, ml_file, msk))
-    else:
-        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, ml_file, msk))
-
-    # invert mask
-    if invert:
-        common.run('plambda %s "255 x -" -o %s' % (msk, msk))
-
-    # apply erosion
-    if erosion is not None:
-        common.run('morsi disk%d erosion %s %s' % (int(erosion), msk, msk))
-
-    # compute the intersection between target_mask and msk
-    common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk,
-                                                      target_mask))
-
-    # save msk (for debug purposes)
-    if water:
-        common.run('cp %s %s.water.png' % (msk, target_mask))
-    elif invert:
-        common.run('cp %s %s.cloud.png' % (msk, target_mask))
-    else:
-        common.run('cp %s %s.roi.png' % (msk, target_mask))
-    return
 
 
 def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
@@ -176,6 +120,45 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
         fout.close()
 
 
+def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
+    """
+    Computes a 3D point cloud from a disparity map.
+
+    Args:
+        out: path to the output ply file
+        rpc1, rpc2: paths to the xml files
+        H1, H2: path to txt files containing two 3x3 numpy arrays defining
+            the rectifying homographies
+        disp, mask: paths to the diparity and mask maps
+        img: path to the png image containing the colors
+        A (optional): pointing correction matrix for im2
+    """
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        log_file = '%s/stdout.log' % os.path.dirname(out)
+        fout = open(log_file, 'a', 0)  # 'a' for append, 0 for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
+    # apply correction matrix
+    if A is not None:
+        HH2 = '%s/H_sec_corrected.txt' % os.path.dirname(out)
+        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
+    else:
+        HH2 = H2
+
+    # do the job
+    common.run("disp2ply %s %s %s %s %s %s %s %s" % (out, disp,  mask, H1, HH2,
+                                                     rpc1, rpc2, img))
+    # close logs
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
+
+    return
+
+
 def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     """
     Colorizes a Pleiades gray crop using low-resolution color information.
@@ -210,7 +193,8 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     x0 = x - 4*xx
     y0 = y - 4*yy
     crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
-    assert(common.image_size_gdal(crop_panchro) == common.image_size_gdal(crop_ms))
+    assert(common.image_size_gdal(crop_panchro) ==
+           common.image_size_gdal(crop_ms))
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
@@ -220,14 +204,13 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     panchro = common.image_qauto_gdal(crop_panchro)
 
     # 2. Combine linearly the intensity and the color to obtain the result
-    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' % (panchro,
-                                                                        rgb,
-                                                                        out_colorized))
+    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' % (
+        panchro, rgb, out_colorized))
     return
 
 
-def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
-                        off_y=0, ascii_ply=False, with_normals=False):
+def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=None,
+                        off_y=None, ascii_ply=False, with_normals=False):
     """
     Computes a color point cloud from a height map.
 
@@ -240,24 +223,23 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=0,
             transforming the coordinates system of the original full size image
             into the coordinates system of the crop we are dealing with.
         cloud: path to the output points cloud (ply format)
-        off_{x,y} (optional, default 0): coordinates of the point we want to
+        off_{x,y} (optional, default None): coordinates of the point we want to
             use as origin in the local coordinate system of the computed cloud
         ascii_ply (optional, default false): boolean flag to tell if the output
             ply file should be encoded in plain text (ascii).
     """
-    if ascii_ply:
-        if with_normals:
-            common.run("colormesh -a %s %s %s %s %s %d %d--with-normals" %
-                       (crop_colorized, heights, rpc, H, cloud, off_x, off_y))
-        else:
-            common.run("colormesh -a %s %s %s %s %s %d %d" % (crop_colorized,
-                                                              heights, rpc, H,
-                                                              cloud, off_x,
-                                                              off_y))
-    else:
-        common.run("colormesh %s %s %s %s %s %d %d" % (crop_colorized, heights,
-                                                       rpc, H, cloud, off_x,
-                                                       off_y))
+    hom = np.loadtxt(H)
+    hij = ' '.join(['%f' % x for x in hom.flatten()])
+    asc = "--ascii" if ascii_ply else ""
+    nrm = "--with-normals" if with_normals else ""
+    command = "colormesh %s %s %s %s -h \"%s\" %s %s" % (cloud, heights, rpc,
+                                                         crop_colorized, hij,
+                                                         asc, nrm)
+    if off_x:
+        command += " --offset_x %d" % off_x
+    if off_y:
+        command += " --offset_y %d" % off_y
+    common.run(command)
 
     # if LidarViewer is installed, convert the point cloud to its format
     # this is useful for huge point clouds

@@ -1,7 +1,7 @@
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
-# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
-
-#!/usr/bin/env python
+# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
 import sys
 import numpy as np
@@ -200,7 +200,7 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
             mask[i] = 1 # for debug only
 
     # for debug only
-    np.savetxt('%s/sift_F_msk' % cfg['temporary_dir'], mask, '%d') 
+    np.savetxt('%s/sift_F_msk' % cfg['temporary_dir'], mask, '%d')
     return np.array(out)
 
 

@@ -83,8 +83,6 @@ cfg['disp_max'] = None
 # radius for erosion of valid disparity areas. Ignored if less than 2
 cfg['msk_erosion'] = 2
 
-
-# These two parameters are currently NOT USED
 # threshold (in meters) used for the fusion of two dems in triplet processing
 # It should be adapted to the zoom factor
 cfg['fusion_thresh'] = 3

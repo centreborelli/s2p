@@ -1,5 +1,7 @@
-# Copyright (C) 2013, Carlo de Franchis <carlodef@gmail.com>
-# Copyright (C) 2013, Gabriele Facciolo <gfacciol@gmail.com>
+# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
 import gc
 import sys
@@ -121,8 +123,10 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
                 out[y0:y1, x0:x1] += tile[:y1 - y0, :x1 - x0]
 
     # free mem
-    del tile
-    del ind
+    if 'tile' in locals():
+        del tile
+    if 'ind' in locals():
+        del ind
     gc.collect()
 
     sys.stdout.write('\n')
