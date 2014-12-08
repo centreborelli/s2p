@@ -10,6 +10,63 @@ import common
 from config import cfg
 
 
+def update_mask(target_mask, H, ml_file, invert=False, erosion=None,
+                water=False):
+    """
+    Computes the intersection between an image mask and a gml mask.
+
+    Args:
+        target_mask: path to the png file containing the image mask. This file
+            will be overwritten.
+        H: 3x3 numpy array defining the rectifying homography
+        ml_file: path to the gml or xml file defining the mask on the full
+            image. For cloud or roi masks, it is a gml file containing polygons.
+            In case of a water mask, it is the rpc xml file.
+        invert: boolean flag. Set it to True if the mask is positive on marked
+            regions (it is the case for cloud masks, but not for roi masks)
+        erosion (optional, default None): erosion parameter applied to the gml
+            mask. Note that the mask should have been inverted (if needed) to
+            mark accepted pixels with a positive value, and rejected pixels
+            with 0.
+        water (optional, default False): boolean flag to tell if the mask to be
+            applied is a water mask
+
+    Returns:
+        nothing. The file target_mask is modified.
+    """
+    msk = common.tmpfile('.png')
+    w, h = common.image_size_gdal(target_mask)
+
+    # write the 9 coefficients of the homography to a string, then call cldmask
+    # or watermask
+    hij = ' '.join(['%r' % num for num in H.flatten()])
+    if water:
+        common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, ml_file, msk))
+    else:
+        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, ml_file, msk))
+
+    # invert mask
+    if invert:
+        common.run('plambda %s "255 x -" -o %s' % (msk, msk))
+
+    # apply erosion
+    if erosion is not None:
+        common.run('morsi disk%d erosion %s %s' % (int(erosion), msk, msk))
+
+    # compute the intersection between target_mask and msk
+    common.run('plambda %s %s "x y 255 / *" -o %s' % (target_mask, msk,
+                                                      target_mask))
+
+    # save msk (for debug purposes)
+    if water:
+        common.run('cp %s %s.water.png' % (msk, target_mask))
+    elif invert:
+        common.run('cp %s %s.cloud.png' % (msk, target_mask))
+    else:
+        common.run('cp %s %s.roi.png' % (msk, target_mask))
+    return
+
+
 def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     """
     Computes a height map from a disparity map, using rpc.
@@ -78,7 +135,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
 
 
 def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
-        A=None):
+                A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -100,48 +157,23 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     Returns:
         nothing
     """
+    out_dir = os.path.dirname(out)
+
+    # redirect stdout and stderr to log file, in append mode
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % out_dir, 'a', 0)  # '0' for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
     tmp = common.tmpfile('.tif')
     compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
 
-
-def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
-    """
-    Computes a 3D point cloud from a disparity map.
-
-    Args:
-        out: path to the output ply file
-        rpc1, rpc2: paths to the xml files
-        H1, H2: path to txt files containing two 3x3 numpy arrays defining
-            the rectifying homographies
-        disp, mask: paths to the diparity and mask maps
-        img: path to the png image containing the colors
-        A (optional): pointing correction matrix for im2
-    """
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        log_file = '%s/stdout.log' % os.path.dirname(out)
-        fout = open(log_file, 'a', 0)  # 'a' for append, 0 for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
-    # apply correction matrix
-    if A is not None:
-        HH2 = '%s/H_sec_corrected.txt' % os.path.dirname(out)
-        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
-    else:
-        HH2 = H2
-
-    # do the job
-    common.run("disp2ply %s %s %s %s %s %s %s %s" % (out, disp,  mask, H1, HH2,
-                                                     rpc1, rpc2, img))
     # close logs
     if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         fout.close()
-
-    return
 
 
 def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):

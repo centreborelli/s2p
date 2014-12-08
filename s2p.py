@@ -11,11 +11,9 @@ import numpy as np
 import os.path
 import copy
 import operator
-import glob
 
 from python import tee
 from python import common
-from python import masking
 from python import rpc_model
 from python import rpc_utils
 from python import geographiclib
@@ -24,7 +22,64 @@ from python import visualisation
 from python import rectification
 from python import block_matching
 from python import triangulation
+from python import tile_composer
+from python import fusion
 from python.config import cfg
+
+
+def is_tile_masked(x, y, w, h, rpc, roi_gml=None, cld_gml=None):
+    """
+    Checks wether a given tile is masked by water or by the roi mask.
+
+    Args:
+        x, y, w, h: four integers defining the rectangular ROI in the reference
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
+        rpc1: paths to the xml file containing the rpc coefficients of the
+            reference image
+        roi_gml (optional, default None): path to a gml file containing a mask
+            defining the area contained in the full image.
+        cld_gml (optional, default None): path to a gml file containing a mask
+            defining the areas covered by clouds.
+    """
+    # coefficients of the homography (actually it's only a translation)
+    # from full image coordinates to tile
+    hij = '1 0 %d 0 1 %d 0 0 1' % (-x, -y)
+
+    # compute the roi mask
+    if roi_gml is not None:
+        roi_msk = common.tmpfile('.png')
+        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, roi_gml,
+                                                    roi_msk))
+
+        # if we are already out, return
+        if common.is_image_black(roi_msk):
+            return True
+
+    # compute the cloud mask
+    if cld_gml is not None:
+        cld_msk = common.tmpfile('.png')
+        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, cld_gml,
+                                                    cld_msk))
+        # cld msk has to be inverted.
+        # TODO: add flag to the cldmask binary, to avoid using read/write the
+        # msk one more time for this
+        common.run('plambda %s "255 x -" -o %s' % (cld_msk, cld_msk))
+
+    # compute the water mask
+    water_msk = common.tmpfile('.png')
+    hij = '1 0 %d 0 1 %d 0 0 1' % (-x, -y)
+    common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc, water_msk))
+
+    # compute the intersection between the 3 masks
+    if roi_gml is not None:
+        common.run('plambda %s %s "x y 255 / *" -o %s' % (water_msk, roi_msk,
+                                                          water_msk))
+    if cld_gml is not None:
+        common.run('plambda %s %s "x y 255 / *" -o %s' % (water_msk, cld_msk,
+                                                          water_msk))
+
+    return common.is_image_black(water_msk)
 
 
 def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
@@ -55,15 +110,13 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         nothing
     """
     # create a directory for the experiment
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    common.run('mkdir -p %s' % out_dir)
 
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
     rect2 = '%s/rectified_sec.tif' % (out_dir)
     disp = '%s/rectified_disp.tif' % (out_dir)
     mask = '%s/rectified_mask.png' % (out_dir)
-    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
     center = '%s/center_keypts_sec.txt' % out_dir
@@ -73,11 +126,6 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
-
-    if os.path.isfile(disp) and cfg['skip_existing']:
-        sys.stderr.write("Tile %d, %d, %d, %d already exists, skip\n" % (x, y,
-                                                                         w, h))
-        return
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
@@ -107,14 +155,12 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         h = z * np.ceil(h / z)
 
     # check if the ROI is completely masked (water, or outside the image domain)
-    H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
-    if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk,
-                                        cld_msk):
+    if is_tile_masked(x, y, w, h, rpc1, roi_msk, cld_msk):
         print "Tile masked by water or outside definition domain, skip"
-        open("%s/pointing.txt" % out_dir, 'a').close()  # don't retry this tile
+        open("%s/this_tile_is_masked.txt" % out_dir, 'a').close()
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
         if not cfg['debug']:
-            sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
             fout.close()
         return
 
@@ -123,11 +169,13 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     if A is None:
         A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
                                                     y, w, h)
-        np.savetxt(pointing, A)
-        np.savetxt(sift_matches, m)
-        np.savetxt(center, np.mean(m[:, 2:4], 0))
-        visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y, w,
-                                            h, sift_matches_plot)
+        if A is not None:
+            np.savetxt(pointing, A)
+        if m is not None:
+            np.savetxt(sift_matches, m)
+            np.savetxt(center, np.mean(m[:, 2:4], 0))
+            visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y,
+                                                w, h, sift_matches_plot)
     else:
         m = None
 
@@ -143,12 +191,14 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
                                          cfg['matching_algorithm'], disp_min,
                                          disp_max)
 
-    # intersect mask with the cloud_water_image_domain mask
-    ww, hh = common.image_size(rect1)
-    masking.cloud_water_image_domain(cwid_msk, ww, hh, H1, rpc1, roi_msk,
-                                     cld_msk)
-    masking.intersection(mask, mask, cwid_msk)
-    masking.erosion(mask, mask, cfg['msk_erosion'])
+    # update mask with water mask, cloud mask and roi mask
+    if cfg['build_additional_masks']:
+        triangulation.update_mask(mask, H1, rpc1, False, None, True)
+        if cld_msk is not None:
+            triangulation.update_mask(mask, H1, cld_msk, True)
+        if roi_msk is not None:
+            triangulation.update_mask(mask, H1, roi_msk, False,
+                                      cfg['msk_erosion'])
 
     # save the subsampling factor, the rectifying homographies and the
     # disparity bounds.
@@ -179,7 +229,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     return
 
 
-def safe_process_pair_single_tile(i, n, out_dir, img1, rpc1, img2, rpc2, x=None,
+def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
                                   y=None, w=None, h=None, prv1=None,
                                   cld_msk=None, roi_msk=None):
     """
@@ -194,20 +244,22 @@ def safe_process_pair_single_tile(i, n, out_dir, img1, rpc1, img2, rpc2, x=None,
     try:
         process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y, w, h,
                                  prv1, cld_msk, roi_msk)
-        sys.__stdout__.write("Processed tile number %d / %d\r" % (i, n))
-        sys.__stdout__.flush()
     # Catch all possible exceptions here
     except:
         sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        print "Failed to generate tile %i %i %i %i: %s)" % (x, y, w, h)
         print sys.exc_info()
-        print "Failed to generate tile %i %i %i %i:\n" % (x, y, w, h)
+        return
+
+    print "Tile %i %i %i %i generated." % (x, y, w, h)
     return
 
 
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                  ov=None, cld_msk=None, roi_msk=None):
     """
-    Computes a height map from a Pair of pushbroom images, using tiles.
+    Computes a height map from a Pair of Pleiades images, using tiles.
 
     Args:
         out_dir: path to the output directory
@@ -228,11 +280,11 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             area contained in the full image.
 
     Returns:
-        Nothing
+        path to the digital elevation model (dem), resampled on the grid of the
+        reference image.
     """
     # create a directory for the experiment
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    common.run('mkdir -p %s' % out_dir)
 
     # duplicate stdout and stderr to log file
     log = tee.Tee('%s/stdout.log' % out_dir, 'w')
@@ -249,59 +301,66 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         h = z * np.ceil(float(h) / z)
 
     # TODO: automatically compute optimal size for tiles
-    # TODO: impose the constraint that ntx*nty is inferior to or equal to a
-    # multiple of the number of cores
     if tw is None and th is None and ov is None:
         ov = z * 100
         if w <= z * cfg['tile_size']:
             tw = w
         else:
             tw = z * cfg['tile_size']
-            # TODO: modify tiles size to be close do a divisor of w
-            # while (np.ceil((w - ov) / (tw - ov)) - .2 > (w - ov) / (tw - ov)):
-            #    tw += 1
         if h <= z * cfg['tile_size']:
             th = h
         else:
             th = z * cfg['tile_size']
-            # TODO: modify tiles size to be close do a divisor of h
-            # while (np.ceil((h - ov) / (th - ov)) - .2 > (h - ov) / (th - ov)):
-            #    th += 1
     ntx = np.ceil(float(w - ov) / (tw - ov))
     nty = np.ceil(float(h - ov) / (th - ov))
-    nt = ntx * nty
 
     print 'tiles size is tw, th = (%d, %d)' % (tw, th)
     print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
-    print 'total number of tiles is %d' % nt
+    print 'total number of tiles is %d' % (ntx * nty)
 
     # create pool with less workers than available cores
-    nb_workers = multiprocessing.cpu_count()
-    if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
+    max_processes = multiprocessing.cpu_count()
+    if cfg['max_nb_threads'] > 0:
+        max_processes = min(max_processes, cfg['max_nb_threads'])
 
-    print 'Creating pool with %d workers\n' % nb_workers
-    pool = multiprocessing.Pool(nb_workers)
+    print 'Creating pool with %d processes\n' % max_processes
+    pool = multiprocessing.Pool(max_processes)
 
     # process the tiles
     # don't parallellize if in debug mode
     tiles = []
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
-            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
+                    th)
             tiles.append(tile_dir)
+
+            # check if the tile is already done, or masked
+            if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
+                if cfg['skip_existing']:
+                    print "stereo on tile %d %d already done, skip" % (col, row)
+                    continue
+            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                print "tile %d %d already masked, skip" % (col, row)
+                continue
+
+            # process the tile
             if cfg['debug']:
                 process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
                                          row, tw, th, None, cld_msk, roi_msk)
             else:
                 pool.apply_async(safe_process_pair_single_tile,
-                                 args=(len(tiles), nt, tile_dir, img1, rpc1,
-                                       img2, rpc2, col, row, tw, th, None,
-                                       cld_msk, roi_msk))
+                                 args=(tile_dir, img1, rpc1, img2, rpc2, col,
+                                       row, tw, th, None, cld_msk, roi_msk))
 
     # wait for all the processes to terminate
     pool.close()
     pool.join()
+    common.garbage_cleanup() 
+
+    # compute global pointing correction
+    A_global = pointing_accuracy.global_from_local(tiles)
+    np.savetxt('%s/pointing.txt' % out_dir, A_global)
 
     # Check if all tiles were computed
     # The only cause of a tile failure is a lack of sift matches, which breaks
@@ -309,46 +368,71 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # correction matrix was computed.
     for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-            tile_dir = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
-            if not os.path.isfile('%s/pointing.txt' % tile_dir):
-                print "WARNING: %s failed. Retrying pointing corr..." % tile_dir
-                # estimate pointing correction matrix from neighbors and rerun
-                # the disparity map computation
-                A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
-                process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2, col,
-                                         row, tw, th, None, cld_msk, roi_msk, A)
-
-    # compute global pointing correction
-    A = pointing_accuracy.global_from_local(tiles)
-    np.savetxt('%s/pointing.txt' % out_dir, A)
+            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
+                    th)
+            if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                if not os.path.isfile('%s/pointing.txt' % tile_dir):
+                    print "%s retrying pointing corr..." % tile_dir
+                    # estimate pointing correction matrix from neighbors, if it
+                    # fails use A_global, then rerun the disparity map
+                    # computation
+                    A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
+                    if A is None:
+                        A = A_global
+                    process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2,
+                                             col, row, tw, th, None, cld_msk,
+                                             roi_msk, A)
+    common.garbage_cleanup() 
 
     # triangulation
-    pool = multiprocessing.Pool(nb_workers)
+    pool = multiprocessing.Pool(max_processes)
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
-            tile = '%s/tile_%d_%d_%d_%d' % (out_dir, col, row, tw, th)
+            tile = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw, th)
             H1 = '%s/H_ref.txt' % tile
             H2 = '%s/H_sec.txt' % tile
             disp = '%s/rectified_disp.tif' % tile
             mask = '%s/rectified_mask.png' % tile
-            ply = '%s/cloud.ply' % tile
-            img_ref = '%s/rectified_ref.tif' % tile
-            img_ref_png = '%s/rectified_ref.png' % tile
-            common.image_qauto(img_ref, img_ref_png)
+            rpc_err = '%s/rpc_err.tif' % tile
+            dem = '%s/dem.tif' % tile
+
+            # check if the tile is already done, or masked
+            if os.path.isfile('%s/dem.tif' % tile_dir):
+                if cfg['skip_existing']:
+                    print "triangulation on tile %d %d is done, skip" % (col,
+                                                                         row)
+                    continue
+            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                print "tile %d %d already masked, skip" % (col, row)
+                continue
+
+            # process the tile
             if cfg['debug']:
-                triangulation.compute_ply(ply, rpc1, rpc2, H1, H2, disp, mask,
-                                          img_ref_png, A)
+                triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
+                                          H1, H2, disp, mask, rpc_err, A_global)
             else:
-                pool.apply_async(triangulation.compute_ply,
-                                 args=(ply, rpc1, rpc2, H1, H2, disp, mask,
-                                       img_ref_png, A))
+                pool.apply_async(triangulation.compute_dem, args=(dem, col, row,
+                                                                  tw, th, z,
+                                                                  rpc1, rpc2,
+                                                                  H1, H2, disp,
+                                                                  mask, rpc_err,
+                                                                  A_global))
     pool.close()
     pool.join()
+    common.garbage_cleanup() 
 
-    # cleanup
-    if cfg['clean_tmp']:
-        while common.garbage:
-            common.run('rm ' + common.garbage.pop())
+    # tiles composition
+    out = '%s/dem.tif' % out_dir
+    tmp = ['%s/dem.tif' % t for t in tiles]
+    if not os.path.isfile(out) or not cfg['skip_existing']:
+        print "Mosaic method: %s" % cfg['mosaic_method']
+        if cfg['mosaic_method'] == 'gdal':
+            tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
+        else:
+            tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
+    common.garbage_cleanup() 
+
+    return out
 
 
 def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
@@ -381,14 +465,14 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
             area contained in the full image.
 
     Returns:
-        Nothing
+        path to the digital elevaton model (dem), resampled on the grid of the
+        reference image.
     """
     # create a directory for the experiment
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    common.run('mkdir -p %s' % out_dir)
 
     # duplicate stdout and stderr to log file
-    tee.Tee('%s/stdout.log' % out_dir, 'w')
+    log = tee.Tee('%s/stdout.log' % out_dir, 'w')
 
     # select ROI
     try:
@@ -399,21 +483,19 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
-    process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h, tile_w,
-                 tile_h, overlap, cld_msk, roi_msk)
+    dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
+                            tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     out_dir_right = '%s/right' % out_dir
-    process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h, tile_w,
-                 tile_h, overlap, cld_msk, roi_msk)
+    dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
+                             tile_w, tile_h, overlap, cld_msk, roi_msk)
 
     # merge the two digital elevation models
-    # TODO: implement a merging procedure that merges the two clouds tile by
-    # tile
+    dem = '%s/dem.tif' % out_dir
+    fusion.merge(dem_left, dem_right, thresh, dem)
 
-    # cleanup
-    if cfg['clean_tmp']:
-        while common.garbage:
-            common.run('rm ' + common.garbage.pop())
+    common.garbage_cleanup()
+    return dem
 
 
 def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
@@ -439,12 +521,11 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             huge numbers)
     """
     # output files
+    common.run('mkdir -p %s' % out_dir)
     crop_color = '%s/roi_color_ref.tif' % out_dir
     crop_ref = '%s/roi_ref.tif' % out_dir
     crop_sec = '%s/roi_sec.tif' % out_dir
     cloud = '%s/cloud.ply' % out_dir
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
 
     # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
@@ -475,29 +556,33 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
         off_x, off_y = 0, 0
 
     # crop the ROI in ref and sec images, then zoom
-    r1 = rpc_model.RPCModel(rpc1)
-    r2 = rpc_model.RPCModel(rpc2)
-    x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x, y, w, h)
-    if z == 1:
-        common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
-        common.image_crop_TIFF(im2, x2, y2, w2, h2, crop_sec)
+    if cfg['full_img'] and z == 1:
+        crop_ref = im1
+        crop_sec = im2
     else:
-        # gdal is used for the zoom because it handles BigTIFF files, and
-        # before the zoom out the image may be that big
-        tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
-        common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
-        tmp_crop = common.image_crop_TIFF(im2, x2, y2, w2, h2)
-        common.image_zoom_gdal(tmp_crop, z, crop_sec, w2, h2)
+        r1 = rpc_model.RPCModel(rpc1)
+        r2 = rpc_model.RPCModel(rpc2)
+        x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x, y, w, h)
+        if z == 1:
+            common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
+            common.image_crop_TIFF(im2, x2, y2, w2, h2, crop_sec)
+        else:
+            # gdal is used for the zoom because it handles BigTIFF files, and
+            # before the zoom out the image may be that big
+            tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
+            common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
+            tmp_crop = common.image_crop_TIFF(im2, x2, y2, w2, h2)
+            common.image_zoom_gdal(tmp_crop, z, crop_sec, w2, h2)
 
     # colorize, then generate point cloud
     if clr is not None:
         print 'colorizing...'
         triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
-    elif common.image_pix_dim(crop_ref) == 4:
+    elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
         print 'the image is pansharpened fusioned'
 
         # if the image is big, use gdal
-        if reduce(operator.mul, common.image_size(crop_ref)) > 1e8:
+        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
             crop_color = common.rgbi_to_rgb_gdal(crop_ref)
             crop_color = common.image_qauto_gdal(crop_color)
         else:
@@ -505,7 +590,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             crop_color = common.image_qauto(crop_color)
     else:
         print 'no color data'
-        if reduce(operator.mul, common.image_size(crop_ref)) > 1e8:
+        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
             crop_color = common.image_qauto_gdal(crop_ref)
         else:
             crop_color = common.image_qauto(crop_ref)
@@ -513,23 +598,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
     triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
                                       off_x, off_y)
 
-    # cleanup
-    if cfg['clean_tmp']:
-        while common.garbage:
-            common.run('rm ' + common.garbage.pop())
-
-
-def generate_dem(out, point_clouds_list, resolution):
-    """
-    Args:
-        out: output geotiff file
-        point_clouds_list: list of ply files
-        resolution: in meters per pixel
-
-    The point clouds are supposed to contain points in the same UTM zones.
-    """
-    files = ' '.join(point_clouds_list)
-    common.run("ls %s | plyflatten %f %s" % (files, resolution, out))
+    common.garbage_cleanup()
 
 
 def check_parameters(usr_cfg):
@@ -617,7 +686,7 @@ def main(config_file):
 
     # update roi definition if the full_img flag is set to true
     if ('full_img' in cfg) and cfg['full_img']:
-        sz = common.image_size_gdal(cfg['images'][0]['img'])
+        sz = common.image_size_tiffinfo(cfg['images'][0]['img'])
         cfg['roi'] = {}
         cfg['roi']['x'] = 0
         cfg['roi']['y'] = 0
@@ -639,38 +708,34 @@ def main(config_file):
 
     # create output directory for the experiment, and store a json dump of the
     # config.cfg dictionary there
-    if not os.path.exists(cfg['out_dir']):
-        os.makedirs(cfg['out_dir'])
+    common.run('mkdir -p %s' % cfg['out_dir'])
     f = open('%s/config.json' % cfg['out_dir'], 'w')
     json.dump(cfg, f, indent=2)
     f.close()
 
-    # point cloud generation, tilewise
+    # dem generation
     if len(cfg['images']) == 2:
-        process_pair(cfg['out_dir'], cfg['images'][0]['img'],
-                     cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                     cfg['images'][1]['rpc'], cfg['roi']['x'], cfg['roi']['y'],
-                     cfg['roi']['w'], cfg['roi']['h'], None, None, None,
-                     cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+                           cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                           cfg['images'][1]['rpc'], cfg['roi']['x'],
+                           cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                           None, None, None, cfg['images'][0]['cld'],
+                           cfg['images'][0]['roi'])
     else:
-        process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
-                        cfg['images'][0]['rpc'], cfg['images'][1]['img'],
-                        cfg['images'][1]['rpc'], cfg['images'][2]['img'],
-                        cfg['images'][2]['rpc'], cfg['roi']['x'],
-                        cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
-                        cfg['fusion_thresh'], None, None, None, None,
-                        cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+                              cfg['images'][0]['rpc'], cfg['images'][1]['img'],
+                              cfg['images'][1]['rpc'], cfg['images'][2]['img'],
+                              cfg['images'][2]['rpc'], cfg['roi']['x'],
+                              cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
+                              cfg['fusion_thresh'], None, None, None, None,
+                              cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
-#    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
-#                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
-#                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
-#                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-#                   cfg['roi']['h'], dem, cfg['offset_ply'])
-
-    # TODO this only work for pairs, not for triplets
-    out_dsm = '%s/dsm.tif' % cfg['out_dir']
-    point_clouds_list = glob.glob('%s/tile_*/cloud.ply' % cfg['out_dir'])
-    generate_dem(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+    # point cloud generation
+    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
+                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
+                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
+                   cfg['roi']['h'], dem, cfg['offset_ply'])
 
 
 if __name__ == '__main__':
