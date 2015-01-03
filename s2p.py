@@ -556,7 +556,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
     common.garbage_cleanup()
 
 
-def generate_dem(out, point_clouds_list, resolution):
+def generate_dsm(out, point_clouds_list, resolution):
     """
     Args:
         out: output geotiff file
@@ -709,7 +709,7 @@ def main(config_file):
     # digital surface model
     out_dsm = '%s/dsm.tif' % cfg['out_dir']
     point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
-    generate_dem(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+    generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
 
 
 if __name__ == '__main__':
