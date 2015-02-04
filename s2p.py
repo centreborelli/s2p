@@ -689,8 +689,10 @@ def main(config_file):
         cfg['roi']['w'] = w
         cfg['roi']['h'] = h
 
-    # create output directory for the experiment, and store a json dump of the
-    # config.cfg dictionary there
+    # create tmp dir and output directory for the experiment, and store a json
+    # dump of the config.cfg dictionary there
+    if not os.path.exists(cfg['temporary_dir']):
+        os.makedirs(cfg['temporary_dir'])
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
     f = open('%s/config.json' % cfg['out_dir'], 'w')
