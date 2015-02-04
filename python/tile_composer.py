@@ -96,7 +96,7 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
     # loop over all the tiles
     for j in range(nty):
         for i in range(ntx):
-            sys.stdout.write("Pasting tile %02d %02d\r" % (j, i))
+            sys.stdout.write("\tPasting tile %02d %02d\r" % (j, i))
             sys.stdout.flush()
             # top-left and bottom-right corners of the tile in the output full
             # image
@@ -131,15 +131,15 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
 
     sys.stdout.write('\n')
     # put nan where count is zero, and take the average where count is nonzero.
-    sys.stdout.write('Counting...\n')
+    sys.stdout.write('\tCounting...\n')
     sys.stdout.flush()
     ind = (count > 0)
 
-    sys.stdout.write('Averaging...\n')
+    sys.stdout.write('\tAveraging...\n')
     sys.stdout.flush()
     out[ind] /= count[ind]
 
-    sys.stdout.write('Putting nans on empty pixels...\n')
+    sys.stdout.write('\tPutting nans on empty pixels...\n')
     sys.stdout.flush()
     out[~ind] = np.nan
 
@@ -150,7 +150,7 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
     # not implemented yet in iio.
     # As an alternative, the numpy array is stored in raw and the libtiff util
     # 'raw2tiff' is used to produce a tiff file from it.
-    print 'writing raw data to disk...'
+    sys.stdout.write('\twriting raw data to disk...\n')
     raw_file = '%s/s2p_numpy_large_image_file' % cfg['temporary_dir']
     out.tofile(raw_file)
     common.run('raw2tiff -w %d -l %d -d float -c zip %s %s' % (w, h, raw_file,

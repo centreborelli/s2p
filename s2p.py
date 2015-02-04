@@ -208,6 +208,14 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     return
 
 
+def show_progress(a):
+    show_progress.counter += 1
+    if show_progress.counter > 1:
+        print "Processed %d tiles" % show_progress.counter
+    else:
+        print "Processed 1 tile"
+
+
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                  ov=None, cld_msk=None, roi_msk=None):
     """
@@ -267,21 +275,20 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     nty = np.ceil(float(h - ov) / (th - ov))
     nt = ntx * nty
 
-    print 'tiles size is tw, th = (%d, %d)' % (tw, th)
-    print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
-    print 'total number of tiles is %d' % nt
+    print 'tiles size: (%d, %d)' % (tw, th)
+    print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
 
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
         nb_workers = min(nb_workers, cfg['max_nb_threads'])
-
-    print 'Creating pool with %d workers\n' % nb_workers
     pool = multiprocessing.Pool(nb_workers)
 
     # process the tiles
     # don't parallellize if in debug mode
     tiles = []
+    show_progress.counter = 0
+    print 'Computing disparity maps tile by tile...'
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
@@ -304,14 +311,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             else:
                 pool.apply_async(safe_process_pair_single_tile,
                                  args=(tile_dir, img1, rpc1, img2, rpc2, col,
-                                       row, tw, th, None, cld_msk, roi_msk))
+                                       row, tw, th, None, cld_msk, roi_msk),
+                                 callback=show_progress)
 
     # wait for all the processes to terminate
     pool.close()
     pool.join()
     common.garbage_cleanup()
+    print ''
 
     # compute global pointing correction
+    print 'Computing global pointing correction...'
     A_global = pointing_accuracy.global_from_local(tiles)
     np.savetxt('%s/pointing.txt' % out_dir, A_global)
 
@@ -338,6 +348,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     common.garbage_cleanup()
 
     # triangulation
+    print 'Computing height maps tile by tile...'
+    show_progress.counter = 0
     pool = multiprocessing.Pool(nb_workers)
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
@@ -369,7 +381,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                                                                   rpc1, rpc2,
                                                                   H1, H2, disp,
                                                                   mask, rpc_err,
-                                                                  A_global))
+                                                                  A_global),
+                                                            callback=show_progress)
     pool.close()
     pool.join()
     common.garbage_cleanup()
@@ -378,7 +391,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     out = '%s/dem.tif' % out_dir
     tmp = ['%s/dem.tif' % t for t in tiles]
     if not os.path.isfile(out) or not cfg['skip_existing']:
-        print "Mosaic method: %s" % cfg['mosaic_method']
+        print "Mosaicing tiles with %s..." % cfg['mosaic_method']
         if cfg['mosaic_method'] == 'gdal':
             tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
         else:
@@ -474,6 +487,8 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
             not (translated to be close to 0, to avoid precision loss due to
             huge numbers)
     """
+    print "\nComputing point cloud..."
+
     # output files
     crop_color = '%s/roi_color_ref.tif' % out_dir
     crop_ref = '%s/roi_ref.tif' % out_dir
