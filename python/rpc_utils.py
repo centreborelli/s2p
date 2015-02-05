@@ -9,6 +9,7 @@ import numpy as np
 import estimation
 import geographiclib
 import common
+import rpc_model
 
 
 def print_distance_between_vectors(u, v, msg):
@@ -369,7 +370,8 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
     specified ROI of im1.
 
     Args:
-        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        rpc1, rpc2: two instances of the rpc_model.RPCModel class, or paths to
+            the xml files
         x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the first view. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
@@ -379,6 +381,11 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
         to contain the projections of the 3D points that are visible in the
         input ROI.
     """
+    # read rpc files 
+    if not isinstance(rpc1, rpc_model.RPCModel):
+        rpc1 = rpc_model.RPCModel(rpc1)
+    if not isinstance(rpc2, rpc_model.RPCModel):
+        rpc2 = rpc_model.RPCModel(rpc2)
     m, M = altitude_range(rpc1, x, y, w, h, 0, 0)
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]

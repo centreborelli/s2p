@@ -28,7 +28,6 @@
   "debug" : false,
   "temporary_dir" : "/tmp",
   "tile_size" : 800,
-  "max_nb_threads" : -1,
   "clean_tmp" : true,
   "offset_ply" : false,
   "disp_range_method" : "sift",
