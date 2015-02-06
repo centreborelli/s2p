@@ -244,6 +244,8 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=None,
     # if LidarViewer is installed, convert the point cloud to its format
     # this is useful for huge point clouds
     if common.which('LidarPreprocessor'):
+        tmp = cfg['temporary_dir']
         cloud_lidar_viewer = "%s.lidar_viewer" % os.path.splitext(cloud)[0]
-        common.run("LidarPreprocessor %s -o %s" % (cloud, cloud_lidar_viewer))
+        common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP %s -o %s" % (
+            tmp, tmp, cloud, cloud_lidar_viewer))
     return
