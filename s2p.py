@@ -13,6 +13,7 @@ import os.path
 import copy
 import operator
 import glob
+import time
 
 from python import tee
 from python import common
@@ -699,6 +700,9 @@ def main(config_file):
     json.dump(cfg, f, indent=2)
     f.close()
 
+    # measure total runtime
+    t0 = time.time()
+
     # height map
     if len(cfg['images']) == 2:
         dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
@@ -727,6 +731,13 @@ def main(config_file):
     out_dsm = '%s/dsm.tif' % cfg['out_dir']
     point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
     generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+
+    # runtime
+    t = int(time.time() - t0)
+    h = t/3600
+    m = (t/60) % 60
+    s = t % 60
+    print "Total runtime: %dh:%dm:%ds" % (h, m, s)
 
 
 if __name__ == '__main__':
