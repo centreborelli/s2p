@@ -360,10 +360,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             disp = '%s/rectified_disp.tif' % tile
             mask = '%s/rectified_mask.png' % tile
             rpc_err = '%s/rpc_err.tif' % tile
-            dem = '%s/dem.tif' % tile
+            height_map = '%s/height_map.tif' % tile
 
             # check if the tile is already done, or masked
-            if os.path.isfile('%s/dem.tif' % tile):
+            if os.path.isfile(height_map):
                 if cfg['skip_existing']:
                     print "triangulation on tile %d %d is done, skip" % (col,
                                                                          row)
@@ -374,23 +374,25 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
 
             # process the tile
             if cfg['debug']:
-                triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
-                                          H1, H2, disp, mask, rpc_err, A_global)
+                triangulation.compute_dem(height_map, col, row, tw, th, z,
+                                          rpc1, rpc2, H1, H2, disp, mask,
+                                          rpc_err, A_global)
             else:
-                pool.apply_async(triangulation.compute_dem, args=(dem, col, row,
-                                                                  tw, th, z,
-                                                                  rpc1, rpc2,
-                                                                  H1, H2, disp,
-                                                                  mask, rpc_err,
+                pool.apply_async(triangulation.compute_dem, args=(height_map,
+                                                                  col, row, tw,
+                                                                  th, z, rpc1,
+                                                                  rpc2, H1, H2,
+                                                                  disp, mask,
+                                                                  rpc_err,
                                                                   A_global),
-                                                            callback=show_progress)
+                                 callback=show_progress)
     pool.close()
     pool.join()
     common.garbage_cleanup()
 
     # tiles composition
-    out = '%s/dem.tif' % out_dir
-    tmp = ['%s/dem.tif' % t for t in tiles]
+    out = '%s/height_map.tif' % out_dir
+    tmp = ['%s/height_map.tif' % t for t in tiles]
     if not os.path.isfile(out) or not cfg['skip_existing']:
         print "Mosaicing tiles with %s..." % cfg['mosaic_method']
         if cfg['mosaic_method'] == 'gdal':
@@ -451,22 +453,24 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
-    dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-                            tile_w, tile_h, overlap, cld_msk, roi_msk)
+    height_map_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y,
+                                   w, h, tile_w, tile_h, overlap, cld_msk,
+                                   roi_msk)
 
     out_dir_right = '%s/right' % out_dir
-    dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-                             tile_w, tile_h, overlap, cld_msk, roi_msk)
+    height_map_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x,
+                                    y, w, h, tile_w, tile_h, overlap, cld_msk,
+                                    roi_msk)
 
-    # merge the two digital elevation models
-    dem = '%s/dem.tif' % out_dir
-    fusion.merge(dem_left, dem_right, thresh, dem)
+    # merge the two height maps
+    height_map = '%s/height_map.tif' % out_dir
+    fusion.merge(height_map_left, height_map_right, thresh, height_map)
 
     common.garbage_cleanup()
-    return dem
+    return height_map
 
 
-def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
+def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, height_map,
                    do_offset=False):
     """
     Args:
@@ -481,7 +485,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
         x, y, w, h: four integers defining the rectangular ROI in the original
             panchro image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
-        dem: path to the digital elevation model, produced by the process_pair
+        height_map: path to the height map, produced by the process_pair
             or process_triplet function
         do_offset (optional, default: False): boolean flag to decide wether the
             x, y coordinates of points in the ply file will be translated or
@@ -566,7 +570,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
         else:
             crop_color = common.image_qauto(crop_ref)
 
-    triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
+    triangulation.compute_point_cloud(crop_color, height_map, rpc1, trans, cloud,
                                       off_x, off_y)
 
     common.garbage_cleanup()
@@ -705,14 +709,14 @@ def main(config_file):
 
     # height map
     if len(cfg['images']) == 2:
-        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+        height_map = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
                            cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                            cfg['images'][1]['rpc'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'])
     else:
-        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+        height_map = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
                               cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                               cfg['images'][1]['rpc'], cfg['images'][2]['img'],
                               cfg['images'][2]['rpc'], cfg['roi']['x'],
@@ -725,7 +729,7 @@ def main(config_file):
                    cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
                    cfg['images'][1]['img'], cfg['images'][1]['rpc'],
                    cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   cfg['roi']['h'], dem, cfg['offset_ply'])
+                   cfg['roi']['h'], height_map, cfg['offset_ply'])
 
     # digital surface model
     out_dsm = '%s/dsm.tif' % cfg['out_dir']
