@@ -145,9 +145,9 @@ def geodesic_bounding_box(rpc, x, y, w, h):
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
-            (ROI) in the image. (x, y) is the top-left corner, and (w, h) are the
-            dimensions of the rectangle.
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h) are
+            the dimensions of the rectangle.
 
     Returns:
         4 geodesic coordinates: the min and max longitudes, and the min and
@@ -255,7 +255,7 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
+        x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
         margin_top: margin (in meters) to add to the upper bound of the range
@@ -343,7 +343,7 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
+        x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h) are
             the dimensions of the rectangle.
         m, M: minimal and maximal altitudes of the ground control points

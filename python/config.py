@@ -89,3 +89,9 @@ cfg['fusion_thresh'] = 3
 
 # binary used to paste together the altitude maps of each tile
 cfg['mosaic_method'] = 'piio'
+
+# url of the srtm database mirror
+cfg['srtm_url'] = 'http://138.231.80.250:443/srtm/tiff'
+
+# directory where to store the srtm tiles
+cfg['srtm_dir'] = '.srtm'

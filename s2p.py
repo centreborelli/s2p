@@ -16,6 +16,7 @@ import glob
 import time
 
 from python import tee
+from python import srtm
 from python import common
 from python import masking
 from python import rpc_model
@@ -706,6 +707,12 @@ def main(config_file):
 
     # measure total runtime
     t0 = time.time()
+
+    # needed srtm tiles
+    srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                           *cfg['roi'].values())
+    for s in srtm_tiles:
+        srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
     # height map
     if len(cfg['images']) == 2:

@@ -728,13 +728,13 @@ def run_binary_on_list_of_points(points, binary, option=None):
     # run the binary
     pts_file = tmpfile('.txt')
     np.savetxt(pts_file, points, '%.18f')
-    p1 = subprocess.Popen(['cat', pts_file], stdout = subprocess.PIPE)
+    p1 = subprocess.Popen(['cat', pts_file], stdout=subprocess.PIPE)
     if option:
-        p2 = subprocess.Popen([binary, option], stdin = p1.stdout, stdout =
-            subprocess.PIPE)
+        p2 = subprocess.Popen([binary, option], stdin=p1.stdout,
+                              stdout=subprocess.PIPE)
     else:
-        p2 = subprocess.Popen([binary], stdin = p1.stdout, stdout =
-            subprocess.PIPE)
+        p2 = subprocess.Popen([binary], stdin=p1.stdout,
+                              stdout=subprocess.PIPE)
 
     # recover output values: first point first, then loop over all the others
     line = p2.stdout.readline()
