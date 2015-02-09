@@ -4,12 +4,13 @@
 # Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
 
-import numpy as np
 import os
-import sys
-import subprocess
-import tempfile
 import re
+import sys
+import urllib2
+import tempfile
+import subprocess
+import numpy as np
 
 from config import cfg
 
@@ -853,3 +854,38 @@ def which(program):
                 return exe_file
 
     return None
+
+
+def download(to_file, from_url):
+    """
+    Download a file from the internet.
+
+    Args:
+        to_file: path where to store the downloaded file
+        from_url: url of the file to download
+    """
+    f = open(to_file, 'wb')
+    file_size_dl = 0
+    block_sz = 8192
+
+    try:
+        u = urllib2.urlopen(from_url)
+        meta = u.info()
+        file_size = int(meta.getheaders("Content-Length")[0])
+        print "Downloading: %s Bytes: %s" % (to_file, file_size)
+
+        while True:
+            buffer = u.read(block_sz)
+            if not buffer:
+                break
+
+            file_size_dl += len(buffer)
+            f.write(buffer)
+            status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+            status = status + chr(8)*(len(status)+1)
+            print status,
+
+    except urllib2.URLError as e:
+        print "Download failed: ", e
+
+    f.close()

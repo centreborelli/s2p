@@ -59,8 +59,7 @@ def get_srtm_tile(srtm_tile, out_dir):
     # download the zip file
     srtm_tile_url = '%s/%s.zip' % (cfg['srtm_url'], srtm_tile)
     zip_path = os.path.join(out_dir, '%s.zip' % srtm_tile)
-    print "Downloading %s..." % srtm_tile_url
-    urllib.urlretrieve(srtm_tile_url, zip_path)
+    common.download(zip_path, srtm_tile_url)
 
     # extract the tif file
     if zipfile.is_zipfile(zip_path):
