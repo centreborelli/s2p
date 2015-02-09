@@ -83,8 +83,8 @@ def srtm4(lon, lat):
     Returns:
         the height, in meters above the WGS84 geoid (not ellipsoid)
     """
-    p = subprocess.Popen(['SRTM4_CACHE=%s srtm4' % cfg['srtm_dir'],
-                          str(lon), str(lat)], stdout=subprocess.PIPE)
-    #p = subprocess.Popen(['srtm4',
-    #                      str(lon), str(lat)], stdout=subprocess.PIPE)
+
+    p = subprocess.Popen(['srtm4', str(lon), str(lat)],
+                         stdout=subprocess.PIPE, env_var=('SRTM4_CACHE',
+                                                          cfg['srtm_dir']))
     return float(p.stdout.readline().split()[0])

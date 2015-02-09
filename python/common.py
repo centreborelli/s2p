@@ -712,7 +712,7 @@ def image_pleiades_unsharpening_mtf():
                                                 os.path.abspath(__file__)))
 
 
-def run_binary_on_list_of_points(points, binary, option=None):
+def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
     """
     Runs a binary that reads its input on stdin.
 
@@ -721,30 +721,33 @@ def run_binary_on_list_of_points(points, binary, option=None):
         binary: path to the binary. It is supposed to write one output value on
             stdout for each input point
         option: optional option to pass to the binary
+        env_var (optional): environment variable that modifies the behaviour of
+            the binary. It is a tuple containing 2 strings, eg ('PATH', '/bin')
 
     Returns:
         a numpy array containing all the output points, one per line.
     """
-    # run the binary
+    # send the input points to stdin
     pts_file = tmpfile('.txt')
     np.savetxt(pts_file, points, '%.18f')
     p1 = subprocess.Popen(['cat', pts_file], stdout=subprocess.PIPE)
-    if option:
-        p2 = subprocess.Popen([binary, option], stdin=p1.stdout,
-                              stdout=subprocess.PIPE)
-    else:
-        p2 = subprocess.Popen([binary], stdin=p1.stdout,
-                              stdout=subprocess.PIPE)
 
-    # recover output values: first point first, then loop over all the others
-    line = p2.stdout.readline()
-    out = np.array([[float(val) for val in line.split()]])
-    for i in range(1, len(points)):
-        line = p2.stdout.readline()
-        l = [float(val) for val in line.split()]
-        out = np.vstack((out, l))
+    # run the binary
+    env = os.environ.copy()
+    if env_var is not None:
+        env[env_var[0]] = env_var[1]
+    cmd = [binary]
+    if option is not None:
+        cmd.append(option)
+    p2 = subprocess.Popen(cmd, env=env, stdin=p1.stdout,
+                          stdout=subprocess.PIPE)
 
-    return out
+    # recover output values
+    out = []
+    for i in xrange(len(points)):
+        out.append([float(x) for x in p2.stdout.readline().split()])
+
+    return np.array(out)
 
 
 def get_rectangle_coordinates(im):

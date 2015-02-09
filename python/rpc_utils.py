@@ -10,7 +10,7 @@ import estimation
 import geographiclib
 import common
 import rpc_model
-
+from config import cfg
 
 def print_distance_between_vectors(u, v, msg):
     """
@@ -286,7 +286,9 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
     ellipsoid_points = sample_bounding_box(lon_m, lon_M, lat_m, lat_M)
 
     # compute srtm height on all these points
-    srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
+    srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4',
+                                               env_var=('SRTM4_CACHE',
+                                                        cfg['srtm_dir']))
     h = np.ravel(srtm)
 
     # TODO: choose between the two heuristics implemented here
