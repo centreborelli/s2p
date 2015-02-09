@@ -36,7 +36,9 @@ def list_srtm_tiles(rpcfile, x, y, w, h):
             p = subprocess.Popen(['srtm4_which_tile', str(lon), str(lat)],
                                  stdout=subprocess.PIPE)
             out.append(p.stdout.readline().split()[0])
-    return set(out)
+    out = set(out)
+    print "Needed srtm tiles: ", out
+    return out
 
 
 def get_srtm_tile(srtm_tile, out_dir):
@@ -57,11 +59,15 @@ def get_srtm_tile(srtm_tile, out_dir):
     # download the zip file
     srtm_tile_url = '%s/%s.zip' % (cfg['srtm_url'], srtm_tile)
     zip_path = os.path.join(out_dir, '%s.zip' % srtm_tile)
+    print "Downloading %s..." % srtm_tile_url
     urllib.urlretrieve(srtm_tile_url, zip_path)
 
     # extract the tif file
-    z = zipfile.ZipFile(zip_path, 'r')
-    z.extract('%s.tif' % srtm_tile, out_dir)
+    if zipfile.is_zipfile(zip_path):
+        z = zipfile.ZipFile(zip_path, 'r')
+        z.extract('%s.tif' % srtm_tile, out_dir)
+    else:
+        print "%s not available" % srtm_tile
 
     # remove the zip file
     os.remove(zip_path)
