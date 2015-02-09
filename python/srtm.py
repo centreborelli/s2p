@@ -8,6 +8,7 @@ import zipfile
 import urllib
 import os
 
+import common
 import rpc_model
 import rpc_utils
 from config import cfg
