@@ -480,7 +480,7 @@ static void print_tile_filename(double lon, double lat)
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
-    printf("srtm_%02d_%02d.zip\n", tlon, tlat);
+    printf("srtm_%02d_%02d\n", tlon, tlat);
     return;
 }
 

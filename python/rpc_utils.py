@@ -10,7 +10,7 @@ import estimation
 import geographiclib
 import common
 import rpc_model
-
+from config import cfg
 
 def print_distance_between_vectors(u, v, msg):
     """
@@ -145,9 +145,9 @@ def geodesic_bounding_box(rpc, x, y, w, h):
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
-            (ROI) in the image. (x, y) is the top-left corner, and (w, h) are the
-            dimensions of the rectangle.
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h) are
+            the dimensions of the rectangle.
 
     Returns:
         4 geodesic coordinates: the min and max longitudes, and the min and
@@ -255,7 +255,7 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
+        x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
         margin_top: margin (in meters) to add to the upper bound of the range
@@ -286,7 +286,9 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
     ellipsoid_points = sample_bounding_box(lon_m, lon_M, lat_m, lat_M)
 
     # compute srtm height on all these points
-    srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4')
+    srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4',
+                                               env_var=('SRTM4_CACHE',
+                                                        cfg['srtm_dir']))
     h = np.ravel(srtm)
 
     # TODO: choose between the two heuristics implemented here
@@ -343,7 +345,7 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers definig a rectangular region of interest
+        x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h) are
             the dimensions of the rectangle.
         m, M: minimal and maximal altitudes of the ground control points

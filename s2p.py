@@ -13,8 +13,10 @@ import os.path
 import copy
 import operator
 import glob
+import time
 
 from python import tee
+from python import srtm
 from python import common
 from python import masking
 from python import rpc_model
@@ -208,6 +210,14 @@ def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
     return
 
 
+def show_progress(a):
+    show_progress.counter += 1
+    if show_progress.counter > 1:
+        print "Processed %d tiles" % show_progress.counter
+    else:
+        print "Processed 1 tile"
+
+
 def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                  ov=None, cld_msk=None, roi_msk=None):
     """
@@ -267,21 +277,20 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     nty = np.ceil(float(h - ov) / (th - ov))
     nt = ntx * nty
 
-    print 'tiles size is tw, th = (%d, %d)' % (tw, th)
-    print 'number of tiles in each dimension is %d, %d' % (ntx, nty)
-    print 'total number of tiles is %d' % nt
+    print 'tiles size: (%d, %d)' % (tw, th)
+    print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
 
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
         nb_workers = min(nb_workers, cfg['max_nb_threads'])
-
-    print 'Creating pool with %d workers\n' % nb_workers
     pool = multiprocessing.Pool(nb_workers)
 
     # process the tiles
     # don't parallellize if in debug mode
     tiles = []
+    show_progress.counter = 0
+    print 'Computing disparity maps tile by tile...'
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
             tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
@@ -304,14 +313,17 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             else:
                 pool.apply_async(safe_process_pair_single_tile,
                                  args=(tile_dir, img1, rpc1, img2, rpc2, col,
-                                       row, tw, th, None, cld_msk, roi_msk))
+                                       row, tw, th, None, cld_msk, roi_msk),
+                                 callback=show_progress)
 
     # wait for all the processes to terminate
     pool.close()
     pool.join()
     common.garbage_cleanup()
+    print ''
 
     # compute global pointing correction
+    print 'Computing global pointing correction...'
     A_global = pointing_accuracy.global_from_local(tiles)
     np.savetxt('%s/pointing.txt' % out_dir, A_global)
 
@@ -338,6 +350,8 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     common.garbage_cleanup()
 
     # triangulation
+    print 'Computing height maps tile by tile...'
+    show_progress.counter = 0
     pool = multiprocessing.Pool(nb_workers)
     for row in np.arange(y, y + h - ov, th - ov):
         for col in np.arange(x, x + w - ov, tw - ov):
@@ -347,10 +361,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             disp = '%s/rectified_disp.tif' % tile
             mask = '%s/rectified_mask.png' % tile
             rpc_err = '%s/rpc_err.tif' % tile
-            dem = '%s/dem.tif' % tile
+            height_map = '%s/height_map.tif' % tile
 
             # check if the tile is already done, or masked
-            if os.path.isfile('%s/dem.tif' % tile):
+            if os.path.isfile(height_map):
                 if cfg['skip_existing']:
                     print "triangulation on tile %d %d is done, skip" % (col,
                                                                          row)
@@ -361,24 +375,27 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
 
             # process the tile
             if cfg['debug']:
-                triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
-                                          H1, H2, disp, mask, rpc_err, A_global)
+                triangulation.compute_dem(height_map, col, row, tw, th, z,
+                                          rpc1, rpc2, H1, H2, disp, mask,
+                                          rpc_err, A_global)
             else:
-                pool.apply_async(triangulation.compute_dem, args=(dem, col, row,
-                                                                  tw, th, z,
-                                                                  rpc1, rpc2,
-                                                                  H1, H2, disp,
-                                                                  mask, rpc_err,
-                                                                  A_global))
+                pool.apply_async(triangulation.compute_dem, args=(height_map,
+                                                                  col, row, tw,
+                                                                  th, z, rpc1,
+                                                                  rpc2, H1, H2,
+                                                                  disp, mask,
+                                                                  rpc_err,
+                                                                  A_global),
+                                 callback=show_progress)
     pool.close()
     pool.join()
     common.garbage_cleanup()
 
     # tiles composition
-    out = '%s/dem.tif' % out_dir
-    tmp = ['%s/dem.tif' % t for t in tiles]
+    out = '%s/height_map.tif' % out_dir
+    tmp = ['%s/height_map.tif' % t for t in tiles]
     if not os.path.isfile(out) or not cfg['skip_existing']:
-        print "Mosaic method: %s" % cfg['mosaic_method']
+        print "Mosaicing tiles with %s..." % cfg['mosaic_method']
         if cfg['mosaic_method'] == 'gdal':
             tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
         else:
@@ -437,22 +454,24 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
-    dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-                            tile_w, tile_h, overlap, cld_msk, roi_msk)
+    height_map_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y,
+                                   w, h, tile_w, tile_h, overlap, cld_msk,
+                                   roi_msk)
 
     out_dir_right = '%s/right' % out_dir
-    dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-                             tile_w, tile_h, overlap, cld_msk, roi_msk)
+    height_map_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x,
+                                    y, w, h, tile_w, tile_h, overlap, cld_msk,
+                                    roi_msk)
 
-    # merge the two digital elevation models
-    dem = '%s/dem.tif' % out_dir
-    fusion.merge(dem_left, dem_right, thresh, dem)
+    # merge the two height maps
+    height_map = '%s/height_map.tif' % out_dir
+    fusion.merge(height_map_left, height_map_right, thresh, height_map)
 
     common.garbage_cleanup()
-    return dem
+    return height_map
 
 
-def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
+def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, height_map,
                    do_offset=False):
     """
     Args:
@@ -467,13 +486,15 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
         x, y, w, h: four integers defining the rectangular ROI in the original
             panchro image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
-        dem: path to the digital elevation model, produced by the process_pair
+        height_map: path to the height map, produced by the process_pair
             or process_triplet function
         do_offset (optional, default: False): boolean flag to decide wether the
             x, y coordinates of points in the ply file will be translated or
             not (translated to be close to 0, to avoid precision loss due to
             huge numbers)
     """
+    print "\nComputing point cloud..."
+
     # output files
     crop_color = '%s/roi_color_ref.tif' % out_dir
     crop_ref = '%s/roi_ref.tif' % out_dir
@@ -550,7 +571,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
         else:
             crop_color = common.image_qauto(crop_ref)
 
-    triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
+    triangulation.compute_point_cloud(crop_color, height_map, rpc1, trans, cloud,
                                       off_x, off_y)
 
     common.garbage_cleanup()
@@ -674,24 +695,35 @@ def main(config_file):
         cfg['roi']['w'] = w
         cfg['roi']['h'] = h
 
-    # create output directory for the experiment, and store a json dump of the
-    # config.cfg dictionary there
+    # create tmp dir and output directory for the experiment, and store a json
+    # dump of the config.cfg dictionary there
+    if not os.path.exists(cfg['temporary_dir']):
+        os.makedirs(cfg['temporary_dir'])
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
     f = open('%s/config.json' % cfg['out_dir'], 'w')
     json.dump(cfg, f, indent=2)
     f.close()
 
+    # measure total runtime
+    t0 = time.time()
+
+    # needed srtm tiles
+    srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                           *cfg['roi'].values())
+    for s in srtm_tiles:
+        srtm.get_srtm_tile(s, cfg['srtm_dir'])
+
     # height map
     if len(cfg['images']) == 2:
-        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+        height_map = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
                            cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                            cfg['images'][1]['rpc'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'])
     else:
-        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+        height_map = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
                               cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                               cfg['images'][1]['rpc'], cfg['images'][2]['img'],
                               cfg['images'][2]['rpc'], cfg['roi']['x'],
@@ -704,12 +736,19 @@ def main(config_file):
                    cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
                    cfg['images'][1]['img'], cfg['images'][1]['rpc'],
                    cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   cfg['roi']['h'], dem, cfg['offset_ply'])
+                   cfg['roi']['h'], height_map, cfg['offset_ply'])
 
     # digital surface model
     out_dsm = '%s/dsm.tif' % cfg['out_dir']
     point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
     generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+
+    # runtime
+    t = int(time.time() - t0)
+    h = t/3600
+    m = (t/60) % 60
+    s = t % 60
+    print "Total runtime: %dh:%dm:%ds" % (h, m, s)
 
 
 if __name__ == '__main__':
