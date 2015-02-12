@@ -462,7 +462,7 @@ def image_qauto_gdal(im):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %s %s' % (im, out))
+    run('gdal_translate -of png -ot Byte -scale %s %s' % (im, out))
     return out
 
 
@@ -479,7 +479,8 @@ def image_qeasy(im, black, white):
         path of requantized image, saved as png
     """
     out = tmpfile('.png')
-    run('gdal_translate -of png -co profile=baseline -ot Byte -scale %d %d %s %s' % (black, white, im, out))
+    run('gdal_translate -of png  -ot Byte -scale %d %d %s %s' % (black, white,
+                                                                 im, out))
     return out
 
 
