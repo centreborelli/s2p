@@ -171,7 +171,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
         zoom: subsampling zoom-factor that was used to generate crop_panchro
         out_colorized: path to the output file
     """
-    # 1. Get a translated and zoomed crop from the color image. It has to be
+    # get a translated and zoomed crop from the color image. It has to be
     # sampled on exactly the same grid as the panchro crop.
     # To do that we compose the translation + zoom transformation with a 4x
     # zoom (because color pleiades images have 4x lower resolution).  There is
@@ -203,9 +203,11 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     rgb = common.image_qauto_gdal(crop_rgb)
     panchro = common.image_qauto_gdal(crop_panchro)
 
-    # 2. Combine linearly the intensity and the color to obtain the result
-    common.run('plambda %s %s "dup split + + / *" | qeasy 0 85 - %s' % (
-        panchro, rgb, out_colorized))
+    # blend intensity and color to obtain the result
+    # each channel value r, g or b is multiplied by 3*y / (r+g+b), where y
+    # denotes the panchro intensity
+    common.run('plambda %s %s "dup split + + / * 3 *" | qauto - %s' % (panchro,
+    rgb, out_colorized))
     return
 
 

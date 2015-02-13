@@ -96,15 +96,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         x, y, w, h = common.get_roi_coordinates(rpc1, prv1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
-    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor
     z = cfg['subsampling_factor']
-    assert(z > 0 and z == np.floor(z))
-    if (z != 1):
-        x = z * np.floor(x / z)
-        y = z * np.floor(y / z)
-        w = z * np.ceil(w / z)
-        h = z * np.ceil(h / z)
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # check if the ROI is completely masked (water, or outside the image domain)
     H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
@@ -242,7 +236,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             area contained in the full image.
 
     Returns:
-        Nothing
+        path to height map tif file
     """
     # create a directory for the experiment
     if not os.path.exists(out_dir):
@@ -251,16 +245,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # duplicate stdout and stderr to log file
     tee.Tee('%s/stdout.log' % out_dir, 'w')
 
-    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
     z = cfg['subsampling_factor']
-    assert(z > 0 and z == np.floor(z))
-    if (z != 1):
-        x = z * np.floor(float(x) / z)
-        y = z * np.floor(float(y) / z)
-        w = z * np.ceil(float(w) / z)
-        h = z * np.ceil(float(h) / z)
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # TODO: automatically compute optimal size for tiles
     if tw is None and th is None and ov is None:
@@ -503,16 +491,10 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, height_map,
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
     z = cfg['subsampling_factor']
-    assert(z > 0 and z == np.floor(z))
-    if (z != 1):
-        x = z * np.floor(float(x) / z)
-        y = z * np.floor(float(y) / z)
-        w = z * np.ceil(float(w) / z)
-        h = z * np.ceil(float(h) / z)
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # build the matrix of the zoom + translation transformation
     A = common.matrix_translation(-x, -y)
@@ -694,6 +676,10 @@ def main(config_file):
         cfg['roi']['y'] = y
         cfg['roi']['w'] = w
         cfg['roi']['h'] = h
+
+    # check the zoom factor
+    z = cfg['subsampling_factor']
+    assert(z > 0 and z == np.floor(z))
 
     # create tmp dir and output directory for the experiment, and store a json
     # dump of the config.cfg dictionary there
