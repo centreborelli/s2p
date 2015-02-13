@@ -492,12 +492,15 @@ def generate_cloud(out_dir, height_map, rpc1, x, y, w, h, im1, clr,
     x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # build the matrix of the zoom + translation transformation
-    A = common.matrix_translation(-x, -y)
-    f = 1.0/z
-    Z = np.diag([f, f, 1])
-    A = np.dot(Z, A)
-    trans = '%s/trans.txt' % out_dir
-    np.savetxt(trans, A)
+    if cfg['full_img'] and z == 1:
+        trans = None
+    else:
+        A = common.matrix_translation(-x, -y)
+        f = 1.0/z
+        Z = np.diag([f, f, 1])
+        A = np.dot(Z, A)
+        trans = '%s/trans.txt' % out_dir
+        np.savetxt(trans, A)
 
     # compute offset
     if do_offset:
