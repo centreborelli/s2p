@@ -459,23 +459,20 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
     return height_map
 
 
-def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, height_map,
+def generate_cloud(out_dir, height_map, rpc1, x, y, w, h, im1, clr,
                    do_offset=False):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
-        im1:  path to the panchro reference image
+        height_map: path to the height map, produced by the process_pair
+            or process_triplet function
         rpc1: path to the xml file containing rpc coefficients for the
             reference image
-        clr:  path to the xs (multispectral, ie color) reference image
-        im2:  path to the panchro secondary image
-        rpc2: path to the xml file containing rpc coefficients for the
-            secondary image
         x, y, w, h: four integers defining the rectangular ROI in the original
             panchro image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
-        height_map: path to the height map, produced by the process_pair
-            or process_triplet function
+        im1:  path to the panchro reference image
+        clr:  path to the xs (multispectral, ie color) reference image
         do_offset (optional, default: False): boolean flag to decide wether the
             x, y coordinates of points in the ply file will be translated or
             not (translated to be close to 0, to avoid precision loss due to
@@ -484,9 +481,7 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, height_map,
     print "\nComputing point cloud..."
 
     # output files
-    crop_color = '%s/roi_color_ref.tif' % out_dir
     crop_ref = '%s/roi_ref.tif' % out_dir
-    crop_sec = '%s/roi_sec.tif' % out_dir
     cloud = '%s/cloud.ply' % out_dir
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -513,49 +508,45 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, height_map,
     else:
         off_x, off_y = 0, 0
 
-    # crop the ROI in ref and sec images, then zoom
+    # crop the ROI in ref image, then zoom
     if cfg['full_img'] and z == 1:
         crop_ref = im1
-        crop_sec = im2
     else:
-        r1 = rpc_model.RPCModel(rpc1)
-        r2 = rpc_model.RPCModel(rpc2)
-        x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x, y, w, h)
         if z == 1:
             common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
-            common.image_crop_TIFF(im2, x2, y2, w2, h2, crop_sec)
         else:
             # gdal is used for the zoom because it handles BigTIFF files, and
             # before the zoom out the image may be that big
             tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
             common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
-            tmp_crop = common.image_crop_TIFF(im2, x2, y2, w2, h2)
-            common.image_zoom_gdal(tmp_crop, z, crop_sec, w2, h2)
 
-    # colorize, then generate point cloud
-    if clr is not None:
-        print 'colorizing...'
-        triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
-    elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
-        print 'the image is pansharpened fusioned'
+    if cfg['color_ply']:
+        crop_color = '%s/roi_color_ref.tif' % out_dir
+        # colorize, then generate point cloud
+        if clr is not None:
+            print 'colorizing...'
+            triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
+        elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
+            print 'the image is pansharpened fusioned'
 
-        # if the image is big, use gdal
-        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
-            crop_color = common.rgbi_to_rgb_gdal(crop_ref)
-            crop_color = common.image_qauto_gdal(crop_color)
+            # if the image is big, use gdal
+            if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
+                crop_color = common.rgbi_to_rgb_gdal(crop_ref)
+                crop_color = common.image_qauto_gdal(crop_color)
+            else:
+                crop_color = common.rgbi_to_rgb(crop_ref)
+                crop_color = common.image_qauto(crop_color)
         else:
-            crop_color = common.rgbi_to_rgb(crop_ref)
-            crop_color = common.image_qauto(crop_color)
+            print 'no color data'
+            if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
+                crop_color = common.image_qauto_gdal(crop_ref)
+            else:
+                crop_color = common.image_qauto(crop_ref)
     else:
-        print 'no color data'
-        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
-            crop_color = common.image_qauto_gdal(crop_ref)
-        else:
-            crop_color = common.image_qauto(crop_ref)
+        crop_color = ''
 
-    triangulation.compute_point_cloud(crop_color, height_map, rpc1, trans, cloud,
+    triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color, 
                                       off_x, off_y)
-
     common.garbage_cleanup()
 
 
@@ -570,6 +561,32 @@ def generate_dsm(out, point_clouds_list, resolution):
     """
     files = ' '.join(point_clouds_list)
     common.run("ls %s | plyflatten %f %s" % (files, resolution, out))
+
+
+def crop_corresponding_areas(out_dir, images, roi, zoom=1):
+    """
+    Crops areas corresponding to the reference ROI in the secondary images.
+
+    Args:
+        out_dir:
+        images: sequence of dicts containing the paths to input data
+        roi: dictionary containing the ROI definition
+        zoom: integer zoom out factor
+    """
+    rpc_ref = images[0]['rpc']
+    for i, image in enumerate(images[1:]):
+        x, y, w, h = rpc_utils.corresponding_roi(rpc_ref, image['rpc'],
+                                                 roi['x'], roi['y'], roi['w'],
+                                                 roi['h'])
+        if zoom == 1:
+            common.image_crop_TIFF(image['img'], x, y, w, h,
+                                   '%s/roi_sec_%d.tif' % (out_dir, i))
+        else:
+            # gdal is used for the zoom because it handles BigTIFF files, and
+            # before the zoom out the image may be that big
+            tmp = common.image_crop_TIFF(image['img'], x, y, w, h)
+            common.image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir,
+                                                                     i), w, h)
 
 
 def check_parameters(usr_cfg):
@@ -718,16 +735,19 @@ def main(config_file):
                               cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
     # point cloud
-    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
-                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
-                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+    generate_cloud(cfg['out_dir'], height_map, cfg['images'][0]['rpc'],
                    cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   cfg['roi']['h'], height_map, cfg['offset_ply'])
+                   cfg['roi']['h'], cfg['images'][0]['img'],
+                   cfg['images'][0]['clr'], cfg['offset_ply'])
 
     # digital surface model
     out_dsm = '%s/dsm.tif' % cfg['out_dir']
     point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
     generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+
+    # crop corresponding areas in the secondary images
+    if not cfg['full_img']:
+        crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
 
     # runtime
     t = int(time.time() - t0)

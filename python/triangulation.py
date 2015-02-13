@@ -211,20 +211,21 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     return
 
 
-def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=None,
+def compute_point_cloud(cloud, heights, rpc, H, crop_colorized='', off_x=None,
                         off_y=None, ascii_ply=False, with_normals=False):
     """
     Computes a color point cloud from a height map.
 
     Args:
-        crop_colorized: path to a colorized crop of a Pleiades image
+        cloud: path to the output points cloud (ply format)
         heights: height map, sampled on the same grid as the crop_colorized
             image. In particular, its size is the same as crop_colorized.
         rpc: path to xml file containing RPC data for the current Pleiade image
         H: path to the file containing the coefficients of the homography
             transforming the coordinates system of the original full size image
             into the coordinates system of the crop we are dealing with.
-        cloud: path to the output points cloud (ply format)
+        crop_colorized (optional, default ''): path to a colorized crop of a
+            Pleiades image
         off_{x,y} (optional, default None): coordinates of the point we want to
             use as origin in the local coordinate system of the computed cloud
         ascii_ply (optional, default false): boolean flag to tell if the output
