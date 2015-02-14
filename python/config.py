@@ -41,6 +41,9 @@ cfg['skip_existing'] = False
 # around (0, 0)
 cfg['offset_ply'] = False
 
+# switch to False to disable cloud colorization
+cfg['color_ply'] = True
+
 # resolution of the output digital surface model, in meters per pixel
 cfg['dsm_resolution'] = 4
 

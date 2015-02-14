@@ -271,12 +271,14 @@ int main(int c, char *v[])
 
                 // write to ply
                 if (ascii) {
-                   fprintf(ply_file, "%.16f %.16f %.16f ", xyz[0], xyz[1],
+                   fprintf(ply_file, "%.16f %.16f %.16f", xyz[0], xyz[1],
                            xyz[2]);
                    if (normals)
-                       fprintf(ply_file, "%.1f %.1f %.1f ", nrm[0], nrm[1],
+                       fprintf(ply_file, " %.1f %.1f %.1f", nrm[0], nrm[1],
                                nrm[2]);
-                   fprintf(ply_file, "%d %d %d\n", rgb[0], rgb[1], rgb[2]);
+                   if (there_is_color)
+                       fprintf(ply_file, " %d %d %d", rgb[0], rgb[1], rgb[2]);
+                   fprintf(ply_file, "\n");
                 } else {
                    float X[3] = {xyz[0], xyz[1], xyz[2]};
                    fwrite(X, sizeof(float), 3, ply_file);

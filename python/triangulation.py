@@ -211,27 +211,29 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     return
 
 
-def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=None,
-                        off_y=None, ascii_ply=False, with_normals=False):
+def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
+                        off_x=None, off_y=None, ascii_ply=False,
+                        with_normals=False):
     """
     Computes a color point cloud from a height map.
 
     Args:
-        crop_colorized: path to a colorized crop of a Pleiades image
+        cloud: path to the output points cloud (ply format)
         heights: height map, sampled on the same grid as the crop_colorized
             image. In particular, its size is the same as crop_colorized.
         rpc: path to xml file containing RPC data for the current Pleiade image
-        H: path to the file containing the coefficients of the homography
-            transforming the coordinates system of the original full size image
-            into the coordinates system of the crop we are dealing with.
-        cloud: path to the output points cloud (ply format)
+        H (optional, default None): path to the file containing the coefficients
+            of the homography transforming the coordinates system of the
+            original full size image into the coordinates system of the crop we
+            are dealing with.
+        crop_colorized (optional, default ''): path to a colorized crop of a
+            Pleiades image
         off_{x,y} (optional, default None): coordinates of the point we want to
             use as origin in the local coordinate system of the computed cloud
         ascii_ply (optional, default false): boolean flag to tell if the output
             ply file should be encoded in plain text (ascii).
     """
-    hom = np.loadtxt(H)
-    hij = ' '.join(['%f' % x for x in hom.flatten()])
+    hij = " ".join([str(x) for x in np.loadtxt(H).flatten()]) if H else ""
     asc = "--ascii" if ascii_ply else ""
     nrm = "--with-normals" if with_normals else ""
     command = "colormesh %s %s %s %s -h \"%s\" %s %s" % (cloud, heights, rpc,
@@ -245,7 +247,7 @@ def compute_point_cloud(crop_colorized, heights, rpc, H, cloud, off_x=None,
 
     # if LidarViewer is installed, convert the point cloud to its format
     # this is useful for huge point clouds
-    if common.which('LidarPreprocessor'):
+    if crop_colorized and common.which('LidarPreprocessor'):
         tmp = cfg['temporary_dir']
         cloud_lidar_viewer = "%s.lidar_viewer" % os.path.splitext(cloud)[0]
         common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP %s -o %s" % (
