@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
+#include <omp.h>
 
 #ifndef m_pi
 #define m_pi 3.14159265358979323846264338328
@@ -230,7 +231,7 @@ int main(int c, char *v[])
         }
     }
     TIMING_CPUCLOCK_TOGGLE(0);
-    TIMING_PRINTF("CPU time spent:     %0.6fs\n", TIMING_CPUCLOCK_S(0));
+    TIMING_PRINTF("CPU time spent counting points: %0.6fs\n", TIMING_CPUCLOCK_S(0));
     printf("found %06d valid points\n", npoints);
 
     // print header for ply file
@@ -247,8 +248,10 @@ int main(int c, char *v[])
     size_t nbytes = npoints*point_size; //TODO cast to uint64_t
     char *out = malloc(nbytes);
     char *outc = out;
-    TIMING_CPUCLOCK_RESET(0);
-    TIMING_CPUCLOCK_TOGGLE(0);
+    TIMING_WALLCLOCK_RESET(0);
+    TIMING_WALLCLOCK_TOGGLE(0);
+
+# pragma omp parallel for
     for (int row = 0; row < h; row++) {
         if (row % 5000 == 0) printf("processing row %06d...\n", row);
         for (int col = 0; col < w; col++) {
@@ -284,16 +287,17 @@ int main(int c, char *v[])
                 out_char[1] = rgb[1];
                 out_char[2] = rgb[2];
                 outc += point_size;
-
-                //float X[3] = {xyz[0], xyz[1], xyz[2]};
-                //fwrite(X, sizeof(float), 3, ply_file);
-                //fwrite(rgb, sizeof(uint8_t), 3, ply_file);
             }
         }
     }
+    TIMING_WALLCLOCK_TOGGLE(0);
+    TIMING_PRINTF("WALL time spent in the loop: %0.6fs\n", TIMING_WALLCLOCK_S(0));
+
+    TIMING_CPUCLOCK_RESET(0);
+    TIMING_CPUCLOCK_TOGGLE(0);
     fwrite(out, sizeof(char), nbytes, ply_file);
     TIMING_CPUCLOCK_TOGGLE(0);
-    TIMING_PRINTF("CPU time spent:     %0.6fs\n", TIMING_CPUCLOCK_S(0));
+    TIMING_PRINTF("CPU time spent writing the file: %0.6fs\n", TIMING_CPUCLOCK_S(0));
 
     fclose(ply_file);
     return 0;
