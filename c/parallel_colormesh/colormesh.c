@@ -240,6 +240,13 @@ int main(int c, char *v[])
 
     // loop over all the pixels of the input height map
     // a 3D point is produced for each 'non Nan' height
+    //
+    // compute the data to be written to the output file, in small 1GB chuncks
+    // TODO: output data chunks
+    size_t point_size = 3*sizeof(float) + 3*sizeof(uint8_t);
+    size_t nbytes = npoints*point_size; //TODO cast to uint64_t
+    char *out = malloc(nbytes);
+    char *outc = out;
     TIMING_CPUCLOCK_RESET(0);
     TIMING_CPUCLOCK_TOGGLE(0);
     for (int row = 0; row < h; row++) {
@@ -267,12 +274,24 @@ int main(int c, char *v[])
                 for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
                 for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
 
-                float X[3] = {xyz[0], xyz[1], xyz[2]};
-                fwrite(X, sizeof(float), 3, ply_file);
-                fwrite(rgb, sizeof(uint8_t), 3, ply_file);
+                // write to memory
+                float *out_float = (float *) outc;
+                char *out_char = outc + 3*sizeof(float);
+                out_float[0] = xyz[0];
+                out_float[1] = xyz[1];
+                out_float[2] = xyz[2];
+                out_char[0] = rgb[0];
+                out_char[1] = rgb[1];
+                out_char[2] = rgb[2];
+                outc += point_size;
+
+                //float X[3] = {xyz[0], xyz[1], xyz[2]};
+                //fwrite(X, sizeof(float), 3, ply_file);
+                //fwrite(rgb, sizeof(uint8_t), 3, ply_file);
             }
         }
     }
+    fwrite(out, sizeof(char), nbytes, ply_file);
     TIMING_CPUCLOCK_TOGGLE(0);
     TIMING_PRINTF("CPU time spent:     %0.6fs\n", TIMING_CPUCLOCK_S(0));
 
