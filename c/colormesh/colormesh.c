@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <math.h>
 
@@ -81,8 +82,8 @@ unsigned char test_little_endian(void)
 }
 
 
-void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
-        bool colors, bool normals)
+void write_ply_header(FILE* f, bool ascii, uint64_t npoints, int zone,
+        bool hem, bool colors, bool normals)
 {
     if (!ascii)
         if (!test_little_endian())
@@ -97,7 +98,7 @@ void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
     fprintf(f, "comment created by S2P\n");
     if (zone >= 0)
         fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
-    fprintf(f, "element vertex %d\n", npoints);
+    fprintf(f, "element vertex %" PRIu64 "\n", npoints);
     fprintf(f, "property float x\n");
     fprintf(f, "property float y\n");
     fprintf(f, "property float z\n");
@@ -140,7 +141,8 @@ static void help(char *s)
 {
     fprintf(stderr, "\t usage: %s out.ply heights.tif rpc.xml "
             "[colors.png] [-h \"h1 ... h9\"] [--utm-zone ZONE] "
-            "[--offset_x x0] [--offset_y y0] [--with-normals] [--ascii]\n", s);
+            "[--offset_x x0] [--offset_y y0] [--with-normals] [--ascii] "
+            "[--max-memory MB]\n", s);
 
     // offset allows the user to choose the origin of the coordinates system,
     // in order to avoid visualisation problems due to huge values of the
@@ -150,7 +152,7 @@ static void help(char *s)
 
 int main(int c, char *v[])
 {
-    if (c < 4 || c > 15) {
+    if (c < 4 || c > 17) {
         help(*v);
         return 1;
     }
@@ -184,6 +186,10 @@ int main(int c, char *v[])
         invert_homography(inv_hom, hom);
     }
 
+    // max memory
+    char *max_mem = pick_option(&c, &v, "-max-memory", "1024");
+    uint64_t buf_size = 1024*1024*atoi(max_mem);
+
     // parse the remaining arguments
     char *fname_ply = v[1];
     char *fname_heights = v[2];
@@ -209,7 +215,7 @@ int main(int c, char *v[])
     read_rpc_file_xml(r, fname_rpc);
 
     // count number of valid pixels
-    int npoints = 0;
+    uint64_t npoints = 0;
     printf("counting valid points...\n");
     TIMING_CPUCLOCK_START(0);
     for (int row = 0; row < h; row++)
@@ -231,7 +237,7 @@ int main(int c, char *v[])
     }
     TIMING_CPUCLOCK_TOGGLE(0);
     TIMING_PRINTF("CPU time spent counting points: %0.6fs\n", TIMING_CPUCLOCK_S(0));
-    printf("found %06d valid points\n", npoints);
+    printf("found %" PRIu64 " valid points\n", npoints);
 
     // print header for ply file
     FILE *ply_file = fopen(fname_ply, "w");
@@ -241,9 +247,8 @@ int main(int c, char *v[])
     // loop over all the pixels of the input height map
     // a 3D point is produced for each 'non Nan' height
     size_t point_size = 3*sizeof(float) + 3*sizeof(uint8_t);
-    size_t nbytes = npoints*point_size; //TODO cast to uint64_t
-    char *out = malloc(nbytes);
-    char *outc = out - point_size;
+    char *buf = malloc(buf_size);
+    char *ptr = buf;
     TIMING_WALLCLOCK_RESET(0);
     TIMING_WALLCLOCK_TOGGLE(0);
 
@@ -276,31 +281,32 @@ int main(int c, char *v[])
             }
 
             // write to memory
-            float *out_float;
-            char *out_char;
             # pragma omp critical
             {
-                outc += point_size;
-                out_float = (float *) outc;
-                out_char = outc + 3*sizeof(float);
+                // if the buffer is full, write to file
+                if (buf + buf_size - ptr < point_size) {
+                    printf("buffer full, writing to file...\n");
+                    fwrite(buf, sizeof(char), ptr - buf, ply_file);
+                    ptr = buf;
+                }
+
+                float *ptr_float = (float *) ptr;
+                char *ptr_char = ptr + 3*sizeof(float);
+                ptr += point_size;
+                ptr_float[0] = xyz[0];
+                ptr_float[1] = xyz[1];
+                ptr_float[2] = xyz[2];
+                ptr_char[0] = rgb[0];
+                ptr_char[1] = rgb[1];
+                ptr_char[2] = rgb[2];
             }
-            out_float[0] = xyz[0];
-            out_float[1] = xyz[1];
-            out_float[2] = xyz[2];
-            out_char[0] = rgb[0];
-            out_char[1] = rgb[1];
-            out_char[2] = rgb[2];
         }
     }
     TIMING_WALLCLOCK_TOGGLE(0);
     TIMING_PRINTF("WALL time spent in the loop: %0.6fs\n", TIMING_WALLCLOCK_S(0));
 
-    TIMING_CPUCLOCK_RESET(0);
-    TIMING_CPUCLOCK_TOGGLE(0);
-    fwrite(out, sizeof(char), nbytes, ply_file);
-    TIMING_CPUCLOCK_TOGGLE(0);
-    TIMING_PRINTF("CPU time spent writing the file: %0.6fs\n", TIMING_CPUCLOCK_S(0));
-
+    // write the last buffer to file
+    fwrite(buf, sizeof(char), ptr - buf, ply_file);
     fclose(ply_file);
     return 0;
 }
