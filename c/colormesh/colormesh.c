@@ -243,49 +243,53 @@ int main(int c, char *v[])
     size_t point_size = 3*sizeof(float) + 3*sizeof(uint8_t);
     size_t nbytes = npoints*point_size; //TODO cast to uint64_t
     char *out = malloc(nbytes);
-    char *outc = out;
+    char *outc = out - point_size;
     TIMING_WALLCLOCK_RESET(0);
     TIMING_WALLCLOCK_TOGGLE(0);
 
-# pragma omp parallel for
-    for (int row = 0; row < h; row++) {
-        if (row % 5000 == 0) printf("processing row %06d...\n", row);
-        for (int col = 0; col < w; col++) {
-            uint64_t pix = (uint64_t) row * w + col;
-            if (!isnan(height[pix])) {
+    # pragma omp parallel for
+    for (int pix = 0; pix < (uint64_t) w*h; pix++) {
+        if (!isnan(height[pix])) {
 
-                // compute coordinates of pix in the big image
+            // compute coordinates of pix in the big image
+            int col = pix % w;
+            int row = pix / w;
+            if (there_is_a_homography) {
                 double xy[2] = {col, row};
-                if (there_is_a_homography)
-                    apply_homography(xy, inv_hom, xy);
-
-                // compute utm coordinates
-                double xyz[3], nrm[3], tmp[3];
-                getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
-
-                if (there_is_an_offset) {
-                    xyz[0] -= x0;
-                    xyz[1] -= y0;
-                }
-
-                // colorization: if greyscale, copy the grey on each channel
-                uint8_t rgb[3];
-                if (there_is_color) {
-                    for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
-                    for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
-                }
-
-                // write to memory
-                float *out_float = (float *) outc;
-                char *out_char = outc + 3*sizeof(float);
-                out_float[0] = xyz[0];
-                out_float[1] = xyz[1];
-                out_float[2] = xyz[2];
-                out_char[0] = rgb[0];
-                out_char[1] = rgb[1];
-                out_char[2] = rgb[2];
-                outc += point_size;
+                apply_homography(xy, inv_hom, xy);
             }
+
+            // compute utm coordinates
+            double xyz[3], nrm[3], tmp[3];
+            getxyz(xyz, r, col, row, height[pix], zone);
+
+            if (there_is_an_offset) {
+                xyz[0] -= x0;
+                xyz[1] -= y0;
+            }
+
+            // colorization: if greyscale, copy the grey on each channel
+            uint8_t rgb[3];
+            if (there_is_color) {
+                for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
+                for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
+            }
+
+            // write to memory
+            float *out_float;
+            char *out_char;
+            # pragma omp critical
+            {
+                outc += point_size;
+                out_float = (float *) outc;
+                out_char = outc + 3*sizeof(float);
+            }
+            out_float[0] = xyz[0];
+            out_float[1] = xyz[1];
+            out_float[2] = xyz[2];
+            out_char[0] = rgb[0];
+            out_char[1] = rgb[1];
+            out_char[2] = rgb[2];
         }
     }
     TIMING_WALLCLOCK_TOGGLE(0);
