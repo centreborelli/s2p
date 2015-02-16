@@ -22,19 +22,13 @@ geographiclib: $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 $(BINDIR)/CartConvert: $(BINDIR) $(GEODIR)/tools/CartConvert.cpp\
 	$(GEODIR)/src/DMS.cpp $(GEODIR)/src/Geocentric.cpp\
 	$(GEODIR)/src/LocalCartesian.cpp
-	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/CartConvert\
-		$(GEODIR)/tools/CartConvert.cpp $(GEODIR)/src/DMS.cpp\
-		$(GEODIR)/src/Geocentric.cpp $(GEODIR)/src/LocalCartesian.cpp
+	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/CartConvert $(GEODIR)/tools/CartConvert.cpp $(GEODIR)/src/DMS.cpp $(GEODIR)/src/Geocentric.cpp $(GEODIR)/src/LocalCartesian.cpp
 
 $(BINDIR)/GeoConvert: $(BINDIR) $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
 	$(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp\
 	$(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp\
 	$(GEODIR)/src/UTMUPS.cpp
-	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/GeoConvert\
-		$(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
-		$(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp\
-		$(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp\
-		$(GEODIR)/src/UTMUPS.cpp
+	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/GeoConvert $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp $(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp $(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp $(GEODIR)/src/UTMUPS.cpp
 
 monasse:
 	mkdir -p $(BINDIR)/monasse_refactored_build
@@ -106,17 +100,14 @@ $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/cmphomod.c\
 	$(CC) $(CFLAGS) c/ransac.c -lm -o $(BINDIR)/ransac
 
 $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4 c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/Geoid.o \
-	-ltiff -lm -lstdc++ -o $(BINDIR)/srtm4
+	$(CC) $(CFLAGS) -DMAIN_SRTM4 c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/Geoid.o -ltiff -lm -lstdc++ -o $(BINDIR)/srtm4
 
 $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o \
-	$(SRCDIR)/Geoid.o -ltiff -lm -lstdc++ -o $(BINDIR)/srtm4_which_tile
+	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/Geoid.o -ltiff -lm -lstdc++ -o $(BINDIR)/srtm4_which_tile
 
 $(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o c/watermask.c c/fail.c\
 	c/xmalloc.c c/pickopt.c c/rpc.c c/srtm4.c c/iio.h c/parsenumbers.c
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o c/watermask.c \
-	$(LDLIBS) -lstdc++ -o $(BINDIR)/watermask
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o c/watermask.c $(LDLIBS) -lstdc++ -o $(BINDIR)/watermask
 
 $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/iio.h c/rpc.h c/read_matrix.c
 	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(LDLIBS) -o $(BINDIR)/disp_to_h
@@ -124,16 +115,12 @@ $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c
 $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
 	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o \
-	$(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c \
-	$(LDLIBS) -lstdc++ -o $(BINDIR)/colormesh
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(LDLIBS) -lstdc++ -o $(BINDIR)/colormesh
 
 $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
 	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c c/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o \
-	$(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c \
-	$(LDLIBS) -lstdc++ -o $(BINDIR)/disp2ply
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(LDLIBS) -lstdc++ -o $(BINDIR)/disp2ply
 
 
 # GEOGRAPHICLIB STUFF
