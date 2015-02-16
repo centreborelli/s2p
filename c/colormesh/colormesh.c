@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <math.h>
+#include <omp.h>
 
 #ifndef m_pi
 #define m_pi 3.14159265358979323846264338328
@@ -187,8 +188,9 @@ int main(int c, char *v[])
     }
 
     // max memory
+    int nthreads = omp_get_max_threads();
     char *max_mem = pick_option(&c, &v, "-max-memory", "1024");
-    uint64_t buf_size = 1024*1024*atoi(max_mem);
+    uint64_t buf_size = 1024*1024*atoi(max_mem) / nthreads;
 
     // parse the remaining arguments
     char *fname_ply = v[1];
@@ -244,13 +246,18 @@ int main(int c, char *v[])
     write_ply_header(ply_file, ascii, npoints, zone, hem, there_is_color,
             normals);
 
+    // prepare one buffer per thread
+    char *buf[nthreads], *ptr[nthreads];
+    for (int i = 0; i < nthreads; i++) {
+        buf[i] = malloc(buf_size);
+        ptr[i] = buf[i];
+    }
+
     // loop over all the pixels of the input height map
     // a 3D point is produced for each 'non Nan' height
-    size_t point_size = 3*sizeof(float) + 3*sizeof(uint8_t);
-    char *buf = malloc(buf_size);
-    char *ptr = buf;
     TIMING_WALLCLOCK_RESET(0);
     TIMING_WALLCLOCK_TOGGLE(0);
+    size_t point_size = 3*sizeof(float) + 3*sizeof(uint8_t);
 
     # pragma omp parallel for
     for (int pix = 0; pix < (uint64_t) w*h; pix++) {
@@ -281,32 +288,35 @@ int main(int c, char *v[])
             }
 
             // write to memory
-            # pragma omp critical
-            {
-                // if the buffer is full, write to file
-                if (buf + buf_size - ptr < point_size) {
-                    printf("buffer full, writing to file...\n");
-                    fwrite(buf, sizeof(char), ptr - buf, ply_file);
-                    ptr = buf;
-                }
-
-                float *ptr_float = (float *) ptr;
-                char *ptr_char = ptr + 3*sizeof(float);
-                ptr += point_size;
-                ptr_float[0] = xyz[0];
-                ptr_float[1] = xyz[1];
-                ptr_float[2] = xyz[2];
-                ptr_char[0] = rgb[0];
-                ptr_char[1] = rgb[1];
-                ptr_char[2] = rgb[2];
+            int i = omp_get_thread_num();
+            if (buf[i] + buf_size - ptr[i] < point_size) {
+                int nbytes = ptr[i] - buf[i];
+                # pragma omp critical
+                    fwrite(buf[i], sizeof(char), nbytes, ply_file);
+                ptr[i] = buf[i];
             }
+
+            float *ptr_float = (float *) ptr[i];
+            ptr_float[0] = xyz[0];
+            ptr_float[1] = xyz[1];
+            ptr_float[2] = xyz[2];
+
+            char *ptr_char = ptr[i] + 3*sizeof(float);
+            ptr_char[0] = rgb[0];
+            ptr_char[1] = rgb[1];
+            ptr_char[2] = rgb[2];
+
+            ptr[i] += point_size;
         }
     }
     TIMING_WALLCLOCK_TOGGLE(0);
-    TIMING_PRINTF("WALL time spent in the loop: %0.6fs\n", TIMING_WALLCLOCK_S(0));
+    TIMING_PRINTF("WALL time spent computing the points: %0.6fs\n",
+            TIMING_WALLCLOCK_S(0));
 
-    // write the last buffer to file
-    fwrite(buf, sizeof(char), ptr - buf, ply_file);
+    // write the last buffers to file
+    for (int i = 0; i < nthreads; i++)
+        fwrite(buf[i], sizeof(char), ptr[i] - buf[i], ply_file);
+
     fclose(ply_file);
     return 0;
 }
