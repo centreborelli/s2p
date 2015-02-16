@@ -1,8 +1,8 @@
 CC = gcc -std=c99
-CFLAGS = -g -O2 -DNDEBUG -DDONT_USE_TEST_MAIN
+CFLAGS = -g -O2 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 CXX = g++
 CPPFLAGS = -g -O2
-LDLIBS = -lpng -ltiff -ljpeg -lm
+LDLIBS = -lpng -ltiff -ljpeg -lm -lrt
 IIOLIBS = -lpng -ltiff -ljpeg -lm -lgeotiff
 FFTLIBS = -lfftw3f -lfftw3
 
@@ -123,9 +123,9 @@ $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c
 
 $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
 	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/iio.h\
-	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
+	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
 	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o \
-	$(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c \
+	$(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c \
 	$(LDLIBS) -lstdc++ -o $(BINDIR)/colormesh
 
 $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
