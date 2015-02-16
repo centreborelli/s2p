@@ -83,19 +83,11 @@ unsigned char test_little_endian(void)
 }
 
 
-void write_ply_header(FILE* f, bool ascii, uint64_t npoints, int zone,
+void write_ply_header(FILE* f, uint64_t npoints, int zone,
         bool hem, bool colors, bool normals)
 {
-    if (!ascii)
-        if (!test_little_endian())
-              fail("BINARY PLY NOT SUPPORTED ON BIG ENDIAN SYSTEMS!\n");
-
     fprintf(f, "ply\n");
-    if (ascii)
-        fprintf(f, "format ascii 1.0\n");
-    else
-        fprintf(f, "format binary_little_endian 1.0\n");
-
+    fprintf(f, "format binary_little_endian 1.0\n");
     fprintf(f, "comment created by S2P\n");
     if (zone >= 0)
         fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
@@ -142,7 +134,7 @@ static void help(char *s)
 {
     fprintf(stderr, "\t usage: %s out.ply heights.tif rpc.xml "
             "[colors.png] [-h \"h1 ... h9\"] [--utm-zone ZONE] "
-            "[--offset_x x0] [--offset_y y0] [--with-normals] [--ascii] "
+            "[--offset_x x0] [--offset_y y0] [--with-normals] "
             "[--max-memory MB]\n", s);
 
     // offset allows the user to choose the origin of the coordinates system,
@@ -158,9 +150,8 @@ int main(int c, char *v[])
         return 1;
     }
 
-    // with_normals and ascii flags
+    // with_normals flag
     bool normals = pick_option(&c, &v, "-with-normals", NULL);
-    bool ascii   = pick_option(&c, &v, "-ascii", NULL);
 
     // offset
     char *offset_x = pick_option(&c, &v, "-offset_x", "0");
@@ -243,7 +234,7 @@ int main(int c, char *v[])
 
     // print header for ply file
     FILE *ply_file = fopen(fname_ply, "w");
-    write_ply_header(ply_file, ascii, npoints, zone, hem, there_is_color,
+    write_ply_header(ply_file, npoints, zone, hem, there_is_color,
             normals);
 
     // prepare one buffer per thread
@@ -257,11 +248,24 @@ int main(int c, char *v[])
     // a 3D point is produced for each 'non Nan' height
     TIMING_WALLCLOCK_RESET(0);
     TIMING_WALLCLOCK_TOGGLE(0);
-    size_t point_size = 3*sizeof(float) + 3*sizeof(uint8_t);
+    size_t point_size = 3*sizeof(float);
+    if (normals)
+        point_size += 3*sizeof(float);
+    if (there_is_color)
+        point_size += 3*sizeof(uint8_t);
 
     # pragma omp parallel for
     for (int pix = 0; pix < (uint64_t) w*h; pix++) {
         if (!isnan(height[pix])) {
+
+            // if the buffer is full, write to file and reset
+            int i = omp_get_thread_num();
+            if (buf[i] + buf_size - ptr[i] < point_size) {
+                int nbytes = ptr[i] - buf[i];
+                # pragma omp critical
+                    fwrite(buf[i], sizeof(char), nbytes, ply_file);
+                ptr[i] = buf[i];
+            }
 
             // compute coordinates of pix in the big image
             int col = pix % w;
@@ -280,31 +284,34 @@ int main(int c, char *v[])
                 xyz[1] -= y0;
             }
 
-            // colorization: if greyscale, copy the grey on each channel
-            uint8_t rgb[3];
-            if (there_is_color) {
-                for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
-                for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
-            }
-
             // write to memory
-            int i = omp_get_thread_num();
-            if (buf[i] + buf_size - ptr[i] < point_size) {
-                int nbytes = ptr[i] - buf[i];
-                # pragma omp critical
-                    fwrite(buf[i], sizeof(char), nbytes, ply_file);
-                ptr[i] = buf[i];
-            }
-
             float *ptr_float = (float *) ptr[i];
             ptr_float[0] = xyz[0];
             ptr_float[1] = xyz[1];
             ptr_float[2] = xyz[2];
 
-            char *ptr_char = ptr[i] + 3*sizeof(float);
-            ptr_char[0] = rgb[0];
-            ptr_char[1] = rgb[1];
-            ptr_char[2] = rgb[2];
+            // normals (unit 3D vector with direction of the camera)
+            if (normals) {
+                getxyz(tmp, r, col, row, height[pix] + 10, zone);
+                nrm[0] = tmp[0] - xyz[0];
+                nrm[1] = tmp[1] - xyz[1];
+                nrm[2] = tmp[2] - xyz[2];
+                normalize_vector_3d(nrm);
+                ptr_float[3] = nrm[0];
+                ptr_float[4] = nrm[1];
+                ptr_float[5] = nrm[2];
+            }
+
+            // colorization: if greyscale, copy the grey on each channel
+            uint8_t rgb[3];
+            if (there_is_color) {
+                for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
+                for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
+                char *ptr_char = ptr[i] + 3*sizeof(float);
+                ptr_char[0] = rgb[0];
+                ptr_char[1] = rgb[1];
+                ptr_char[2] = rgb[2];
+            }
 
             ptr[i] += point_size;
         }
