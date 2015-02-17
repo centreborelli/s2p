@@ -2,7 +2,7 @@ CC = gcc -std=c99
 CFLAGS = -g -O2 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 CXX = g++
 CPPFLAGS = -g -O2
-LDLIBS = -lpng -ltiff -ljpeg -lm -lrt
+LDLIBS = -lpng -ltiff -ljpeg -lm
 IIOLIBS = -lpng -ltiff -ljpeg -lm -lgeotiff
 FFTLIBS = -lfftw3f -lfftw3
 
