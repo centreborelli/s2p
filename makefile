@@ -3,7 +3,7 @@ CFLAGS = -g -O3 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 CXX = g++
 CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
-IIOLIBS = -lpng -ltiff -ljpeg -lm
+IIOLIBS = -L$(TIFDIR)/lib -lpng -ltiff -ljpeg -lm
 GEOLIBS = -lgeotiff
 FFTLIBS = -lfftw3f -lfftw3
 
@@ -82,7 +82,7 @@ SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten
 
-imscript: $(BINDIR) $(PROGRAMS)
+imscript: $(BINDIR) libtiff $(PROGRAMS)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
 	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
@@ -107,10 +107,10 @@ $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/cmphomod.c\
 	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ -ltiff -lm $(LDLIBS) -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ -L$(TIFDIR)/lib -ltiff -lm $(LDLIBS) -o $@
 
 $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ -ltiff -lm $(LDLIBS) -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ -L$(TIFDIR)/lib -ltiff -lm $(LDLIBS) -o $@
 
 $(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o\
 	$(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
