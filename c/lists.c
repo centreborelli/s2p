@@ -2,10 +2,13 @@
 #include<stdlib.h>
 #include<string.h>
 
+
 struct list {
     char *current;
     struct list *next;
 };
+
+char *strdup(const char *s);
 
 struct list *push(struct list *l, char *s)
 {

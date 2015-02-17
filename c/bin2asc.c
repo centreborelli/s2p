@@ -76,15 +76,16 @@ int main(int c, char *v[])
     // then read the binary body of the file
     // each 'line' contains a position X = (x, y, z), eventually a normal N =
     // (nx, ny, nz) and color C = (r, g, b)
+    size_t n;
     float X[3];
     float N[3];
     unsigned char C[3];
 
     while (!feof(f)) {
-        fread(X, sizeof(float), 3, f);
+        n = fread(X, sizeof(float), 3, f);
         if (normals)
-            fread(N, sizeof(float), 3, f);
-        fread(C, sizeof(unsigned char), 3, f);
+            n = fread(N, sizeof(float), 3, f);
+        n = fread(C, sizeof(unsigned char), 3, f);
         printf("%.10f %.10f %.10f", X[0], X[1], X[2]);
         if (normals & !strip_n)
             printf(" %.1f %.1f %.1f", N[0], N[1], N[2]);
