@@ -3,7 +3,7 @@ CFLAGS = -g -O3 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 CXX = g++
 CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
-IIOLIBS = $(TIFDIR)/lib/libtiff.a -llzma -lz -lpng -ljpeg -lm
+IIOLIBS = $(TIFDIR)/lib/libtiff.a -lz -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff
 FFTLIBS = -lfftw3f -lfftw3
 
@@ -25,7 +25,7 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 $(TIFDIR)/lib/libtiff.a:
-	cd $(TIFDIR); ./configure --prefix=`pwd`; make install; make distclean
+	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma; make install; make distclean
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
@@ -107,10 +107,10 @@ $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/cmphomod.c\
 	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ -L$(TIFDIR)/lib -ltiff -lm $(LDLIBS) -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ -L$(TIFDIR)/lib -ltiff -lm $(LDLIBS) -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o\
 	$(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
