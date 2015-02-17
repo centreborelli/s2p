@@ -3,7 +3,7 @@ CFLAGS = -g -O3 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 CXX = g++
 CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
-IIOLIBS = -L$(TIFDIR)/lib -lpng -ltiff -ljpeg -lm
+IIOLIBS = $(TIFDIR)/lib/libtiff.a -llzma -lz -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff
 FFTLIBS = -lfftw3f -lfftw3
 
@@ -24,8 +24,8 @@ all: $(BINDIR) libtiff geographiclib monasse sift imscript msmw tvl1 sgbm
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-libtiff:
-	cd $(TIFDIR); ./configure --prefix=`pwd`; make install
+$(TIFDIR)/lib/libtiff.a:
+	cd $(TIFDIR); ./configure --prefix=`pwd`; make install; make distclean
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
@@ -82,7 +82,7 @@ SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten
 
-imscript: $(BINDIR) libtiff $(PROGRAMS)
+imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
 	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
