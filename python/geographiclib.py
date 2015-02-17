@@ -133,19 +133,3 @@ def geoid_above_ellipsoid(lat, lon):
     line = p2.stdout.readline()
     h = float(line.split()[0])
     return h
-
-
-def srtm4(lon, lat):
-    """
-    Gives the SRTM height of a point. It is a wrapper to the srtm4 binary.
-
-    Args:
-        lon, lat: longitude and latitude
-
-    Returns:
-        the height, in meters above the WGS84 geoid (not ellipsoid)
-    """
-    p = subprocess.Popen(['srtm4', str(lon), str(lat)], stdout=subprocess.PIPE)
-    line = p.stdout.readline()
-    alt = float(line.split()[0])
-    return alt

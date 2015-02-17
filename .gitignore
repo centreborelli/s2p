@@ -5,6 +5,7 @@ python/piio/libiio.so
 
 bin
 build
+.srtm
 experiments
 3rdparty/GeographicLib-1.32/tools
 3rdparty/sgbm/sgbm

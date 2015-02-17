@@ -13,8 +13,10 @@ import os.path
 import copy
 import operator
 import glob
+import time
 
 from python import tee
+from python import srtm
 from python import common
 from python import masking
 from python import rpc_model
@@ -94,15 +96,9 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         x, y, w, h = common.get_roi_coordinates(rpc1, prv1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
 
-    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor
     z = cfg['subsampling_factor']
-    assert(z > 0 and z == np.floor(z))
-    if (z != 1):
-        x = z * np.floor(x / z)
-        y = z * np.floor(y / z)
-        w = z * np.ceil(w / z)
-        h = z * np.ceil(h / z)
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # check if the ROI is completely masked (water, or outside the image domain)
     H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
@@ -240,7 +236,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             area contained in the full image.
 
     Returns:
-        Nothing
+        path to height map tif file
     """
     # create a directory for the experiment
     if not os.path.exists(out_dir):
@@ -249,16 +245,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # duplicate stdout and stderr to log file
     tee.Tee('%s/stdout.log' % out_dir, 'w')
 
-    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
     z = cfg['subsampling_factor']
-    assert(z > 0 and z == np.floor(z))
-    if (z != 1):
-        x = z * np.floor(float(x) / z)
-        y = z * np.floor(float(y) / z)
-        w = z * np.ceil(float(w) / z)
-        h = z * np.ceil(float(h) / z)
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # TODO: automatically compute optimal size for tiles
     if tw is None and th is None and ov is None:
@@ -359,10 +349,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             disp = '%s/rectified_disp.tif' % tile
             mask = '%s/rectified_mask.png' % tile
             rpc_err = '%s/rpc_err.tif' % tile
-            dem = '%s/dem.tif' % tile
+            height_map = '%s/height_map.tif' % tile
 
             # check if the tile is already done, or masked
-            if os.path.isfile('%s/dem.tif' % tile):
+            if os.path.isfile(height_map):
                 if cfg['skip_existing']:
                     print "triangulation on tile %d %d is done, skip" % (col,
                                                                          row)
@@ -373,23 +363,25 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
 
             # process the tile
             if cfg['debug']:
-                triangulation.compute_dem(dem, col, row, tw, th, z, rpc1, rpc2,
-                                          H1, H2, disp, mask, rpc_err, A_global)
+                triangulation.compute_dem(height_map, col, row, tw, th, z,
+                                          rpc1, rpc2, H1, H2, disp, mask,
+                                          rpc_err, A_global)
             else:
-                pool.apply_async(triangulation.compute_dem, args=(dem, col, row,
-                                                                  tw, th, z,
-                                                                  rpc1, rpc2,
-                                                                  H1, H2, disp,
-                                                                  mask, rpc_err,
+                pool.apply_async(triangulation.compute_dem, args=(height_map,
+                                                                  col, row, tw,
+                                                                  th, z, rpc1,
+                                                                  rpc2, H1, H2,
+                                                                  disp, mask,
+                                                                  rpc_err,
                                                                   A_global),
-                                                            callback=show_progress)
+                                 callback=show_progress)
     pool.close()
     pool.join()
     common.garbage_cleanup()
 
     # tiles composition
-    out = '%s/dem.tif' % out_dir
-    tmp = ['%s/dem.tif' % t for t in tiles]
+    out = '%s/height_map.tif' % out_dir
+    tmp = ['%s/height_map.tif' % t for t in tiles]
     if not os.path.isfile(out) or not cfg['skip_existing']:
         print "Mosaicing tiles with %s..." % cfg['mosaic_method']
         if cfg['mosaic_method'] == 'gdal':
@@ -450,38 +442,37 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # process the two pairs
     out_dir_left = '%s/left' % out_dir
-    dem_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y, w, h,
-                            tile_w, tile_h, overlap, cld_msk, roi_msk)
+    height_map_left = process_pair(out_dir_left, img1, rpc1, img2, rpc2, x, y,
+                                   w, h, tile_w, tile_h, overlap, cld_msk,
+                                   roi_msk)
 
     out_dir_right = '%s/right' % out_dir
-    dem_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x, y, w, h,
-                             tile_w, tile_h, overlap, cld_msk, roi_msk)
+    height_map_right = process_pair(out_dir_right, img1, rpc1, img3, rpc3, x,
+                                    y, w, h, tile_w, tile_h, overlap, cld_msk,
+                                    roi_msk)
 
-    # merge the two digital elevation models
-    dem = '%s/dem.tif' % out_dir
-    fusion.merge(dem_left, dem_right, thresh, dem)
+    # merge the two height maps
+    height_map = '%s/height_map.tif' % out_dir
+    fusion.merge(height_map_left, height_map_right, thresh, height_map)
 
     common.garbage_cleanup()
-    return dem
+    return height_map
 
 
-def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
+def generate_cloud(out_dir, height_map, rpc1, x, y, w, h, im1, clr,
                    do_offset=False):
     """
     Args:
         out_dir: output directory. The file cloud.ply will be written there
-        im1:  path to the panchro reference image
+        height_map: path to the height map, produced by the process_pair
+            or process_triplet function
         rpc1: path to the xml file containing rpc coefficients for the
             reference image
-        clr:  path to the xs (multispectral, ie color) reference image
-        im2:  path to the panchro secondary image
-        rpc2: path to the xml file containing rpc coefficients for the
-            secondary image
         x, y, w, h: four integers defining the rectangular ROI in the original
             panchro image. (x, y) is the top-left corner, and (w, h) are the
             dimensions of the rectangle.
-        dem: path to the digital elevation model, produced by the process_pair
-            or process_triplet function
+        im1:  path to the panchro reference image
+        clr:  path to the xs (multispectral, ie color) reference image
         do_offset (optional, default: False): boolean flag to decide wether the
             x, y coordinates of points in the ply file will be translated or
             not (translated to be close to 0, to avoid precision loss due to
@@ -490,31 +481,26 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
     print "\nComputing point cloud..."
 
     # output files
-    crop_color = '%s/roi_color_ref.tif' % out_dir
     crop_ref = '%s/roi_ref.tif' % out_dir
-    crop_sec = '%s/roi_sec.tif' % out_dir
     cloud = '%s/cloud.ply' % out_dir
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-    # if subsampling_factor is > 1, (ie 2, 3, 4... it has to be int) then
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
     z = cfg['subsampling_factor']
-    assert(z > 0 and z == np.floor(z))
-    if (z != 1):
-        x = z * np.floor(float(x) / z)
-        y = z * np.floor(float(y) / z)
-        w = z * np.ceil(float(w) / z)
-        h = z * np.ceil(float(h) / z)
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # build the matrix of the zoom + translation transformation
-    A = common.matrix_translation(-x, -y)
-    f = 1.0/z
-    Z = np.diag([f, f, 1])
-    A = np.dot(Z, A)
-    trans = '%s/trans.txt' % out_dir
-    np.savetxt(trans, A)
+    if cfg['full_img'] and z == 1:
+        trans = None
+    else:
+        A = common.matrix_translation(-x, -y)
+        f = 1.0/z
+        Z = np.diag([f, f, 1])
+        A = np.dot(Z, A)
+        trans = '%s/trans.txt' % out_dir
+        np.savetxt(trans, A)
 
     # compute offset
     if do_offset:
@@ -525,49 +511,45 @@ def generate_cloud(out_dir, im1, rpc1, clr, im2, rpc2, x, y, w, h, dem,
     else:
         off_x, off_y = 0, 0
 
-    # crop the ROI in ref and sec images, then zoom
+    # crop the ROI in ref image, then zoom
     if cfg['full_img'] and z == 1:
         crop_ref = im1
-        crop_sec = im2
     else:
-        r1 = rpc_model.RPCModel(rpc1)
-        r2 = rpc_model.RPCModel(rpc2)
-        x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x, y, w, h)
         if z == 1:
             common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
-            common.image_crop_TIFF(im2, x2, y2, w2, h2, crop_sec)
         else:
             # gdal is used for the zoom because it handles BigTIFF files, and
             # before the zoom out the image may be that big
             tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
             common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
-            tmp_crop = common.image_crop_TIFF(im2, x2, y2, w2, h2)
-            common.image_zoom_gdal(tmp_crop, z, crop_sec, w2, h2)
 
-    # colorize, then generate point cloud
-    if clr is not None:
-        print 'colorizing...'
-        triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
-    elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
-        print 'the image is pansharpened fusioned'
+    if cfg['color_ply']:
+        crop_color = '%s/roi_color_ref.tif' % out_dir
+        # colorize, then generate point cloud
+        if clr is not None:
+            print 'colorizing...'
+            triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
+        elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
+            print 'the image is pansharpened fusioned'
 
-        # if the image is big, use gdal
-        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
-            crop_color = common.rgbi_to_rgb_gdal(crop_ref)
-            crop_color = common.image_qauto_gdal(crop_color)
+            # if the image is big, use gdal
+            if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
+                crop_color = common.rgbi_to_rgb_gdal(crop_ref)
+                crop_color = common.image_qauto_gdal(crop_color)
+            else:
+                crop_color = common.rgbi_to_rgb(crop_ref)
+                crop_color = common.image_qauto(crop_color)
         else:
-            crop_color = common.rgbi_to_rgb(crop_ref)
-            crop_color = common.image_qauto(crop_color)
+            print 'no color data'
+            if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
+                crop_color = common.image_qauto_gdal(crop_ref)
+            else:
+                crop_color = common.image_qauto(crop_ref)
     else:
-        print 'no color data'
-        if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
-            crop_color = common.image_qauto_gdal(crop_ref)
-        else:
-            crop_color = common.image_qauto(crop_ref)
+        crop_color = ''
 
-    triangulation.compute_point_cloud(crop_color, dem, rpc1, trans, cloud,
+    triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color, 
                                       off_x, off_y)
-
     common.garbage_cleanup()
 
 
@@ -582,6 +564,32 @@ def generate_dsm(out, point_clouds_list, resolution):
     """
     files = ' '.join(point_clouds_list)
     common.run("ls %s | plyflatten %f %s" % (files, resolution, out))
+
+
+def crop_corresponding_areas(out_dir, images, roi, zoom=1):
+    """
+    Crops areas corresponding to the reference ROI in the secondary images.
+
+    Args:
+        out_dir:
+        images: sequence of dicts containing the paths to input data
+        roi: dictionary containing the ROI definition
+        zoom: integer zoom out factor
+    """
+    rpc_ref = images[0]['rpc']
+    for i, image in enumerate(images[1:]):
+        x, y, w, h = rpc_utils.corresponding_roi(rpc_ref, image['rpc'],
+                                                 roi['x'], roi['y'], roi['w'],
+                                                 roi['h'])
+        if zoom == 1:
+            common.image_crop_TIFF(image['img'], x, y, w, h,
+                                   '%s/roi_sec_%d.tif' % (out_dir, i))
+        else:
+            # gdal is used for the zoom because it handles BigTIFF files, and
+            # before the zoom out the image may be that big
+            tmp = common.image_crop_TIFF(image['img'], x, y, w, h)
+            common.image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir,
+                                                                     i), w, h)
 
 
 def check_parameters(usr_cfg):
@@ -689,6 +697,10 @@ def main(config_file):
         cfg['roi']['w'] = w
         cfg['roi']['h'] = h
 
+    # check the zoom factor
+    z = cfg['subsampling_factor']
+    assert(z > 0 and z == np.floor(z))
+
     # create tmp dir and output directory for the experiment, and store a json
     # dump of the config.cfg dictionary there
     if not os.path.exists(cfg['temporary_dir']):
@@ -699,16 +711,25 @@ def main(config_file):
     json.dump(cfg, f, indent=2)
     f.close()
 
+    # measure total runtime
+    t0 = time.time()
+
+    # needed srtm tiles
+    srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                           *cfg['roi'].values())
+    for s in srtm_tiles:
+        srtm.get_srtm_tile(s, cfg['srtm_dir'])
+
     # height map
     if len(cfg['images']) == 2:
-        dem = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
+        height_map = process_pair(cfg['out_dir'], cfg['images'][0]['img'],
                            cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                            cfg['images'][1]['rpc'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'])
     else:
-        dem = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
+        height_map = process_triplet(cfg['out_dir'], cfg['images'][0]['img'],
                               cfg['images'][0]['rpc'], cfg['images'][1]['img'],
                               cfg['images'][1]['rpc'], cfg['images'][2]['img'],
                               cfg['images'][2]['rpc'], cfg['roi']['x'],
@@ -717,16 +738,26 @@ def main(config_file):
                               cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
     # point cloud
-    generate_cloud(cfg['out_dir'], cfg['images'][0]['img'],
-                   cfg['images'][0]['rpc'], cfg['images'][0]['clr'],
-                   cfg['images'][1]['img'], cfg['images'][1]['rpc'],
+    generate_cloud(cfg['out_dir'], height_map, cfg['images'][0]['rpc'],
                    cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   cfg['roi']['h'], dem, cfg['offset_ply'])
+                   cfg['roi']['h'], cfg['images'][0]['img'],
+                   cfg['images'][0]['clr'], cfg['offset_ply'])
 
     # digital surface model
     out_dsm = '%s/dsm.tif' % cfg['out_dir']
     point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
     generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+
+    # crop corresponding areas in the secondary images
+    if not cfg['full_img']:
+        crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
+
+    # runtime
+    t = int(time.time() - t0)
+    h = t/3600
+    m = (t/60) % 60
+    s = t % 60
+    print "Total runtime: %dh:%dm:%ds" % (h, m, s)
 
 
 if __name__ == '__main__':

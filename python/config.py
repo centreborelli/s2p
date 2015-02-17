@@ -9,6 +9,9 @@
 # user is not forced to define in config.json) must be defined here, otherwise
 # they won't have a default value.
 
+import os.path
+
+
 cfg = {}
 
 # path to directory where (many) temporary files will be stored
@@ -37,6 +40,9 @@ cfg['skip_existing'] = False
 # switch to True to translate the planar coordinates of the output point cloud
 # around (0, 0)
 cfg['offset_ply'] = False
+
+# switch to False to disable cloud colorization
+cfg['color_ply'] = True
 
 # resolution of the output digital surface model, in meters per pixel
 cfg['dsm_resolution'] = 4
@@ -89,3 +95,11 @@ cfg['fusion_thresh'] = 3
 
 # binary used to paste together the altitude maps of each tile
 cfg['mosaic_method'] = 'piio'
+
+# url of the srtm database mirror
+cfg['srtm_url'] = 'http://138.231.80.250:443/srtm/tiff'
+
+# directory where to store the srtm tiles
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+cfg['srtm_dir'] = os.path.join(parent_dir, '.srtm')
