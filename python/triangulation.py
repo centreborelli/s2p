@@ -6,6 +6,7 @@
 import os
 import sys
 import numpy as np
+import multiprocessing
 
 import common
 from config import cfg
@@ -249,7 +250,8 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     # this is useful for huge point clouds
     if crop_colorized and common.which('LidarPreprocessor'):
         tmp = cfg['temporary_dir']
+        nthreads = multiprocessing.cpu_count()
         cloud_lidar_viewer = "%s.lidar_viewer" % os.path.splitext(cloud)[0]
-        common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP %s -o %s" % (
-            tmp, tmp, cloud, cloud_lidar_viewer))
+        common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (
+            tmp, tmp, nthreads, cloud, cloud_lidar_viewer))
     return
