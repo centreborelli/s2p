@@ -6,6 +6,11 @@ LDLIBS = -lpng -ltiff -ljpeg -lm
 IIOLIBS = -lpng -ltiff -ljpeg -lm -lgeotiff
 FFTLIBS = -lfftw3f -lfftw3
 
+OS := $(shell uname -s)
+ifeq ($(OS),Linux)
+	LDLIBS += -lrt
+endif
+
 BINDIR = bin
 SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
