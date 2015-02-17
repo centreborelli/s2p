@@ -15,26 +15,29 @@ endif
 BINDIR = bin
 SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
+TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) geographiclib monasse sift imscript sgbm
+default: $(BINDIR) libtiff geographiclib monasse sift imscript sgbm
 
-all: $(BINDIR) geographiclib monasse sift imscript msmw tvl1 sgbm
+all: $(BINDIR) libtiff geographiclib monasse sift imscript msmw tvl1 sgbm
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-geographiclib: $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
+libtiff:
+	cd $(TIFDIR); ./configure --prefix=`pwd`; make install
 
-$(BINDIR)/CartConvert: $(BINDIR) $(GEODIR)/tools/CartConvert.cpp\
-	$(GEODIR)/src/DMS.cpp $(GEODIR)/src/Geocentric.cpp\
-	$(GEODIR)/src/LocalCartesian.cpp
-	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/CartConvert $(GEODIR)/tools/CartConvert.cpp $(GEODIR)/src/DMS.cpp $(GEODIR)/src/Geocentric.cpp $(GEODIR)/src/LocalCartesian.cpp
+geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
-$(BINDIR)/GeoConvert: $(BINDIR) $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
+$(BINDIR)/CartConvert: $(GEODIR)/tools/CartConvert.cpp $(GEODIR)/src/DMS.cpp\
+	$(GEODIR)/src/Geocentric.cpp $(GEODIR)/src/LocalCartesian.cpp
+	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
+
+$(BINDIR)/GeoConvert: $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
 	$(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp\
 	$(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp\
 	$(GEODIR)/src/UTMUPS.cpp
-	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man -o $(BINDIR)/GeoConvert $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp $(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp $(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp $(GEODIR)/src/UTMUPS.cpp
+	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
 
 monasse:
 	mkdir -p $(BINDIR)/monasse_refactored_build
@@ -172,4 +175,4 @@ clean_imscript:
 	#rm -r $(addsuffix .dSYM, $(PROGRAMS))
 
 .PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
-	imscript clean clean_imscript
+	imscript clean clean_imscript libtiff
