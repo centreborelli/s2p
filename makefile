@@ -2,8 +2,9 @@ CC = gcc -std=c99
 CFLAGS = -g -O2 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 CXX = g++
 CPPFLAGS = -g -O2
-LDLIBS = -lpng -ltiff -ljpeg -lm
-IIOLIBS = -lpng -ltiff -ljpeg -lm -lgeotiff
+LDLIBS = -lstdc++
+IIOLIBS = -lpng -ltiff -ljpeg -lm
+GEOLIBS = -lgeotiff
 FFTLIBS = -lfftw3f -lfftw3
 
 OS := $(shell uname -s)
@@ -73,10 +74,10 @@ tvl1:
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
-	veco morphoop cldmask disp_to_h_projective colormesh_projective plyflatten
+	veco morphoop cldmask disp_to_h_projective colormesh_projective
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
-	srtm4_which_tile
+	srtm4_which_tile plyflatten
 
 imscript: $(BINDIR) $(PROGRAMS)
 
@@ -90,40 +91,45 @@ $(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
 	$(CC) $(CFLAGS) -c -Wno-deprecated-declarations $< -o $@
 
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
-	$(CC) $(CFLAGS) -c c/rpc.c -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BINDIR)/bin2asc: c/bin2asc.c
-	$(CC) $(CFLAGS) c/bin2asc.c -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 $(BINDIR)/siftu: c/siftu.c c/siftie.c
-	$(CC) $(CFLAGS) c/siftu.c -lm -o $@
+	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/cmphomod.c\
 	c/ransac_cases.c c/parsenumbers.c
-	$(CC) $(CFLAGS) c/ransac.c -lm -o @
+	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4 c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/Geoid.o -ltiff -lm -lstdc++ -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ -ltiff -lm $(LDLIBS) -o $@
 
 $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/Geoid.o -ltiff -lm -lstdc++ -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ -ltiff -lm $(LDLIBS) -o $@
 
-$(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o c/watermask.c c/fail.c\
-	c/xmalloc.c c/pickopt.c c/rpc.c c/srtm4.c c/iio.h c/parsenumbers.c
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o c/watermask.c $(LDLIBS) -lstdc++ -o $@
+$(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o\
+	$(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
+	$(SRCDIR)/xmalloc.c $(SRCDIR)/pickopt.c $(SRCDIR)/rpc.c $(SRCDIR)/srtm4.c\
+	$(SRCDIR)/iio.h $(SRCDIR)/parsenumbers.c
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/iio.h c/rpc.h c/read_matrix.c
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(LDLIBS) -o $@
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
 
 $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
 	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(LDLIBS) -lstdc++ -o $@
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
 	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c c/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(LDLIBS) -lstdc++ -o $@
+	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -o $@
+
+$(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
+	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 
 # GEOGRAPHICLIB STUFF
