@@ -1,7 +1,7 @@
 CC = gcc -std=c99
-CFLAGS = -g -O2 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
+CFLAGS = -g -O3 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 CXX = g++
-CPPFLAGS = -g -O2
+CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
 IIOLIBS = -lpng -ltiff -ljpeg -lm
 GEOLIBS = -lgeotiff
