@@ -1273,9 +1273,9 @@ static int read_whole_tiff(struct iio_image *x, const char *filename)
 
 
 	// acquire memory block
-	uint32_t scanline_size = (w * spp * bps)/8;
+	uint64_t scanline_size = (w * spp * bps)/8;
 	int rbps = (bps/8) ? (bps/8) : 1;
-	uint32_t uscanline_size = w * spp * rbps;
+	uint64_t uscanline_size = w * spp * rbps;
 	IIO_DEBUG("bps = %d\n", (int)bps);
 	IIO_DEBUG("spp = %d\n", (int)spp);
 	IIO_DEBUG("sls = %d\n", (int)scanline_size);
