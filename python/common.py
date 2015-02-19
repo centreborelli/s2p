@@ -339,7 +339,7 @@ def image_safe_zoom_fft(im, f, out=None):
 
 def image_zoom_gdal(im, f, out=None, w=None, h=None):
     """
-    Zooms an image using gdal (cubic interpolation)
+    Zooms an image using gdal (nearest neighbor interpolation)
 
     Args:
         im: path to the input image
@@ -364,10 +364,13 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
         h = sz[1]
 
     # First, we need to make sure the dataset has a proper origin/spacing
-    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/float(f), -h/float(f), im, tmp))
+    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/float(f), -h/float(f),
+                                                    im, tmp))
 
     # do the zoom with gdalwarp
-    run('gdalwarp -r cubic -ts %d %d %s %s' %  (w/float(f), h/float(f), tmp, out))
+    # -wm gives the max memory in MB. If bigger than 2GB, int overflow
+    run(('gdalwarp -r near -co "BIGTIFF=IF_NEEDED" -co "TILED=YES" -wm 2047 -ts'
+         ' %d %d %s %s') % (w/float(f), h/float(f), tmp, out))
     return out
 
 
@@ -513,7 +516,8 @@ def rgbi_to_rgb(im):
         output rgb image
     """
     out = tmpfile('.tif')
-    run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s'%(im, out))
+    run('plambda %s "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3" -o %s' % (im,
+                                                                        out))
     return out
 
 
