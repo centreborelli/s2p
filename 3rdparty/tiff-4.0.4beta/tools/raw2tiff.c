@@ -212,7 +212,7 @@ main(int argc, char* argv[])
 
 	if (outfilename == NULL)
 		outfilename = argv[optind+1];
-	out = TIFFOpen(outfilename, "w");
+	out = TIFFOpen(outfilename, "w8");
 	if (out == NULL) {
 		fprintf(stderr, "%s: %s: Cannot open file for output.\n",
 			argv[0], outfilename);
