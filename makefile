@@ -25,7 +25,7 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 $(TIFDIR)/lib/libtiff.a:
-	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma; make install; cp bin/raw2tiff $(BINDIR); make distclean
+	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma; make install; cp bin/{raw2tiff,tiffinfo} $(BINDIR); make distclean
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
@@ -173,6 +173,10 @@ clean_imscript:
 	rm $(SRCDIR)/iio.o
 	rm $(SRCDIR)/rpc.o
 	#rm -r $(addsuffix .dSYM, $(PROGRAMS))
+
+clean_libtiff:
+	rm $(TIFDIR)/lib/libtiff.a
+	rm $(BINDIR)/raw2tiff
 
 .PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
 	imscript clean clean_imscript libtiff
