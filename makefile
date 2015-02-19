@@ -25,7 +25,7 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 $(TIFDIR)/lib/libtiff.a:
-	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma; make install; cp bin/raw2tiff $(BINDIR); make distclean
+	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma; make install; cp bin/{raw2tiff,tiffinfo} $(BINDIR); make distclean
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
