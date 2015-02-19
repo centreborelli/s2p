@@ -194,15 +194,15 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     x0 = x - 4*xx
     y0 = y - 4*yy
     crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
-    assert(common.image_size_gdal(crop_panchro) ==
-           common.image_size_gdal(crop_ms))
+    assert(common.image_size_tiffinfo(crop_panchro) ==
+           common.image_size_tiffinfo(crop_ms))
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms)
     # rgb      = common.image_qeasy(crop_rgb, 300, 3000)
     # panchro  = common.image_qeasy(crop_panchro, 300, 3000)
-    rgb = common.image_qauto_gdal(crop_rgb)
-    panchro = common.image_qauto_gdal(crop_panchro)
+    rgb = common.image_qauto(crop_rgb)
+    panchro = common.image_qauto(crop_panchro)
 
     # blend intensity and color to obtain the result
     # each channel value r, g or b is multiplied by 3*y / (r+g+b), where y
