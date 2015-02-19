@@ -1134,8 +1134,8 @@ static void add_item_to_cmdline(char *cmdline, char *item, char *fileprefix)
 
 static char *create_temporary_directory(void)
 {
-	//return "/tmp/metafilter_temporary_directory/";
-	return "/tmp/MTD/";
+    char *t = getenv("TMPDIR");
+    return t ? t : "/tmp/MTD/";
 }
 
 static char *bn(char *s)
