@@ -437,7 +437,6 @@ def median_filter(im, w, n):
     return out
 
 
-
 def image_qauto(im, out=None):
     """
     Uniform requantization between min and max intensity.
@@ -451,7 +450,7 @@ def image_qauto(im, out=None):
     """
     if out is None:
         out = tmpfile('.png')
-    run('qauto %s %s' % (im, out))
+    run('tiffu meta \"qauto ^ @\" %s -- %s' % (im, out))
     return out
 
 
@@ -470,7 +469,7 @@ def image_qauto_gdal(im):
     return out
 
 
-def image_qeasy(im, black, white):
+def image_qeasy(im, black, white, out=None):
     """
     Uniform requantization between user-specified min and max levels.
 
@@ -478,13 +477,14 @@ def image_qeasy(im, black, white):
         im: path to input image
         black: lower threshold. Values lower or equal are mapped to 0
         white: upper threshold. Values greater or equal are mapped to 255
+        out (optional, default is None): path to output image
 
     Returns:
         path of requantized image, saved as png
     """
-    out = tmpfile('.png')
-    run('gdal_translate -of png  -ot Byte -scale %d %d %s %s' % (black, white,
-                                                                 im, out))
+    if out is None:
+        out = tmpfile('.png')
+    run('tiffu meta \"qeasy %d %d ^ @\" %s -- %s' % (black, white, im, out))
     return out
 
 
@@ -501,9 +501,11 @@ def pansharpened_to_panchro(im, out=None):
     """
     if out is None:
         out = tmpfile('.tif')
-    run('plambda %s "x[0] x[1] x[2] x[3] + + + 4 /" -o %s' % (im, out))
+    plambda_cmd = "x[0] x[1] x[2] x[3] + + + 4 /"
+    cmd = 'tiffu meta \"plambda ^ \\\"%s\\\" -o @\" %s -- %s' % (plambda_cmd,
+                                                                 im, out))
+    run(cmd)
     return out
-
 
 
 def rgbi_to_rgb(im):
