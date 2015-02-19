@@ -207,8 +207,13 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     # blend intensity and color to obtain the result
     # each channel value r, g or b is multiplied by 3*y / (r+g+b), where y
     # denotes the panchro intensity
-    common.run('plambda %s %s "dup split + + / * 3 *" | qauto - %s' % (panchro,
-    rgb, out_colorized))
+    tmp = common.tmpfile('.tif')
+    pcmd = "dup split + + / * 3 *"
+    cmd = 'tiffu meta \"plambda ^ ^ \\\"%s\\\" -o @\" %s %s -- %s' % (pcmd,
+                                                                      panchro,
+                                                                      rgb, tmp)
+    common.run(cmd)
+    common.image_qauto(tmp, out_colorized)
     return
 
 
