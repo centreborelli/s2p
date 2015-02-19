@@ -174,5 +174,9 @@ clean_imscript:
 	rm $(SRCDIR)/rpc.o
 	#rm -r $(addsuffix .dSYM, $(PROGRAMS))
 
+clean_libtiff:
+	rm $(TIFDIR)/lib/libtiff.a
+	rm $(BINDIR)/raw2tiff
+
 .PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
 	imscript clean clean_imscript libtiff
