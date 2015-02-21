@@ -445,13 +445,15 @@ def image_qauto(im, out=None, tilewise=False):
         im: path to input image
         out (optional, default is None): path to output image
         tilewise (optional, default is False): boolean telling wether or not
-            use 'tiffu meta'
+            use 'tiffu meta'. If True, the output file has to be a *.tif
 
     Returns:
         path of requantized image, saved as png
     """
     if out is None:
-        out = tmpfile('.tif')
+        extension = '.tif' if tilewise else '.png'
+        out = tmpfile(extension)
+        out = tmpfile(extension)
     if tilewise:
         run('tiffu meta \"qauto ^ @\" %s -- %s' % (im, out))
     else:
@@ -490,7 +492,9 @@ def image_qeasy(im, black, white, out=None, tilewise=False):
         path of requantized image, saved as png
     """
     if out is None:
-        out = tmpfile('.tif')
+        extension = '.tif' if tilewise else '.png'
+        out = tmpfile(extension)
+        out = tmpfile(extension)
     if tilewise:
         run('tiffu meta \"qeasy %d %d ^ @\" %s -- %s' % (black, white, im, out))
     else:
@@ -512,7 +516,8 @@ def pansharpened_to_panchro(im, out=None, tilewise=False):
         path to the output image
     """
     if out is None:
-        out = tmpfile('.tif')
+        extension = '.tif' if tilewise else '.png'
+        out = tmpfile(extension)
     pcmd = "x[0] x[1] x[2] x[3] + + + 4 /"
 
     if tilewise:
@@ -539,7 +544,9 @@ def rgbi_to_rgb(im, out=None, tilewise=False):
         output rgb image
     """
     if out is None:
-        out = tmpfile('.tif')
+        extension = '.tif' if tilewise else '.png'
+        out = tmpfile(extension)
+        out = tmpfile(extension)
     pcmd = "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3"
 
     if tilewise:

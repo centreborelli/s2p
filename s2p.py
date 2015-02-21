@@ -525,26 +525,16 @@ def generate_cloud(out_dir, height_map, rpc1, x, y, w, h, im1, clr,
 
     if cfg['color_ply']:
         crop_color = '%s/roi_color_ref.tif' % out_dir
-        # colorize, then generate point cloud
         if clr is not None:
             print 'colorizing...'
             triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
         elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
             print 'the image is pansharpened fusioned'
-
-            # if the image is big, use gdal
-            if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
-                crop_color = common.rgbi_to_rgb_gdal(crop_ref)
-                crop_color = common.image_qauto_gdal(crop_color)
-            else:
-                crop_color = common.rgbi_to_rgb(crop_ref)
-                crop_color = common.image_qauto(crop_color)
+            tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
+            common.image_qauto(tmp, crop_color, tilewise=False)
         else:
             print 'no color data'
-            if reduce(operator.mul, common.image_size_tiffinfo(crop_ref)) > 1e8:
-                crop_color = common.image_qauto_gdal(crop_ref)
-            else:
-                crop_color = common.image_qauto(crop_ref)
+            common.image_qauto(crop_ref, crop_color, tilewise=False)
     else:
         crop_color = ''
 

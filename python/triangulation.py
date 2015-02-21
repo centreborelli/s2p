@@ -199,8 +199,8 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
 
     # convert rgbi to rgb and requantify between 0 and 255
     crop_rgb = common.rgbi_to_rgb(crop_ms, out=None, tilewise=True)
-    rgb = common.image_qauto(crop_rgb, out=None, tilewise=True)
-    panchro = common.image_qauto(crop_panchro, out=None, tilewise=True)
+    rgb = common.image_qauto(crop_rgb, out=None, tilewise=False)
+    panchro = common.image_qauto(crop_panchro, out=None, tilewise=False)
 
     # blend intensity and color to obtain the result
     # each channel value r, g or b is multiplied by 3*y / (r+g+b), where y
@@ -211,7 +211,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
                                                                       panchro,
                                                                       rgb, tmp)
     common.run(cmd)
-    common.image_qauto(tmp, out_colorized, tilewise=True)
+    common.image_qauto(tmp, out_colorized, tilewise=False)
     return
 
 
