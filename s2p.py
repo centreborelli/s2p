@@ -705,7 +705,7 @@ def main(config_file):
     # dump of the config.cfg dictionary there
     if not os.path.exists(cfg['temporary_dir']):
         os.makedirs(cfg['temporary_dir'])
-    if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta'):
+    if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
         os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])

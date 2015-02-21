@@ -519,7 +519,7 @@ def pansharpened_to_panchro(im, out=None, tilewise=False):
         cmd = 'tiffu meta \"plambda ^ \\\"%s\\\" -o @\" %s -- %s' % (pcmd, im,
                                                                      out)
     else:
-        cmd = 'plambda %s \"%s\" -o %s') % (im, pcmd, out)
+        cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
 
     run(cmd)
     return out
