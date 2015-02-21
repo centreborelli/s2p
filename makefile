@@ -91,7 +91,7 @@ $(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
 	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
 
 $(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
-	$(CC) $(CFLAGS) -c -Wno-deprecated-declarations $< -o $@
+	$(CC) $(CFLAGS) -c -DIIO_ABORT_ON_ERROR -Wno-deprecated-declarations $< -o $@
 
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
 	$(CC) $(CFLAGS) -c $< -o $@
