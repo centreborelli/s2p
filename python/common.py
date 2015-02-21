@@ -455,6 +455,7 @@ def image_qauto(im, out=None, tilewise=False):
         out = tmpfile(extension)
         out = tmpfile(extension)
     if tilewise:
+        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
         run('tiffu meta \"qauto ^ @\" %s -- %s' % (im, out))
     else:
         run('qauto %s %s' % (im, out))
@@ -496,6 +497,7 @@ def image_qeasy(im, black, white, out=None, tilewise=False):
         out = tmpfile(extension)
         out = tmpfile(extension)
     if tilewise:
+        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
         run('tiffu meta \"qeasy %d %d ^ @\" %s -- %s' % (black, white, im, out))
     else:
         run('qeasy %d %d %s %s' % (black, white, im, out))
@@ -521,6 +523,7 @@ def pansharpened_to_panchro(im, out=None, tilewise=False):
     pcmd = "x[0] x[1] x[2] x[3] + + + 4 /"
 
     if tilewise:
+        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
         cmd = 'tiffu meta \"plambda ^ \\\"%s\\\" -o @\" %s -- %s' % (pcmd, im,
                                                                      out)
     else:
@@ -550,6 +553,7 @@ def rgbi_to_rgb(im, out=None, tilewise=False):
     pcmd = "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3"
 
     if tilewise:
+        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
         cmd = 'tiffu meta \"plambda ^ \\\"%s\\\" -o @\" %s -- %s' % (pcmd, im,
                                                                      out)
     else:

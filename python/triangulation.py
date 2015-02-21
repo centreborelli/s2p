@@ -205,6 +205,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     # denotes the panchro intensity
     tmp = common.tmpfile('.tif')
     pcmd = "dup split + + / * 3 *"
+    os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
     cmd = 'tiffu meta \"plambda ^ ^1 \\\"%s\\\" -o @\" %s %s -- %s' % (pcmd,
                                                                       crop_panchro,
                                                                       rgb, tmp)
