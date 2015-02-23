@@ -153,7 +153,8 @@ Now you can compile the SGBM wrapper:
     python setup.py install --prefix=~/local
     export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
 
- python 2.7, linux x86_64 (Fedora)
+on python 2.7, linux x86_64 (Fedora)
+
     export PYTHONPATH=$PYTHONPATH:$HOME/local/lib64/python2.7/site-packages
 
 #### Copy 3rd party binaries into bin
