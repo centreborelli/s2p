@@ -270,14 +270,13 @@ int main(int c, char *v[])
             // compute coordinates of pix in the big image
             int col = pix % w;
             int row = pix / w;
-            if (there_is_a_homography) {
-                double xy[2] = {col, row};
+            double xy[2] = {col, row};
+            if (there_is_a_homography)
                 apply_homography(xy, inv_hom, xy);
-            }
 
             // compute utm coordinates
             double xyz[3], nrm[3], tmp[3];
-            getxyz(xyz, r, col, row, height[pix], zone);
+            getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
 
             if (there_is_an_offset) {
                 xyz[0] -= x0;
