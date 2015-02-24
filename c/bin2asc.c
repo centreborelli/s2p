@@ -10,32 +10,43 @@ void print_help(char *bin_name)
             "[--strip-colors] [--strip-header] > ascii_ply\n", bin_name);
 }
 
-// fast forward "f" until "lin" is found. "lin" is read.
-static int eat_until_this_line(FILE *f, char *lin)
+// fast forward "f" until "last_lin" is found. "last_lin" is read.
+// checks if there are lines starting with given patterns
+static void eat_until_this_line(bool *out, FILE *f, char *last_lin,
+        char *pattern[2])
 {
-    int out = 0;
     char buf[FILENAME_MAX] = {0};
     while (fgets(buf, FILENAME_MAX, f)) {
-        out++;
-        if (0 == strcmp(buf, lin))
+        if (0 == strcmp(buf, last_lin))
             break;
+        else if (0 == strncmp(buf, pattern[0], strlen(pattern[0])))
+            *out = true;
+        else if (0 == strncmp(buf, pattern[1], strlen(pattern[1])))
+            *(out+1) = true;
     }
-    return out;
 }
 
-// prints "f" on stdout until "lin" is found. Does not print "lin".
-static int print_until_this_line(FILE *f, char *lin)
+// prints "f" until "last_lin" is found. "last_lin" is printed.
+// checks if there are lines starting with given patterns
+static void print_until_this_line(bool *out, FILE *f, char *last_lin,
+        char *pattern[2], bool strip[2])
 {
-    int out = 0;
     char buf[FILENAME_MAX] = {0};
     while (fgets(buf, FILENAME_MAX, f)) {
-        out++;
-        if (0 == strcmp(buf, lin))
+        if (0 == strcmp(buf, "format binary_little_endian 1.0\n")) {
+            printf("format ascii 1.0\n");
+        } else if (0 == strncmp(buf, pattern[0], strlen(pattern[0]))) {
+            *out = true;
+            if (!strip[0]) printf("%s", buf);
+        } else if (0 == strncmp(buf, pattern[1], strlen(pattern[1]))) {
+            *(out+1) = true;
+            if (!strip[1]) printf("%s", buf);
+        } else if (0 == strcmp(buf, last_lin)) {
+            printf("%s", buf);
             break;
-        else
+        } else
             printf("%s", buf);
     }
-    return out;
 }
 
 int main(int c, char *v[])
@@ -45,33 +56,24 @@ int main(int c, char *v[])
         return 1;
     }
 
+    // read args
 	bool strip_n = (pick_option(&c, &v, "-strip-normals", NULL) != NULL);
 	bool strip_c = (pick_option(&c, &v, "-strip-colors", NULL) != NULL);
 	bool strip_h = (pick_option(&c, &v, "-strip-header", NULL) != NULL);
-
-    // read args
     const char *filename = v[1];
 
-    // open the input binary file
+    // open the input binary file, and parse its header
     FILE *f = fopen(filename, "rb");
+    char *patterns[2] = {"property uchar", "property float n"};
+    bool strip_cn[2] = {strip_c, strip_n};
+    bool cn[2] = {false, false};
+    if (strip_h)
+        eat_until_this_line(cn, f, "end_header\n", patterns);
+    else
+        print_until_this_line(cn, f, "end_header\n", patterns, strip_cn);
 
-    int nb_lines = 0;
-    if (strip_h) {
-        eat_until_this_line(f, "format binary_little_endian 1.0\n");
-        nb_lines = eat_until_this_line(f, "end_header\n");
-    } else {
-        // copy the header, replace the 'format' line, and remove the line about
-        // normals if needed
-        print_until_this_line(f, "format binary_little_endian 1.0\n");
-        printf("format ascii 1.0\n");
-        if (strip_n) {
-            print_until_this_line(f, "property float nx\n");
-            eat_until_this_line(f, "property float nz\n");
-        }
-        nb_lines = print_until_this_line(f, "end_header\n");
-        printf("end_header\n");
-    }
-    bool normals = strip_n | (nb_lines > 10) ;
+    bool colors = cn[0];
+    bool normals = cn[1];
 
     // then read the binary body of the file
     // each 'line' contains a position X = (x, y, z), eventually a normal N =
@@ -85,11 +87,12 @@ int main(int c, char *v[])
         n = fread(X, sizeof(float), 3, f);
         if (normals)
             n = fread(N, sizeof(float), 3, f);
-        n = fread(C, sizeof(unsigned char), 3, f);
+        if (colors)
+            n = fread(C, sizeof(unsigned char), 3, f);
         printf("%.10f %.10f %.10f", X[0], X[1], X[2]);
         if (normals & !strip_n)
             printf(" %.1f %.1f %.1f", N[0], N[1], N[2]);
-        if (!strip_c)
+        if (colors & !strip_c)
             printf(" %d %d %d\n", C[0], C[1], C[2]);
         else
             printf("\n");

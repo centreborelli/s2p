@@ -820,7 +820,7 @@ def is_image_black(img):
             out = p.stdout.readline()
             return (out == '0\n')
     except IOError:
-        print "is_image_black: the input file %s doesn't exist" % str(im)
+        print "is_image_black: the input file %s doesn't exist" % str(img)
         sys.exit()
 
 
