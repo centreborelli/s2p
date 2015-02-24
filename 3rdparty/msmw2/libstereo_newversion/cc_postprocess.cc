@@ -511,148 +511,148 @@ SMART_PARAMETER(LR_REVERSE,1)
 //}
 //
 
-/***************************/
-
-// c: pointer to original argc
-// v: pointer to original argv
-// o: option name after hyphen
-// d: default value (if NULL, the option takes no argument)
-static char *pick_option(int *c, char ***v, char *o, char *d)
-{
-   int argc = *c;
-   char **argv = *v;
-   int id = d ? 1 : 0;
-   for (int i = 0; i < argc - id; i++)
-      if (argv[i][0] == '-' && 0 == strcmp(argv[i] + 1, o)) {
-         char *r = argv[i + id] + 1 - id;
-         *c -= id + 1;
-         for (int j = i; j < argc - id; j++)
-            (*v)[j] = (*v)[j + id + 1];
-         return r;
-      }
-   return d;
-}
-extern "C"{
-#include "iio.h"
-}
-
-
-int main(int argc, char **argv)
-{
-
-   if (argc < 2) {
-      fprintf(stderr, "[MAXERR=%.2f MAXDIFF=%.2f LR_REVERSE={1(LR),0(disabled),-1(RL)}] %s mask out [minsz]\n", MAXERR(), MAXDIFF(), argv[0]);
-      return 1;
-   }
-
-   char *img_file = argv[1];
-   char *out_file = argv[2];
-   int minsz = argc>2 ? atoi(argv[3]): 25;
-
-   int w,h,nch;
-
-   float *img = iio_read_image_float_split(img_file, &w, &h, &nch);
-   float *out = (float*) calloc(w*h*nch, sizeof(*out));
-   nch=1;
-
-   
-   int n_cc = cc_grain(w, h, img, out, minsz); 
-   printf("%d\n", n_cc);
-
-//   // initialize the image to 
-//   std::vector< int > rep(w*h); 
-//   for (int i=0;i<w*h;i++) 
-//      rep[i] = msk[i] > 0 ? -1 : 1;
-//
-//   // identify the connected components of positive values
-//   positive_connected_component_filter(&(rep.front()), w, h);
-//
-//   // count connected components
-//   int n_cc = 0;
-//   std::vector< int > cc_ids(w*h); 
-//   for (int i=0;i<w*h;i++) {
-//      if (rep[i] == i) {
-//         cc_ids[n_cc] = i;
-//         n_cc += 1;
-//      }
-//   }
-//
-//   // store the cc_pixels  and cc_boundary in vectors of vectors
-//   std::vector< std::vector< struct pix > > cc_pixels(w*h);
-//   std::vector< std::vector< struct pix > > cc_boundary(w*h);
-//
-//   for (int j = 0; j < h; j++)
-//      for (int i = 0; i < w; i++)
-//      {
-//         int idx = j*w + i;
-//         int cc = rep[idx];
-//         if (cc>=0) { // if it is a region 
-//            struct pix pp;
-//            pp.x=i;
-//            pp.y=j;
-//            pp.v=img[idx];
-//            cc_pixels[cc].push_back(pp);
-//            extract_cc_boundary_at_pix(w, h, i, j, &(rep.front()), img, &(cc_boundary[cc]));
-//         }
-//      }
-//   printf("%d\n", n_cc);
-//
-//   for (int i=0;i<w*h;i++) {
-//      out[i] = img[i];
-//      outmsk[i] = msk[i];
-//   }
-//
-//   // for each connected component
-//   std::vector< float > data(3*w*h);
-//   for(int t =0;t < n_cc; t++) 
-//   {
-//      int cc = cc_ids[t];
-//      std::vector< struct pix > pixels   =  cc_pixels[cc];
-//      std::vector< struct pix > boundary =  cc_boundary[cc];
-//      int l=boundary.size();
-//
-//      // copy the data at the boundary and compute the affine model
-//      double model[3];
-//      for(int i = 0;i<l;i++) {
-//         data[i*3+0]=(float)boundary[i].x;
-//         data[i*3+1]=(float)boundary[i].y;
-//         data[i*3+2]=(float)boundary[i].v;
-//      }
-//      generate_model ( 3, &(data.front()), l, model);
-//
-//      // compute stuff
-//      float maxerr = 0;
-//      float sum = 0;
-//      float vmax = -INFINITY;
-//      float vmin = INFINITY;
-//      for(int i = 0;i<l;i++){
-//         sum += boundary[i].v;
-//         vmax = fmax(boundary[i].v,vmax);
-//         vmin = fmin(boundary[i].v,vmin);
-//
-//         float err =  eval_model(3, &(data[i*3]), model) - data[i*3+2];
-//         maxerr = fmax(maxerr, fabs(err));
-//      }
-//      sum/=l;
-//
-//      // interpolate the region if necessary
-//      if(LR_REVERSE()*model[0] < 1.0 )      //      if(model[0] > -1.0 )
-//      if(maxerr< MAXERR() && vmax-vmin< MAXDIFF() ) {
-//         for(int i = 0;i<pixels.size();i++) {
-//            int idx = pixels[i].x + pixels[i].y*w;
-//            float vv[3] = {pixels[i].x, pixels[i].y, 0};
-//            out[idx] = eval_model(3, vv, model);
-//            outmsk[idx] = 254;
-//         }
-//         //      printf("id:%d sz:%d per:%d vmax-vmin:%f avg:%f maxerr:%f\n", 
-//         //            cc, (int) pixels.size(), (int)boundary.size(), vmax-vmin, sum, maxerr);
-//      }
-//   }
-
-	/* write the results */
-   iio_save_image_float_split(out_file, out,w,h,nch);
-   free(out);
-   free(img);
-}
-
-
+// /***************************/
+// 
+// // c: pointer to original argc
+// // v: pointer to original argv
+// // o: option name after hyphen
+// // d: default value (if NULL, the option takes no argument)
+// static char *pick_option(int *c, char ***v, char *o, char *d)
+// {
+//    int argc = *c;
+//    char **argv = *v;
+//    int id = d ? 1 : 0;
+//    for (int i = 0; i < argc - id; i++)
+//       if (argv[i][0] == '-' && 0 == strcmp(argv[i] + 1, o)) {
+//          char *r = argv[i + id] + 1 - id;
+//          *c -= id + 1;
+//          for (int j = i; j < argc - id; j++)
+//             (*v)[j] = (*v)[j + id + 1];
+//          return r;
+//       }
+//    return d;
+// }
+// extern "C"{
+// #include "iio.h"
+// }
+// 
+// 
+// int main(int argc, char **argv)
+// {
+// 
+//    if (argc < 2) {
+//       fprintf(stderr, "[MAXERR=%.2f MAXDIFF=%.2f LR_REVERSE={1(LR),0(disabled),-1(RL)}] %s mask out [minsz]\n", MAXERR(), MAXDIFF(), argv[0]);
+//       return 1;
+//    }
+// 
+//    char *img_file = argv[1];
+//    char *out_file = argv[2];
+//    int minsz = argc>2 ? atoi(argv[3]): 25;
+// 
+//    int w,h,nch;
+// 
+//    float *img = iio_read_image_float_split(img_file, &w, &h, &nch);
+//    float *out = (float*) calloc(w*h*nch, sizeof(*out));
+//    nch=1;
+// 
+//    
+//    int n_cc = cc_grain(w, h, img, out, minsz); 
+//    printf("%d\n", n_cc);
+// 
+// //   // initialize the image to 
+// //   std::vector< int > rep(w*h); 
+// //   for (int i=0;i<w*h;i++) 
+// //      rep[i] = msk[i] > 0 ? -1 : 1;
+// //
+// //   // identify the connected components of positive values
+// //   positive_connected_component_filter(&(rep.front()), w, h);
+// //
+// //   // count connected components
+// //   int n_cc = 0;
+// //   std::vector< int > cc_ids(w*h); 
+// //   for (int i=0;i<w*h;i++) {
+// //      if (rep[i] == i) {
+// //         cc_ids[n_cc] = i;
+// //         n_cc += 1;
+// //      }
+// //   }
+// //
+// //   // store the cc_pixels  and cc_boundary in vectors of vectors
+// //   std::vector< std::vector< struct pix > > cc_pixels(w*h);
+// //   std::vector< std::vector< struct pix > > cc_boundary(w*h);
+// //
+// //   for (int j = 0; j < h; j++)
+// //      for (int i = 0; i < w; i++)
+// //      {
+// //         int idx = j*w + i;
+// //         int cc = rep[idx];
+// //         if (cc>=0) { // if it is a region 
+// //            struct pix pp;
+// //            pp.x=i;
+// //            pp.y=j;
+// //            pp.v=img[idx];
+// //            cc_pixels[cc].push_back(pp);
+// //            extract_cc_boundary_at_pix(w, h, i, j, &(rep.front()), img, &(cc_boundary[cc]));
+// //         }
+// //      }
+// //   printf("%d\n", n_cc);
+// //
+// //   for (int i=0;i<w*h;i++) {
+// //      out[i] = img[i];
+// //      outmsk[i] = msk[i];
+// //   }
+// //
+// //   // for each connected component
+// //   std::vector< float > data(3*w*h);
+// //   for(int t =0;t < n_cc; t++) 
+// //   {
+// //      int cc = cc_ids[t];
+// //      std::vector< struct pix > pixels   =  cc_pixels[cc];
+// //      std::vector< struct pix > boundary =  cc_boundary[cc];
+// //      int l=boundary.size();
+// //
+// //      // copy the data at the boundary and compute the affine model
+// //      double model[3];
+// //      for(int i = 0;i<l;i++) {
+// //         data[i*3+0]=(float)boundary[i].x;
+// //         data[i*3+1]=(float)boundary[i].y;
+// //         data[i*3+2]=(float)boundary[i].v;
+// //      }
+// //      generate_model ( 3, &(data.front()), l, model);
+// //
+// //      // compute stuff
+// //      float maxerr = 0;
+// //      float sum = 0;
+// //      float vmax = -INFINITY;
+// //      float vmin = INFINITY;
+// //      for(int i = 0;i<l;i++){
+// //         sum += boundary[i].v;
+// //         vmax = fmax(boundary[i].v,vmax);
+// //         vmin = fmin(boundary[i].v,vmin);
+// //
+// //         float err =  eval_model(3, &(data[i*3]), model) - data[i*3+2];
+// //         maxerr = fmax(maxerr, fabs(err));
+// //      }
+// //      sum/=l;
+// //
+// //      // interpolate the region if necessary
+// //      if(LR_REVERSE()*model[0] < 1.0 )      //      if(model[0] > -1.0 )
+// //      if(maxerr< MAXERR() && vmax-vmin< MAXDIFF() ) {
+// //         for(int i = 0;i<pixels.size();i++) {
+// //            int idx = pixels[i].x + pixels[i].y*w;
+// //            float vv[3] = {pixels[i].x, pixels[i].y, 0};
+// //            out[idx] = eval_model(3, vv, model);
+// //            outmsk[idx] = 254;
+// //         }
+// //         //      printf("id:%d sz:%d per:%d vmax-vmin:%f avg:%f maxerr:%f\n", 
+// //         //            cc, (int) pixels.size(), (int)boundary.size(), vmax-vmin, sum, maxerr);
+// //      }
+// //   }
+// 
+// 	/* write the results */
+//    iio_save_image_float_split(out_file, out,w,h,nch);
+//    free(out);
+//    free(img);
+// }
+// 
+// 
