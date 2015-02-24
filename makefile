@@ -12,7 +12,7 @@ GEODIR = 3rdparty/GeographicLib-1.32
 
 default: $(BINDIR) geographiclib monasse sift imscript sgbm
 
-all: $(BINDIR) geographiclib monasse sift imscript msmw tvl1 sgbm
+all: $(BINDIR) geographiclib monasse sift imscript msmw msmw2 tvl1 sgbm
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
@@ -60,6 +60,11 @@ msmw:
 	mkdir -p $(BINDIR)/msmw_build
 	cd $(BINDIR)/msmw_build; cmake ../../3rdparty/msmw; make
 	cp $(BINDIR)/msmw_build/libstereo/iip_stereo_correlation_multi_win2 $(BINDIR)
+
+msmw2:
+	mkdir -p $(BINDIR)/msmw2_build
+	cd $(BINDIR)/msmw2_build; cmake ../../3rdparty/msmw2; make
+	cp $(BINDIR)/msmw2_build/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion $(BINDIR)
 
 tvl1:
 	cd 3rdparty/tvl1flow_3; make
