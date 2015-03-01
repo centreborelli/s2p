@@ -151,7 +151,7 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
     # As an alternative, the numpy array is stored in raw and the libtiff util
     # 'raw2tiff' is used to produce a tiff file from it.
     sys.stdout.write('\twriting raw data to disk...\n')
-    raw_file = '%s/s2p_numpy_large_image_file' % cfg['temporary_dir']
+    raw_file = common.tmpfile('')
     out.tofile(raw_file)
     common.run('raw2tiff -w %d -l %d -d float -c zip %s %s' % (w, h, raw_file,
                                                                fout))
