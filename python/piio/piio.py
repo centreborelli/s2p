@@ -1,3 +1,7 @@
+# Primitie python wrapper for iio
+# Copyright 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+
+
 import os,sys,ctypes
 
 #if sys.platform.startswith('win'):
@@ -31,7 +35,7 @@ def read(filename):
    IIO: numpyarray = read(filename)
    '''
    from numpy import array, zeros, ctypeslib
-   from ctypes import c_int, c_float, c_void_p, CDLL, POINTER, cast, byref
+   from ctypes import c_int, c_float, c_void_p, POINTER, cast, byref
 
    iioread = libiio.iio_read_image_float_vec
    
@@ -56,7 +60,7 @@ def read(filename):
    
    # free the memory
    iiofreemem = libiio.freemem
-   iiofreemem(ptr);
+   iiofreemem(ptr)
    return data
 
 
@@ -64,7 +68,7 @@ def write(filename,data):
    '''
    IIO: write(filename,numpyarray)
    '''
-   from ctypes import CDLL, c_char_p, c_int, c_float
+   from ctypes import c_char_p, c_int, c_float
    from numpy.ctypeslib import ndpointer
 
    iiosave = libiio.iio_save_image_float_vec

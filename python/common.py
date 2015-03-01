@@ -37,10 +37,10 @@ def garbage_cleanup():
 
 def tmpfile(ext=''):
     """
-    Creates a temporary file in the /tmp directory.
+    Creates a temporary file in the cfg['temporary_dir'] directory.
 
     Args:
-        ext: desired file extension
+        ext: desired file extension. The dot has to be included.
 
     Returns:
         absolute path to the created file
@@ -48,9 +48,10 @@ def tmpfile(ext=''):
     The path of the created file is added to the garbage list to allow cleaning
     at the end of the pipeline.
     """
-    fd, out = tempfile.mkstemp(suffix = ext, prefix = 's2p_', dir = cfg['temporary_dir'])
-    garbage.append(out)
+    fd, out = tempfile.mkstemp(suffix=ext, prefix='s2p_',
+                               dir=cfg['temporary_dir'])
     os.close(fd)           # http://www.logilab.org/blogentry/17873
+    garbage.append(out)
     return out
 
 
@@ -852,7 +853,7 @@ def is_image_black(img):
             out = p.stdout.readline()
             return (out == '0\n')
     except IOError:
-        print "is_image_black: the input file %s doesn't exist" % str(im)
+        print "is_image_black: the input file %s doesn't exist" % str(img)
         sys.exit()
 
 

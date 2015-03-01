@@ -172,6 +172,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     f.close()
 
     # close logs
+    common.garbage_cleanup()
     if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
@@ -307,7 +308,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # wait for all the processes to terminate
     pool.close()
     pool.join()
-    common.garbage_cleanup()
     print ''
 
     # compute global pointing correction
@@ -335,7 +335,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                     process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2,
                                              col, row, tw, th, None, cld_msk,
                                              roi_msk, A)
-    common.garbage_cleanup()
 
     # triangulation
     print 'Computing height maps tile by tile...'
@@ -377,7 +376,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                                  callback=show_progress)
     pool.close()
     pool.join()
-    common.garbage_cleanup()
 
     # tiles composition
     out = '%s/height_map.tif' % out_dir
@@ -388,7 +386,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
             tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
         else:
             tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-    common.garbage_cleanup()
     common.garbage_cleanup()
 
     return out
@@ -750,6 +747,7 @@ def main(config_file):
     m = (t/60) % 60
     s = t % 60
     print "Total runtime: %dh:%dm:%ds" % (h, m, s)
+    common.garbage_cleanup()
 
 
 if __name__ == '__main__':

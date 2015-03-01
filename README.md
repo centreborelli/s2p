@@ -1,10 +1,10 @@
 # S2P - Satellite Stereo Pipeline
 
 This code implements a stereo pipeline which produces elevation models from
-images taken by high resolution optical satellites such as Pléiades, Worldiew
-QuickBird, Spot or Ikonos. It generates automatically 3D point clouds and
-digital surface models from stereo pairs (two images) or tri-stereo sets (three
-images).
+images taken by high resolution optical satellites such as Pléiades, WorldView,
+QuickBird, Spot or Ikonos. It generates 3D point clouds and digital surface
+models from stereo pairs (two images) or tri-stereo sets (three images) in a
+complete automatic fashion.
 
 The main language is Python, although several operations are handled by
 binaries written in C.
@@ -40,7 +40,7 @@ the preview file must be given by the key `'prv'` of the `'images'[0]`
 dictionary (as in the example).
 
 ### From a python interpreter
-An other way is to import the `s2p` module in a python session, and run the
+Another way is to import the `s2p` module in a python session, and run the
 functions `process_pair` or `process_triplet`, depending on the kind of dataset
 you have (stereo pair or triplet), to generate an altitude map.  A 3D point
 cloud can be generated from this altitude map using the function
@@ -153,7 +153,9 @@ Now you can compile the SGBM wrapper:
     python setup.py install --prefix=~/local
     export PYTHONPATH=$PYTHONPATH:$HOME/local/lib/python2.6/site-packages
 
+on python 2.7, linux x86_64 (Fedora)
 
+    export PYTHONPATH=$PYTHONPATH:$HOME/local/lib64/python2.7/site-packages
 
 #### Copy 3rd party binaries into bin
 

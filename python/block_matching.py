@@ -26,6 +26,9 @@ sgbm = '%s/../bin/call_sgbm.sh' % (
 msmw = '%s/../bin/iip_stereo_correlation_multi_win2' % (
     os.path.dirname(os.path.abspath(__file__)))
 
+msmw2 = '%s/../bin/iip_stereo_correlation_multi_win2_newversion' % (
+    os.path.dirname(os.path.abspath(__file__)))
+
 tvl1 = '%s/../bin/callTVL1.sh' % (
     os.path.dirname(os.path.abspath(__file__)))
 
@@ -93,4 +96,9 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
     elif (algo == 'msmw'):
         bm_binary = msmw
         common.run("%s -i 1 -n 4 -p 4 -W 5 -x 9 -y 9 -r 1 -d 1 -t -1 -s 0 -b 0 -o 0.25 -f 0 -P 32 -m %d -M %d %s %s %s %s" %(bm_binary,
+            disp_min, disp_max, im1, im2, out_disp, out_mask))
+
+    elif (algo == 'msmw2'):
+        bm_binary = msmw2
+        common.run("%s -i 1 -n 4 -p 4 -W 5 -x 9 -y 9 -r 1 -d 1 -t -1 -s 0 -b 0 -o -0.25 -f 0 -P 32 -D 0 -O 25 -c 0 -m %d -M %d %s %s %s %s" % (bm_binary,
             disp_min, disp_max, im1, im2, out_disp, out_mask))
