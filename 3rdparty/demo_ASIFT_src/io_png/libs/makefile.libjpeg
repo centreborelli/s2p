@@ -1,0 +1,49 @@
+# Copyright 2010 Nicolas Limare <nicolas.limare@cmla.ens-cachan.fr>
+#
+# Copying and distribution of this file, with or without
+# modification, are permitted in any medium without royalty provided
+# the copyright notice and this notice are preserved.  This file is
+# offered as-is, without any warranty.
+#
+# This makefile imports and compiles libraries libraries
+# for local use in static form
+
+LIBJPEG_LIB	= $(LIB_DIR)/libjpeg.a
+LIBJPEG_INC	= $(addprefix $(INC_DIR), jconfig.h jerror.h jmorecfg.h jpeglib.h)
+LIBJPEG_FILES	= $(LIBJPEG_LIB) $(LIBJPEG_INC)
+LIBJPEG_DIR 	= jpeg-8b
+LIBJPEG_ARC 	= jpegsrc.v8b.tar.gz
+LIBJPEG_URL 	= http://www.ijg.org/files/jpegsrc.v8b.tar.gz
+
+#
+# LIBJPEG
+#
+
+.PHONY	: libjpeg
+libjpeg	: $(LIBJPEG_DIR)
+
+$(LIBJPEG_FILES)	: $(LIB_DIR) $(INC_DIR)
+$(LIB_DIR)/libjpeg.a	: $(LIBJPEG_DIR)/lib/libjpeg.a
+$(INC_DIR)/jconfig.h	: $(LIBJPEG_DIR)/include/jconfig.h
+$(INC_DIR)/jerror.h	: $(LIBJPEG_DIR)/include/jerror.h
+$(INC_DIR)/jmorecfg.h	: $(LIBJPEG_DIR)/include/jmorecfg.h
+$(INC_DIR)/jpeglib.h	: $(LIBJPEG_DIR)/include/jpeglib.h
+
+$(LIBJPEG_DIR)/lib/libjpeg.a	: $(LIBJPEG_DIR)
+	cd ./$(LIBJPEG_DIR)/; ./configure \
+		--enable-static \
+		--disable-shared \
+		--prefix=$$PWD
+	$(MAKE) -C $(LIBJPEG_DIR) libjpeg.la
+	$(MAKE) -C $(LIBJPEG_DIR) install
+$(LIBJPEG_DIR)/jconfig.h	: $(LIBJPEG_DIR)
+$(LIBJPEG_DIR)/jerror.h		: $(LIBJPEG_DIR)
+$(LIBJPEG_DIR)/jmorecfg.h	: $(LIBJPEG_DIR)
+$(LIBJPEG_DIR)/jpeglib.h	: $(LIBJPEG_DIR)
+
+$(LIBJPEG_DIR) : $(LIBJPEG_ARC)
+	tar xvzf $<
+	touch $@
+
+$(LIBJPEG_ARC) :
+	curl -L $(LIBJPEG_URL) > $@

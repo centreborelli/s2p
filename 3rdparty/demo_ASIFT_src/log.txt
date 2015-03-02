@@ -1,0 +1,19 @@
+- 2010.04.08, Pierre Moulon
+Use Eigen matrix library in order to compute the SVD in ORSA. 
+Add a Cmake based build, for easier compilation on Windows. 
+
+- 2010.11.08, Guoshen Yu
+Remove a few minor bugs in orsa.cpp. 
+Code compiled with Intel C++ and Visual C++ compilers under Windows (32 bits). Both OpenMP and vectorization work with Intel C++. OpenMP but vectorization withs with Visual C++. 
+
+- 2010.08.17, Guoshen Yu
+In compute_asift_matches.c, change the nfa_max value from 0 to -2 to reduce false matching. 
+
+- 2010.08.28, Guoshen Yu
+In demo_lib_sift.cpp, change par.MatchRatio from 0.75 to 0.73 to reduce et number of false matches. 
+In demo_ASIFT.cpp, change the image resize target dimension from 640x480 to 800x600. 
+In demo_ASIFT.cpp, add a white band between the images in the output image for better visibility. 
+
+
+
+
