@@ -87,8 +87,8 @@ def matches_from_sift(im1, im2, asift=False):
         ver = common.tmpfile('.png')
         hor = common.tmpfile('.png')
         match_f = common.tmpfile('.txt')
-        common.run('demo_ASIFT %s %s %s %s matches.txt /dev/null /dev/null' % (im1_8b, im2_8b, ver, hor, match_f))
-        matches = np.loadtxt(matches, skiprows=1)  #TODO look at the structure of the file outputted by asift
+        common.run('demo_ASIFT %s %s %s %s %s /dev/null /dev/null' % (im1_8b, im2_8b, ver, hor, match_f))
+        matches = np.loadtxt(match_f, skiprows=1)
 
     else:
         # apply sift (monasse implementation first, because faster)
