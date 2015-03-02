@@ -46,7 +46,7 @@ def center_2d_points(pts):
     return np.vstack([new_x, new_y]).T, T
 
 
-def matches_from_sift(im1, im2):
+def matches_from_sift(im1, im2, asift=False):
     """
     Computes a list of sift matches between two images.
 
@@ -61,6 +61,7 @@ def matches_from_sift(im1, im2):
 
     Args:
         im1, im2: paths to the two images
+        asift (optional, default is False): boolean flag to enable ASIFT usage
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -82,32 +83,40 @@ def matches_from_sift(im1, im2):
     im1_8b = common.image_qauto(im1)
     im2_8b = common.image_qauto(im2)
 
-    # apply sift (monasse implementation first, because faster)
-    p1 = common.image_sift_keypoints(im1_8b, None, None, 'monasse')
-    p2 = common.image_sift_keypoints(im2_8b, None, None, 'monasse')
-    matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                          cfg['sift_match_thresh'])
+    if asift:
+        ver = common.tmpfile('.png')
+        hor = common.tmpfile('.png')
+        match_f = common.tmpfile('.txt')
+        common.run('demo_ASIFT %s %s %s %s matches.txt /dev/null /dev/null' % (im1_8b, im2_8b, ver, hor, match_f))
+        matches = np.loadtxt(matches, skiprows=1)  #TODO look at the structure of the file outputted by asift
 
-    # if less than 10 matches, use ipol implementation
-    if matches.shape[0] < 10:
-        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol')
-        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol')
+    else:
+        # apply sift (monasse implementation first, because faster)
+        p1 = common.image_sift_keypoints(im1_8b, None, None, 'monasse')
+        p2 = common.image_sift_keypoints(im2_8b, None, None, 'monasse')
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
-    # if still less than 10 matches, lower the thresh_dog for the sift calls.
-    # Default value for thresh_dog is 0.0133
-    thresh_dog = 0.0133
-    nb_sift_tries = 2
-    while (matches.shape[0] < 10 and nb_sift_tries < 6):
-        nb_sift_tries += 1
-        thresh_dog /= 2.0
-        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol',
-                                         '-thresh_dog %f' % thresh_dog)
-        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol',
-                                         '-thresh_dog %f' % thresh_dog)
-        matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                              cfg['sift_match_thresh'])
+        # if less than 10 matches, use ipol implementation
+        if matches.shape[0] < 10:
+            p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol')
+            p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol')
+            matches = common.sift_keypoints_match(p1, p2, 'relative',
+                                                  cfg['sift_match_thresh'])
+
+        # if still less than 10 matches, lower the thresh_dog for the sift calls.
+        # Default value for thresh_dog is 0.0133
+        thresh_dog = 0.0133
+        nb_sift_tries = 2
+        while (matches.shape[0] < 10 and nb_sift_tries < 6):
+            nb_sift_tries += 1
+            thresh_dog /= 2.0
+            p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol',
+                                             '-thresh_dog %f' % thresh_dog)
+            p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol',
+                                             '-thresh_dog %f' % thresh_dog)
+            matches = common.sift_keypoints_match(p1, p2, 'relative',
+                                                  cfg['sift_match_thresh'])
 
     # compensate coordinates for the zoom
     return matches * zoom
