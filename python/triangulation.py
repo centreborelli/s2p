@@ -114,6 +114,7 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     transfer_map(tmp, H1, x, y, w, h, z, out)
 
     # close logs
+    common.garbage_cleanup()
     if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
