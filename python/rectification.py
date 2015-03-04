@@ -401,9 +401,9 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         # filter sift matches with the known fundamental matrix
         # but first convert F for big images coordinate frame
         F = np.dot(T2.T, np.dot(F, T1))
-        print '%d sift matches before epipolar constraint filering', len(m)
+        print '%d sift matches before epipolar constraint filering' % len(m)
         m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
-        print 'd sift matches after epipolar constraint filering', len(m)
+        print '%d sift matches after epipolar constraint filering' % len(m)
         if len(m) < 2:
             # 0 or 1 sift match
             print 'rectification.compute_rectification_homographies: less than'
