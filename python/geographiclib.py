@@ -103,7 +103,6 @@ def geodetic_to_utm(lat, lon, zone=None):
     line = p2.stdout.readline()
 
     splits = line.split()
-    print splits
     zone = splits[0]
     x = float(splits[1])
     y = float(splits[2])

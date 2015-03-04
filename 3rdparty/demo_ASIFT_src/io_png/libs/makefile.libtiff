@@ -1,0 +1,55 @@
+# Copyright 2010 Nicolas Limare <nicolas.limare@cmla.ens-cachan.fr>
+#
+# Copying and distribution of this file, with or without
+# modification, are permitted in any medium without royalty provided
+# the copyright notice and this notice are preserved.  This file is
+# offered as-is, without any warranty.
+#
+# This makefile imports and compiles libraries libraries
+# for local use in static form
+
+LIBTIFF_LIB	= $(LIB_DIR)/libtiff.a
+LIBTIFF_INC	= $(addprefix $(INC_DIR)/, tiffconf.h tiff.h tiffio.h tiffvers.h)
+LIBTIFF_FILES	= $(LIBTIFF_LIB) $(LIBTIFF_INC)
+LIBTIFF_DIR 	= tiff-3.9.4
+LIBTIFF_ARC 	= tiff-3.9.4.tar.gz
+LIBTIFF_URL 	= http://download.osgeo.org/libtiff/tiff-3.9.4.tar.gz
+
+#
+# LIBTIFF
+#
+
+.PHONY	: libtiff
+libtiff	: $(LIBTIFF_FILES)
+
+$(LIBTIFF_FILES)	: $(LIB_DIR) $(INC_DIR)
+$(LIB_DIR)/libtiff.a	: $(LIBTIFF_DIR)/lib/libtiff.a
+$(INC_DIR)/tiff.h	: $(LIBTIFF_DIR)/include/tiff.h
+$(INC_DIR)/tiffio.h	: $(LIBTIFF_DIR)/include/tiffio.h
+$(INC_DIR)/tiffconf.h	: $(LIBTIFF_DIR)/include/tiffconf.h
+$(INC_DIR)/tiffvers.h	: $(LIBTIFF_DIR)/include/tiffvers.h
+
+$(LIBTIFF_DIR)/lib/libtiff.a	: $(LIBTIFF_DIR) $(ZLIB_FILES) $(LIBJPEG_FILES)
+	cd ./$(LIBTIFF_DIR)/; ./configure \
+		--with-zlib-include-dir=../ \
+		--with-zlib-lib-dir=../ \
+		--with-jpeg-include-dir=../ \
+		--with-jpeg-lib-dir=../ \
+		--disable-cxx \
+		--enable-static \
+		--disable-shared \
+		--disable-rpath --prefix=$$PWD
+	$(MAKE) -C $(LIBTIFF_DIR)/port libport.la
+	$(MAKE) -C $(LIBTIFF_DIR)/libtiff libtiff.la
+	$(MAKE) -C $(LIBTIFF_DIR)/libtiff install
+$(LIBTIFF_DIR)/include/tiff.h	: $(LIBTIFF_DIR)
+$(LIBTIFF_DIR)/include/tiffio.h	: $(LIBTIFF_DIR)
+$(LIBTIFF_DIR)/include/tiffconf.h	: $(LIBTIFF_DIR)
+$(LIBTIFF_DIR)/include/tiffvers.h	: $(LIBTIFF_DIR)
+
+$(LIBTIFF_DIR) : $(LIBTIFF_ARC)
+	tar xvzf $<
+	touch $@
+
+$(LIBTIFF_ARC) :
+	curl -L $(LIBTIFF_URL) > $@

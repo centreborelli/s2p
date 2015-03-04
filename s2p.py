@@ -549,8 +549,9 @@ def generate_dsm(out, point_clouds_list, resolution):
 
     The point clouds are supposed to contain points in the same UTM zones.
     """
-    files = ' '.join(point_clouds_list)
-    common.run("ls %s | plyflatten %f %s" % (files, resolution, out))
+    if point_clouds_list:
+        files = ' '.join(point_clouds_list)
+        common.run("ls %s | plyflatten %f %s" % (files, resolution, out))
 
 
 def crop_corresponding_areas(out_dir, images, roi, zoom=1):
