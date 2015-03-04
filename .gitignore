@@ -11,6 +11,10 @@ experiments
 3rdparty/sgbm/sgbm
 3rdparty/tvl1flow_3/backflow
 3rdparty/tvl1flow_3/tvl1flow
+3rdparty/stereo_hirschmuller_2008/testdata
+3rdparty/tiff-4.0.4beta/include
+3rdparty/tiff-4.0.4beta/lib
+3rdparty/tiff-4.0.4beta/share
 
 .DS_Store
 ipynb
@@ -18,10 +22,7 @@ ipynb
 python/iterate.dat
 iterate.dat
 
-3rdparty/stereo_hirschmuller_2008/testdata/
 data/pleiades/*/*
-3rdparty/tvl1flow_3/backflow
-3rdparty/tvl1flow_3/tvl1flow
 snapshots
 to_debug
 licence_examples
