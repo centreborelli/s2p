@@ -635,12 +635,12 @@ def sift_keypoints_match(k1, k2, method='relative', thresh=0.6):
     matchfile = tmpfile('.txt')
     run("match_cli %s %s -%s %f > %s" % (k1, k2, method, thresh, matchfile))
     if os.stat(matchfile).st_size:  # test if file is empty
-        matches = np.loadtxt(matchfile)
+        matches = np.loadtxt(matchfile, usecols=[0, 1, 4, 5])
         if len(matches.shape) == 1:
             # only one match. Discard scale and orientation, then return
-            return matches[[0, 1, 4, 5]].reshape(1, 4)
+            return matches.reshape(1, 4)
         # last case, 'matches' is already a 2D array
-        return matches[:, [0, 1, 4, 5]]
+        return matches
     else:
         return np.array([[]])
 
