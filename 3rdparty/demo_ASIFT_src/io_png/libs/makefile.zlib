@@ -1,0 +1,41 @@
+# Copyright 2010 Nicolas Limare <nicolas.limare@cmla.ens-cachan.fr>
+#
+# Copying and distribution of this file, with or without
+# modification, are permitted in any medium without royalty provided
+# the copyright notice and this notice are preserved.  This file is
+# offered as-is, without any warranty.
+#
+# This makefile imports and compiles libraries libraries
+# for local use in static form
+
+ZLIB_LIB	= $(LIB_DIR)/libz.a
+ZLIB_INC	= $(addprefix $(INC_DIR)/, zlib.h zconf.h)
+ZLIB_FILES	= $(ZLIB_LIB) $(ZLIB_INC)
+ZLIB_DIR	= zlib-1.2.5
+ZLIB_ARC	= zlib-1.2.5.tar.gz
+ZLIB_URL	= http://sourceforge.net/projects/libpng/files/zlib/1.2.5/zlib-1.2.5.tar.gz/download
+
+#
+# ZLIB
+#
+
+.PHONY	: zlib
+zlib	: $(ZLIB_FILES)
+
+$(ZLIB_FILES)	: $(LIB_DIR) $(INC_DIR)
+$(LIB_DIR)/libz.a	: $(ZLIB_DIR)/libz.a
+$(INC_DIR)/zlib.h	: $(ZLIB_DIR)/zlib.h
+$(INC_DIR)/zconf.h	: $(ZLIB_DIR)/zconf.h
+
+$(ZLIB_DIR)/libz.a	: $(ZLIB_DIR)
+	cd ./$(ZLIB_DIR)/; ./configure --static
+	$(MAKE) -C $(ZLIB_DIR) libz.a
+$(ZLIB_DIR)/zlib.h	: $(ZLIB_DIR)
+$(ZLIB_DIR)/zconf.h	: $(ZLIB_DIR)
+
+$(ZLIB_DIR) : $(ZLIB_ARC)
+	tar xvzf $<
+	touch $@
+
+$(ZLIB_ARC) :
+	curl -L $(ZLIB_URL) > $@
