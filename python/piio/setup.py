@@ -101,15 +101,17 @@ class build_iio(distutils.cmd.Command):
             compiler.set_executable('linker_so', ['cc', '-dynamiclib', '-arch', 'i386', '-arch', 'x86_64'])
         else:
             libname = compiler.library_filename(libname, lib_type='shared')
-        linker_preargs = [ '-lpng', '-ljpeg', '-ltiff']
+        s2p_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        libtiff_static = '%s/3rdparty/tiff-4.0.4beta/lib/libtiff.a' % s2p_dir
+        linker_postargs = [libtiff_static, '-lpng', '-ljpeg']
         if platform.system() == 'Linux' and platform.machine() == 'x86_64':
-            linker_preargs += ['-fPIC']
+            linker_postargs += ['-fPIC']
         if platform.system() in ('Windows', 'Microsoft'):
             # link with stddecl instead of cdecl
-            linker_preargs += ['-mrtd']
+            linker_postargs += ['-mrtd']
             # remove link against msvcr*. this is a bit ugly maybe.. :)
             compiler.dll_libraries = [lib for lib in compiler.dll_libraries if not lib.startswith("msvcr")]
-        compiler.link(cc.CCompiler.SHARED_LIBRARY, objs, libname, output_dir = './', extra_preargs=linker_preargs)
+        compiler.link(cc.CCompiler.SHARED_LIBRARY, objs, libname, output_dir = './', extra_postargs=linker_postargs)
 
     def run(self):
         self.compile()
