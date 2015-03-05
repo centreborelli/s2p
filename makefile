@@ -174,6 +174,8 @@ $(SRCDIR)/UTMUPS.o: c/UTMUPS.cpp
 $(SRCDIR)/Geoid.o: c/Geoid.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
 
+test:
+	./s2p.py test_small.json
 
 clean:
 	rm c/*.o
