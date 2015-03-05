@@ -8,29 +8,16 @@ import common
 
 
 # define paths of various bm binaries
-hirschmuller02 = '%s/../bin/subpix.sh' % (
-    os.path.dirname(os.path.abspath(__file__)))
-
-hirschmuller08 = '%s/../bin/callSGBM.sh' % (
-    os.path.dirname(os.path.abspath(__file__)))
-
-hirschmuller08_laplacian = '%s/../bin/callSGBM_lap.sh' % (
-    os.path.dirname(os.path.abspath(__file__)))
-
-hirschmuller08_cauchy = '%s/../bin/callSGBM_cauchy.sh' % (
-    os.path.dirname(os.path.abspath(__file__)))
-
-sgbm = '%s/../bin/call_sgbm.sh' % (
-    os.path.dirname(os.path.abspath(__file__)))
-
-msmw = '%s/../bin/iip_stereo_correlation_multi_win2' % (
-    os.path.dirname(os.path.abspath(__file__)))
-
-msmw2 = '%s/../bin/iip_stereo_correlation_multi_win2_newversion' % (
-    os.path.dirname(os.path.abspath(__file__)))
-
-tvl1 = '%s/../bin/callTVL1.sh' % (
-    os.path.dirname(os.path.abspath(__file__)))
+b = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                 'bin')
+hirschmuller02 = os.path.join(b, 'subpix.sh')
+hirschmuller08 = os.path.join(b, 'callSGBM.sh')
+hirschmuller08_laplacian = os.path.join(b, 'callSGBM_lap.sh')
+hirschmuller08_cauchy = os.path.join(b, 'callSGBM_cauchy.sh')
+sgbm = os.path.join(b, 'call_sgbm.sh')
+msmw = os.path.join(b, 'iip_stereo_correlation_multi_win2')
+msmw2 = os.path.join(b, 'iip_stereo_correlation_multi_win2_newversion')
+tvl1 = os.path.join(b, 'callTVL1.sh')
 
 def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max, extra_params=''):
     """
@@ -93,12 +80,12 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         common.run("%s %s %s %s %s" %(bm_binary, im1, im2, out_disp,
             out_mask))
 
-    elif (algo == 'msmw'):
+    if (algo == 'msmw'):
         bm_binary = msmw
         common.run("%s -i 1 -n 4 -p 4 -W 5 -x 9 -y 9 -r 1 -d 1 -t -1 -s 0 -b 0 -o 0.25 -f 0 -P 32 -m %d -M %d %s %s %s %s" %(bm_binary,
             disp_min, disp_max, im1, im2, out_disp, out_mask))
 
-    elif (algo == 'msmw2'):
+    if (algo == 'msmw2'):
         bm_binary = msmw2
         common.run("%s -i 1 -n 4 -p 4 -W 5 -x 9 -y 9 -r 1 -d 1 -t -1 -s 0 -b 0 -o -0.25 -f 0 -P 32 -D 0 -O 25 -c 0 -m %d -M %d %s %s %s %s" % (bm_binary,
             disp_min, disp_max, im1, im2, out_disp, out_mask))
