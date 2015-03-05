@@ -66,8 +66,13 @@ def run(cmd):
     of the parent process.
     """
     print cmd
-    subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
-                          stderr=subprocess.STDOUT, env=os.environ)
+    try:
+        subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
+                              stderr=subprocess.STDOUT, env=os.environ)
+    except subprocess.CalledProcessError as e:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        raise e
 
 
 def shellquote(s):
