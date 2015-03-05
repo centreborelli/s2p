@@ -1,0 +1,42 @@
+{
+  "roi" : {
+      "x" : 19242,
+      "y" : 23057,
+      "w" : 500,
+      "h" : 500
+  },
+  "out_dir" : "test_1",
+  "images" : [
+    { "img" : "data/pleiades/islande/im02.tif",
+      "rpc" : "data/pleiades/islande/rpc02.xml",
+      "clr" : "data/pleiades/islande/im02_color.tif",
+      "roi" : "data/pleiades/islande/roi_msk02.gml",
+      "cld" : "data/pleiades/islande/cld_msk02.gml",
+      "prv" : "data/pleiades/islande/prev02.jpg" },
+    { "img" : "data/pleiades/islande/im01.tif",
+      "rpc" : "data/pleiades/islande/rpc01.xml" }
+    ],
+  "full_img" : false,
+  "matching_algorithm" : "sgbm",
+  "subsampling_factor" : 1,
+  "subsampling_factor_registration" : 1,
+  "sift_match_thresh" : 0.6,
+  "disp_range_extra_margin" : 0.2,
+  "n_gcp_per_axis" : 5,
+  "epipolar_thresh" : 0.5,
+  "use_pleiades_unsharpening" : false,
+  "debug" : false,
+  "temporary_dir" : "/tmp",
+  "tile_size" : 800,
+  "clean_tmp" : false,
+  "offset_ply" : false,
+  "color_ply" : true,
+  "fusion_thresh" : 3,
+  "disp_range_method" : "sift",
+  "disp_range_srtm_high_margin" : 50,
+  "disp_range_srtm_low_margin" : -20,
+  "skip_existing" : true,
+  "mosaic_method" : "piio",
+  "msk_erosion": 0,
+  "dsm_resolution": 0.5
+}

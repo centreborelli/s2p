@@ -175,7 +175,10 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
 
 test:
-	./s2p.py test_small.json
+	./s2p.py test_1.json
+
+test_large:
+	./s2p.py test_4.json
 
 clean:
 	rm c/*.o
