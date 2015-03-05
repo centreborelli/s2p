@@ -85,16 +85,16 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         sys.stdout = fout
         sys.stderr = fout
 
-    # debug print
-    print 'tile %d %d running on process %s' % (
-        x, y, multiprocessing.current_process())
-
     # select ROI
     try:
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
     except TypeError:
-        x, y, w, h = common.get_roi_coordinates(rpc1, prv1)
+        x, y, w, h = common.get_roi_coordinates(img1, prv1)
         print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+
+    # debug print
+    print 'tile %d %d running on process %s' % (
+        x, y, multiprocessing.current_process())
 
     # ensure that the coordinates of the ROI are multiples of the zoom factor
     z = cfg['subsampling_factor']
