@@ -66,9 +66,8 @@ def run(cmd):
     of the parent process.
     """
     print cmd
-    subprocess.call(cmd, shell=True, stdout=sys.stdout, stderr=subprocess.STDOUT,
-        env=os.environ)
-    return
+    subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
+                          stderr=subprocess.STDOUT, env=os.environ)
 
 
 def shellquote(s):
