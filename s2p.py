@@ -79,22 +79,25 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
+    # select ROI
+    try:
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+    except TypeError:
+        if prv1:
+            x, y, w, h = common.get_roi_coordinates(img1, prv1)
+        else:
+            print 'Neither a ROI nor a preview file are defined. Aborting.'
+            return
+
     # redirect stdout and stderr to log file
     if not cfg['debug']:
         fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
         sys.stdout = fout
         sys.stderr = fout
 
-    # select ROI
-    try:
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except TypeError:
-        x, y, w, h = common.get_roi_coordinates(img1, prv1)
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-
     # debug print
-    print 'tile %d %d running on process %s' % (
-        x, y, multiprocessing.current_process())
+    print 'tile %d %d running on process %s' % (x, y,
+                                                multiprocessing.current_process())
 
     # ensure that the coordinates of the ROI are multiples of the zoom factor
     z = cfg['subsampling_factor']
@@ -163,10 +166,7 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     # save json file with all the parameters needed to reproduce this tile
     tile_cfg = copy.deepcopy(cfg)
-    tile_cfg['roi']['x'] = x
-    tile_cfg['roi']['y'] = y
-    tile_cfg['roi']['w'] = w
-    tile_cfg['roi']['h'] = h
+    tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
     f = open(config, 'w')
     json.dump(tile_cfg, f, indent=2)
     f.close()
