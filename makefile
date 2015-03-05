@@ -86,14 +86,20 @@ SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten
+ifeq ($(OS),Darwin)
+	PROGRAMS += plambda_without_fopenmp
+endif
 
 imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
+	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
 
 $(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	    $(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
+	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
+
+plambda_without_fopenmp:
+	$(CC) -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN c/plambda.c c/iio.o -o bin/plambda $(IIOLIBS)
 
 $(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
 	$(CC) $(CFLAGS) -c -DIIO_ABORT_ON_ERROR -Wno-deprecated-declarations $< -o $@
