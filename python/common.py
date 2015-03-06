@@ -72,7 +72,10 @@ def run(cmd):
     except subprocess.CalledProcessError as e:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        raise e
+        print e
+        # raise a custom exception because the CalledProcessError causes the
+        # pool to crash
+        raise Exception("FAIL %s" % cmd)
 
 
 def shellquote(s):

@@ -182,30 +182,6 @@ def process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     return
 
 
-def safe_process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x=None,
-                                  y=None, w=None, h=None, prv1=None,
-                                  cld_msk=None, roi_msk=None):
-    """
-    Safe call to process_pair_single_tile (all exceptions will be
-    caught). Arguments are the same. This safe version is used when
-    processing with multiprocessing module, which will silent
-    exceptions and break downstream tasks.
-
-    Returns:
-    path to the height map, resampled on the grid of the reference image
-    """
-    try:
-        process_pair_single_tile(out_dir, img1, rpc1, img2, rpc2, x, y, w, h,
-                                 prv1, cld_msk, roi_msk)
-    # Catch all possible exceptions here
-    except:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stdout__
-        print sys.exc_info()
-        print "failed to generate tile %i %i %i %i\n" % (x, y, w, h)
-    return
-
-
 def show_progress(a):
     show_progress.counter += 1
     if show_progress.counter > 1:
@@ -279,7 +255,6 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # process the tiles
     # don't parallellize if in debug mode
     tiles = []
-    processes = []
     results = []
     show_progress.counter = 0
     print 'Computing disparity maps tile by tile...'
@@ -304,15 +279,15 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                                              col, row, tw, th, None, cld_msk,
                                              roi_msk)
                 else:
-                    p = pool.apply_async(safe_process_pair_single_tile,
+                    p = pool.apply_async(process_pair_single_tile,
                                          args=(tile_dir, img1, rpc1, img2, rpc2,
                                                col, row, tw, th, None, cld_msk,
                                                roi_msk), callback=show_progress)
-                    processes.append(p)
+                    results.append(p)
                 tiles.append(tile_dir)
 
-        for p in processes:
-            results.append(p.get(3600))  # wait at most one hour per tile
+        for r in results:
+            r.get(3600)  # wait at most one hour per tile
 
     except KeyboardInterrupt:
         pool.terminate()
