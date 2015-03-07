@@ -180,27 +180,47 @@ test:
 test_large:
 	./s2p.py test_4.json
 
-clean: clean_sift clean_sgbm clean_imscript clean_libtiff
-	rm c/*.o
-	rm -r bin
+clean: clean_libtiff clean_geographiclib clean_monasse clean_sift\
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm
+
+clean_libtiff:
+	-rm $(TIFDIR)/lib/libtiff.a
+	-rm $(BINDIR)/raw2tiff
+
+clean_geographiclib:
+	-rm $(BINDIR)/{Cart,Geo}Convert
+
+clean_monasse:
+	-rm -r $(BINDIR)/monasse_refactored_build
+	-rm $(BINDIR)/{homography,rectify_mindistortion}
 
 clean_sift:
 	cd 3rdparty/sift_anatomy_20140911; make clean
-	rm $(BINDIR)/{sift,match}_cli
+	-rm $(BINDIR)/{sift,match}_cli
+
+clean_imscript:
+	-rm $(PROGRAMS)
+	-rm $(SRCDIR)/iio.o
+	-rm $(SRCDIR)/rpc.o
+	#rm -r $(addsuffix .dSYM, $(PROGRAMS))
+
+clean_msmw:
+	-rm -r $(BINDIR)/msmw_build
+	-rm $(BINDIR)/iip_stereo_correlation_multi_win2
+
+clean_msmw2:
+	-rm -r $(BINDIR)/msmw2_build
+	-rm $(BINDIR)/iip_stereo_correlation_multi_win2_newversion
+
+clean_tvl1:
+	cd 3rdparty/tvl1flow_3; make clean
+	-rm $(BINDIR)/{tvl1flow,callTVL1.sh}
 
 clean_sgbm:
 	cd 3rdparty/sgbm; make clean
-	rm $(BINDIR)/sgbm
-
-clean_imscript:
-	rm $(PROGRAMS)
-	rm $(SRCDIR)/iio.o
-	rm $(SRCDIR)/rpc.o
-	#rm -r $(addsuffix .dSYM, $(PROGRAMS))
-
-clean_libtiff:
-	rm $(TIFDIR)/lib/libtiff.a
-	rm $(BINDIR)/raw2tiff
+	-rm $(BINDIR)/sgbm
+	-rm $(BINDIR)/call_sgbm.sh
 
 .PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
-	imscript clean clean_imscript libtiff
+	imscript clean clean_libtiff clean_geographiclib clean_monasse clean_sift\
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm
