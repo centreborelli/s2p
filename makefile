@@ -180,13 +180,17 @@ test:
 test_large:
 	./s2p.py test_4.json
 
-clean:
+clean: clean_sift clean_sgbm clean_imscript clean_libtiff
 	rm c/*.o
 	rm -r bin
 
 clean_sift:
 	cd 3rdparty/sift_anatomy_20140911; make clean
 	rm $(BINDIR)/{sift,match}_cli
+
+clean_sgbm:
+	cd 3rdparty/sgbm; make clean
+	rm $(BINDIR)/sgbm
 
 clean_imscript:
 	rm $(PROGRAMS)
