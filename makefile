@@ -17,15 +17,24 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) geographiclib monasse sift imscript msmw2 sgbm
+default: $(BINDIR) libtiff geographiclib monasse sift imscript msmw2 sgbm
 
-all: $(BINDIR) geographiclib monasse sift imscript msmw msmw2 tvl1 sgbm
+all: default msmw tvl1
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
+libtiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)/raw2tiff $(BINDIR)/tiffinfo
+
 $(TIFDIR)/lib/libtiff.a:
-	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma --with-pic; make install -j; cp bin/{raw2tiff,tiffinfo} $(BINDIR); make distclean
+	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma --with-pic; make install -j
+	cd $(TIFDIR); make distclean
+
+$(BINDIR)/raw2tiff: $(TIFDIR)/lib/libtiff.a
+	cp $(TIFDIR)/bin/raw2tiff $(BINDIR)
+
+$(BINDIR)/tiffinfo: $(TIFDIR)/lib/libtiff.a
+	cp $(TIFDIR)/bin/tiffinfo $(BINDIR)
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
@@ -185,7 +194,8 @@ clean: clean_libtiff clean_geographiclib clean_monasse clean_sift\
 
 clean_libtiff:
 	-rm $(TIFDIR)/lib/libtiff.a
-	-rm $(BINDIR)/raw2tiff
+	-rm $(TIFDIR)/bin/{raw2tiff,tiffinfo}
+	-rm $(BINDIR)/{raw2tiff,tiffinfo}
 
 clean_geographiclib:
 	-rm $(BINDIR)/{Cart,Geo}Convert
