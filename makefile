@@ -184,6 +184,10 @@ clean:
 	rm c/*.o
 	rm -r bin
 
+clean_sift:
+	cd 3rdparty/sift_anatomy_20140911; make clean
+	rm $(BINDIR)/{sift,match}_cli
+
 clean_imscript:
 	rm $(PROGRAMS)
 	rm $(SRCDIR)/iio.o
