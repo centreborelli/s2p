@@ -21,8 +21,10 @@ default: $(BINDIR) libtiff geographiclib monasse sift imscript msmw2 sgbm
 
 all: default msmw tvl1
 
+
 $(BINDIR):
 	mkdir -p $(BINDIR)
+
 
 libtiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)/raw2tiff $(BINDIR)/tiffinfo
 
@@ -30,11 +32,12 @@ $(TIFDIR)/lib/libtiff.a:
 	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma --with-pic; make install -j
 	cd $(TIFDIR); make distclean
 
-$(BINDIR)/raw2tiff: $(TIFDIR)/lib/libtiff.a
+$(BINDIR)/raw2tiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)
 	cp $(TIFDIR)/bin/raw2tiff $(BINDIR)
 
-$(BINDIR)/tiffinfo: $(TIFDIR)/lib/libtiff.a
+$(BINDIR)/tiffinfo: $(TIFDIR)/lib/libtiff.a $(BINDIR)
 	cp $(TIFDIR)/bin/tiffinfo $(BINDIR)
+
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
@@ -47,6 +50,7 @@ $(BINDIR)/GeoConvert: $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
 	$(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp\
 	$(GEODIR)/src/UTMUPS.cpp
 	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
+
 
 monasse:
 	mkdir -p $(BINDIR)/monasse_refactored_build
