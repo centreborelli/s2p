@@ -5,7 +5,6 @@
 #include "../libraryStable/libraryBasic.h"
 
 #include <iostream>
-#include <omp.h>
 #include <fstream>
 #include <sstream>
 #include <string>
