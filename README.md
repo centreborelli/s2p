@@ -71,8 +71,13 @@ directory containing all the needed binaries.
 
 ## Dependencies
 
-The only required dependency is `gdal`. Comments about dependencies that were
-required in previous versions of `s2p` are still here just in case...
+Required dependencies: `cmake, libtiff, libpng, libjpeg, libfftw3, libgeotiff,
+gdal`. These can be installed on Debian 7 (wheezy) with
+
+    apt-get install cmake libfftw3-dev libtiff5-dev libgeotiff-dev gdal-bin
+
+`gdal` version must be 1.10 or newer. Comments about dependencies that were
+required in previous versions of `s2p` are still here just in case.
 
 ### GDAL >= 1.10
 
