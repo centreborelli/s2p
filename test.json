@@ -1,20 +1,16 @@
 {
   "roi" : {
-      "x" : 19242,
-      "y" : 23057,
-      "w" : 1200,
-      "h" : 1200
+      "x" : 19,
+      "y" : 23,
+      "w" : 500,
+      "h" : 500
   },
-  "out_dir" : "test_4",
+  "out_dir" : "test",
   "images" : [
-    { "img" : "data/pleiades/islande/im02.tif",
-      "rpc" : "data/pleiades/islande/rpc02.xml",
-      "clr" : "data/pleiades/islande/im02_color.tif",
-      "roi" : "data/pleiades/islande/roi_msk02.gml",
-      "cld" : "data/pleiades/islande/cld_msk02.gml",
-      "prv" : "data/pleiades/islande/prev02.jpg" },
-    { "img" : "data/pleiades/islande/im01.tif",
-      "rpc" : "data/pleiades/islande/rpc01.xml" }
+    { "img" : "data/test_data_pleiades_iceland/img_01.tif",
+      "rpc" : "data/test_data_pleiades_iceland/rpc_01.xml" },
+    { "img" : "data/test_data_pleiades_iceland/img_02.tif",
+      "rpc" : "data/test_data_pleiades_iceland/rpc_02.xml" }
     ],
   "full_img" : false,
   "matching_algorithm" : "sgbm",
