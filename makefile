@@ -29,7 +29,7 @@ $(BINDIR):
 libtiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)/raw2tiff $(BINDIR)/tiffinfo
 
 $(TIFDIR)/lib/libtiff.a:
-	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma --with-pic; make install -j
+	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma --disable-jbig --with-pic; make install -j
 	cd $(TIFDIR); make distclean
 
 $(BINDIR)/raw2tiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)
