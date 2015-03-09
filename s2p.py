@@ -11,7 +11,6 @@ import json
 import numpy as np
 import os.path
 import copy
-import operator
 import glob
 import time
 
