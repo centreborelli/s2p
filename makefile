@@ -92,16 +92,13 @@ tvl1:
 	cp 3rdparty/tvl1flow_3/tvl1flow $(BINDIR)
 	cp 3rdparty/tvl1flow_3/callTVL1.sh $(BINDIR)
 
-PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
+PROGRAMS = $(addprefix $(BINDIR)/,$(SRC)) plambda_without_fopenmp
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
-SRCIIO = downsa backflow synflow imprintf iion plambda qauto qeasy crop morsi\
+SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective tiffu
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten
-ifeq ($(OS),Darwin)
-	PROGRAMS += plambda_without_fopenmp
-endif
 
 imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
 
