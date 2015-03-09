@@ -234,4 +234,4 @@ clean_sgbm:
 
 .PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
 	imscript clean clean_libtiff clean_geographiclib clean_monasse clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test
