@@ -7,6 +7,8 @@
  *
  */
 
+#include <unistd.h> 
+
 #include "libraryBasic.h"
 
 
