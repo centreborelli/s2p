@@ -17,7 +17,7 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse sift imscript msmw2 sgbm
+default: $(BINDIR) libtiff geographiclib monasse sift asift imscript msmw2 sgbm
 
 all: default msmw tvl1
 
@@ -51,6 +51,10 @@ $(BINDIR)/GeoConvert: $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
 	$(GEODIR)/src/UTMUPS.cpp
 	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
 
+asift:
+	mkdir -p $(BINDIR)/asift_build
+	cd $(BINDIR)/asift_build; cmake ../../3rdparty/demo_ASIFT_src; make
+	cp $(BINDIR)/asift_build/demo_ASIFT $(BINDIR)
 
 monasse:
 	mkdir -p $(BINDIR)/monasse_refactored_build
@@ -205,6 +209,10 @@ clean_monasse:
 clean_sift:
 	cd 3rdparty/sift_anatomy_20140911; make clean
 	-rm $(BINDIR)/{sift,match}_cli
+
+clean_asift:
+	-rm -r $(BINDIR)/asift_build
+	-rm $(BINDIR)/demo_ASIFT
 
 clean_imscript:
 	-rm $(PROGRAMS)
