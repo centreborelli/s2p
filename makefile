@@ -17,7 +17,7 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse sift asift imscript msmw2 sgbm
+default: $(BINDIR) libtiff geographiclib monasse sift asift imscript msmw2 sgbm piio
 
 all: default msmw tvl1
 
@@ -38,6 +38,9 @@ $(BINDIR)/raw2tiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)
 $(BINDIR)/tiffinfo: $(TIFDIR)/lib/libtiff.a $(BINDIR)
 	cp $(TIFDIR)/bin/tiffinfo $(BINDIR)
 
+piio: python/piio/libiio.so
+python/piio/libiio.so: python/piio/setup.py python/piio/freemem.c c/iio.c c/iio.h
+	cd python/piio; python setup.py build
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
 
