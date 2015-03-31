@@ -59,12 +59,12 @@ static void ConvBufferFast(flnum *buffer, flnum *kernel, int rsize, int ksize)
 */
 static void ConvHorizontal(LWImage<flnum>& image, flnum *kernel, int ksize)
 {
-    flnum buffer[8000];
+    flnum buffer[200000];
     
     const int rows = image.h;
     const int cols = image.w;
     const int halfsize = ksize / 2;
-    assert(cols + ksize < 8000); /*TANG: this will give a limit of image size*/
+    assert(cols + ksize < 200000); /*TANG: this will give a limit of image size*/
 
     for(int comp = 0; comp < image.comps; comp++) {
         const int deltaComp = comp*image.stepComp();
@@ -90,12 +90,12 @@ static void ConvHorizontal(LWImage<flnum>& image, flnum *kernel, int ksize)
 */
 static void ConvVertical(LWImage<flnum>& image, flnum *kernel, int ksize)
 {
-    flnum buffer[8000];
+    flnum buffer[200000];
 
     const int rows = image.h;
     const int cols = image.w;
     const int halfsize = ksize / 2;
-    assert(rows + ksize < 8000);  /*TANG: this will give a limit of image size*/
+    assert(rows + ksize < 200000);  /*TANG: this will give a limit of image size*/
 
     for(int comp = 0; comp < image.comps; comp++) {
         const int deltaComp = comp*image.stepComp();
@@ -121,7 +121,7 @@ static void ConvVertical(LWImage<flnum>& image, flnum *kernel, int ksize)
 void gauss_convol(LWImage<flnum>& image, flnum sigma)
 {
     /*float x, kernel[100], sum = 0.0;*/
-    flnum x, kernel[1000], sum = 0.0; /*TANG*/
+    flnum x, kernel[200000], sum = 0.0; /*TANG*/
     int ksize, i;
 
     /* The Gaussian kernel is truncated at GaussTruncate sigmas from
@@ -133,7 +133,7 @@ void gauss_convol(LWImage<flnum>& image, flnum sigma)
     if (ksize % 2 == 0)       /* Make kernel size odd. */
       ksize++;
     /*assert(ksize < 100);*/
-    assert(ksize < 1000); /*TANG*/
+    assert(ksize < 200000); /*TANG*/
     
     /* Fill in kernel values. */
     for (i = 0; i <= ksize; i++) {
