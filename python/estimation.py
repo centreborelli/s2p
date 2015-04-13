@@ -189,40 +189,46 @@ def fundamental_matrix(matches):
     return F
 
 
-def fundamental_matrix_ransac(matches, precision=1.0):
+def fundamental_matrix_ransac(matches, precision=1.0, return_inliers=False):
     """
     Estimates the fundamental matrix given a set of point correspondences
     between two images, using ransac.
 
     Arguments:
-        matches: 2D array of size Nx4 containing a list of pair of matching
-            points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
-            the point in the first view while (x2, y2) is the matching point in
-            the second view.
+        matches: numpy 2D array of size Nx4 containing a list of pair of
+            matching points. Each line is of the form x1, y1, x2, y2, where (x1,
+            y1) is the point in the first view while (x2, y2) is the matching
+            point in the second view.
+            It can be the path to a txt file containing such an array.
         precision: optional parameter indicating the maximum error
             allowed for counting the inliers
+        return_inliers: optional boolean flag to activate/deactivate inliers
+            output
 
     Returns:
-        the estimated fundamental matrix
+        the estimated fundamental matrix, and optionally the 2D array containing
+        the inliers
 
     The algorithm uses ransac as a search engine.
     """
-    # write a file containing the list of correspondences. The
-    # expected format is a raw text file with one match per line: x1 y1 x2 y2
-    matchfile = common.tmpfile('.txt')
-    np.savetxt(matchfile, matches)
+    if type(matches) is np.ndarray:
+        # write a file containing the list of correspondences. The
+        # expected format is a text file with one match per line: x1 y1 x2 y2
+        matchfile = common.tmpfile('.txt')
+        np.savetxt(matchfile, matches)
+    else:
+        # assume it is a path to a txt file containing the matches
+        matchfile = matches
 
     # call ransac binary, from Enric's imscript
     inliers = common.tmpfile('.txt')
     Ffile = common.tmpfile('.txt')
-    common.run("""
-        ransac fmn 1000 %f 7 %s < %s |
-        grep parameters |
-        awk \'{ print "[ " $3 " " $4 " " $5 " ; " $6 " " $7 " " $8 " ; " $9 " " $10 " " $11 " ] " }\' |
-        tail -1 > %s
-        """ % (precision, inliers, matchfile, Ffile))
-    common.matrix_write(Ffile, (common.matrix_read(Ffile, 3, 3)).transpose())
-    return common.matrix_read(Ffile, 3, 3)
+    awk_command = "awk {\'printf(\"%e %e %e\\n%e %e %e\\n%e %e %e\", $3, $4, $5, $6, $7, $8, $9, $10, $11)\'}"
+    common.run("ransac fmn 1000 %f 7 %s < %s | grep param | %s > %s" % (precision, inliers, matchfile, awk_command, Ffile))
+    if return_inliers:
+        return np.loadtxt(Ffile).transpose(), np.loadtxt(inliers)
+    else:
+        return np.loadtxt(Ffile).transpose()
 
 
 def fundamental_matrix_cameras(P1, P2):
@@ -285,7 +291,7 @@ def loop_zhang(F, w, h):
     a = does_this_homography_change_the_vertical_direction(Ha)
     b = does_this_homography_change_the_vertical_direction(Hb)
     if a and b:
-        R = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]) 
+        R = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])
         Ha = np.dot(R, Ha)
         Hb = np.dot(R, Hb)
     return Ha, Hb
