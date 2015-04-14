@@ -17,8 +17,8 @@
 #define SRTM4_TIF "%s/srtm_%02d_%02d.tif"
 //#define SRTM4_URL_TIF "http://138.231.80.250:443/srtm/tiff/srtm_%02d_%02d.zip"
 //#define SRTM4_URL_ASC "http://138.231.80.250:443/srtm/asc/srtm_%02d_%02d.zip"
- #define SRTM4_URL_ASC "ftp://xftp.jrc.it/pub/srtmV4/arcasci/srtm_%02d_%02d.zip"
- #define SRTM4_URL_TIF "ftp://xftp.jrc.it/pub/srtmV4/tiff/srtm_%02d_%02d.zip"
+#define SRTM4_URL_ASC "ftp://xftp.jrc.it/pub/srtmV4/arcasci/srtm_%02d_%02d.zip"
+#define SRTM4_URL_TIF "ftp://xftp.jrc.it/pub/srtmV4/tiff/srtm_%02d_%02d.zip"
 // #define SRTM4_URL_ASC "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/ASCII/srtm_%02d_%02d.zip"
 // #define SRTM4_URL_TIF "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/GeoTIFF/srtm_%02d_%02d.zip"
 
