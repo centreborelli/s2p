@@ -55,12 +55,17 @@ def tmpfile(ext=''):
     return out
 
 
-def run(cmd):
+class RunFailure(Exception):
+    pass
+
+def run(cmd, env=os.environ):
     """
     Runs a shell command, and print it before running.
 
     Arguments:
         cmd: string to be passed to a shell
+        env (optional, default value is os.environ): dictionary containing the
+            environment variables
 
     Both stdout and stderr of the shell in which the command is run are those
     of the parent process.
@@ -68,14 +73,12 @@ def run(cmd):
     print cmd
     try:
         subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
-                              stderr=subprocess.STDOUT, env=os.environ)
+                              stderr=subprocess.STDOUT, env=env)
     except subprocess.CalledProcessError as e:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        print e
         # raise a custom exception because the CalledProcessError causes the
         # pool to crash
-        raise Exception("FAIL %s" % cmd)
+        raise RunFailure({"command": e.cmd, "environment": env, "output":
+                          e.output})
 
 
 def shellquote(s):

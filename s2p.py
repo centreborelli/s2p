@@ -292,6 +292,11 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
         pool.terminate()
         sys.exit(1)
 
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "output: ", e.args[0]["output"]
+
+
     # compute global pointing correction
     print 'Computing global pointing correction...'
     A_global = pointing_accuracy.global_from_local(tiles)

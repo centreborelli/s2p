@@ -3,7 +3,9 @@
 # Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
+import os
 import common
+from config import cfg
 
 
 def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None):
@@ -50,7 +52,10 @@ def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None):
 
     # water mask
     water_msk = common.tmpfile('.png')
-    common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc, water_msk))
+    env = os.environ.copy()
+    env['SRTM4_CACHE'] = cfg['srtm_dir']
+    common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc, water_msk),
+               env)
     intersection(out, out, water_msk)
 
     return common.is_image_black(out)
