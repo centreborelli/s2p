@@ -306,6 +306,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
     # The only cause of a tile failure is a lack of sift matches, which breaks
     # the pointing correction step. Thus it is enough to check if the pointing
     # correction matrix was computed.
+    results = []
     for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
             tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
@@ -319,9 +320,30 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                     A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
                     if A is None:
                         A = A_global
-                    process_pair_single_tile(tile_dir, img1, rpc1, img2, rpc2,
-                                             col, row, tw, th, None, cld_msk,
-                                             roi_msk, A)
+                    if cfg['debug']:
+                        process_pair_single_tile(tile_dir, img1, rpc1, img2,
+                                                 rpc2, col, row, tw, th, None,
+                                                 cld_msk, roi_msk, A)
+                    else:
+                        p = pool.apply_async(process_pair_single_tile,
+                                             args=(tile_dir, img1, rpc1, img2,
+                                                   rpc2, col, row, tw, th, None,
+                                                   cld_msk, roi_msk, A),
+                                             callback=show_progress)
+                        results.append(p)
+
+    try:
+        for r in results:
+            r.get(3600)  # wait at most one hour per tile
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "output: ", e.args[0]["output"]
+
 
     # triangulation
     processes = []
