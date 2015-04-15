@@ -483,8 +483,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None,
     pts1 = common.points_apply_homography(H1, roi)
     x0, y0, w0, h0 = common.bounding_box2D(pts1)
     # check that the first homography maps the ROI in the positive quadrant
-    assert(round(x0) == 0)
-    assert(round(y0) == 0)
+    np.testing.assert_allclose(np.round([x0, y0]), 0, atol=.01)
 
     # apply homographies and do the crops
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0,
