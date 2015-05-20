@@ -529,8 +529,7 @@ def pansharpened_to_panchro(im, out=None, tilewise=False):
         path to the output image
     """
     if out is None:
-        extension = '.tif' if tilewise else '.png'
-        out = tmpfile(extension)
+        out = tmpfile('.tif')
     pcmd = "x[0] x[1] x[2] x[3] + + + 4 /"
 
     if tilewise:
