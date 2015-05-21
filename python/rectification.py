@@ -397,7 +397,6 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
     # the origin, if sift matches are available
     if m is not None:
         print "step 5: horizontal registration --------------------------------"
-
         # filter sift matches with the known fundamental matrix
         # but first convert F for big images coordinate frame
         F = np.dot(T2.T, np.dot(F, T1))
@@ -414,23 +413,27 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         else:
             H2 = register_horizontally(m, H1, H2)
             disp_m, disp_M = update_disp_range(m, H1, H2, w, h)
+            print "SIFT disparity range:  [%f,%f]"%(disp_m,disp_M)
 
     # expand disparity range with srtm according to cfg params
-    if (cfg['disp_range_method'] is "srtm") or (m is None) or (len(m) < 2):
+    print cfg['disp_range_method']
+    if (cfg['disp_range_method'] == "srtm") or (m is None) or (len(m) < 2):
         disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(
             rpc1, rpc2, x, y, w, h, H1, H2, A,
             cfg['disp_range_srtm_high_margin'],
             cfg['disp_range_srtm_low_margin'])
-    if ((cfg['disp_range_method'] is "wider_sift_srtm") and (m is not None) and
+        print "SRTM disparity range:  [%f,%f]"%(disp_m,disp_M)
+    if ((cfg['disp_range_method'] == "wider_sift_srtm") and (m is not None) and
             (len(m) >= 2)):
         d_m, d_M = rpc_utils.srtm_disp_range_estimation(
             rpc1, rpc2, x, y, w, h, H1, H2, A,
             cfg['disp_range_srtm_high_margin'],
             cfg['disp_range_srtm_low_margin'])
+        print "SRTM disparity range:  [%f,%f]"%(d_m,d_M)
         disp_m = min(disp_m, d_m)
         disp_M = max(disp_M, d_M)
 
-    print "disparity range:  [%s, %s]" % (disp_m, disp_M)
+    print "Final disparity range:  [%s, %s]" % (disp_m, disp_M)
     return H1, H2, disp_m, disp_M
 
 
