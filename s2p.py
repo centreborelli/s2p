@@ -267,9 +267,11 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                     if cfg['skip_existing']:
                         print "stereo on tile %d %d already done, skip" % (col,
                                                                            row)
+                        tiles.append(tile_dir)
                         continue
                 if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
                     print "tile %d %d already masked, skip" % (col, row)
+                    tiles.append(tile_dir)
                     continue
 
                 # process the tile
@@ -286,7 +288,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                 tiles.append(tile_dir)
 
         for r in results:
-            r.get(3600)  # wait at most one hour per tile
+            try:
+                r.get(3600)  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)
 
     except KeyboardInterrupt:
         pool.terminate()
@@ -334,7 +339,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
 
     try:
         for r in results:
-            r.get(3600)  # wait at most one hour per tile
+            try:
+                r.get(3600)  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)  
 
     except KeyboardInterrupt:
         pool.terminate()
@@ -384,7 +392,10 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
                                          callback=show_progress)
                     processes.append(p)
         for p in processes:
-            results.append(p.get(3600))  # wait at most one hour per tile
+            try:
+                results.append(p.get(3600))  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)
 
     except KeyboardInterrupt:
         pool.terminate()
