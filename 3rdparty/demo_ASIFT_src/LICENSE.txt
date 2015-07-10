@@ -1,0 +1,72 @@
+Copyright (c) 2011, Guoshen Yu and Jean-Michel Morel
+All rights reserved.
+
+The source code files in this directory implement as tightly as 
+possible algorithms described in this IPOL article. They are made 
+available to the exclusive aim of serving as scientific tools enabling 
+the verification of the soundness and completeness of the algorithmic 
+descriptions.
+
+These source codes implement an algorithm possibly linked to the patent 
+[1][2]. Compiling or running this code may violate patents in certain 
+countries. For this reason, the use of the source files 
+- demo_ASIFT.cpp
+- compute_asift_keypoints.cpp
+- compute_asift_matches.cpp
+- demo_lib_sift.cpp
+may be restricted in certain countries to non profit research and non profit 
+educational purposes. In certain countries, redistribution or commercial 
+use of these source files may require the  consent of the patent owner. 
+
+[1] Jean-Michel Morel and Guoshen Yu,  Method and device for the invariant 
+affine recognition recognition of shapes (WO/2009/150361), patent pending.
+
+[2] David Lowe  "Method and apparatus for identifying scale invariant 
+features in an image and use of same for locating an object in an 
+image",  U.S. Patent 6,711,293.
+
+In short, be careful before you download, compile, use, modify, or 
+redistribute these source codes. The situation being different for every 
+country and changing over time, it is your responsibility to check that 
+you are not infringing a patent by using this source code. IPOL therefore 
+invites potential users to consult a patent lawyer. If and only if you are
+free from any patent restriction, then you can enjoy the BSD license terms.
+
+The source code in the subdirectory third_party comes from the Eigen 
+library, which is LGPL-licensed.
+(see http://www.gnu.org/copyleft/lesser.html)
+
+fproj.cpp, frot.cpp, orsa.cpp, libMatch, libNumerics
+copyright (C) 2007-2010, Lionel Moisan <Lionel.Moisan@parisdescartes.fr>,
+Universite Paris Descartes, distributed under the BSD license.
+
+With the exception of the files mentioned above, redistribution and use 
+in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met: the rest of usual BSD 
+license follows.
+
+BSD LICENSE
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above
+    copyright notice, this list of conditions and the following
+    disclaimer in the documentation and/or other materials provided
+    with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+This license file must be retained with all copies of the software,
+including any modified or derivative versions.

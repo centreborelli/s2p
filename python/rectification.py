@@ -46,7 +46,7 @@ def center_2d_points(pts):
     return np.vstack([new_x, new_y]).T, T
 
 
-def matches_from_sift(im1, im2):
+def matches_from_sift(im1, im2, asift_only=False):
     """
     Computes a list of sift matches between two images.
 
@@ -61,6 +61,9 @@ def matches_from_sift(im1, im2):
 
     Args:
         im1, im2: paths to the two images
+        asift_only: set to true to use ASIFT on the first try. If False, SIFT
+            will be used first, and ASIFT will be used only if not enough
+            matches are found
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -82,38 +85,42 @@ def matches_from_sift(im1, im2):
     im1_8b = common.image_qauto(im1)
     im2_8b = common.image_qauto(im2)
 
-    # apply sift (monasse implementation first, because faster)
-    p1 = common.image_sift_keypoints(im1_8b, None, None, 'monasse')
-    p2 = common.image_sift_keypoints(im2_8b, None, None, 'monasse')
-    matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                          cfg['sift_match_thresh'])
-
-    # if less than 10 matches, use ipol implementation
-    if matches.shape[0] < 10:
-        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol')
-        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol')
+    if not asift_only:
+        p1 = common.image_sift_keypoints(im1_8b, max_nb=2000)
+        p2 = common.image_sift_keypoints(im2_8b, max_nb=2000)
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
-    # if still less than 10 matches, lower the thresh_dog for the sift calls.
+    if asift_only or matches.shape[0] < 10:
+        ver = common.tmpfile('.png')
+        hor = common.tmpfile('.png')
+        match_f = common.tmpfile('.txt')
+        common.run('demo_ASIFT %s %s %s %s %s /dev/null /dev/null' % (im1_8b,
+                                                                      im2_8b,
+                                                                      ver, hor,
+                                                                      match_f))
+        matches = np.loadtxt(match_f, skiprows=1)
+
+    # Below is an alternative to ASIFT: lower the thresh_dog for the sift calls.
     # Default value for thresh_dog is 0.0133
-    thresh_dog = 0.0133
-    nb_sift_tries = 2
-    while (matches.shape[0] < 10 and nb_sift_tries < 6):
-        nb_sift_tries += 1
-        thresh_dog /= 2.0
-        p1 = common.image_sift_keypoints(im1_8b, None, None, 'ipol',
-                                         '-thresh_dog %f' % thresh_dog)
-        p2 = common.image_sift_keypoints(im2_8b, None, None, 'ipol',
-                                         '-thresh_dog %f' % thresh_dog)
-        matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                              cfg['sift_match_thresh'])
+    if False:
+        thresh_dog = 0.0133
+        nb_sift_tries = 1
+        while (matches.shape[0] < 10 and nb_sift_tries < 6):
+            nb_sift_tries += 1
+            thresh_dog /= 2.0
+            p1 = common.image_sift_keypoints(im1_8b, None, None,
+                                             '-thresh_dog %f' % thresh_dog)
+            p2 = common.image_sift_keypoints(im2_8b, None, None,
+                                             '-thresh_dog %f' % thresh_dog)
+            matches = common.sift_keypoints_match(p1, p2, 'relative',
+                                                  cfg['sift_match_thresh'])
 
     # compensate coordinates for the zoom
     return matches * zoom
 
 
-def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
+def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h, asift_only=False):
     """
     Computes a list of sift matches between two Pleiades images.
 
@@ -144,7 +151,7 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     T2 = common.matrix_translation(x2, y2)
 
     # compute sift matches for the images
-    matches = matches_from_sift(crop1, crop2)
+    matches = matches_from_sift(crop1, crop2, asift_only)
 
     if matches.size:
         # compensate coordinates for the crop and the zoom
@@ -358,6 +365,13 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
 
     print "step 3: compute rectifying homographies (loop-zhang algorithm) -----"
     H1, H2 = estimation.loop_zhang(F, w, h)
+    S1, S2 = estimation.rectifying_similarities_from_affine_fundamental_matrix(
+        F, True)
+    print "F\n", F, "\n"
+    print "H1\n", H1, "\n"
+    print "S1\n", S1, "\n"
+    print "H2\n", H2, "\n"
+    print "S2\n", S2, "\n"
     # compose with previous translations to get H1, H2 in the big images frame
     H1 = np.dot(H1, T1)
     H2 = np.dot(H2, T2)
@@ -383,13 +397,12 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
     # the origin, if sift matches are available
     if m is not None:
         print "step 5: horizontal registration --------------------------------"
-
         # filter sift matches with the known fundamental matrix
         # but first convert F for big images coordinate frame
         F = np.dot(T2.T, np.dot(F, T1))
-        print '%d sift matches before epipolar constraint filering', len(m)
+        print '%d sift matches before epipolar constraint filering' % len(m)
         m = filter_matches_epipolar_constraint(F, m, cfg['epipolar_thresh'])
-        print 'd sift matches after epipolar constraint filering', len(m)
+        print '%d sift matches after epipolar constraint filering' % len(m)
         if len(m) < 2:
             # 0 or 1 sift match
             print 'rectification.compute_rectification_homographies: less than'
@@ -400,23 +413,27 @@ def compute_rectification_homographies(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         else:
             H2 = register_horizontally(m, H1, H2)
             disp_m, disp_M = update_disp_range(m, H1, H2, w, h)
+            print "SIFT disparity range:  [%f,%f]"%(disp_m,disp_M)
 
     # expand disparity range with srtm according to cfg params
-    if (cfg['disp_range_method'] is "srtm") or (m is None) or (len(m) < 2):
+    print cfg['disp_range_method']
+    if (cfg['disp_range_method'] == "srtm") or (m is None) or (len(m) < 2):
         disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(
             rpc1, rpc2, x, y, w, h, H1, H2, A,
             cfg['disp_range_srtm_high_margin'],
             cfg['disp_range_srtm_low_margin'])
-    if ((cfg['disp_range_method'] is "wider_sift_srtm") and (m is not None) and
+        print "SRTM disparity range:  [%f,%f]"%(disp_m,disp_M)
+    if ((cfg['disp_range_method'] == "wider_sift_srtm") and (m is not None) and
             (len(m) >= 2)):
         d_m, d_M = rpc_utils.srtm_disp_range_estimation(
             rpc1, rpc2, x, y, w, h, H1, H2, A,
             cfg['disp_range_srtm_high_margin'],
             cfg['disp_range_srtm_low_margin'])
+        print "SRTM disparity range:  [%f,%f]"%(d_m,d_M)
         disp_m = min(disp_m, d_m)
         disp_M = max(disp_M, d_M)
 
-    print "disparity range:  [%s, %s]" % (disp_m, disp_M)
+    print "Final disparity range:  [%s, %s]" % (disp_m, disp_M)
     return H1, H2, disp_m, disp_M
 
 
@@ -469,8 +486,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None,
     pts1 = common.points_apply_homography(H1, roi)
     x0, y0, w0, h0 = common.bounding_box2D(pts1)
     # check that the first homography maps the ROI in the positive quadrant
-    assert(round(x0) == 0)
-    assert(round(y0) == 0)
+    np.testing.assert_allclose(np.round([x0, y0]), 0, atol=.01)
 
     # apply homographies and do the crops
     homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0,

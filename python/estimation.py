@@ -189,40 +189,46 @@ def fundamental_matrix(matches):
     return F
 
 
-def fundamental_matrix_ransac(matches, precision=1.0):
+def fundamental_matrix_ransac(matches, precision=1.0, return_inliers=False):
     """
     Estimates the fundamental matrix given a set of point correspondences
     between two images, using ransac.
 
     Arguments:
-        matches: 2D array of size Nx4 containing a list of pair of matching
-            points. Each line is of the form x1, y1, x2, y2, where (x1, y1) is
-            the point in the first view while (x2, y2) is the matching point in
-            the second view.
+        matches: numpy 2D array of size Nx4 containing a list of pair of
+            matching points. Each line is of the form x1, y1, x2, y2, where (x1,
+            y1) is the point in the first view while (x2, y2) is the matching
+            point in the second view.
+            It can be the path to a txt file containing such an array.
         precision: optional parameter indicating the maximum error
             allowed for counting the inliers
+        return_inliers: optional boolean flag to activate/deactivate inliers
+            output
 
     Returns:
-        the estimated fundamental matrix
+        the estimated fundamental matrix, and optionally the 2D array containing
+        the inliers
 
     The algorithm uses ransac as a search engine.
     """
-    # write a file containing the list of correspondences. The
-    # expected format is a raw text file with one match per line: x1 y1 x2 y2
-    matchfile = common.tmpfile('.txt')
-    np.savetxt(matchfile, matches)
+    if type(matches) is np.ndarray:
+        # write a file containing the list of correspondences. The
+        # expected format is a text file with one match per line: x1 y1 x2 y2
+        matchfile = common.tmpfile('.txt')
+        np.savetxt(matchfile, matches)
+    else:
+        # assume it is a path to a txt file containing the matches
+        matchfile = matches
 
     # call ransac binary, from Enric's imscript
     inliers = common.tmpfile('.txt')
     Ffile = common.tmpfile('.txt')
-    common.run("""
-        ransac fmn 1000 %f 7 %s < %s |
-        grep parameters |
-        awk \'{ print "[ " $3 " " $4 " " $5 " ; " $6 " " $7 " " $8 " ; " $9 " " $10 " " $11 " ] " }\' |
-        tail -1 > %s
-        """ % (precision, inliers, matchfile, Ffile))
-    common.matrix_write(Ffile, (common.matrix_read(Ffile, 3, 3)).transpose())
-    return common.matrix_read(Ffile, 3, 3)
+    awk_command = "awk {\'printf(\"%e %e %e\\n%e %e %e\\n%e %e %e\", $3, $4, $5, $6, $7, $8, $9, $10, $11)\'}"
+    common.run("ransac fmn 1000 %f 7 %s < %s | grep param | %s > %s" % (precision, inliers, matchfile, awk_command, Ffile))
+    if return_inliers:
+        return np.loadtxt(Ffile).transpose(), np.loadtxt(inliers)
+    else:
+        return np.loadtxt(Ffile).transpose()
 
 
 def fundamental_matrix_cameras(P1, P2):
@@ -280,7 +286,99 @@ def loop_zhang(F, w, h):
                                                                      Hbf))
     Ha = common.matrix_read(Haf, 3, 3)
     Hb = common.matrix_read(Hbf, 3, 3)
+
+    # check if both the images are rotated
+    a = does_this_homography_change_the_vertical_direction(Ha)
+    b = does_this_homography_change_the_vertical_direction(Hb)
+    if a and b:
+        R = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])
+        Ha = np.dot(R, Ha)
+        Hb = np.dot(R, Hb)
     return Ha, Hb
+
+
+def does_this_homography_change_the_vertical_direction(H):
+    d = H[1,1]
+    q = H[1,2]
+    s = H[2,1]
+    t = H[2,2]
+    return ((d+q) / (s+t)) < (q/t)
+
+
+def get_angle_from_cos_and_sin(c, s):
+    """
+    Computes x in ]-pi, pi] such that cos(x) = c and sin(x) = s.
+    """
+    if s >= 0:
+        return np.arccos(c)
+    else:
+        return -np.arccos(c)
+
+
+def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
+    """
+    Computes two similarities from an affine fundamental matrix.
+
+    Args:
+        F: 3x3 numpy array representing the input fundamental matrix
+        debug (optional, default is False): boolean flag to activate verbose
+            mode
+
+    Returns:
+        S, S': two similarities such that, when used to resample the two images
+            related by the fundamental matrix, the resampled images are
+            stereo-rectified.
+    """
+    # check that the input matrix is an affine fundamental matrix
+    assert(np.shape(F) == (3, 3))
+    assert(np.linalg.matrix_rank(F) == 2)
+    assert(F[0, 0] == 0)
+    assert(F[0, 1] == 0)
+    assert(F[1, 0] == 0)
+    assert(F[1, 1] == 0)
+
+    # notations
+    a = F[2, 0]
+    b = F[2, 1]
+    c = F[0, 2]
+    d = F[1, 2]
+    e = F[2, 2]
+
+    # rotations
+    r = np.sqrt(a*a + b*b)
+    s = np.sqrt(c*c + d*d)
+    R1 = (1.0 / r) * np.array([[b, -a], [a, b]])
+    R2 = (1.0 / s) * np.array([[-d, c], [-c, -d]])
+
+    # zoom and translation
+    z = np.sqrt(r / s)
+    t = 0.5 * e / np.sqrt(r * s)
+
+    if debug:
+        theta_1 = get_angle_from_cos_and_sin(b, a)
+        print "reference image:"
+        print "\trotation: %f deg " % np.rad2deg(theta_1)
+        print "\tzoom: %f " % z
+        print "\tvertical translation: %f" % t
+        print
+        theta_2 = get_angle_from_cos_and_sin(-d, -c)
+        print "secondary image:"
+        print "\trotation: %f deg " % np.rad2deg(theta_2)
+        print "\tzoom: %f " % (1.0 / z)
+        print "\tvertical translation: %f" % -t
+
+    # output similarities
+    S1 = np.zeros((3, 3))
+    S1[0:2, 0:2] = z * R1
+    S1[1, 2] = t
+    S1[2, 2] = 1
+
+    S2 = np.zeros((3, 3))
+    S2[0:2, 0:2] = (1.0 / z) * R2
+    S2[1, 2] = -t
+    S2[2, 2] = 1
+
+    return S1, S2
 
 
 def affine_fundamental_matrix(matches):

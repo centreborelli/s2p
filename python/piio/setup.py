@@ -39,7 +39,7 @@ class build_iio(distutils.cmd.Command):
         compiler = cc.new_compiler(compiler=self.compiler)
 
          # sources for IIO
-        source_folders = ['./']
+        source_folders = ['.']
         sources = ['iio.c','freemem.c']
 
        ### removed the sources are just a couple of files
@@ -54,7 +54,7 @@ class build_iio(distutils.cmd.Command):
 
         include_folders = source_folders
 
-        compiler_preargs = ['-std=gnu99']
+        compiler_preargs = ['-std=gnu99', '-Wno-deprecated-declarations']
 
         if self.release:
             compiler_preargs.append('-DNDEBUG')
@@ -62,26 +62,27 @@ class build_iio(distutils.cmd.Command):
         # check if we are on a 64bit python
         arch = ctypes.sizeof(ctypes.c_voidp) * 8
 
-        if arch == 64 and platform.system() == 'Linux':
-            compiler_preargs += ['-m64', '-O3', '-fPIC']
-        elif arch == 32 and platform.system() == 'Linux':
-            compiler_preargs += ['-m32', '-O3']
+        if platform.system() == 'Linux':
+            compiler_preargs += ['-O3']
+            if arch == 64:
+                compiler_preargs += ['-m64', '-fPIC']
+            elif arch == 32:
+                compiler_preargs += ['-m32']
         elif platform.system() == 'Darwin':
             #No -O3 on OSX. There's a bug in the clang compiler when using O3.
             compiler_preargs += ['-O3', '-arch', 'x86_64']
 
-        if platform.system() in ('Windows', 'Microsoft'):
+        elif platform.system() in ('Windows', 'Microsoft'):
             # Compile with stddecl instead of cdecl (-mrtd).
             # Using cdecl cause a missing bytes issue in some cases
             # Because -mrtd and -fomit-frame-pointer (which is included in -O)
             # gives problem with function pointer to the sdtlib free function
             # we also have to use -fno-omit-frame-pointer
             compiler_preargs += ['-mrtd', '-O3', '-shared', '-fno-omit-frame-pointer']
-
-        if arch == 64 and platform.system() in ('Windows', 'Microsoft'):
-            compiler_preargs += ['-m64']
-        if arch == 32 and platform.system() in ('Windows', 'Microsoft'):
-            compiler_preargs += ['-m32']
+            if arch == 64:
+                compiler_preargs += ['-m64']
+            elif arch == 32:
+                compiler_preargs += ['-m32']
 
         for x in compiler.executables:
             args = getattr(compiler, x)
@@ -98,18 +99,20 @@ class build_iio(distutils.cmd.Command):
             libname += ''
         if platform.system() == 'Darwin':
             libname = compiler.library_filename(libname, lib_type='shared')
-            compiler.set_executable('linker_so', ['cc', '-dynamiclib', '-arch', 'i386', '-arch', 'x86_64'])
+            compiler.set_executable('linker_so', ['cc', '-dynamiclib', '-arch', 'x86_64'])
         else:
             libname = compiler.library_filename(libname, lib_type='shared')
-        linker_preargs = [ '-lpng', '-ljpeg', '-ltiff']
+        s2p_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        libtiff_static = '%s/3rdparty/tiff-4.0.4beta/lib/libtiff.a' % s2p_dir
+        linker_postargs = [libtiff_static, '-lpng', '-ljpeg', '-lz']
         if platform.system() == 'Linux' and platform.machine() == 'x86_64':
-            linker_preargs += ['-fPIC']
+            linker_postargs += ['-fPIC']
         if platform.system() in ('Windows', 'Microsoft'):
             # link with stddecl instead of cdecl
-            linker_preargs += ['-mrtd']
+            linker_postargs += ['-mrtd']
             # remove link against msvcr*. this is a bit ugly maybe.. :)
             compiler.dll_libraries = [lib for lib in compiler.dll_libraries if not lib.startswith("msvcr")]
-        compiler.link(cc.CCompiler.SHARED_LIBRARY, objs, libname, output_dir = './', extra_preargs=linker_preargs)
+        compiler.link(cc.CCompiler.SHARED_LIBRARY, objs, libname, output_dir = './', extra_postargs=linker_postargs)
 
     def run(self):
         self.compile()

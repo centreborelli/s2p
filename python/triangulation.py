@@ -6,6 +6,7 @@
 import os
 import sys
 import numpy as np
+import multiprocessing
 
 import common
 from config import cfg
@@ -194,21 +195,23 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     x0 = x - 4*xx
     y0 = y - 4*yy
     crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
-    assert(common.image_size_gdal(crop_panchro) ==
-           common.image_size_gdal(crop_ms))
+    assert(common.image_size_tiffinfo(crop_panchro) ==
+           common.image_size_tiffinfo(crop_ms))
 
-    # convert rgbi to rgb and requantify between 0 and 255
-    crop_rgb = common.rgbi_to_rgb(crop_ms)
-    # rgb      = common.image_qeasy(crop_rgb, 300, 3000)
-    # panchro  = common.image_qeasy(crop_panchro, 300, 3000)
-    rgb = common.image_qauto_gdal(crop_rgb)
-    panchro = common.image_qauto_gdal(crop_panchro)
+    # convert rgbi to rgb
+    rgb = common.rgbi_to_rgb(crop_ms, out=None, tilewise=True)
 
     # blend intensity and color to obtain the result
     # each channel value r, g or b is multiplied by 3*y / (r+g+b), where y
     # denotes the panchro intensity
-    common.run('plambda %s %s "dup split + + / * 3 *" | qauto - %s' % (panchro,
-    rgb, out_colorized))
+    tmp = common.tmpfile('.tif')
+    pcmd = "dup split + + / * 3 *"
+    os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
+    cmd = 'tiffu meta \"plambda ^ ^1 \\\"%s\\\" -o @\" %s %s -- %s' % (pcmd,
+                                                                      crop_panchro,
+                                                                      rgb, tmp)
+    common.run(cmd)
+    common.image_qauto(tmp, out_colorized, tilewise=False)
     return
 
 
@@ -250,7 +253,8 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     # this is useful for huge point clouds
     if crop_colorized and common.which('LidarPreprocessor'):
         tmp = cfg['temporary_dir']
+        nthreads = multiprocessing.cpu_count()
         cloud_lidar_viewer = "%s.lidar_viewer" % os.path.splitext(cloud)[0]
-        common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP %s -o %s" % (
-            tmp, tmp, cloud, cloud_lidar_viewer))
+        common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (
+            tmp, tmp, nthreads, cloud, cloud_lidar_viewer))
     return

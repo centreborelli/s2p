@@ -20,24 +20,24 @@ in several small tiles and process them in parallel.
 The easiest way to use `s2p` is to run the binary `s2p.py` from a shell, with a
 json configuration file as unique argument:
 
-    $ ./s2p.py config.json
+    $ ./s2p.py test.json
 
 All the parameters of the algorithm, paths to input and output data are stored
-in the json file. See the provided `config.json.example` file for an example,
-and the comments in the file `python/config.py` for some explanations about
-the roles of these parameters.
+in the json file. See the provided `test.json` file for an example, and the
+comments in the file `python/config.py` for some explanations about the roles
+of these parameters.
 
 #### ROI definition
 
 The processed Region of interest (ROI) is defined by the image coordinates (x,
 y) of its top-left corner, and its dimensions (w, h) in pixels. These four
-numbers must be given in the config.json file (as in the example). They are
-ignored if the parameter `'full_img'` is set to `true`. In that case the full
-image will be processed. If neither the ROI definition or the `'full_img'` flag
-are present in the config file, then a preview of the reference image must be
-provided. The ROI will be selected interactively on that preview. The path of
-the preview file must be given by the key `'prv'` of the `'images'[0]`
-dictionary (as in the example).
+numbers must be given in the `json` configuration file (as in the example).
+They are ignored if the parameter `'full_img'` is set to `true`. In that case
+the full image will be processed. If neither the ROI definition or the
+`'full_img'` flag are present in the configuration file, then a preview of the
+reference image must be provided. The ROI will be selected interactively on
+that preview. The path of the preview file must be given by the key `'prv'` of
+the `'images'[0]` dictionary (as in the example).
 
 ### From a python interpreter
 Another way is to import the `s2p` module in a python session, and run the
@@ -71,8 +71,13 @@ directory containing all the needed binaries.
 
 ## Dependencies
 
-The only required dependency is `gdal`. Comments about dependencies that were
-required in previous versions of `s2p` are still here just in case...
+Required dependencies: `cmake, libtiff, libpng, libjpeg, libfftw3, libgeotiff,
+gdal`. These can be installed on Debian 7 (wheezy) with
+
+    apt-get install cmake libfftw3-dev libtiff5-dev libgeotiff-dev gdal-bin
+
+`gdal` version must be 1.10 or newer. Comments about dependencies that were
+required in previous versions of `s2p` are still here just in case.
 
 ### GDAL >= 1.10
 

@@ -11,7 +11,7 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 #
 #
 set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES 
-   "iioConfig.cmake;CMakeCache.txt;CMakeFiles;Makefile;cmake_install.cmake;iio;iion;iio.o")
+   "iioConfig.cmake;CMakeCache.txt;CMakeFiles;Makefile;cmake_install.cmake;iio.o")
 
 
 # LIBRARIES
@@ -66,21 +66,11 @@ ENDIF()
 # IIO
 #
 #
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -std=c99 -funroll-loops -Wno-unused -DNDEBUG")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -std=c99 -funroll-loops -Wno-unused -Wdeprecated-declarations -DNDEBUG")
 message( "FLAGS: ${CMAKE_C_FLAGS}")
 set(IIO_LIB_SRCS iio.h iio.c)       #Define a variable that contains files of the lib
 add_library(IIOLIB ${IIO_LIB_SRCS}) #Define that those files create the lib FooLib
 target_link_libraries(IIOLIB ${LIBS})
-
-
-# EXAMPLE PROGRAMS
-#
-#
-add_executable (iio iio_test.c)
-target_link_libraries(iio IIOLIB)
-
-add_executable (iion iio_test_named.c)
-target_link_libraries(iion IIOLIB)
 
 
 

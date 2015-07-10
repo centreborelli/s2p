@@ -1,4 +1,4 @@
-# Primitie python wrapper for iio
+# Primitive python wrapper for iio
 # Copyright 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 
 

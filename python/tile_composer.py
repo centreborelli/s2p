@@ -165,8 +165,9 @@ def mosaic(fout, w, h, list_tiles, tw, th, ov):
 
 # How prepare the list of tiles to launch this function from ipython:
 # import glob
-# tiles = glob.glob('tile_*').sort()
+# tiles = glob.glob('tile_*')
+# tiles.sort()
 # ind = []
 # line = range(0, (nx-1)*ny+1, ny)
 # for y in range(ny): ind = ind + [y+x for x in line]
-# tiles_sorted = [tiles[i] for i in ind]
+# tiles_sorted = [os.path.join(tiles[i], 'height_map.tif') for i in ind]

@@ -129,7 +129,7 @@ struct images {
 // update the output images with a new height
 static void add_height_to_images(struct images *x, int i, int j, float v)
 {
-	int k = x->w * j + i;
+	uint64_t k = (uint64_t) x->w * j + i;
 	x->min[k] = fmin(x->min[k], v);
 	x->max[k] = fmax(x->max[k], v);
 	x->avg[k] = (v + x->cnt[k] * x->avg[k]) / (1 + x->cnt[k]);
@@ -242,7 +242,7 @@ int main(int c, char *v[])
 	x.max = xmalloc(w*h*sizeof(float));
 	x.cnt = xmalloc(w*h*sizeof(float));
 	x.avg = xmalloc(w*h*sizeof(float));
-	for (int i = 0; i < w*h; i++)
+	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
 	{
 		x.min[i] = INFINITY;
 		x.max[i] = -INFINITY;
@@ -259,7 +259,7 @@ int main(int c, char *v[])
 	}
 
 	// set unknown values to NAN
-	for (int i = 0; i < w*h; i++)
+	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
 		if (!x.cnt[i])
 			x.avg[i] = NAN;
 

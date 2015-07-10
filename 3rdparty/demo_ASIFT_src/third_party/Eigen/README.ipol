@@ -1,0 +1,10 @@
+Project: EIGEN
+URL: http://eigen.tuxfamily.org/
+License: GPL/LGPL
+Upstream version: Eigen 3.0 released on March 19, 2011.
+
+Local modifications: 
+
+* Use only the Eigen directory
+* Copy *.GPL and *.LGPL licence file
+* Add this readme file

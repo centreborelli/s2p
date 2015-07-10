@@ -1,5 +1,5 @@
 CC = gcc
-CXX = g++
+CXX = c++
 CFLAGS = -std=c99 -O3
 CPPFLAGS = -O3
 CV_CORE_OBJS = alloc.o arithm.o array.o convert.o copy.o datastructs.o gpumat.o lapack.o mathfuncs.o matmul.o matop.o matrix.o opengl_interop.o opengl_interop_deprecated.o parallel.o persistence.o stat.o system.o tables_core.o
@@ -20,6 +20,6 @@ libcv_imgproc.a: $(CV_IMGPROC_OBJS)
 iio.o:
 		$(CC) $(CFLAGS) -c iio.c -o iio.o -Wno-deprecated-declarations
 clean:
-		rm *.o
-		rm *.a
-		rm sgbm
+		-rm *.o
+		-rm *.a
+		-rm sgbm

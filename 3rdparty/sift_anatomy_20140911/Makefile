@@ -113,7 +113,7 @@ $(BINDEMO) : $(BINDIR)/% :	 $(SRCDIR)/demo_extract_patch.c  $(OBJDIR)/lib_discre
 #  clean
 #
 cleanobj:
-	-rm -f $(OBJ)
+	-rm -f $(OBJ) $(OBJDIR)/io_png.o
 
 clean: cleanobj
-	-rm -f $(BIN)
+	-rm -f $(BIN) $(BINMATCH) $(BINDEMO)
