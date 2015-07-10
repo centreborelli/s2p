@@ -1,9 +1,23 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
+# s2p - Satellite Stereo Pipeline
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@polytechnique.org>
+# Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import multiprocessing
 import sys
