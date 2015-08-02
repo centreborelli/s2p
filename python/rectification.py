@@ -193,7 +193,7 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     return np.array(out)
 
 
-def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
+def register_horizontally(matches, H1, H2, do_shear=False, flag='center'):
     """
     Adjust rectifying homographies to modify the disparity range.
 
