@@ -4,7 +4,7 @@ CXX = g++
 CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
 IIOLIBS = $(TIFDIR)/lib/libtiff.a -lz -lpng -ljpeg -lm
-GEOLIBS = -lgeotiff
+GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
 OS := $(shell uname -s)
