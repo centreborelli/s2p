@@ -313,7 +313,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
 
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
-        print "output: ", e.args[0]["output"]
+        print "\toutput: ", e.args[0]["output"]
 
 
     # compute global pointing correction
@@ -364,7 +364,7 @@ def process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=None,
 
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
-        print "output: ", e.args[0]["output"]
+        print "\toutput: ", e.args[0]["output"]
 
 
     # triangulation
