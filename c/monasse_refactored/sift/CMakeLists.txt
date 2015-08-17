@@ -27,8 +27,8 @@ IF(UNIX)
                           COMPILE_FLAGS "-Wall -Wextra -Werror")
 ENDIF(UNIX)
 
-TARGET_LINK_LIBRARIES(sift Numerics Match IO)
-TARGET_LINK_LIBRARIES(sift_keypoints Numerics IO)
+TARGET_LINK_LIBRARIES(sift Numerics Match IO IIOLIB)
+TARGET_LINK_LIBRARIES(sift_keypoints Numerics IO IIOLIB)
 
 INSTALL(FILES CMakeLists.txt ${SRC} DESTINATION src/sift)
 INSTALL(FILES CMakeLists.txt ${SRC} DESTINATION src/sift_keypoints)
