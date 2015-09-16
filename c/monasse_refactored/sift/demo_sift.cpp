@@ -28,7 +28,7 @@
 #include "demo_lib_sift.h"
 #include "library.h"
 
-#include "libIO/io_png.h"
+#include "libIO/iio_wrap.h"
 
 #include <iostream>
 #include <fstream>

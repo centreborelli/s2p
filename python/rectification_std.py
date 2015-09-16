@@ -44,7 +44,6 @@ def center_2d_points(pts):
     return np.vstack([new_x, new_y]).T, T
 
 
-
 def matches_from_sift(im1, im2):
     """
     Computes a list of sift matches between two images.
@@ -63,18 +62,24 @@ def matches_from_sift(im1, im2):
             The coordinate system is that of the big images.
             If no sift matches are found, then an exception is raised.
     """
-    if cfg['subsampling_factor_registration'] != 1:
-        im1 = common.image_safe_zoom_fft(im1, subsampling_factor_registration)
-        im2 = common.image_safe_zoom_fft(im2, subsampling_factor_registration)
+    # zoom out
+    zoom = cfg['subsampling_factor_registration']
+    if zoom != 1:
+        im1 = common.image_safe_zoom_fft(im1, zoom)
+        im2 = common.image_safe_zoom_fft(im2, zoom)
+
+    # rescale on 8 bits
+    im1_8b = common.image_qauto(im1)
+    im2_8b = common.image_qauto(im2)
 
     # apply sift, then transport keypoints coordinates in the big images frame
-    p1 = common.image_sift_keypoints(im1)
-    p2 = common.image_sift_keypoints(im2)
+    p1 = common.image_sift_keypoints(im1_8b)
+    p2 = common.image_sift_keypoints(im2_8b)
     matches = common.sift_keypoints_match(p1, p2, 'relative',
             cfg['sift_match_thresh'])
 
     # compensate coordinates for the crop and the zoom
-    return matches * subsampling_factor_registration
+    return matches * zoom 
 
 
 def matches_from_projection_matrices_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -528,8 +533,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None):
         H2 = np.dot(Z, H2)
         disp_min = floor(disp_min / z)
         disp_max = ceil(disp_max / z)
-        w0 = w0 / subsampling_factor
-        h0 = h0 / subsampling_factor
+        w0 = w0 / z
+        h0 = h0 / z
 
     return H1, H2, disp_min, disp_max
 
