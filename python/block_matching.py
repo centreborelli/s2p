@@ -93,6 +93,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
 
     if (algo == 'mgm'):
         env = os.environ.copy()
+        env['OMP_NUM_THREADS'] = '4'
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = '5'
         env['TSGM'] = '3'
