@@ -15,6 +15,7 @@ hirschmuller08 = os.path.join(b, 'callSGBM.sh')
 hirschmuller08_laplacian = os.path.join(b, 'callSGBM_lap.sh')
 hirschmuller08_cauchy = os.path.join(b, 'callSGBM_cauchy.sh')
 sgbm = os.path.join(b, 'call_sgbm.sh')
+mgm = os.path.join(b, 'mgm')
 msmw = os.path.join(b, 'iip_stereo_correlation_multi_win2')
 msmw2 = os.path.join(b, 'iip_stereo_correlation_multi_win2_newversion')
 tvl1 = os.path.join(b, 'callTVL1.sh')
@@ -89,3 +90,19 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         bm_binary = msmw2
         common.run("%s -i 1 -n 4 -p 4 -W 5 -x 9 -y 9 -r 1 -d 1 -t -1 -s 0 -b 0 -o -0.25 -f 0 -P 32 -D 0 -O 25 -c 0 -m %d -M %d %s %s %s %s" % (bm_binary,
             disp_min, disp_max, im1, im2, out_disp, out_mask))
+
+    if (algo == 'mgm'):
+        env = os.environ.copy()
+        env['MEDIAN'] = '1'
+        env['CENSUS_NCC_WIN'] = '5'
+        env['TSGM'] = '3'
+        common.run("%s -r %d -R %d -s vfit -t census -O 8 %s %s %s" % (mgm,
+                                                                       disp_min,
+                                                                       disp_max,
+                                                                       im1, im2,
+                                                                       out_disp),
+                  env)
+
+        # produce the mask: rejected pixels are marked with nan of inf in disp
+        # map
+        common.run('plambda %s "isfinite" -o %s' % (out_disp, out_mask))
