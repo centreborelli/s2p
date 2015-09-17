@@ -110,7 +110,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
 
     if (algo == 'micmac'):
         # add micmac binaries to the PATH environment variable
-        s2p_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        s2p_dir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
         micmac_bin = os.path.join(s2p_dir, '3rdparty', 'micmac', 'bin')
         os.environ['PATH'] = os.environ['PATH'] + os.pathsep + micmac_bin
 
