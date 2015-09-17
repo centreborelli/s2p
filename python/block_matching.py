@@ -107,3 +107,30 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         # produce the mask: rejected pixels are marked with nan of inf in disp
         # map
         common.run('plambda %s "isfinite" -o %s' % (out_disp, out_mask))
+
+    if (algo == 'micmac'):
+        # add micmac binaries to the PATH environment variable
+        s2p_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        micmac_bin = os.path.join(s2p_dir, '3rdparty', 'micmac', 'bin')
+        os.environ['PATH'] = os.environ['PATH'] + os.pathsep + micmac_bin
+
+        # prepare micmac xml params file
+        micmac_params = os.path.join(s2p_dir, 'micmac_params.xml')
+        work_dir = os.path.dirname(os.path.abspath(im1))
+        common.run('cp %s %s' % (micmac_params, work_dir))
+
+        # run MICMAC
+        common.run("MICMAC %s" % os.path.join(work_dir, 'micmac_params.xml'))
+
+        # copy output disp map
+        micmac_disp = os.path.join(work_dir, 'MEC-EPI',
+                                 'Px1_Num6_DeZoom1_LeChantier.tif')
+        out_disp = os.path.join(work_dir, 'rectified_disp.tif')
+        common.run('cp %s %s' % (micmac_disp, out_disp))
+
+        # compute mask by rejecting the 10% of pixels with lowest correlation score
+        micmac_cost = os.path.join(work_dir, 'MEC-EPI',
+                                 'Correl_LeChantier_Num_5.tif')
+        out_mask = os.path.join(work_dir, 'rectified_mask.png')
+        common.run('plambda %s "x x%%q10 < 0 255 if" -o %s' % (micmac_cost,
+                                                               out_mask))

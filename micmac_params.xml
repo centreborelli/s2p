@@ -1,0 +1,78 @@
+<ParamMICMAC>
+
+    <Section_Terrain>
+        <IntervParalaxe>
+            <Px1IncCalc>   50.0  </Px1IncCalc>
+        </IntervParalaxe>
+    </Section_Terrain>
+
+    <Section_PriseDeVue >
+        <GeomImages> eGeomImage_EpipolairePure </GeomImages>
+        <Images >
+            <Im1> rectified_ref.tif </Im1>
+            <Im2> rectified_sec.tif </Im2>
+        </Images>
+    </Section_PriseDeVue>
+
+    <Section_MEC >
+        <EtapeMEC>
+            <DeZoom >  -1                      </DeZoom>
+            <SzW >      1             </SzW>
+
+            <Px1Pas>        0.5  </Px1Pas>
+
+            <Px1DilatAlti>  3    </Px1DilatAlti>
+            <Px1DilatPlani> 4    </Px1DilatPlani>
+
+            <AlgoRegul>    eAlgoCoxRoy    </AlgoRegul>
+            <Px1Regul>  0.05    </Px1Regul>
+            <ModeInterpolation> eInterpolMPD </ModeInterpolation>
+
+            <GenImagesCorrel> true </GenImagesCorrel>
+        </EtapeMEC>
+
+
+        <EtapeMEC>
+            <DeZoom >        8        </DeZoom>
+        </EtapeMEC>
+        <EtapeMEC>
+            <DeZoom >        4        </DeZoom>
+        </EtapeMEC>
+        <EtapeMEC>
+            <DeZoom >        2        </DeZoom>
+        </EtapeMEC>
+        <EtapeMEC>
+            <DeZoom >        1        </DeZoom>
+        </EtapeMEC>
+        <EtapeMEC>
+            <DeZoom >        1        </DeZoom>
+            <Px1Pas>        0.25  </Px1Pas>
+            <Px1DilatAlti>  1    </Px1DilatAlti>
+            <Px1DilatPlani> 2    </Px1DilatPlani>
+        </EtapeMEC>
+
+        <EtapeMEC>
+            <AlgoRegul>    eAlgoDequant    </AlgoRegul>
+            <DeZoom >        1        </DeZoom>
+            <Px1Pas>         1  </Px1Pas>
+        </EtapeMEC>
+
+    </Section_MEC>
+
+    <Section_Results >
+        <GeomMNT> eGeomPxBiDim  </GeomMNT>
+    </Section_Results>
+
+    <Section_WorkSpace >
+        <WorkDir >  ThisDir </WorkDir>
+        <TmpMEC>  MEC-EPI/  </TmpMEC>
+        <TmpResult>  MEC-EPI/  </TmpResult>
+        <TmpPyr>    Pyram-Epi/  </TmpPyr>
+        <ByProcess> 2 </ByProcess>
+    </Section_WorkSpace>
+
+
+    <Section_Vrac> </Section_Vrac>
+
+
+</ParamMICMAC>
