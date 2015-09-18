@@ -166,11 +166,11 @@ class RPCModel:
                 elif a[1] == "DEN": self.inverseColDen[a[3]] = float(val)
 
     def read_rpc_xml(self, tree):
-        # determine wether it's a pleiades or worldview image
+        # determine wether it's a pleiades, spot-6 or worldview image
         a = tree.find('Metadata_Identification/METADATA_PROFILE') # PHR_SENSOR
         b = tree.find('IMD/IMAGE/SATID') # WorldView
         if a is not None:
-            if a.text == 'PHR_SENSOR':
+            if a.text in ['PHR_SENSOR', 'S6_SENSOR']:
                 self.read_rpc_pleiades(tree)
             else:
                 print 'unknown sensor type'
