@@ -211,7 +211,10 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
                                                                       crop_panchro,
                                                                       rgb, tmp)
     common.run(cmd)
-    common.image_qauto(tmp, out_colorized, tilewise=False)
+    if w * h > 25e6:  # image larger than 5000 x 5000 pixels
+        common.image_qauto_otb(out_colorized, tmp)
+    else:
+        common.image_qauto(tmp, out_colorized)
     return
 
 
