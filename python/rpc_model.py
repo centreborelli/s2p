@@ -1,7 +1,7 @@
-# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import copy
 import numpy as np
@@ -166,11 +166,11 @@ class RPCModel:
                 elif a[1] == "DEN": self.inverseColDen[a[3]] = float(val)
 
     def read_rpc_xml(self, tree):
-        # determine wether it's a pleiades or worldview image
+        # determine wether it's a pleiades, spot-6 or worldview image
         a = tree.find('Metadata_Identification/METADATA_PROFILE') # PHR_SENSOR
         b = tree.find('IMD/IMAGE/SATID') # WorldView
         if a is not None:
-            if a.text == 'PHR_SENSOR':
+            if a.text in ['PHR_SENSOR', 'S6_SENSOR']:
                 self.read_rpc_pleiades(tree)
             else:
                 print 'unknown sensor type'

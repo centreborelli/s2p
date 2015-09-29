@@ -1,7 +1,7 @@
-# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import sys
 import numpy as np
@@ -193,7 +193,7 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     return np.array(out)
 
 
-def register_horizontally(matches, H1, H2, do_shear=True, flag='center'):
+def register_horizontally(matches, H1, H2, do_shear=False, flag='center'):
     """
     Adjust rectifying homographies to modify the disparity range.
 

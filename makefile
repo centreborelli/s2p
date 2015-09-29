@@ -4,7 +4,7 @@ CXX = g++
 CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
 IIOLIBS = $(TIFDIR)/lib/libtiff.a -lz -lpng -ljpeg -lm
-GEOLIBS = -lgeotiff
+GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
 OS := $(shell uname -s)
@@ -17,7 +17,7 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse sift asift imscript msmw2 sgbm piio
+default: $(BINDIR) libtiff geographiclib monasse sift asift imscript mgm msmw2 sgbm piio
 
 all: default msmw tvl1
 
@@ -69,6 +69,10 @@ sift: $(BINDIR)
 	cd 3rdparty/sift_anatomy_20140911; make
 	cp 3rdparty/sift_anatomy_20140911/bin/sift_cli $(BINDIR)
 	cp 3rdparty/sift_anatomy_20140911/bin/match_cli $(BINDIR)
+
+mgm:
+	cd 3rdparty/mgm; make
+	cp 3rdparty/mgm/mgm $(BINDIR)
 
 sgbm:
 	cd 3rdparty/sgbm; make
@@ -195,7 +199,7 @@ test:
 	./s2p.py test.json
 
 clean: clean_libtiff clean_geographiclib clean_monasse clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_mgm
 
 clean_libtiff:
 	-rm $(TIFDIR)/lib/libtiff.a
@@ -239,6 +243,10 @@ clean_sgbm:
 	cd 3rdparty/sgbm; make clean
 	-rm $(BINDIR)/sgbm
 	-rm $(BINDIR)/call_sgbm.sh
+
+clean_mgm:
+	cd 3rdparty/mgm; make clean
+	-rm $(BINDIR)/mgm
 
 .PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
 	imscript clean clean_libtiff clean_geographiclib clean_monasse clean_sift\

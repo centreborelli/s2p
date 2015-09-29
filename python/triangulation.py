@@ -1,7 +1,7 @@
-# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import os
 import sys
@@ -211,7 +211,10 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
                                                                       crop_panchro,
                                                                       rgb, tmp)
     common.run(cmd)
-    common.image_qauto(tmp, out_colorized, tilewise=False)
+    if w * h > 25e6:  # image larger than 5000 x 5000 pixels
+        common.image_qauto_otb(out_colorized, tmp)
+    else:
+        common.image_qauto(tmp, out_colorized)
     return
 
 

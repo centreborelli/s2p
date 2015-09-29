@@ -66,8 +66,8 @@ cfg['n_gcp_per_axis'] = 5
 cfg['epipolar_thresh'] = 0.5
 
 # stereo matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
-# hirschmuller08_laplacian', 'sgbm'
-cfg['matching_algorithm'] = 'sgbm'
+# hirschmuller08_laplacian', 'sgbm', 'mgm'
+cfg['matching_algorithm'] = 'mgm'
 
 # blur pleiades images before stereo matching
 cfg['use_pleiades_unsharpening'] = True

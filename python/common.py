@@ -1,7 +1,7 @@
-# Copyright (C) 2013, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 
 import os
@@ -486,6 +486,34 @@ def image_qauto_gdal(im):
     out = tmpfile('.png')
     run('gdal_translate -of png -ot Byte -scale %s %s' % (im, out))
     return out
+
+
+def image_qauto_otb(img_out, img_in, ram=128, gamma=1.5, intensity_cut_high=.1,
+                    intensity_cut_low=.1):
+    """
+    Gamma correction and simplest color balance to 8 bits with otbcli_Convert.
+
+    Args:
+        img_out, img_in: paths to output and input images
+        ram: allowed memory amount, in MB
+        gamma: exponent for the gamma correction applied to the input image
+        intensity_cut_high/low: percentage of pixels whose intensity is clipped
+            to 255/0.
+    """
+    gdaltags = ('gdal:co:TILED=YES&'
+                'gdal:co:BIGTIFF=IF_SAFER&'
+                'gdal:co:PROFILE=BASELINE')
+    cmd = ('otbcli_Convert -progress 1 -ram %d'
+           ' -type linear'
+           ' -type.linear.gamma %f'
+           ' -hcp.high %f'
+           ' -hcp.low %f'
+           ' -in %s'
+           ' -out "%s?writegeom=false&%s" uint8') % (ram, gamma,
+                                                     intensity_cut_high,
+                                                     intensity_cut_low, img_in,
+                                                     img_out, gdaltags)
+    run(cmd)
 
 
 def image_qeasy(im, black, white, out=None, tilewise=False):

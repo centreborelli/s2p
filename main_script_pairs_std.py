@@ -10,20 +10,22 @@ from python import triangulation
 # import the global parameters module
 # it permits to pass values between different modules
 try:
-    from python import global_params
+    from python import config
+    global_params = config.cfg
 
     # zoom factor (determines outputs' resolution)
-    global_params.subsampling_factor=1
+    global_params['subsampling_factor']=7
 
     # zoom factor used when searching for sift matches
-    global_params.subsampling_factor_registration=1
+    global_params['subsampling_factor_registration']=7
 
     # matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
     # hirschmuller08_laplacian'
-    global_params.matching_algorithm='hirschmuller08'
+    global_params['matching_algorithm']='hirschmuller08'
+    global_params['matching_algorithm']='sgbm'
 
     # don't use pleiades unsharpening filter
-    global_params.use_pleiades_unsharpening = False
+    global_params['use_pleiades_unsharpening'] = False
 
 except ImportError:
     pass
@@ -75,7 +77,7 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
 
 
     # read the zoom value
-    zoom = global_params.subsampling_factor
+    zoom = global_params['subsampling_factor']
 
     # colorize, then generate point cloud
     tmp_crop = common.image_crop_TIFF(im, x, y, w, h)
@@ -94,9 +96,9 @@ def generate_cloud(img_name, exp_name, x, y, w, h, height_map,
     compute_point_cloud(common.image_qauto(crop),
           common.image_crop(height_map,0,0,sz[0],sz[1]) , rpc, trans, cloud)
 
-    # cleanup
-    while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+#    # cleanup
+#    while common.garbage:
+#        common.run('rm ' + common.garbage.pop())
 
     print "v %s %s %s" % (crop, crop_color, height_map)
     print "meshlab %s" % (cloud)
@@ -152,7 +154,7 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
     from shutil import copyfile
     copyfile(rpc1, outrpc1)
     copyfile(rpc2, outrpc2)
-    np.savetxt(subsampling_file, np.array([global_params.subsampling_factor]))
+    np.savetxt(subsampling_file, np.array([global_params['subsampling_factor']]))
 
     # ATTENTION if subsampling_factor is set the rectified images will be
     # smaller, and the homography matrices and disparity range will reflect
@@ -174,7 +176,7 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
 #    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
 #        'hirschmuller08', disp_min, disp_max, extra_params='3')
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
-        global_params.matching_algorithm, disp_min, disp_max)
+        global_params['matching_algorithm'], disp_min, disp_max)
 
 
     ## 3. triangulation FOR PROJECTIVE MATRICES DLT algorithm Hartley chapter 12.2 or 12.5
@@ -184,12 +186,12 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
         disp, mask, height, rpc_err))
 
     try:
-        zoom = global_params.subsampling_factor
+        zoom = global_params['subsampling_factor']
     except NameError:
         zoom = 1
     ref_crop = common.image_crop_TIFF(im1, x, y, w, h)
-    triangulation.transfer_map(height, ref_crop, H1, x, y, zoom, height_unrect)
-    triangulation.transfer_map(mask, ref_crop, H1, x, y, zoom, mask_unrect)
+    triangulation.transfer_map(height, hom1, x, y, w, h, zoom, height_unrect)
+    triangulation.transfer_map(mask, hom1, x, y, w, h, zoom, mask_unrect)
 
 
     ## 4. colorize and generate point cloud
@@ -200,7 +202,10 @@ def main(img_name=None, exp_name=None, x=None, y=None, w=None, h=None,
 
     ### cleanup
     while common.garbage:
-        common.run('rm ' + common.garbage.pop())
+       try:
+          common.run('rm ' + common.garbage.pop())
+       except BaseException:
+          pass
 
 
 #    # display results

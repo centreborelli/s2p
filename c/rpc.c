@@ -262,6 +262,11 @@ void read_rpc_file_xml(struct rpc *p, char *filename)
 			found = 1;
 			read_rpc_file_xml_pleiades(p, filename);
 		}
+		if (0 == strhas(line, "<METADATA_PROFILE>") && 0 == strhas(line,
+					"S6_SENSOR")) {
+			found = 1;
+			read_rpc_file_xml_pleiades(p, filename);
+		}
 	}
 	xfclose(f);
 }

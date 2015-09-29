@@ -13,7 +13,7 @@
       "h" : 500
   },
   "full_img" : false,
-  "matching_algorithm" : "sgbm",
+  "matching_algorithm" : "mgm",
   "subsampling_factor" : 1,
   "subsampling_factor_registration" : 1,
   "sift_match_thresh" : 0.6,
