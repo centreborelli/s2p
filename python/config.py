@@ -78,7 +78,7 @@ cfg['pointing_correction_rois_mode'] = 'automatic'
 
 # method used to compute the disparity range: "sift", "srtm" or
 # "wider_sift_srtm"
-cfg['disp_range_method'] = "sift"
+cfg['disp_range_method'] = "wider_sift_srtm"
 cfg['disp_range_srtm_low_margin'] = -10
 cfg['disp_range_srtm_high_margin'] = +100
 
