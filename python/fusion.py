@@ -57,32 +57,50 @@ def register_heights(im1, im2):
     return out
 
 
-def merge(im1, im2, thresh, out):
+def merge(im1, im2, thresh, out, conservative=False):
     """
     Args:
         im1, im2: paths to the two input images
         thresh: distance threshold on the intensity values
         out: path to the output image
+        conservative (optional, default is False): if True, keep only the
+            pixels where the two height map agree
 
     This function merges two images. They are supposed to be two height maps,
     sampled on the same grid. If a pixel has a valid height (ie not inf) in
-    only one of the two maps, then we keep this height. When two heights are
-    available, if they differ less than the threshold we take the mean, if not
-    we discard the pixel (ie assign NAN to the output pixel).
+    only one of the two maps, then we keep this height (if the 'conservative'
+    option is set to False). When two heights are available, if they differ
+    less than the threshold we take the mean, if not we discard the pixel (ie
+    assign NAN to the output pixel).
     """
     # first register the second image on the first
     im2 = register_heights(im1, im2)
 
-    # then merge
-    # the following plambda expression implements:
-    # if isfinite x
-    #   if isfinite y
-    #     if fabs(x - y) < t
-    #       return (x+y)/2
-    #     return nan
-    #   return x
-    # return y
-    common.run("""
-        plambda %s %s "x isfinite y isfinite x y - fabs %f < x y + 2 / nan if x
-        if y if" -o %s
-        """ % ( im1, im2, thresh, out))
+    if conservative:
+        # then merge
+        # the following plambda expression implements:
+        # if isfinite x
+        #   if isfinite y
+        #     if fabs(x - y) < t
+        #       return (x+y)/2
+        #     return nan
+        #   return nan
+        # return nan
+        common.run("""
+            plambda %s %s "x isfinite y isfinite x y - fabs %f < x y + 2 / nan if nan
+            if nan if" -o %s
+            """ % ( im1, im2, thresh, out))
+    else:
+        # then merge
+        # the following plambda expression implements:
+        # if isfinite x
+        #   if isfinite y
+        #     if fabs(x - y) < t
+        #       return (x+y)/2
+        #     return nan
+        #   return x
+        # return y
+        common.run("""
+            plambda %s %s "x isfinite y isfinite x y - fabs %f < x y + 2 / nan if x
+            if y if" -o %s
+            """ % ( im1, im2, thresh, out))

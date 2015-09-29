@@ -488,7 +488,8 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # merge the two height maps
     height_map = '%s/height_map.tif' % out_dir
-    fusion.merge(height_map_left, height_map_right, thresh, height_map)
+    fusion.merge(height_map_left, height_map_right, thresh, height_map,
+                 conservative=cfg['fusion_conservative'])
 
     common.garbage_cleanup()
     return height_map

@@ -93,6 +93,11 @@ cfg['msk_erosion'] = 2
 # It should be adapted to the zoom factor
 cfg['fusion_thresh'] = 3
 
+# set to True to keep only the pixels were the two height maps have a valid
+# height. If False, pixels with a valid height in only one of the two maps will
+# be kept.
+cfg['fusion_conservative'] = False
+
 # binary used to paste together the altitude maps of each tile
 cfg['mosaic_method'] = 'piio'
 
