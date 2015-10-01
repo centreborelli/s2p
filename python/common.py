@@ -32,7 +32,7 @@ def garbage_cleanup():
     """
     if cfg['clean_tmp']:
         while garbage:
-            run('rm %s' % garbage.pop())
+            run('rm -f %s' % garbage.pop())
 
 
 def tmpfile(ext=''):
@@ -754,8 +754,8 @@ def image_crop_TIFF(im, x, y, w, h, out=None):
                      h, shellquote(im), shellquote(out)))
 
     except IOError:
-        print """image_crop_TIFF: input image not found! Verify your paths to
-                 Pleiades full images"""
+        print """image_crop_TIFF: input image %s not found! Verify your paths to
+                 Pleiades full images"""%shellquote(im)
         sys.exit()
 
     return out
