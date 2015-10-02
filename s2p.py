@@ -766,6 +766,11 @@ def main(config_file):
                               cfg['fusion_thresh'], None, None, None, None,
                               cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
+    # also copy the RPC's
+    for i in range(len(cfg['images'])):
+        from shutil import copy2
+        copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
+
     # point cloud
     generate_cloud(cfg['out_dir'], height_map, cfg['images'][0]['rpc'],
                    cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
