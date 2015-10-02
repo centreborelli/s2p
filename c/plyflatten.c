@@ -80,20 +80,37 @@ void set_geotif_header(char *tiff_fname, char *utm_zone, float xoff,
 // fast forward "f" until "last_line" is found
 // returns the sum of 'properties' byte length
 // ie the numer of bytes used to store one 3D point in the ply file
+// OR the number of properties if the ply is ascii encoded
 // and reads the utm zone
-static size_t header_get_record_length_and_utm_zone(FILE *f, char *utm,
+static size_t header_get_record_length_and_utm_zone(FILE *f, char *utm, int *isbin,
         char *last_line)
 {
 	char buf[FILENAME_MAX] = {0};
     size_t n = 0;
+	int nproperties = 0;
+	*isbin = 1;
 	while (fgets(buf, FILENAME_MAX, f)) {
-		if (0 == strcmp(buf, last_line))
-			return n;
+//        		fprintf(stderr, "%s\n", buf);
+		if (0 == strcmp(buf, last_line)) {
+			return *isbin ? n : nproperties;
+		}
+		if (0 == strncmp(buf, "format ascii", 12)) {
+        		fprintf(stderr, "debug: ascii format\n");
+			*isbin=0;
+		}
+		if (0 == strncmp(buf, "format binary_little_endian", 27)) {
+        		fprintf(stderr, "debug: binary format\n");
+			*isbin=1;
+		}
         if (0 == strncmp(buf, "property ", 9)) {
-            if (0 == strncmp(buf+9, "float", 5))
+            if (0 == strncmp(buf+9, "float", 5)) {
                 n += sizeof(float);
-            else if (0 == strncmp(buf+9, "uchar", 5))
+		nproperties++;
+		}
+            else if (0 == strncmp(buf+9, "uchar", 5)) {
                 n += sizeof(unsigned char);
+		nproperties++;
+		}
             else
                 fprintf(stderr, "error: property must be float or uchar\n");
         }
@@ -110,7 +127,7 @@ static void update_min_max(float *min, float *max, float x)
 }
 
 // re-scale a float between 0 and w
-static int rescale_float_to_int(float x, float min, float max, int w)
+static int rescale_float_to_int(double x, double min, double max, int w)
 {
 	int r = w * (x - min)/(max - min);
 	if (r < 0) r = 0;
@@ -146,18 +163,33 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 		return;
 	}
 
-    size_t n = header_get_record_length_and_utm_zone(f, utm, "end_header\n");
+    int isbin=0;
+    size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, "end_header\n");
     //fprintf(stderr, "%d\n", n);
     //fprintf(stderr, "%s\n", utm);
 
-	char cbuf[n];
-	float *fbuf = (void*) cbuf;
-	while (n == fread(cbuf, 1, n, f))
-	{
-        update_min_max(xmin, xmax, fbuf[0]);
-        update_min_max(ymin, ymax, fbuf[1]);
-		//fprintf(stderr, "\t%f %f\n", fbuf[0], fbuf[1]);
+	if(isbin) {// format binary_little_endian
+		char cbuf[n];
+		float *fbuf = (void*) cbuf;
+		while (n == fread(cbuf, 1, n, f))
+		{
+        	update_min_max(xmin, xmax, fbuf[0]);
+        	update_min_max(ymin, ymax, fbuf[1]);
+			//fprintf(stderr, "\t%f %f\n", fbuf[0], fbuf[1]);
+		}
+	} else { //format ascii
+		double fbuf[n];
+		while (!feof(f)) {
+			int r=0;
+			while (r<n) {
+      				fscanf(f,"%lf", &fbuf[r]);  r++;
+			}
+        		update_min_max(xmin, xmax, fbuf[0]);
+        		update_min_max(ymin, ymax, fbuf[1]);
+		}
+			
 	}
+
 
 	fclose(f);
 }
@@ -175,19 +207,36 @@ static void add_ply_points_to_images(struct images *x,
 
     // check that the utm zone is the same as the provided one
     char utm[3];
-    size_t n = header_get_record_length_and_utm_zone(f, utm, "end_header\n");
+    int isbin=1;
+    size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, "end_header\n");
     if (0 != strncmp(utm_zone, utm, 3))
         fprintf(stderr, "error: different UTM zones among ply files\n");
 
-	char cbuf[n];
-	float *fbuf = (void*)cbuf;
-	while (n == fread(cbuf, 1, n, f))
-	{
-		int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
-		add_height_to_images(x, i, j, fbuf[2]);
-		//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
-		//		fbuf[0], fbuf[1], fbuf[2], i, j);
+	if(isbin) {// format binary_little_endian
+		char cbuf[n];
+		float *fbuf = (void*)cbuf;
+		while (n == fread(cbuf, 1, n, f))
+		{
+			int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
+			int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
+			add_height_to_images(x, i, j, fbuf[2]);
+			//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
+			//		fbuf[0], fbuf[1], fbuf[2], i, j);
+		}
+	} else { //format ascii
+		double fbuf[n];
+		while (!feof(f)) {
+			int r=0;
+			while (r<n) {
+      				fscanf(f,"%lf", &fbuf[r]);  
+				r++;
+			}
+			int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
+			int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
+			add_height_to_images(x, i, j, fbuf[2]);
+			
+		}
+
 	}
 
 	fclose(f);
