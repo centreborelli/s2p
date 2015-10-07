@@ -62,7 +62,7 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1,
     if (common.image_pix_dim(crop_fullres) == 1 and subsampling_factor == 1 and
             cfg['use_pleiades_unsharpening']):
         tmp = image_apply_pleiades_unsharpening_filter(crop_fullres)
-        common.run('rm %s' % crop_fullres)
+        common.run('rm -f %s' % crop_fullres)
         crop_fullres = tmp
 
     # convert to gray
@@ -102,12 +102,12 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1,
         tmpw, tmph = int(tmpw / subsampling_factor), int(tmph / subsampling_factor)
         crop_fullres_safe = common.image_crop_TIFF(crop_fullres, 0, 0, tmpw *
                 subsampling_factor, tmph * subsampling_factor)
-        common.run('rm %s' % crop_fullres)
+        common.run('rm -f %s' % crop_fullres)
 
         # zoom out the input image (crop_fullres)
         crop_zoom_out = common.image_safe_zoom_fft(crop_fullres_safe,
                 subsampling_factor)
-        common.run('rm %s' % crop_fullres_safe)
+        common.run('rm -f %s' % crop_fullres_safe)
 
         # apply the homography to the zoomed out crop
         common.image_apply_homography(im_out, crop_zoom_out, H, w, h)
