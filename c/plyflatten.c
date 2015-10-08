@@ -1,5 +1,6 @@
 // take a series of ply files and produce a digital elevation map
 
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -187,7 +188,7 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
         		update_min_max(xmin, xmax, fbuf[0]);
         		update_min_max(ymin, ymax, fbuf[1]);
 		}
-			
+
 	}
 
 
@@ -197,7 +198,7 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 // open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
 		float xmin, float xmax, float ymin, float ymax,
-		char utm_zone[3], char *fname)
+		char utm_zone[3], char *fname, int col_idx)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -212,31 +213,29 @@ static void add_ply_points_to_images(struct images *x,
     if (0 != strncmp(utm_zone, utm, 3))
         fprintf(stderr, "error: different UTM zones among ply files\n");
 
-	if(isbin) {// format binary_little_endian
-		char cbuf[n];
-		float *fbuf = (void*)cbuf;
-		while (n == fread(cbuf, 1, n, f))
-		{
-			int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-			int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
+    	if (col_idx < 2 || col_idx > 5)
+		exit(fprintf(stderr, "error: bad col_idx %d\n", col_idx));
+
+
+
+	char cbuf[n];
+	float *fbuf = (void*)cbuf;
+	while (n == fread(cbuf, 1, n, f))
+	{
+		int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
+		int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
+		if (col_idx == 2) {
 			add_height_to_images(x, i, j, fbuf[2]);
-			//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
-			//		fbuf[0], fbuf[1], fbuf[2], i, j);
+			assert(isfinite(fbuf[2]));
 		}
-	} else { //format ascii
-		double fbuf[n];
-		while (!feof(f)) {
-			int r=0;
-			while (r<n) {
-      				fscanf(f,"%lf", &fbuf[r]);  
-				r++;
-			}
-			int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-			int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
-			add_height_to_images(x, i, j, fbuf[2]);
-			
+		else
+		{
+			unsigned int rgb = cbuf[sizeof(float)*3+col_idx-3];
+			add_height_to_images(x, i, j, rgb);
 		}
 
+		//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
+		//		fbuf[0], fbuf[1], fbuf[2], i, j);
 	}
 
 	fclose(f);
@@ -246,12 +245,16 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
     fprintf(stderr, "usage:\n\t"
-            "ls files | %s resolution out.tif\n", s);
+            "ls files | %s [-c column] resolution out.tif\n", s);
     fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
+#include "pickopt.c"
+
 int main(int c, char *v[])
 {
+	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
+
 	// process input arguments
 	if (c != 3) {
         help(*v);
@@ -303,7 +306,7 @@ int main(int c, char *v[])
 	while (l != NULL)
 	{
 		// printf("FILENAME: \"%s\"\n", l->current);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current);
+		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx);
         l = l->next;
 	}
 
