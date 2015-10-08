@@ -212,7 +212,6 @@ static void add_ply_points_to_images(struct images *x,
     if (0 != strncmp(utm_zone, utm, 3))
         fprintf(stderr, "error: different UTM zones among ply files\n");
 
-<<<<<<< HEAD
     	if (col_idx < 2 || col_idx > 5)
 		exit(fprintf(stderr, "error: bad col_idx %d\n", col_idx));
 
@@ -236,33 +235,6 @@ static void add_ply_points_to_images(struct images *x,
 
 		//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
 		//		fbuf[0], fbuf[1], fbuf[2], i, j);
-=======
-	if(isbin) {// format binary_little_endian
-		char cbuf[n];
-		float *fbuf = (void*)cbuf;
-		while (n == fread(cbuf, 1, n, f))
-		{
-			int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-			int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
-			add_height_to_images(x, i, j, fbuf[2]);
-			//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
-			//		fbuf[0], fbuf[1], fbuf[2], i, j);
-		}
-	} else { //format ascii
-		double fbuf[n];
-		while (!feof(f)) {
-			int r=0;
-			while (r<n) {
-      				fscanf(f,"%lf", &fbuf[r]);  
-				r++;
-			}
-			int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-			int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
-			add_height_to_images(x, i, j, fbuf[2]);
-			
-		}
-
->>>>>>> 98bba1e2714c691b1954d5f641da8059504ebcfa
 	}
 
 	fclose(f);
