@@ -85,12 +85,12 @@ void write_ply_header(FILE* f, int npoints) {
     fprintf(f, "format ascii 1.0\n");
     fprintf(f, "comment created by S2P\n");
     fprintf(f, "element vertex %d\n", npoints);
-    fprintf(f, "property float x\n");
-    fprintf(f, "property float y\n");
-    fprintf(f, "property float z\n");
-    fprintf(f, "property float nx\n");
-    fprintf(f, "property float ny\n");
-    fprintf(f, "property float nz\n");
+    fprintf(f, "property double x\n");
+    fprintf(f, "property double y\n");
+    fprintf(f, "property double z\n");
+    fprintf(f, "property double nx\n");
+    fprintf(f, "property double ny\n");
+    fprintf(f, "property double nz\n");
     fprintf(f, "property uchar red\n");
     fprintf(f, "property uchar green\n");
     fprintf(f, "property uchar blue\n");
@@ -158,7 +158,7 @@ int main(int c, char *v[])
                 normalize_vector_3d(nrm);
             }
             // print the voxel in the ply output file
-            fprintf(out, "%.16lf %.16lf %.16lf %.16lf %.16lf %.16lf %d %d %d\n",
+            fprintf(out, "%a %a %a %a %a %a %d %d %d\n",
                     xyz[0], xyz[1], xyz[2], nrm[0], nrm[1], nrm[2], rgb[0],
                     rgb[1], rgb[2]);
         }

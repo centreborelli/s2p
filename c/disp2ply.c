@@ -61,13 +61,13 @@ void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
     if (zone >= 0)
         fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
     fprintf(f, "element vertex %d\n", npoints);
-    fprintf(f, "property float x\n");
-    fprintf(f, "property float y\n");
-    fprintf(f, "property float z\n");
+    fprintf(f, "property double x\n");
+    fprintf(f, "property double y\n");
+    fprintf(f, "property double z\n");
     if (normals) {
-        fprintf(f, "property float nx\n");
-        fprintf(f, "property float ny\n");
-        fprintf(f, "property float nz\n");
+        fprintf(f, "property double nx\n");
+        fprintf(f, "property double ny\n");
+        fprintf(f, "property double nz\n");
     }
     if (colors) {
         fprintf(f, "property uchar red\n");
@@ -222,13 +222,13 @@ int main(int c, char *v[])
 
             // write to ply
             if (ascii) {
-                fprintf(ply_file, "%.3f %.3f %.3f ", X[0], X[1], X[2]);
+                fprintf(ply_file, "%a %a %a ", X[0], X[1], X[2]);
                 if (clr)
                     fprintf(ply_file, "%d %d %d", rgb[0], rgb[1], rgb[2]);
                 fprintf(ply_file, "\n");
             } else {
-                float XX[3] = {X[0], X[1], X[2]};
-                fwrite(XX, sizeof(float), 3, ply_file);
+                double XX[3] = {X[0], X[1], X[2]};
+                fwrite(XX, sizeof(double), 3, ply_file);
                 if (clr) {
                     unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
                     fwrite(rgb, sizeof(unsigned char), 3, ply_file);

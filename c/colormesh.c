@@ -92,13 +92,13 @@ void write_ply_header(FILE* f, uint64_t npoints, int zone,
     if (zone >= 0)
         fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
     fprintf(f, "element vertex %" PRIu64 "\n", npoints);
-    fprintf(f, "property float x\n");
-    fprintf(f, "property float y\n");
-    fprintf(f, "property float z\n");
+    fprintf(f, "property double x\n");
+    fprintf(f, "property double y\n");
+    fprintf(f, "property double z\n");
     if (normals) {
-        fprintf(f, "property float nx\n");
-        fprintf(f, "property float ny\n");
-        fprintf(f, "property float nz\n");
+        fprintf(f, "property double nx\n");
+        fprintf(f, "property double ny\n");
+        fprintf(f, "property double nz\n");
     }
     if (colors) {
         fprintf(f, "property uchar red\n");
@@ -140,6 +140,7 @@ static void help(char *s)
     // offset allows the user to choose the origin of the coordinates system,
     // in order to avoid visualisation problems due to huge values of the
     // coordinates (for which float precision is often not enough)
+    // NOTE: now we use double, so the "offset" is unnecessary
 }
 
 
@@ -248,9 +249,9 @@ int main(int c, char *v[])
     // a 3D point is produced for each 'non Nan' height
     TIMING_WALLCLOCK_RESET(0);
     TIMING_WALLCLOCK_TOGGLE(0);
-    size_t point_size = 3*sizeof(float);
+    size_t point_size = 3*sizeof(double);
     if (normals)
-        point_size += 3*sizeof(float);
+        point_size += 3*sizeof(double);
     if (there_is_color)
         point_size += 3*sizeof(uint8_t);
 
@@ -284,10 +285,10 @@ int main(int c, char *v[])
             }
 
             // write to memory
-            float *ptr_float = (float *) ptr[i];
-            ptr_float[0] = xyz[0];
-            ptr_float[1] = xyz[1];
-            ptr_float[2] = xyz[2];
+            double *ptr_double = (double *) ptr[i];
+            ptr_double[0] = xyz[0];
+            ptr_double[1] = xyz[1];
+            ptr_double[2] = xyz[2];
 
             // normals (unit 3D vector with direction of the camera)
             if (normals) {
@@ -296,9 +297,9 @@ int main(int c, char *v[])
                 nrm[1] = tmp[1] - xyz[1];
                 nrm[2] = tmp[2] - xyz[2];
                 normalize_vector_3d(nrm);
-                ptr_float[3] = nrm[0];
-                ptr_float[4] = nrm[1];
-                ptr_float[5] = nrm[2];
+                ptr_double[3] = nrm[0];
+                ptr_double[4] = nrm[1];
+                ptr_double[5] = nrm[2];
             }
 
             // colorization: if greyscale, copy the grey on each channel
@@ -306,7 +307,7 @@ int main(int c, char *v[])
             if (there_is_color) {
                 for (int k = 0; k < pd; k++) rgb[k] = color[k + pd*pix];
                 for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
-                char *ptr_char = ptr[i] + 3*sizeof(float);
+                char *ptr_char = ptr[i] + 3*sizeof(double);
                 ptr_char[0] = rgb[0];
                 ptr_char[1] = rgb[1];
                 ptr_char[2] = rgb[2];
