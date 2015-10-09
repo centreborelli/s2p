@@ -98,18 +98,18 @@ int main(int c, char *v[])
 			switch(t[i].type) {
 			case UCHAR: {
 				unsigned char X;
-				fread(&X, 1, 1, f_in);
-				fprintf(f_out, "%d", X);
+				if( fread(&X, 1, 1, f_in))
+					fprintf(f_out, "%d", X);
 				break; }
 			case FLOAT: {
 				float X;
-				fread(&X, sizeof(float), 1, f_in);
-				fprintf(f_out, "%a", X);
+				if( fread(&X, sizeof(float), 1, f_in))
+					fprintf(f_out, "%a", X);
 				break; }
 			case DOUBLE: {
 				double X;
-				fread(&X, sizeof(double), 1, f_in);
-				fprintf(f_out, "%a", X);
+				if( fread(&X, sizeof(double), 1, f_in))
+					fprintf(f_out, "%a", X);
 				break; }
 			}
 			fprintf(f_out, "%c", i==nproperties-1?'\n':' ');

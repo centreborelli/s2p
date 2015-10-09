@@ -78,47 +78,53 @@ void set_geotif_header(char *tiff_fname, char *utm_zone, float xoff,
     XTIFFClose(tif);
 }
 
-// fast forward "f" until "last_line" is found
-// returns the sum of 'properties' byte length
-// ie the numer of bytes used to store one 3D point in the ply file
-// OR the number of properties if the ply is ascii encoded
-// and reads the utm zone
-static size_t header_get_record_length_and_utm_zone(FILE *f, char *utm, int *isbin,
-        char *last_line)
+
+
+struct ply_property {
+	enum {UCHAR,FLOAT,DOUBLE,UNKNOWN} type;
+	char name[0x100];
+	size_t len;
+};
+
+static bool parse_property_line(struct ply_property *t, char *buf)
 {
+	char typename[0x100];
+	bool r = 2 == sscanf(buf, "property %s %s\n", typename, t->name);
+	t->type = UNKNOWN;
+	if (0 == strcmp(typename, "uchar")) { t->type = UCHAR;  t->len = 1;}
+	if (0 == strcmp(typename, "float")) { t->type = FLOAT;  t->len = 4;}
+	if (0 == strcmp(typename, "double")){ t->type = DOUBLE; t->len = 8;}
+	return r;
+}
+
+
+
+// fast forward "f" until "end_header" is found
+// returns the number of 'properties' 
+// the array of structures *t, contains the names and sizes 
+// the properties in bytes, isbin is set if binary encoded
+// and reads the utm zone
+static size_t header_get_record_length_and_utm_zone(FILE *f_in, char *utm, 
+	int *isbin, struct ply_property *t)
+{
+    	size_t n = 0;
+	*isbin = 0;
+
 	char buf[FILENAME_MAX] = {0};
-    size_t n = 0;
-	int nproperties = 0;
-	*isbin = 1;
-	while (fgets(buf, FILENAME_MAX, f)) {
-//        		fprintf(stderr, "%s\n", buf);
-		if (0 == strcmp(buf, last_line)) {
-			return *isbin ? n : nproperties;
+	while (fgets(buf, FILENAME_MAX, f_in)) {
+		if (0 == strcmp(buf, "format binary_little_endian 1.0\n")) *isbin=1;
+		else if (0 == strcmp(buf, "format ascii 1.0\n")) *isbin=0;
+		else {
+			if (parse_property_line(t+n, buf))
+				n += 1;
+        		else if (0 == strncmp(buf, "comment projection:", 19)) {
+        		    sscanf(buf, "comment projection: UTM %s", utm);
+        		}
 		}
-		if (0 == strncmp(buf, "format ascii", 12)) {
-        		fprintf(stderr, "debug: ascii format\n");
-			*isbin=0;
-		}
-		if (0 == strncmp(buf, "format binary_little_endian", 27)) {
-        		fprintf(stderr, "debug: binary format\n");
-			*isbin=1;
-		}
-        if (0 == strncmp(buf, "property ", 9)) {
-            if (0 == strncmp(buf+9, "float", 5)) {
-                n += sizeof(float);
-		nproperties++;
-		}
-            else if (0 == strncmp(buf+9, "uchar", 5)) {
-                n += sizeof(unsigned char);
-		nproperties++;
-		}
-            else
-                fprintf(stderr, "error: property must be float or uchar\n");
-        }
-        else if (0 == strncmp(buf, "comment projection:", 19)) {
-            sscanf(buf, "comment projection: UTM %s", utm);
-        }
-    }
+		if (0 == strcmp(buf, "end_header\n"))
+			break;
+	}
+	return n;
 }
 
 static void update_min_max(float *min, float *max, float x)
@@ -154,9 +160,40 @@ static void add_height_to_images(struct images *x, int i, int j, float v)
 	x->cnt[k] += 1;
 }
 
+int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *data){
+	int rec = 0;
+	if(isbin) {
+		for (int i = 0; i < n; i++) {
+			switch(t[i].type) {
+			case UCHAR: {
+				unsigned char X;
+				rec += fread(&X, 1, 1, f_in);
+				data[i] = X;
+				break; }
+			case FLOAT: {
+				float X;
+				rec += fread(&X, sizeof(float), 1, f_in);
+				data[i] = X;
+				break; }
+			case DOUBLE: {
+				double X;
+				rec += fread(&X, sizeof(double), 1, f_in);
+				data[i] = X;
+				break; }
+			}
+		}
+	} else {
+		int i=0;
+		while (i < n && !feof(f_in)) {
+      			rec += fscanf(f_in,"%lf", &data[i]);  i++;
+		}
+	}
+	return rec;
+}
+
 // open a ply file, read utm zone in the header, and update the known extrema
 static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
-        float *ymax, char *utm, char *fname)
+		float *ymax, char *utm, char *fname)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -164,33 +201,17 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 		return;
 	}
 
-    int isbin=0;
-    size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, "end_header\n");
-    //fprintf(stderr, "%d\n", n);
-    //fprintf(stderr, "%s\n", utm);
+	int isbin=0;
+	struct ply_property t[100];
+	size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, t);
+	//fprintf(stderr, "%d\n", n);
+	//fprintf(stderr, "%s\n", utm);
 
-	if(isbin) {// format binary_little_endian
-		char cbuf[n];
-		float *fbuf = (void*) cbuf;
-		while (n == fread(cbuf, 1, n, f))
-		{
-        	update_min_max(xmin, xmax, fbuf[0]);
-        	update_min_max(ymin, ymax, fbuf[1]);
-			//fprintf(stderr, "\t%f %f\n", fbuf[0], fbuf[1]);
-		}
-	} else { //format ascii
-		double fbuf[n];
-		while (!feof(f)) {
-			int r=0;
-			while (r<n) {
-      				fscanf(f,"%lf", &fbuf[r]);  r++;
-			}
-        		update_min_max(xmin, xmax, fbuf[0]);
-        		update_min_max(ymin, ymax, fbuf[1]);
-		}
+	double data[n];
+	while ( n == get_record(f, isbin, t, n, data) ) {
+		update_min_max(xmin, xmax, data[0]);
+		update_min_max(ymin, ymax, data[1]);
 	}
-
-
 	fclose(f);
 }
 
@@ -208,7 +229,8 @@ static void add_ply_points_to_images(struct images *x,
     // check that the utm zone is the same as the provided one
     char utm[3];
     int isbin=1;
-    size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, "end_header\n");
+    struct ply_property t[100];
+    size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, t);
     if (0 != strncmp(utm_zone, utm, 3))
         fprintf(stderr, "error: different UTM zones among ply files\n");
 
@@ -216,25 +238,21 @@ static void add_ply_points_to_images(struct images *x,
 		exit(fprintf(stderr, "error: bad col_idx %d\n", col_idx));
 
 
+	double data[n];
+	while ( n == get_record(f, isbin, t, n, data) ) {
 
-	char cbuf[n];
-	float *fbuf = (void*)cbuf;
-	while (n == fread(cbuf, 1, n, f))
-	{
-		int i = rescale_float_to_int(fbuf[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(-fbuf[1], -ymax, -ymin, x->h);
+		int i = rescale_float_to_int(data[0], xmin, xmax, x->w);
+		int j = rescale_float_to_int(-data[1], -ymax, -ymin, x->h);
 		if (col_idx == 2) {
-			add_height_to_images(x, i, j, fbuf[2]);
-			assert(isfinite(fbuf[2]));
+			add_height_to_images(x, i, j, data[2]);
+			assert(isfinite(data[2]));
 		}
 		else
 		{
-			unsigned int rgb = cbuf[sizeof(float)*3+col_idx-3];
+			unsigned int rgb = data[col_idx];
 			add_height_to_images(x, i, j, rgb);
 		}
 
-		//fprintf(stderr, "\t%8.8lf %8.8lf %8.8lf %d %d\n",
-		//		fbuf[0], fbuf[1], fbuf[2], i, j);
 	}
 
 	fclose(f);
