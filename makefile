@@ -108,7 +108,7 @@ SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective tiffu
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
-SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc bin2asc2 siftu ransac srtm4\
+SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten
 
 imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
@@ -129,9 +129,6 @@ $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BINDIR)/bin2asc: c/bin2asc.c
-	$(CC) $(CFLAGS) $^ -o $@
-
-$(BINDIR)/bin2asc2: c/bin2asc2.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(BINDIR)/siftu: c/siftu.c c/siftie.c
