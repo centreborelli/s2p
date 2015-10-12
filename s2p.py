@@ -895,29 +895,34 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
         print "\toutput: ", e.args[0]["output"]
 
 
-    ## compute global pointing correction
-    #print 'Computing global pointing correction...'
-    #A_global = pointing_accuracy.global_from_local(tiles)
-    #np.savetxt('%s/pointing.txt' % out_dir, A_global)
+    # compute global pointing correction
+    print 'Computing global pointing correction...'
+    A_global = pointing_accuracy.global_from_local(tiles)
+    np.savetxt('%s/global_pointing.txt' % out_dir, A_global)
 
-    ## Check if all tiles were computed
-    ## The only cause of a tile failure is a lack of sift matches, which breaks
-    ## the pointing correction step. Thus it is enough to check if the pointing
-    ## correction matrix was computed.
-    #results = []
-    #for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
-        #for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-            #tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
-                                                        #th)
-            #if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                #if not os.path.isfile('%s/pointing.txt' % tile_dir):
-                    #print "%s retrying pointing corr..." % tile_dir
-                    ## estimate pointing correction matrix from neighbors, if it
-                    ## fails use A_global, then rerun the disparity map
-                    ## computation
-                    #A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
-                    #if A is None:
-                        #A = A_global
+    # Check if all tiles were computed
+    # The only cause of a tile failure is a lack of sift matches, which breaks
+    # the pointing correction step. Thus it is enough to check if the pointing
+    # correction matrix was computed.
+    results = []
+    for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
+        for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
+            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
+                                                        th)
+            if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                if not os.path.isfile('%s/pointing.txt' % tile_dir):
+                    print "%s retrying pointing corr..." % tile_dir
+                    # estimate pointing correction matrix from neighbors, if it
+                    # fails use A_global, then rerun the disparity map
+                    # computation
+                    A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
+                    if A is not None:
+                        np.savetxt('%s/next_tile_pointing.txt' % out_dir, A)
+                    else:
+                        np.savetxt('%s/global_pointing.txt' % out_dir, A_global)
+
+                        
+                        
                     #if cfg['debug']:
                         #process_pair_single_tile(tile_dir, img1, rpc1, img2,
                                                  #rpc2, col, row, tw, th, None,
