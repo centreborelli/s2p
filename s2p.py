@@ -849,36 +849,43 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
     tiles = []
     results = []
     show_progress.counter = 0
-    print 'Computing disparity maps tile by tile...'
+
+    # Build a simple tile dico
+    tilesDic={}
+    for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
+        for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
+            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw, th)
+            tilesDic[tile_dir]=[col,row,tw,th,i,j]
+            
+    print 'Computing disparity maps tile by tile...'    
     try:
-        for row in np.arange(y, y + h - ov, th - ov):
-            for col in np.arange(x, x + w - ov, tw - ov):
-                tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row,
-                                                            tw, th)
-                # check if the tile is already done, or masked
-                if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
-                    if cfg['skip_existing']:
-                        print "stereo on tile %d %d already done, skip" % (col,
+        for tile_dir,tab in tilesDic.items():
+            col,row,tw,th,i,j=tab
+			
+            # check if the tile is already done, or masked
+            if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
+                if cfg['skip_existing']:
+                    print "stereo on tile %d %d already done, skip" % (col,
                                                                            row)
-                        tiles.append(tile_dir)
-                        continue
-                if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                    print "tile %d %d already masked, skip" % (col, row)
                     tiles.append(tile_dir)
                     continue
+            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                print "tile %d %d already masked, skip" % (col, row)
+                tiles.append(tile_dir)
+                continue
 
-                # process the tile
-                if cfg['debug']:
-                    chris_pointing_correction(tile_dir, img1, rpc1, img2, rpc2,
+            # process the tile
+            if cfg['debug']:
+                chris_pointing_correction(tile_dir, img1, rpc1, img2, rpc2,
                                              col, row, tw, th, None, cld_msk,
                                              roi_msk)
-                else:
-                    p = pool.apply_async(chris_pointing_correction,
+            else:
+                p = pool.apply_async(chris_pointing_correction,
                                          args=(tile_dir, img1, rpc1, img2, rpc2,
                                                col, row, tw, th, None, cld_msk,
                                                roi_msk), callback=show_progress)
-                    results.append(p)
-                tiles.append(tile_dir)
+                results.append(p)
+            tiles.append(tile_dir)
 
         for r in results:
             try:
@@ -905,21 +912,20 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
     # the pointing correction step. Thus it is enough to check if the pointing
     # correction matrix was computed.
     results = []
-    for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
-        for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw,
-                                                        th)
-            if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                if not os.path.isfile('%s/pointing.txt' % tile_dir):
-                    print "%s retrying pointing corr..." % tile_dir
-                    # estimate pointing correction matrix from neighbors, if it
-                    # fails use A_global, then rerun the disparity map
-                    # computation
-                    A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
-                    if A is not None:
-                        np.savetxt('%s/next_tile_pointing.txt' % out_dir, A)
-                    else:
-                        np.savetxt('%s/global_pointing.txt' % out_dir, A_global)
+    for tile_dir,tab in tilesDic.items():
+        col,row,tw,th,i,j=tab
+        
+        if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+            if not os.path.isfile('%s/pointing.txt' % tile_dir):
+                print "%s retrying pointing corr..." % tile_dir
+                # estimate pointing correction matrix from neighbors, if it
+                # fails use A_global, then rerun the disparity map
+                # computation
+                A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
+                if A is not None:
+                    np.savetxt('%s/next_tile_pointing.txt' % out_dir, A)
+                else:
+                    np.savetxt('%s/global_pointing.txt' % out_dir, A_global)
 
                         
                         
