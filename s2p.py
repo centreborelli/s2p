@@ -1041,16 +1041,18 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
 
     # process the tiles
     # don't parallellize if in debug mode
-    tiles = []
+    
     results = []
     show_progress.counter = 0
 
     # Build a simple tile dico
     tilesDic={}
+    tiles = []
     for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
             tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw, th)
             tilesDic[tile_dir]=[col,row,tw,th,i,j]
+            tiles.append(tile_dir)
             
     print 'Computing disparity maps tile by tile...' 
      
@@ -1064,11 +1066,11 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
                 if cfg['skip_existing']:
                     print "stereo on tile %d %d already done, skip" % (col,
                                                                            row)
-                    tiles.append(tile_dir)
+                    #tiles.append(tile_dir)
                     continue
             if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
                 print "tile %d %d already masked, skip" % (col, row)
-                tiles.append(tile_dir)
+                #tiles.append(tile_dir)
                 continue
 
             
@@ -1082,7 +1084,7 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
                                                col, row, tw, th, None, cld_msk,
                                                roi_msk), callback=show_progress)
                 results.append(p)
-            tiles.append(tile_dir)
+            
 
         for r in results:
             try:
