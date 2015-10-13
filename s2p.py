@@ -1121,9 +1121,9 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
                 # computation
                 A = pointing_accuracy.from_next_tiles(tiles, ntx, nty, j, i)
                 if A is not None:
-                    np.savetxt('%s/next_tile_pointing.txt' % out_dir, A)
+                    np.savetxt('%s/next_tile_pointing.txt' % tile_dir, A)
                 else:
-                    np.savetxt('%s/global_pointing.txt' % out_dir, A_global)
+                    np.savetxt('%s/global_pointing.txt' % tile_dir, A_global)
 
     # 3 - Rectify each tile
     for tile_dir,tab in tilesDic.items():
@@ -1140,8 +1140,8 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
                     A=np.loadtxt('%s/next_tile_pointing.txt' % tile_dir)
                 if os.path.isfile('%s/pointing.txt' % tile_dir): 
                     A=np.loadtxt('%s/pointing.txt' % tile_dir)
-                if os.path.isfile('%s/sift_matches.txt' % out_dir):
-                    m=np.loadtxt('%s/sift_matches.txt' % out_dir)
+                if os.path.isfile('%s/sift_matches.txt' % tile_dir):
+                    m=np.loadtxt('%s/sift_matches.txt' % tile_dir)
   
     
          
