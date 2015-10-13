@@ -1050,7 +1050,7 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
     tiles = []
     for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
         for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-            tile_dir = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw, th)
+            tile_dir = '%s/tile_%04d_%04d_row_%06d/col_%06d' % (out_dir, tw, th, row, col)
             tilesDic[tile_dir]=[col,row,tw,th,i,j]
             tiles.append(tile_dir)
             
