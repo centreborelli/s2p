@@ -1036,7 +1036,7 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])-1
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
     pool = multiprocessing.Pool(nb_workers)
 
     # process the tiles
@@ -1131,8 +1131,7 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
                      
         # check if the tile is already done, or masked
         if not os.path.isfile('%s/rectified_disp.tif' % tile_dir):
-            if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):                
-                print 'rectification' 
+            if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):                 
                 
                 A,m=None,None
                 if os.path.isfile('%s/global_pointing.txt' % tile_dir):
@@ -1262,20 +1261,19 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
 
-    ## tiles composition
-    #out = '%s/height_map.tif' % out_dir
-    #tmp = ['%s/height_map.tif' % t for t in tiles]
-    #if not os.path.isfile(out) or not cfg['skip_existing']:
-        #print "Mosaicing tiles with %s..." % cfg['mosaic_method']
-        #if cfg['mosaic_method'] == 'gdal':
-            #tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-        #else:
-            #tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
-    
+    # tiles composition
+    out = '%s/height_map.tif' % out_dir
+    tmp = ['%s/height_map.tif' % t for t in tiles]
+    if not os.path.isfile(out) or not cfg['skip_existing']:
+        print "Mosaicing tiles with %s..." % cfg['mosaic_method']
+        if cfg['mosaic_method'] == 'gdal':
+            tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
+        else:
+            tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
     
     common.garbage_cleanup()
 
-    return 
+    return out
 
 
 
