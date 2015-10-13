@@ -1068,53 +1068,55 @@ def chris_process_pair(out_dir, img1, rpc1, img2, rpc2, x, y, w, h, tw=None, th=
         print "\toutput: ", e.args[0]["output"]
 
 
-    ## triangulation
-    #processes = []
-    #results = []
-    #show_progress.counter = 0
-    #print 'Computing height maps tile by tile...'
-    #try:
-        #for row in np.arange(y, y + h - ov, th - ov):
-            #for col in np.arange(x, x + w - ov, tw - ov):
-                #tile = '%s/tile_%06d_%06d_%04d_%04d' % (out_dir, col, row, tw, th)
-                #H1 = '%s/H_ref.txt' % tile
-                #H2 = '%s/H_sec.txt' % tile
-                #disp = '%s/rectified_disp.tif' % tile
-                #mask = '%s/rectified_mask.png' % tile
-                #rpc_err = '%s/rpc_err.tif' % tile
-                #height_map = '%s/height_map.tif' % tile
+    # 4 - Triangulation
+    results = []
+    show_progress.counter = 0
+    print 'Computing height maps tile by tile...'
+    try:
+        for tile_dir,tab in tilesDic.items():
+            col,row,tw,th,i,j=tab
+            H1 = '%s/H_ref.txt' % tile_dir
+            H2 = '%s/H_sec.txt' % tile_dir
+            disp = '%s/rectified_disp.tif' % tile_dir
+            mask = '%s/rectified_mask.png' % tile_dir
+            rpc_err = '%s/rpc_err.tif' % tile_dir
+            height_map = '%s/height_map.tif' % tile_dir
 
-                ## check if the tile is already done, or masked
-                #if os.path.isfile(height_map):
-                    #if cfg['skip_existing']:
-                        #print "triangulation on tile %d %d is done, skip" % (col,
-                                                                             #row)
-                        #continue
-                #if os.path.isfile('%s/this_tile_is_masked.txt' % tile):
-                    #print "tile %d %d already masked, skip" % (col, row)
-                    #continue
+            # check if the tile is already done, or masked
+            if os.path.isfile(height_map):
+                if cfg['skip_existing']:
+                    print "triangulation on tile %d %d is done, skip" % (col, row)
+                    continue
+            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                print "tile %d %d already masked, skip" % (col, row)
+                continue
 
-                ## process the tile
-                #if cfg['debug']:
-                    #triangulation.compute_dem(height_map, col, row, tw, th, z,
-                                              #rpc1, rpc2, H1, H2, disp, mask,
-                                              #rpc_err, A_global)
-                #else:
-                    #p = pool.apply_async(triangulation.compute_dem,
-                                         #args=(height_map, col, row, tw, th, z,
-                                               #rpc1, rpc2, H1, H2, disp, mask,
-                                               #rpc_err, A_global),
-                                         #callback=show_progress)
-                    #processes.append(p)
-        #for p in processes:
-            #try:
-                #results.append(p.get(3600))  # wait at most one hour per tile
-            #except multiprocessing.TimeoutError:
-                #print "Timeout while computing tile "+str(r)
+            # process the tile
+            if cfg['debug']:
+                triangulation.compute_dem(height_map, col, row, tw, th, z,
+                                              rpc1, rpc2, H1, H2, disp, mask,
+                                              rpc_err, A_global)
+            else:
+                p = pool.apply_async(triangulation.compute_dem,
+                                         args=(height_map, col, row, tw, th, z,
+                                               rpc1, rpc2, H1, H2, disp, mask,
+                                               rpc_err, A_global),
+                                         callback=show_progress)
+                results.append(p)
+        
+        for r in results:
+            try:
+                r.get(3600)  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)
 
-    #except KeyboardInterrupt:
-        #pool.terminate()
-        #sys.exit(1)
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+        
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
 
     ## tiles composition
     #out = '%s/height_map.tif' % out_dir
