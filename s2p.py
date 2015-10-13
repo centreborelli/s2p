@@ -844,13 +844,17 @@ def chris_rectify(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # debug print
     print 'tile %d %d running on process %s' % (x, y,
                                                 multiprocessing.current_process())
+                                                
+    # ensure that the coordinates of the ROI are multiples of the zoom factor
+    z = cfg['subsampling_factor']
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # rectification
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
                                                             rpc2, x, y, w, h,
                                                             rect1, rect2, A, m)
                                                             
-                                                            
+    np.savetxt(subsampling, np.array([z]))                                                        
     np.savetxt(H_ref, H1)
     np.savetxt(H_sec, H2)
     np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
