@@ -1479,33 +1479,33 @@ def main(config_file):
                               cfg['fusion_thresh'], None, None, None, None,
                               cfg['images'][0]['cld'], cfg['images'][0]['roi'])
 
-    ## also copy the RPC's
-    #for i in range(len(cfg['images'])):
-        #from shutil import copy2
-        #copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
+    # also copy the RPC's
+    for i in range(len(cfg['images'])):
+        from shutil import copy2
+        copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
 
-    ## point cloud
-    #generate_cloud(cfg['out_dir'], height_map, cfg['images'][0]['rpc'],
-                   #cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   #cfg['roi']['h'], cfg['images'][0]['img'],
-                   #cfg['images'][0]['clr'], cfg['offset_ply'])
+    # point cloud
+    generate_cloud(cfg['out_dir'], height_map, cfg['images'][0]['rpc'],
+                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
+                   cfg['roi']['h'], cfg['images'][0]['img'],
+                   cfg['images'][0]['clr'], cfg['offset_ply'])
 
-    ## digital surface model
-    #out_dsm = '%s/dsm.tif' % cfg['out_dir']
-    #point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
-    #generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+    # digital surface model
+    out_dsm = '%s/dsm.tif' % cfg['out_dir']
+    point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
+    generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
 
-    ## crop corresponding areas in the secondary images
-    #if not cfg['full_img']:
-        #crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
+    # crop corresponding areas in the secondary images
+    if not cfg['full_img']:
+        crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
 
-    ## runtime
-    #t = int(time.time() - t0)
-    #h = t/3600
-    #m = (t/60) % 60
-    #s = t % 60
-    #print "Total runtime: %dh:%dm:%ds" % (h, m, s)
-    #common.garbage_cleanup()
+    # runtime
+    t = int(time.time() - t0)
+    h = t/3600
+    m = (t/60) % 60
+    s = t % 60
+    print "Total runtime: %dh:%dm:%ds" % (h, m, s)
+    common.garbage_cleanup()
 
 
 if __name__ == '__main__':
