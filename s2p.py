@@ -1403,6 +1403,22 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
 
 
 
+def mergeHeightMaps(height_maps,thresh,conservative,k=1,garbage=[]):
+
+    list_height_maps=[]
+    for i in range(len(height_maps)-1):
+        height_map = cfg['temporary_dir'] +'/height_map_'+str(i)+'_'+str(i+1)+'_'+str(k)+'.tif'
+        fusion.merge(height_maps[i], height_maps[i+1], thresh, height_map,
+                 conservative)
+        list_height_maps.append(height_map)
+        garbage.append(height_map)
+    
+    if len(list_height_maps) > 1:
+        mergeHeightMaps(list_height_maps,thresh,conservative,k+1,garbage)
+    else:
+        common.run('cp %s %s' % (list_height_maps[0],cfg['out_dir']+'/final_height_map.tif'))
+        for imtemp in garbage:
+            common.run('rm -f %s' % imtemp )
 
 
 def main(config_file):
@@ -1504,6 +1520,11 @@ def main(config_file):
         out_dsm = '%s/dsm_pair_%d.tif' % (cfg['out_dir'] , pair_id)
         cloud   = '%s/cloud_pair_%d.ply' % ( cfg['out_dir'] , pair_id )
         common.run("ls %s | plyflatten %f %s" % (cloud, cfg['dsm_resolution'], out_dsm))
+        
+     
+    # merge the n height maps
+    mergeHeightMaps(height_maps,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])   
+    
 
     ## crop corresponding areas in the secondary images
     #if not cfg['full_img']:
