@@ -495,7 +495,7 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
     return height_map
 
 
-def generate_cloud(out_dir, height_map, rpc1, x, y, w, h, im1, clr,
+def generate_cloud(out_dir, height_maps, rpc1, x, y, w, h, im1, clr,
                    do_offset=False):
     """
     Args:
@@ -516,66 +516,70 @@ def generate_cloud(out_dir, height_map, rpc1, x, y, w, h, im1, clr,
     """
     print "\nComputing point cloud..."
 
-    # output files
-    crop_ref = '%s/roi_ref.tif' % out_dir
-    cloud = '%s/cloud.ply' % out_dir
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    for i,height_map in enumerate(height_maps):
+        
+        pair_id = i+1
+        print '>>'*10,pair_id,height_map
+	    # output files
+        crop_ref = '%s/roi_ref_pair_%d.tif' % (out_dir,pair_id)
+        cloud = '%s/cloud_pair_%d.ply' % (out_dir,pair_id)
+        if not os.path.exists(out_dir):
+           os.makedirs(out_dir)
+	
+        # ensure that the coordinates of the ROI are multiples of the zoom factor,
+        # to avoid bad registration of tiles due to rounding problems.
+        z = cfg['subsampling_factor']
+        x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
-    # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problems.
-    z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-
-    # build the matrix of the zoom + translation transformation
-    if cfg['full_img'] and z == 1:
-        trans = None
-    else:
-        A = common.matrix_translation(-x, -y)
-        f = 1.0/z
-        Z = np.diag([f, f, 1])
-        A = np.dot(Z, A)
-        trans = '%s/trans.txt' % out_dir
-        np.savetxt(trans, A)
-
-    # compute offset
-    if do_offset:
-        r = rpc_model.RPCModel(rpc1)
-        lat = r.latOff
-        lon = r.lonOff
-        off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
-    else:
-        off_x, off_y = 0, 0
-
-    # crop the ROI in ref image, then zoom
-    if cfg['full_img'] and z == 1:
-        crop_ref = im1
-    else:
-        if z == 1:
-            common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
+        # build the matrix of the zoom + translation transformation
+        if cfg['full_img'] and z == 1:
+            trans = None
         else:
-            # gdal is used for the zoom because it handles BigTIFF files, and
-            # before the zoom out the image may be that big
-            tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
-            common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
-
-    if cfg['color_ply']:
-        crop_color = '%s/roi_color_ref.tif' % out_dir
-        if clr is not None:
-            print 'colorizing...'
-            triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
-        elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
-            print 'the image is pansharpened fusioned'
-            tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
-            common.image_qauto(tmp, crop_color, tilewise=False)
+            A = common.matrix_translation(-x, -y)
+            f = 1.0/z
+            Z = np.diag([f, f, 1])
+            A = np.dot(Z, A)
+            trans = '%s/trans_pair_%d.txt' % (out_dir,pair_id)
+            np.savetxt(trans, A)
+	
+        # compute offset
+        if do_offset:
+            r = rpc_model.RPCModel(rpc1)
+            lat = r.latOff
+            lon = r.lonOff
+            off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
         else:
-            print 'no color data'
-            common.image_qauto(crop_ref, crop_color, tilewise=False)
-    else:
-        crop_color = ''
+            off_x, off_y = 0, 0
+	
+        # crop the ROI in ref image, then zoom
+        if cfg['full_img'] and z == 1:
+            crop_ref = im1
+        else:
+            if z == 1:
+                common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
+            else:
+                # gdal is used for the zoom because it handles BigTIFF files, and
+                # before the zoom out the image may be that big
+                tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
+                common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
+	
+        if cfg['color_ply']:
+            crop_color = '%s/roi_color_ref_pair_%d.tif' % (out_dir,pair_id)
+            if clr is not None:
+                print 'colorizing...'
+                triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
+            elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
+                print 'the image is pansharpened fusioned'
+                tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
+                common.image_qauto(tmp, crop_color, tilewise=False)
+            else:
+                print 'no color data'
+                common.image_qauto(crop_ref, crop_color, tilewise=False)
+        else:
+            crop_color = ''
 
-    triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
-                                      off_x, off_y)
+        triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
+	                                      off_x, off_y)
     common.garbage_cleanup()
 
 
@@ -1369,18 +1373,20 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
         print "\toutput: ", e.args[0]["output"]
 
     # 6 - Tiles composition
+    out=set([])
     try:
         for tile_dir,tab in tilesInfo.items():
             col,row,tw,th,i,j,img2,rpc2,pair_id=tab 
             
-            out = '%s/height_map_pair_%d.tif' % (out_dir,pair_id)
+            height_map_path = '%s/height_map_pair_%d.tif' % (out_dir,pair_id)
+            out.add( height_map_path )
             tmp = ['%s/height_map.tif' % t for t in tilesLoc[pair_id]]
-            if not os.path.isfile(out) or not cfg['skip_existing']:
+            if not os.path.isfile(height_map_path) or not cfg['skip_existing']:
                 print "Mosaicing tiles with %s..." % cfg['mosaic_method']
                 if cfg['mosaic_method'] == 'gdal':
-                    tile_composer.mosaic_gdal(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
+                    tile_composer.mosaic_gdal(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
                 else:
-                    tile_composer.mosaic(out, w/z, h/z, tmp, tw/z, th/z, ov/z)
+                    tile_composer.mosaic(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
             
     except KeyboardInterrupt:
         pool.terminate()
@@ -1393,7 +1399,7 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
     
     common.garbage_cleanup()
 
-    return out
+    return list(out)
 
 
 
@@ -1474,24 +1480,22 @@ def main(config_file):
     for s in srtm_tiles:
         srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
-    # height map
-
-    height_map = chris_process_pair(cfg['out_dir'], cfg['roi']['x'],
+    # height maps
+    height_maps = chris_process_pair(cfg['out_dir'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'], cfg['images'])
-
 
     ## also copy the RPC's
     #for i in range(len(cfg['images'])):
         #from shutil import copy2
         #copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
 
-    ## point cloud
-    #generate_cloud(cfg['out_dir'], height_map, cfg['images'][0]['rpc'],
-                   #cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   #cfg['roi']['h'], cfg['images'][0]['img'],
-                   #cfg['images'][0]['clr'], cfg['offset_ply'])
+    # point cloud
+    generate_cloud(cfg['out_dir'], height_maps, cfg['images'][0]['rpc'],
+                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
+                   cfg['roi']['h'], cfg['images'][0]['img'],
+                   cfg['images'][0]['clr'], cfg['offset_ply'])
 
     ## digital surface model
     #out_dsm = '%s/dsm.tif' % cfg['out_dir']
