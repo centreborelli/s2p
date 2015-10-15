@@ -519,7 +519,7 @@ def generate_cloud(out_dir, height_maps, rpc1, x, y, w, h, im1, clr,
     for i,height_map in enumerate(height_maps):
         
         pair_id = i+1
-        print '>>'*10,pair_id,height_map
+        
 	    # output files
         crop_ref = '%s/roi_ref_pair_%d.tif' % (out_dir,pair_id)
         cloud = '%s/cloud_pair_%d.ply' % (out_dir,pair_id)
@@ -1497,10 +1497,13 @@ def main(config_file):
                    cfg['roi']['h'], cfg['images'][0]['img'],
                    cfg['images'][0]['clr'], cfg['offset_ply'])
 
+
     ## digital surface model
-    #out_dsm = '%s/dsm.tif' % cfg['out_dir']
-    #point_clouds_list = glob.glob('%s/cloud.ply' % cfg['out_dir'])
-    #generate_dsm(out_dsm, point_clouds_list, cfg['dsm_resolution'])
+    for i,height_map in enumerate(height_maps):
+        pair_id = i+1
+        out_dsm = '%s/dsm_pair_%d.tif' % (cfg['out_dir'] , pair_id)
+        cloud   = '%s/cloud_pair_%d.ply' % ( cfg['out_dir'] , pair_id )
+        common.run("ls %s | plyflatten %f %s" % (cloud, cfg['dsm_resolution'], out_dsm))
 
     ## crop corresponding areas in the secondary images
     #if not cfg['full_img']:
