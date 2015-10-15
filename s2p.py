@@ -1151,13 +1151,12 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
     tilesInfo={}
     tilesLoc = {}
     for numImSec in range(1,len(images[0])) :
-        pair_dir = '%s/pair_%d' % (out_dir, numImSec)
-        tilesLoc[pair_dir]=[]
+        tilesLoc[numImSec]=[]
         for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
             for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-                tile_dir = '%s/pair_%d/tile_%d_%d_row_%d/col_%d' % (out_dir, numImSec, tw, th, row, col)
-                tilesInfo[tile_dir]=[col,row,tw,th,i,j,images[0][numImSec]['img'],images[0][numImSec]['rpc'],pair_dir]
-                tilesLoc[pair_dir].append(tile_dir)
+                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d/' % (out_dir, tw, th, row, col, numImSec)
+                tilesInfo[tile_dir]=[col,row,tw,th,i,j,images[0][numImSec]['img'],images[0][numImSec]['rpc'],numImSec]
+                tilesLoc[numImSec].append(tile_dir)
 
 
     img1 = images[0][0]['img']
@@ -1168,7 +1167,7 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
     try:
         print 'Computing pointing correction...'
         for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_dir=tab
+            col,row,tw,th,i,j,img2,rpc2,pair_id=tab
 			
             # check if the tile is already done, or masked
             if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
@@ -1213,9 +1212,11 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
     # 2 - Global pointing correction
     try:
         print 'Computing global pointing correction...'
-        for pair_dir,tiles in tilesLoc.items():
-            A_global = pointing_accuracy.global_from_local(tiles)
-            np.savetxt('%s/global_pointing.txt' % pair_dir, A_global)
+        A_globalDic={}
+        for pair_id,tiles in tilesLoc.items():
+            A_globalDic[pair_id] = pointing_accuracy.global_from_local(tiles)
+            np.savetxt('%s/global_pointing_pair_%d.txt' % (out_dir,pair_id), A_globalDic[pair_id])
+            
 
         # Check if all tiles were computed
         # The only cause of a tile failure is a lack of sift matches, which breaks
@@ -1223,7 +1224,7 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
         # correction matrix was computed.
         
         for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_dir=tab
+            col,row,tw,th,i,j,img2,rpc2,pair_id=tab
         
             # check if the tile is masked, or if the pointing correction is already computed
             if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
@@ -1232,11 +1233,11 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
                     # estimate pointing correction matrix from neighbors, if it
                     # fails use A_global, then rerun the disparity map
                     # computation
-                    A = pointing_accuracy.from_next_tiles(tilesLoc[pair_dir], ntx, nty, j, i)
+                    A = pointing_accuracy.from_next_tiles(tilesLoc[pair_id], ntx, nty, j, i)
                     if A is not None:
                         np.savetxt('%s/next_tile_pointing.txt' % tile_dir, A)
                     else:
-                        np.savetxt('%s/global_pointing.txt' % tile_dir, A_global)
+                        np.savetxt('%s/global_pointing.txt' % tile_dir, A_globalDic[pair_id])
     except KeyboardInterrupt:
         pool.terminate()
         sys.exit(1)
@@ -1249,7 +1250,7 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
     # 3 - Rectify each tile
     try:
         for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_dir=tab                     
+            col,row,tw,th,i,j,img2,rpc2,pair_id=tab                     
                      
             # check if the tile is already done, or masked
             if not os.path.isfile('%s/rectified_disp.tif' % tile_dir):
@@ -1287,7 +1288,7 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
     # 4 - Disparity
     try:
         for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_dir=tab                     
+            col,row,tw,th,i,j,img2,rpc2,pair_id=tab                     
                      
             # check if the tile is already done, or masked
             if not os.path.isfile('%s/rectified_disp.tif' % tile_dir):
@@ -1327,7 +1328,7 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
     print 'Computing height maps tile by tile...'
     try:
         for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_dir=tab
+            col,row,tw,th,i,j,img2,rpc2,pair_id=tab
 
             height_map = '%s/height_map.tif' % tile_dir
             # check if the tile is already done, or masked
@@ -1343,16 +1344,13 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
             if cfg['debug']:
 				chris_triangulation(tile_dir, img1, rpc1, img2,
                                                  rpc2, col, row, tw, th, None,
-                                                 cld_msk, roi_msk, A_global)
+                                                 cld_msk, roi_msk, A_globalDic[pair_id])
 				
-                #triangulation.compute_dem(height_map, col, row, tw, th, z,
-                                              #rpc1, rpc2, H1, H2, disp, mask,
-                                              #rpc_err, A_global) 
             else:
                 p = pool.apply_async(chris_triangulation,
                                          args=(tile_dir, img1, rpc1, img2,
                                                  rpc2, col, row, tw, th, None,
-                                                 cld_msk, roi_msk, A_global),
+                                                 cld_msk, roi_msk, A_globalDic[pair_id]),
                                          callback=show_progress)
                 results.append(p)
         
@@ -1372,9 +1370,11 @@ def chris_process_pair(out_dir, x, y, w, h, tw=None, th=None,
 
     # 6 - Tiles composition
     try:
-        for pair_dir,tiles in tilesLoc.items():
-            out = '%s/height_map.tif' % pair_dir
-            tmp = ['%s/height_map.tif' % t for t in tiles]
+        for tile_dir,tab in tilesInfo.items():
+            col,row,tw,th,i,j,img2,rpc2,pair_id=tab 
+            
+            out = '%s/height_map_pair_%d.tif' % (out_dir,pair_id)
+            tmp = ['%s/height_map.tif' % t for t in tilesLoc[pair_id]]
             if not os.path.isfile(out) or not cfg['skip_existing']:
                 print "Mosaicing tiles with %s..." % cfg['mosaic_method']
                 if cfg['mosaic_method'] == 'gdal':

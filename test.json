@@ -4,6 +4,8 @@
     { "img" : "data/test_data_pleiades_iceland/img_01.tif",
       "rpc" : "data/test_data_pleiades_iceland/rpc_01.xml" },
     { "img" : "data/test_data_pleiades_iceland/img_02.tif",
+      "rpc" : "data/test_data_pleiades_iceland/rpc_02.xml" },
+    { "img" : "data/test_data_pleiades_iceland/img_02.tif",
       "rpc" : "data/test_data_pleiades_iceland/rpc_02.xml" }
     ],
   "roi" : {
@@ -31,7 +33,7 @@
   "disp_range_method" : "wider_sift_srtm",
   "disp_range_srtm_high_margin" : 50,
   "disp_range_srtm_low_margin" : -20,
-  "skip_existing" : false,
+  "skip_existing" : true,
   "mosaic_method" : "piio",
   "msk_erosion": 0,
   "dsm_resolution": 0.5
