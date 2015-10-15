@@ -240,6 +240,8 @@ def check_parameters(usr_cfg):
 
 
 
+
+
 def pointing_correction(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
                              w=None, h=None, prv1=None, cld_msk=None,
                              roi_msk=None):
@@ -287,15 +289,6 @@ def pointing_correction(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
-    # select ROI
-    try:
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except TypeError:
-        if prv1:
-            x, y, w, h = common.get_roi_coordinates(img1, prv1)
-        else:
-            print 'Neither a ROI nor a preview file are defined. Aborting.'
-            return
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
@@ -388,15 +381,6 @@ def rectify(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
-    # select ROI
-    try:
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except TypeError:
-        if prv1:
-            x, y, w, h = common.get_roi_coordinates(img1, prv1)
-        else:
-            print 'Neither a ROI nor a preview file are defined. Aborting.'
-            return
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
@@ -408,10 +392,6 @@ def rectify(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     print 'tile %d %d running on process %s' % (x, y,
                                                 multiprocessing.current_process())
                                                 
-    # ensure that the coordinates of the ROI are multiples of the zoom factor
-    z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-    
     
     A,m=None,None
     if os.path.isfile('%s/global_pointing.txt' % out_dir):
@@ -427,7 +407,8 @@ def rectify(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
                                                             rpc2, x, y, w, h,
                                                             rect1, rect2, A, m)
-                                                            
+    
+    z = cfg['subsampling_factor']                           
     np.savetxt(subsampling, np.array([z]))                                                        
     np.savetxt(H_ref, H1)
     np.savetxt(H_sec, H2)
@@ -487,15 +468,6 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
-    # select ROI
-    try:
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except TypeError:
-        if prv1:
-            x, y, w, h = common.get_roi_coordinates(img1, prv1)
-        else:
-            print 'Neither a ROI nor a preview file are defined. Aborting.'
-            return
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
@@ -507,9 +479,6 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     print 'tile %d %d running on process %s' % (x, y,
                                                 multiprocessing.current_process())
                                                 
-    # ensure that the coordinates of the ROI are multiples of the zoom factor
-    z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
     # disparity (block-matching)
     
@@ -590,16 +559,8 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
-
-    # select ROI
-    try:
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except TypeError:
-        if prv1:
-            x, y, w, h = common.get_roi_coordinates(img1, prv1)
-        else:
-            print 'Neither a ROI nor a preview file are defined. Aborting.'
-            return
+    rpc_err = '%s/rpc_err.tif' % out_dir
+    height_map = '%s/height_map.tif' % out_dir
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
@@ -610,17 +571,12 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # debug print
     print 'tile %d %d running on process %s' % (x, y,
                                                 multiprocessing.current_process())
-                                                
-    # ensure that the coordinates of the ROI are multiples of the zoom factor
-    z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
+
     
     
 
     # triangulation
-    rpc_err = '%s/rpc_err.tif' % out_dir
-    height_map = '%s/height_map.tif' % out_dir
-    
+    z = cfg['subsampling_factor']
     triangulation.compute_dem(height_map, x, y, w, h, z,
                                               rpc1, rpc2, H_ref, H_sec, disp, mask,
                                               rpc_err, A)
@@ -692,15 +648,14 @@ def process_pair(out_dir, images, x, y, w, h, tw=None, th=None,
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])-2
     pool = multiprocessing.Pool(nb_workers)
+    
 
     # process the tiles
     # don't parallellize if in debug mode
     print 'Computing tile by tile...' 
     
-    results = []
-    show_progress.counter = 0
 
     # Build a simple tile dico
     tilesInfo={}
@@ -719,6 +674,8 @@ def process_pair(out_dir, images, x, y, w, h, tw=None, th=None,
 
 	     
     # 1 - Pointing correction  
+    results = []
+    show_progress.counter = 0
     try:
         print 'Computing pointing correction...'
         for tile_dir,tab in tilesInfo.items():
@@ -765,6 +722,8 @@ def process_pair(out_dir, images, x, y, w, h, tw=None, th=None,
 
 
     # 2 - Global pointing correction
+    results = []
+    show_progress.counter = 0
     try:
         print 'Computing global pointing correction...'
         A_globalDic={}
@@ -803,6 +762,8 @@ def process_pair(out_dir, images, x, y, w, h, tw=None, th=None,
 
 
     # 3 - Rectify each tile
+    results = []
+    show_progress.counter = 0
     try:
         for tile_dir,tab in tilesInfo.items():
             col,row,tw,th,i,j,img2,rpc2,pair_id=tab                     
@@ -841,6 +802,8 @@ def process_pair(out_dir, images, x, y, w, h, tw=None, th=None,
 
 
     # 4 - Disparity
+    results = []
+    show_progress.counter = 0
     try:
         for tile_dir,tab in tilesInfo.items():
             col,row,tw,th,i,j,img2,rpc2,pair_id=tab                     
@@ -970,6 +933,13 @@ def mergeHeightMaps(height_maps,thresh,conservative,k=1,garbage=[]):
         common.run('cp %s %s' % (list_height_maps[0],cfg['out_dir']+'/final_height_map.tif'))
         for imtemp in garbage:
             common.run('rm -f %s' % imtemp )
+
+
+
+
+
+
+
 
 
 def main(config_file):
