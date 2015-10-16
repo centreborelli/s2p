@@ -936,7 +936,7 @@ def mergeHeightMaps(height_maps,thresh,conservative,k=1,garbage=[]):
 
 
 
-def preprocess_tiles(out_dir, images, x, y, w, h, tw=None, th=None,
+def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
                  ov=None, cld_msk=None, roi_msk=None):
               
 
@@ -1001,8 +1001,15 @@ def preprocess_tiles(out_dir, images, x, y, w, h, tw=None, th=None,
                 tilesLocPerPairId[numImSec].append(tile_dir)
                 ensTiles.add('%s/tile_%d_%d_row_%d/col_%d/' % (out_dir, tw, th, row, col))
 
-                
-    
+
+    return tilesFullInfo,tilesLocPerPairId,list(ensTiles),NbPairs
+
+
+
+
+
+def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_msk=None, roi_msk=None):
+
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
@@ -1110,17 +1117,69 @@ def preprocess_tiles(out_dir, images, x, y, w, h, tw=None, th=None,
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
 
-    return tilesFullInfo,tilesLocPerPairId,list(ensTiles),NbPairs
 
 
+
+def process_tile(fullInfo,cld_msk=None, roi_msk=None):
+
+    col,row,tw,th,i,j,img1,rpc1,img2,rpc2,pair_id=fullInfo
+    print 'process tile %d %d (pair %d)...' % (col,row,pair_id)
+    
+    
+    
 
 
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_msk=None, roi_msk=None):
+    
+    # create pool with less workers than available cores
+    nb_workers = multiprocessing.cpu_count()
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])-2
+    pool = multiprocessing.Pool(nb_workers)
+    
+    
+    #process_tiles
+    results = []
+    show_progress.counter = 0
+    try:
+        for tile in ensTiles:
+            for i in range(0,NbPairs):
+            
+                pair_id = i+1
+                tile_dir=tile + 'pair_%d' % pair_id
+                
+                fullInfo=tilesFullInfo[tile_dir]
+        
+                if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+    
+                    if cfg['debug']:
+                        process_tile(fullInfo,cld_msk,roi_msk)
+                    else:
+                        p = pool.apply_async(process_tile,
+                                                 args=(fullInfo, cld_msk,
+                                                       roi_msk), callback=show_progress)
+                        results.append(p)
+    
+                for r in results:
+                    try:
+                        r.get(3600)  # wait at most one hour per tile
+                    except multiprocessing.TimeoutError:
+                        print "Timeout while computing tile "+str(r)
 
-    pass
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
 
-
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+    
+    
+    
+    
+    
+    
 
 def main(config_file):
     """
@@ -1198,15 +1257,18 @@ def main(config_file):
         srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
     # height maps
-    tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs = preprocess_tiles(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
+    tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs = prepare_fullProcess(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'])
                            
                     
-    process_tiles(cfg['out_dir'],tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,
+    preprocess_tiles(cfg['out_dir'],tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])         
-                           
+     
+     
+    process_tiles(cfg['out_dir'],tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,
+                        cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
                            
     #height_maps = process_pair(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
     #                       cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
