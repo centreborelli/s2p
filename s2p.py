@@ -1142,8 +1142,9 @@ def process_tile(fullInfo,cld_msk=None, roi_msk=None):
     else:
         print 'process tile %d %d (pair %d)...' % (col,row,pair_id)    
         triangulate(tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
-    
 
+                
+                
 
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_msk=None, roi_msk=None):
@@ -1183,6 +1184,7 @@ def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_m
                     except multiprocessing.TimeoutError:
                         print "Timeout while computing tile "+str(r)
 
+
     except KeyboardInterrupt:
         pool.terminate()
         sys.exit(1)
@@ -1191,8 +1193,78 @@ def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_m
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
     
+
+
     
+def tile_composition(out_dir,pair_id, tiles, x, y, w, h, tw=None, th=None, ov=None):
+
+    height_map_path = '%s/height_map_pair_%d.tif' % (out_dir,pair_id)
+    if os.path.isfile(height_map_path) and cfg['skip_existing']:
+        print 'tile composition for %s already done, skip' % height_map_path
+    else:
+        # ensure that the coordinates of the ROI are multiples of the zoom factor,
+        # to avoid bad registration of tiles due to rounding problems.
+        z = cfg['subsampling_factor']
+        x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
     
+        # TODO: automatically compute optimal size for tiles
+        if tw is None and th is None and ov is None:
+            ov = z * 100
+            if w <= z * cfg['tile_size']:
+                tw = w
+            else:
+                tw = z * cfg['tile_size']
+            if h <= z * cfg['tile_size']:
+                th = h
+            else:
+                th = z * cfg['tile_size']
+    
+        
+        tmp = ['%s/height_map.tif' % t for t in tiles]
+        print "Mosaicing tiles with %s..." % cfg['mosaic_method']
+        if cfg['mosaic_method'] == 'gdal':
+            tile_composer.mosaic_gdal(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
+        else:
+            tile_composer.mosaic(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
+
+
+def tiles_composition(out_dir,ensTiles,tilesLocPerPairId,NbPairs, x, y, w, h, tw=None, th=None, ov=None):
+
+    # create pool with less workers than available cores
+    nb_workers = multiprocessing.cpu_count()
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
+    pool = multiprocessing.Pool(nb_workers)
+
+    # Tiles composition
+    results = []
+    show_progress.counter = 0
+    try:
+        for tile in ensTiles:
+            for i in range(0,NbPairs):
+            
+                pair_id = i+1 
+
+                if cfg['debug']:
+                        tile_composition(out_dir,pair_id,tilesLocPerPairId[pair_id],x, y, w, h, tw, th, ov)
+                else:
+                        p = pool.apply_async(tile_composition,
+                                                 args=(out_dir,pair_id,tilesLocPerPairId[pair_id],x, y, w, h, tw, th, ov), callback=show_progress)
+                        results.append(p)
+    
+                for r in results:
+                    try:
+                        r.get(3600)  # wait at most one hour per tile
+                    except multiprocessing.TimeoutError:
+                        print "Timeout while computing tile "+str(r)
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]    
     
     
     
@@ -1286,6 +1358,12 @@ def main(config_file):
     process_tiles(cfg['out_dir'],tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
                            
+    tiles_composition(cfg['out_dir'],ensTiles,tilesLocPerPairId,NbPairs, 
+                           cfg['roi']['x'], cfg['roi']['y'], 
+                           cfg['roi']['w'], cfg['roi']['h'], None, None, None)
+
+#tiles_composition(out_dir,ensTiles,tilesLocPerPairId,NbPairs, x, y, w, h, tw=None, th=None, ov=None):
+
     #height_maps = process_pair(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
     #                       cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
      #                      None, None, None, cfg['images'][0]['cld'],
