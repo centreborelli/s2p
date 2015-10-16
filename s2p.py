@@ -54,8 +54,6 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
-
-
 def generate_cloud(out_dir, height_maps, rpc1, x, y, w, h, im1, clr,
                    do_offset=False):
     """
@@ -990,21 +988,20 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     tilesFullInfo={}
     tilesLocPerPairId = {}
     ensTiles = set([])
-    for numImSec in range(1,len(images)) :
-        tilesLocPerPairId[numImSec]=[]
+    for pair_id in range(1,len(images)) :
+        tilesLocPerPairId[pair_id]=[]
         for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
             for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
                 # ensure that the coordinates of the ROI are multiples of the zoom factor
                 col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row, tw, th)
-                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (out_dir, tw, th, row, col, numImSec)
-                tilesFullInfo[tile_dir]=[col,row,tw,th,i,j,img1,rpc1,images[numImSec]['img'],images[numImSec]['rpc'],numImSec]
-                tilesLocPerPairId[numImSec].append(tile_dir)
+                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (out_dir, tw, th, row, col, pair_id)
+                A_global = '%s/global_pointing_pair_%d.txt' % (out_dir,pair_id)
+                tilesFullInfo[tile_dir]=[tile_dir,pair_id,A_global,col,row,tw,th,i,j,img1,rpc1,images[pair_id]['img'],images[pair_id]['rpc']]
+                tilesLocPerPairId[pair_id].append(tile_dir)
                 ensTiles.add('%s/tile_%d_%d_row_%d/col_%d/' % (out_dir, tw, th, row, col))
 
 
     return tilesFullInfo,tilesLocPerPairId,list(ensTiles),NbPairs
-
-
 
 
 
@@ -1027,7 +1024,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
                 pair_id = i+1
                 tile_dir=tile + 'pair_%d' % pair_id
                 
-                col,row,tw,th,i,j,img1,rpc1,img2,rpc2,pair_id=tilesFullInfo[tile_dir]
+                tile_dir,pair_id,A_global,col,row,tw,th,i,j,img1,rpc1,img2,rpc2=tilesFullInfo[tile_dir]
 
                 # check if the tile is already done, or masked
                 if os.path.isfile('%s/pointing.txt' % tile_dir):
@@ -1072,14 +1069,13 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
     show_progress.counter = 0
     try:
         print 'Computing global pointing correction...'
-        A_globalDic={}
         
         for i in range(0,NbPairs):
             
                 pair_id = i+1
                 tiles =tilesLocPerPairId[pair_id]
-                A_globalDic[pair_id] = pointing_accuracy.global_from_local(tiles)
-                np.savetxt('%s/global_pointing_pair_%d.txt' % (out_dir,pair_id), A_globalDic[pair_id])
+                A_globalMat = pointing_accuracy.global_from_local(tiles)
+                np.savetxt('%s/global_pointing_pair_%d.txt' % (out_dir,pair_id), A_globalMat)
             
 
         # Check if all tiles were computed
@@ -1094,7 +1090,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
                 pair_id = i+1
                 tile_dir=tile + 'pair_%d' % pair_id
                 
-                col,row,tw,th,i,j,img1,rpc1,img2,rpc2,pair_id=tilesFullInfo[tile_dir]
+                tile_dir,pair_id,A_global,col,row,tw,th,i,j,img1,rpc1,img2,rpc2=tilesFullInfo[tile_dir]
         
                 # check if the tile is masked, or if the pointing correction is already computed
                 if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
@@ -1107,7 +1103,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
                         if A is not None:
                             np.savetxt('%s/next_tile_pointing.txt' % tile_dir, A)
                         else:
-                            np.savetxt('%s/global_pointing.txt' % tile_dir, A_globalDic[pair_id])
+                            np.savetxt('%s/global_pointing.txt' % tile_dir, A_global)
                         
     except KeyboardInterrupt:
         pool.terminate()
@@ -1122,10 +1118,30 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
 
 def process_tile(fullInfo,cld_msk=None, roi_msk=None):
 
-    col,row,tw,th,i,j,img1,rpc1,img2,rpc2,pair_id=fullInfo
+    tile_dir,pair_id,A_global,col,row,tw,th,i,j,img1,rpc1,img2,rpc2=fullInfo
     print 'process tile %d %d (pair %d)...' % (col,row,pair_id)
+   
     
+    # Rectification
+    if os.path.isfile('%s/rectified_ref.tif' % tile_dir) and os.path.isfile('%s/rectified_sec.tif' % tile_dir) and cfg['skip_existing']:
+        print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+    else:
+        print 'process tile %d %d (pair %d)...' % (col,row,pair_id)
+        rectify(tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
     
+    # Disparity
+    if os.path.isfile('%s/rectified_disp.tif' % tile_dir) and cfg['skip_existing']:
+        print 'disparity on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+    else:
+        print 'process tile %d %d (pair %d)...' % (col,row,pair_id)
+        disparity(tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+        
+    # Triangulate
+    if os.path.isfile('%s/height_map.tif' % tile_dir) and cfg['skip_existing']:
+        print 'disparity on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+    else:
+        print 'process tile %d %d (pair %d)...' % (col,row,pair_id)    
+        triangulate(tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
     
 
 
