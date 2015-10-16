@@ -1036,7 +1036,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
                         #tiles.append(tile_dir)
                         continue
                     if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                        print "tile %d %d (pair %d) already masked, skip" % (col, row, pair_id)
+                        print "tile %s already masked, skip" % tile_dir
                         #tiles.append(tile_dir)
                         continue
     
@@ -1088,10 +1088,32 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
         print "\toutput: ", e.args[0]["output"]
 
 
+def mergeHeightMaps2(height_maps,out,thresh,conservative,k=1,garbage=[]):
+
+    final_height_map = out +'final_height_map.tif'
+    if os.path.isfile(final_height_map) and cfg['skip_existing']:
+        print 'final height map %s already done, skip' % final_height_map
+    else:
+        list_height_maps=[]
+        for i in range(len(height_maps)-1):
+            height_map = out +'/height_map_'+str(i)+'_'+str(i+1)+'_'+str(k)+'.tif'
+            fusion.merge(height_maps[i], height_maps[i+1], thresh, height_map,
+                     conservative)
+            list_height_maps.append(height_map)
+            garbage.append(height_map)
+        
+        if len(list_height_maps) > 1:
+            mergeHeightMaps2(list_height_maps,out,thresh,conservative,k+1,garbage)
+        else:
+            common.run('cp %s %s' % (list_height_maps[0],final_height_map))
+            for imtemp in garbage:
+                common.run('rm -f %s' % imtemp )
 
 
 def process_tile(fullInfoNpairs,cld_msk=None, roi_msk=None):
 
+
+    height_maps = []
     for fullInfo in fullInfoNpairs:
 
         tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo
@@ -1099,6 +1121,8 @@ def process_tile(fullInfoNpairs,cld_msk=None, roi_msk=None):
         if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
             print 'process tile %d %d (pair %d)...' % (col,row,pair_id)
            
+            height_maps.append('%s/height_map.tif' % tile_dir)
+
             # Rectification
             if os.path.isfile('%s/rectified_ref.tif' % tile_dir) and os.path.isfile('%s/rectified_sec.tif' % tile_dir) and cfg['skip_existing']:
                 print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
@@ -1120,8 +1144,13 @@ def process_tile(fullInfoNpairs,cld_msk=None, roi_msk=None):
                 print 'process tile %d %d (pair %d)...' % (col,row,pair_id)    
                 triangulate(tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
 
+        else:
+            print "tile %s already masked, skip" % tile_dir
+
                 
-                
+    # merge the n height maps
+    out=fullInfoNpairs[0][0].split('pair_')[0] #root dir of the tile
+    mergeHeightMaps2(height_maps,out,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])     
 
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_msk=None, roi_msk=None):
@@ -1129,7 +1158,7 @@ def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_m
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])-2
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
     pool = multiprocessing.Pool(nb_workers)
     
     
