@@ -142,6 +142,32 @@ def generate_cloud(out_dir, height_maps, rpc1, x, y, w, h, im1, clr,
     common.garbage_cleanup()
 
 
+def cropImage(fullInfo):
+
+    print "\nCrop ref image..."
+
+    z = cfg['subsampling_factor']
+ 
+    tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo
+    
+    root_tile_dir = os.path.dirname(tile_dir)
+    
+    # output files
+    crop_ref = root_tile_dir + '/roi_ref.tif'
+    local_minmax = root_tile_dir + '/local_minmax.txt'
+    
+    if z == 1:
+        common.image_crop_TIFF(img1, col,row,tw,th, crop_ref)
+    else:
+        # gdal is used for the zoom because it handles BigTIFF files, and
+        # before the zoom out the image may be that big
+        tmp_crop = common.image_crop_TIFF(im1, col,row,tw,th)
+        common.image_zoom_gdal(tmp_crop, z, crop_ref, tw,th)
+		
+    common.image_getminmax(crop_ref,local_minmax)
+    
+    
+
 def generate_cloud2(fullInfo, clr,
                    do_offset=False):
     """
@@ -161,6 +187,10 @@ def generate_cloud2(fullInfo, clr,
     crop_ref = root_tile_dir + '/roi_ref.tif'
     cloud = root_tile_dir + '/cloud.ply'
 
+    if cfg['full_img'] and z == 1:
+        crop_ref = img1
+    #else crop image has already been computed by cropImage 
+
 
     A = common.matrix_translation(-col, -row)
     z = cfg['subsampling_factor']
@@ -179,17 +209,7 @@ def generate_cloud2(fullInfo, clr,
     else:
         off_x, off_y = 0, 0
 
-    # crop the ROI in ref image, then zoom
-    if cfg['full_img'] and z == 1:
-        crop_ref = img1
-    else:
-        if z == 1:
-            common.image_crop_TIFF(img1, col,row,tw,th, crop_ref)
-        else:
-            # gdal is used for the zoom because it handles BigTIFF files, and
-            # before the zoom out the image may be that big
-            tmp_crop = common.image_crop_TIFF(im1, col,row,tw,th)
-            common.image_zoom_gdal(tmp_crop, z, crop_ref, tw,th)
+
 
     if cfg['color_ply']:
         crop_color = root_tile_dir + '/roi_color_ref.tif'
@@ -1156,6 +1176,76 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
+        
+        
+    # 3 - Crop ref image into tile, and get min/max intensities values  
+    results = []
+    show_progress.counter = 0
+    try:
+        print 'Croping ref image into tiles, get min/max intensities values from each tile...'
+        for tile_dir in ensTiles:
+
+			# check if the tile is already done, or masked
+			if os.path.isfile('%s/local_minmax.txt' % tile_dir):
+				if cfg['skip_existing']:
+					print "Compute min/max intensities values on tile %s already done, skip" % (tile_dir)
+					#tiles.append(tile_dir)
+					continue
+				if os.path.isfile('%s/this_tile_is_masked.txt' % (tile_dir + 'pair_1')):
+					print "tile %s already masked, skip" % (tile_dir + 'pair_1')
+					#tiles.append(tile_dir)
+					continue
+
+			
+			if cfg['debug']:
+				cropImage(tilesFullInfo[tile_dir + 'pair_1'])
+			else:
+				p = pool.apply_async(cropImage,
+										 args=([tilesFullInfo[tile_dir + 'pair_1']]), callback=show_progress)
+				results.append(p)
+
+        for r in results:
+            try:
+                r.get(3600)  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+        
+        
+    # 4 - Global Min/max
+    try:
+        print 'Computing global min max intensities...'
+        
+        minlist=[]
+        maxlist=[]
+        for tile_dir in ensTiles:
+            minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
+            minlist.append(minmax[0])
+            maxlist.append(minmax[1])
+            
+        global_minmax=[min(minlist),max(maxlist)]
+        
+        np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)			        
+            
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+        
+        
+        
+        
 
 
 def mergeHeightMaps2(height_maps,out,thresh,conservative,k=1,garbage=[]):
