@@ -158,8 +158,8 @@ def generate_cloud2(fullInfo, clr,
     root_tile_dir = os.path.dirname(tile_dir)
     
     # output files
-    crop_ref = os.path.join(root_tile_dir,'roi_ref.tif')
-    cloud = os.path.join(root_tile_dir,'cloud.ply')
+    crop_ref = root_tile_dir + '/roi_ref.tif'
+    cloud = root_tile_dir + '/cloud.ply'
 
 
     A = common.matrix_translation(-col, -row)
@@ -167,7 +167,7 @@ def generate_cloud2(fullInfo, clr,
     f = 1.0/z
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
-    trans = os.path.join(root_tile_dir,'trans.txt')
+    trans = root_tile_dir + '/trans.txt'
     np.savetxt(trans, A)
 
     # compute offset
@@ -192,7 +192,7 @@ def generate_cloud2(fullInfo, clr,
             common.image_zoom_gdal(tmp_crop, z, crop_ref, tw,th)
 
     if cfg['color_ply']:
-        crop_color = os.path.join(root_tile_dir,'roi_color_ref.tif') 
+        crop_color = root_tile_dir + '/roi_color_ref.tif'
         if clr is not None:
             print 'colorizing...'
             triangulation.colorize(crop_ref, clr, col,row, z, crop_color)
@@ -206,7 +206,7 @@ def generate_cloud2(fullInfo, clr,
     else:
         crop_color = ''
 
-    height_map = os.path.join(root_tile_dir,'final_height_map.tif')
+    height_map = root_tile_dir + '/final_height_map.tif'
     triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
                                       off_x, off_y)
     common.garbage_cleanup()
@@ -1160,7 +1160,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
 
 def mergeHeightMaps2(height_maps,out,thresh,conservative,k=1,garbage=[]):
 
-    final_height_map = out +'final_height_map.tif'
+    final_height_map = out +'/final_height_map.tif'
     if os.path.isfile(final_height_map) and cfg['skip_existing']:
         print 'final height map %s already done, skip' % final_height_map
     else:
@@ -1441,8 +1441,6 @@ def main(config_file):
     height_maps=tiles_composition(cfg['out_dir'],ensTiles,tilesLocPerPairId,NbPairs, 
                            cfg['roi']['x'], cfg['roi']['y'], 
                            cfg['roi']['w'], cfg['roi']['h'], None, None, None)
-
-    print('^^'*20,height_maps)
 
     # merge the n height maps
     mergeHeightMaps(height_maps,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
