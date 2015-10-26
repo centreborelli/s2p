@@ -142,6 +142,76 @@ def generate_cloud(out_dir, height_maps, rpc1, x, y, w, h, im1, clr,
     common.garbage_cleanup()
 
 
+def generate_cloud2(fullInfo, clr,
+                   do_offset=False):
+    """
+    Args:
+        clr:  path to the xs (multispectral, ie color) reference image
+        do_offset (optional, default: False): boolean flag to decide wether the
+            x, y coordinates of points in the ply file will be translated or
+            not (translated to be close to 0, to avoid precision loss due to
+            huge numbers)
+    """
+    print "\nComputing point cloud (2)..."
+    tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo
+
+    root_tile_dir = os.path.dirname(tile_dir)
+    
+    # output files
+    crop_ref = os.path.join(root_tile_dir,'roi_ref.tif')
+    cloud = os.path.join(root_tile_dir,'cloud.ply')
+
+
+    A = common.matrix_translation(-col, -row)
+    z = cfg['subsampling_factor']
+    f = 1.0/z
+    Z = np.diag([f, f, 1])
+    A = np.dot(Z, A)
+    trans = os.path.join(root_tile_dir,'trans.txt')
+    np.savetxt(trans, A)
+
+    # compute offset
+    if do_offset:
+        r = rpc_model.RPCModel(rpc1)
+        lat = r.latOff
+        lon = r.lonOff
+        off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
+    else:
+        off_x, off_y = 0, 0
+
+    # crop the ROI in ref image, then zoom
+    if cfg['full_img'] and z == 1:
+        crop_ref = img1
+    else:
+        if z == 1:
+            common.image_crop_TIFF(img1, col,row,tw,th, crop_ref)
+        else:
+            # gdal is used for the zoom because it handles BigTIFF files, and
+            # before the zoom out the image may be that big
+            tmp_crop = common.image_crop_TIFF(im1, col,row,tw,th)
+            common.image_zoom_gdal(tmp_crop, z, crop_ref, tw,th)
+
+    if cfg['color_ply']:
+        crop_color = os.path.join(root_tile_dir,'roi_color_ref.tif') 
+        if clr is not None:
+            print 'colorizing...'
+            triangulation.colorize(crop_ref, clr, col,row, z, crop_color)
+        elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
+            print 'the image is pansharpened fusioned'
+            tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
+            common.image_qauto(tmp, crop_color, tilewise=False)
+        else:
+            print 'no color data'
+            common.image_qauto(crop_ref, crop_color, tilewise=False)
+    else:
+        crop_color = ''
+
+    height_map = os.path.join(root_tile_dir,'final_height_map.tif')
+    triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
+                                      off_x, off_y)
+    common.garbage_cleanup()
+
+
 def generate_dsm(out, point_clouds_list, resolution):
     """
     Args:
@@ -1149,9 +1219,10 @@ def process_tile(fullInfoNpairs,cld_msk=None, roi_msk=None):
 
                 
     # merge the n height maps
-    out=fullInfoNpairs[0][0].split('pair_')[0] #root dir of the tile
+    out=os.path.dirname(fullInfoNpairs[0][0])
     mergeHeightMaps2(height_maps,out,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])     
-
+    generate_cloud2(fullInfo,None,cfg['offset_ply'])
+    
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_msk=None, roi_msk=None):
     
@@ -1371,10 +1442,20 @@ def main(config_file):
                            cfg['roi']['x'], cfg['roi']['y'], 
                            cfg['roi']['w'], cfg['roi']['h'], None, None, None)
 
+    print('^^'*20,height_maps)
+
     # merge the n height maps
     mergeHeightMaps(height_maps,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
 
-
+    #debug
+    for tile in ensTiles:
+        for i in range(0,NbPairs):
+        
+            pair_id = i+1
+            tile_dir=tile + 'pair_%d' % pair_id
+            tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=tilesFullInfo[tile_dir]
+            
+            print tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2
 
     # point cloud
     generate_cloud(cfg['out_dir'], height_maps, cfg['images'][0]['rpc'],
