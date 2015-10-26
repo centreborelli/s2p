@@ -29,22 +29,39 @@ static void get_rminmax(float *rmin, float *rmax, float *x, int n)
 
 int main(int c, char *v[])
 {
-	if (c != 3 && c != 2 && c != 1) {
-		fprintf(stderr, "usage:\n\t%s [in [out]]\n", *v);
-		//                          0  1   2
+	if (c != 3 ) {
+		fprintf(stderr, "usage:\n\t%s in out\n", *v);
+		//                          0  1  2
 		return EXIT_FAILURE;
 	}
-	char *in = c > 1 ? v[1] : "-";
-	char *out = c > 2 ? v[2] : "-";
+	/*char *in = c > 1 ? v[1] : "-";
+	char *out = c > 2 ? v[2] : "-";*/
+    
+    char *in = v[1];
+    char *out = v[2];
 
 	int w, h, pd;
 	float *x = iio_read_image_float_vec(in, &w, &h, &pd);
 
 	float rmin, rmax;
 	get_rminmax(&rmin, &rmax, x, w*h*pd);
-	fprintf(stderr, "qauto: rminmax = %g %g\n", rmin, rmax);
+    
+    FILE* file = NULL;
+    
+    file = fopen(out,"w");
+    
+    if (file != NULL)
+    {
+        fprintf(file, "%g %g", rmin, rmax);
+    }
+    else
+       return EXIT_FAILURE; 
+       
+    fclose(file);
+    
+	//fprintf(stderr, "qauto: rminmax = %g %g\n", rmin, rmax);
 
-	uint8_t *y = xmalloc(w*h*pd);
+	/*uint8_t *y = xmalloc(w*h*pd);
 	for (int i = 0; i < w*h*pd; i++) {
 		float g = x[i];
 		g = floor(255 * (g - rmin)/(rmax - rmin));
@@ -52,6 +69,6 @@ int main(int c, char *v[])
 		if (g > 255) g = 255;
 		y[i] = g;
 	}
-	iio_save_image_uint8_vec(out, y, w, h, pd);
+	iio_save_image_uint8_vec(out, y, w, h, pd);*/
 	return EXIT_SUCCESS;
 }

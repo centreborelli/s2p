@@ -471,7 +471,19 @@ def image_qauto(im, out=None, tilewise=False):
     else:
         run('qauto %s %s' % (im, out))
     return out
-
+    
+    
+def image_getminmax(im,out=None):
+    """
+    Get min and max intensity
+    
+    Args :
+        im: path to input image
+        out: (optional, default is None): path to file where min/max values will be stored
+    """
+    
+    run('getminmax %s %s' % (im, out))
+    
 
 def image_qauto_gdal(im):
     """
