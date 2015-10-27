@@ -175,26 +175,53 @@ def getMinMaxFromExtract(fullInfo):
     
 def colorCropRef(fullInfo,clr=None):
 
-    #Get info
+    # Get info
     tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo    
     root_tile_dir = os.path.dirname(tile_dir)
 
-   
+    # Paths
     crop_ref = root_tile_dir + '/roi_ref.tif'
+    global_minmax = cfg['out_dir']+'/global_minmax.txt'
+    applied_minmax = root_tile_dir + '/applied_minmax.txt'
     
+    global_minmax_arr = np.loadtxt(global_minmax)
+            
     if cfg['color_ply']:
+        
         crop_color = root_tile_dir + '/roi_color_ref.tif'
         if clr is not None:
             print 'colorizing...'
             triangulation.colorize(crop_ref, clr, col,row, z, crop_color)
-        elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
-            print 'the image is pansharpened fusioned'
-            tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
-            common.image_qauto(tmp, crop_color, tilewise=False)
-        else:
-            print 'no color data'
-            common.image_qauto(crop_ref, crop_color, tilewise=False)
         
+        else: # use of image_rescaleintensities
+        
+            doProcess=False
+            if not os.path.exists(applied_minmax):
+                doProcess=True
+                applied_minmax_arr = global_minmax_arr
+            else:     
+                applied_minmax_arr = np.loadtxt(applied_minmax)
+		    
+                if (applied_minmax_arr[0]!=global_minmax_arr[0]) or (applied_minmax_arr[1]!=global_minmax_arr[1]):
+		            doProcess=True
+		            applied_minmax_arr = global_minmax_arr
+        
+            if not doProcess and cfg['skip_existing']:
+                print 'Rescaling of tile %s already done, skip' % root_tile_dir
+            else:
+
+                np.savetxt(applied_minmax,applied_minmax_arr)
+
+                if common.image_pix_dim_tiffinfo(crop_ref) == 4:
+                    print 'the image is pansharpened fusioned'
+                    tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
+                    #common.image_qauto(tmp, crop_color, tilewise=False)
+                    common.image_rescaleintensities(tmp,crop_color,applied_minmax_arr[0],applied_minmax_arr[1])
+                else:
+                    print 'no color data'
+                    #common.image_qauto(crop_ref, crop_color, tilewise=False)
+                    common.image_rescaleintensities(crop_ref,crop_color,applied_minmax_arr[0],applied_minmax_arr[1])
+	        
         
 
 def generate_cloud2(fullInfo, do_offset=False):
@@ -1253,7 +1280,6 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
         global_minmax=[min(minlist),max(maxlist)]
         
         np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)			        
-            
 
     except KeyboardInterrupt:
         pool.terminate()
