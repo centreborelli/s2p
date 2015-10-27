@@ -1170,7 +1170,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])-2
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
     pool = multiprocessing.Pool(nb_workers)
     
     # 1 - Pointing correction  
