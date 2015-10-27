@@ -181,7 +181,9 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     else: #Crop image has already been computed by getMinMaxFromExtract 
         crop_ref = tile_dir + '/roi_ref.tif'
 
-    #Compute transformation matrix
+    #Compute the homography transforming the coordinates system of the
+    #original full size image into the coordinates system 
+    #of the crop we are dealing with
     A = common.matrix_translation(-col, -row)
     z = cfg['subsampling_factor']
     f = 1.0/z
@@ -190,7 +192,7 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     trans = tile_dir + '/trans.txt'
     np.savetxt(trans, A)
 
-    # compute offset
+    # compute coordinates (offsets) of the point we want to use as origin in the local coordinate system of the computed cloud
     if do_offset:
         r = rpc_model.RPCModel(rpc1)
         lat = r.latOff
@@ -1172,6 +1174,9 @@ def main(config_file):
      
     process_tiles(cfg['out_dir'],tilesFullInfo,pairedTilesPerPairId,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
+
+
+    print tilesFullInfo
 
     #TODO
     # digital surface model
