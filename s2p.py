@@ -153,16 +153,15 @@ def getMinMaxFromExtract(fullInfo):
     
     print "\nCrop ref image and compute min/max intensities..."
 
-    z = cfg['subsampling_factor']
- 
-    tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo
-    
+    #Get info
+    tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo    
     root_tile_dir = os.path.dirname(tile_dir)
     
     # output files
     crop_ref = root_tile_dir + '/roi_ref.tif'
     local_minmax = root_tile_dir + '/local_minmax.txt'
     
+    z = cfg['subsampling_factor']
     if z == 1:
         common.image_crop_TIFF(img1, col,row,tw,th, crop_ref)
     else:
@@ -174,9 +173,31 @@ def getMinMaxFromExtract(fullInfo):
     common.image_getminmax(crop_ref,local_minmax)
     
     
+def colorCropRef(fullInfo,clr=None):
 
-def generate_cloud2(fullInfo, clr,
-                   do_offset=False):
+    #Get info
+    tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo    
+    root_tile_dir = os.path.dirname(tile_dir)
+
+   
+    crop_ref = root_tile_dir + '/roi_ref.tif'
+    
+    if cfg['color_ply']:
+        crop_color = root_tile_dir + '/roi_color_ref.tif'
+        if clr is not None:
+            print 'colorizing...'
+            triangulation.colorize(crop_ref, clr, col,row, z, crop_color)
+        elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
+            print 'the image is pansharpened fusioned'
+            tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
+            common.image_qauto(tmp, crop_color, tilewise=False)
+        else:
+            print 'no color data'
+            common.image_qauto(crop_ref, crop_color, tilewise=False)
+        
+        
+
+def generate_cloud2(fullInfo, do_offset=False):
     """
     Args:
         clr:  path to the xs (multispectral, ie color) reference image
@@ -186,19 +207,22 @@ def generate_cloud2(fullInfo, clr,
             huge numbers)
     """
     print "\nComputing point cloud (2)..."
+    
+    # Get useful info
     tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo
-
     root_tile_dir = os.path.dirname(tile_dir)
     
-    # output files
-    crop_ref = root_tile_dir + '/roi_ref.tif'
-    cloud = root_tile_dir + '/cloud.ply'
+    height_map = root_tile_dir + '/final_height_map.tif'
+    crop_color = root_tile_dir + '/roi_color_ref.tif'
+    if not os.path.exists(crop_color):
+        crop_color=''
 
     if cfg['full_img'] and z == 1:
         crop_ref = img1
-    #else crop image has already been computed by getMinMaxFromExtract 
+    else: #Crop image has already been computed by getMinMaxFromExtract 
+        crop_ref = root_tile_dir + '/roi_ref.tif'
 
-
+    #Compute transformation matrix
     A = common.matrix_translation(-col, -row)
     z = cfg['subsampling_factor']
     f = 1.0/z
@@ -218,24 +242,13 @@ def generate_cloud2(fullInfo, clr,
 
 
 
-    if cfg['color_ply']:
-        crop_color = root_tile_dir + '/roi_color_ref.tif'
-        if clr is not None:
-            print 'colorizing...'
-            triangulation.colorize(crop_ref, clr, col,row, z, crop_color)
-        elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
-            print 'the image is pansharpened fusioned'
-            tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
-            common.image_qauto(tmp, crop_color, tilewise=False)
-        else:
-            print 'no color data'
-            common.image_qauto(crop_ref, crop_color, tilewise=False)
-    else:
-        crop_color = ''
-
-    height_map = root_tile_dir + '/final_height_map.tif'
+    # output 
+    cloud = root_tile_dir + '/cloud.ply'
+    
     triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
                                       off_x, off_y)
+                                      
+                                      
     common.garbage_cleanup()
 
 
@@ -1250,9 +1263,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
         
-        
-        
-        
+       
 
 
 def mergeHeightMaps2(height_maps,out,thresh,conservative,k=1,garbage=[]):
@@ -1314,11 +1325,18 @@ def process_tile(fullInfoNpairs,cld_msk=None, roi_msk=None):
         else:
             print "tile %s already masked, skip" % tile_dir
 
+
+    fullInfo=fullInfoNpairs[0]
                 
     # merge the n height maps
-    out=os.path.dirname(fullInfoNpairs[0][0])
-    mergeHeightMaps2(height_maps,out,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])     
-    generate_cloud2(fullInfo,None,cfg['offset_ply'])
+    out=os.path.dirname(fullInfo[0])
+    mergeHeightMaps2(height_maps,out,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])    
+    
+    #Colors 
+    colorCropRef(fullInfo,None)
+    
+    #Generate cloud 
+    generate_cloud2(fullInfo,cfg['offset_ply'])
     
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_msk=None, roi_msk=None):
