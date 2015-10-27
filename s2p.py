@@ -142,9 +142,16 @@ def generate_cloud(out_dir, height_maps, rpc1, x, y, w, h, im1, clr,
     common.garbage_cleanup()
 
 
-def cropImage(fullInfo):
-
-    print "\nCrop ref image..."
+def getMinMaxFromExtract(fullInfo):
+    """
+    Get min/max intensities of an extract ROI from the ref image.
+    
+    Args:
+        fullInfo : all that you need to process a tile:
+        tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2
+    """
+    
+    print "\nCrop ref image and compute min/max intensities..."
 
     z = cfg['subsampling_factor']
  
@@ -189,7 +196,7 @@ def generate_cloud2(fullInfo, clr,
 
     if cfg['full_img'] and z == 1:
         crop_ref = img1
-    #else crop image has already been computed by cropImage 
+    #else crop image has already been computed by getMinMaxFromExtract 
 
 
     A = common.matrix_translation(-col, -row)
@@ -1198,9 +1205,9 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
 
 			
 			if cfg['debug']:
-				cropImage(tilesFullInfo[tile_dir + 'pair_1'])
+				getMinMaxFromExtract(tilesFullInfo[tile_dir + 'pair_1'])
 			else:
-				p = pool.apply_async(cropImage,
+				p = pool.apply_async(getMinMaxFromExtract,
 										 args=([tilesFullInfo[tile_dir + 'pair_1']]), callback=show_progress)
 				results.append(p)
 
