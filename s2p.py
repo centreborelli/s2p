@@ -709,25 +709,6 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
 
 
     # Build tiles dicos
-    #img1 = images[0]['img']
-    #rpc1 = images[0]['rpc']
-    #tilesFullInfo={}
-    #tilesLocPerPairId = {}
-    #ensTiles = set([])
-    #for pair_id in range(1,len(images)) :
-        #tilesLocPerPairId[pair_id]=[]
-        #for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
-            #for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-                ## ensure that the coordinates of the ROI are multiples of the zoom factor
-                #col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row, tw, th)
-                #tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (out_dir, tw, th, row, col, pair_id)
-                #A_global = '%s/global_pointing_pair_%d.txt' % (out_dir,pair_id)
-                #tilesFullInfo[tile_dir]=[tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,images[pair_id]['img'],images[pair_id]['rpc']]
-                #tilesLocPerPairId[pair_id].append(tile_dir)
-                #ensTiles.add('%s/tile_%d_%d_row_%d/col_%d/' % (out_dir, tw, th, row, col))
-
-
-    # Build tiles dicos
     tilesFullInfo={}
     pairedTilesPerPairId = {}
     for pair_id in range(1,len(images)) :
@@ -1192,10 +1173,7 @@ def main(config_file):
     process_tiles(cfg['out_dir'],tilesFullInfo,pairedTilesPerPairId,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
 
-
-    print '--'*10
-    print cfg['images']
-
+    #TODO
     # digital surface model
     #for i,height_map in enumerate(height_maps):
      #   pair_id = i+1
