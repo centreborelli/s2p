@@ -484,6 +484,19 @@ def image_getminmax(im,out=None):
     
     run('getminmax %s %s' % (im, out))
     
+    
+def image_rescaleintensities(im,out,rmin,rmax):
+    """
+    rescale the values of an input image im, ranging from rmin to rmax,
+    to an output image out with values ranging from 0 to 255 (8-bits image)
+    
+    Args :
+        im: path to input image
+        out: path to output image
+    """
+    
+    run('rescaleintensities %s %s %d %d' % (im, out, rmin, rmax))
+    
 
 def image_qauto_gdal(im):
     """
