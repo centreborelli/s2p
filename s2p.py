@@ -54,93 +54,6 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
-def generate_cloud(out_dir, height_maps, rpc1, x, y, w, h, im1, clr,
-                   do_offset=False):
-    """
-    Args:
-        out_dir: output directory. The file cloud.ply will be written there
-        height_map: path to the height map, produced by the process_pair
-            or process_triplet function
-        rpc1: path to the xml file containing rpc coefficients for the
-            reference image
-        x, y, w, h: four integers defining the rectangular ROI in the original
-            panchro image. (x, y) is the top-left corner, and (w, h) are the
-            dimensions of the rectangle.
-        im1:  path to the panchro reference image
-        clr:  path to the xs (multispectral, ie color) reference image
-        do_offset (optional, default: False): boolean flag to decide wether the
-            x, y coordinates of points in the ply file will be translated or
-            not (translated to be close to 0, to avoid precision loss due to
-            huge numbers)
-    """
-    print "\nComputing point cloud..."
-
-    for i,height_map in enumerate(height_maps):
-        
-        pair_id = i+1
-        
-	    # output files
-        crop_ref = '%s/roi_ref_pair_%d.tif' % (out_dir,pair_id)
-        cloud = '%s/cloud_pair_%d.ply' % (out_dir,pair_id)
-        if not os.path.exists(out_dir):
-           os.makedirs(out_dir)
-	
-        # ensure that the coordinates of the ROI are multiples of the zoom factor,
-        # to avoid bad registration of tiles due to rounding problems.
-        z = cfg['subsampling_factor']
-        x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-
-        # build the matrix of the zoom + translation transformation
-        if cfg['full_img'] and z == 1:
-            trans = None
-        else:
-            A = common.matrix_translation(-x, -y)
-            f = 1.0/z
-            Z = np.diag([f, f, 1])
-            A = np.dot(Z, A)
-            trans = '%s/trans_pair_%d.txt' % (out_dir,pair_id)
-            np.savetxt(trans, A)
-	
-        # compute offset
-        if do_offset:
-            r = rpc_model.RPCModel(rpc1)
-            lat = r.latOff
-            lon = r.lonOff
-            off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
-        else:
-            off_x, off_y = 0, 0
-	
-        # crop the ROI in ref image, then zoom
-        if cfg['full_img'] and z == 1:
-            crop_ref = im1
-        else:
-            if z == 1:
-                common.image_crop_TIFF(im1, x, y, w, h, crop_ref)
-            else:
-                # gdal is used for the zoom because it handles BigTIFF files, and
-                # before the zoom out the image may be that big
-                tmp_crop = common.image_crop_TIFF(im1, x, y, w, h)
-                common.image_zoom_gdal(tmp_crop, z, crop_ref, w, h)
-	
-        if cfg['color_ply']:
-            crop_color = '%s/roi_color_ref_pair_%d.tif' % (out_dir,pair_id)
-            if clr is not None:
-                print 'colorizing...'
-                triangulation.colorize(crop_ref, clr, x, y, z, crop_color)
-            elif common.image_pix_dim_tiffinfo(crop_ref) == 4:
-                print 'the image is pansharpened fusioned'
-                tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
-                common.image_qauto(tmp, crop_color, tilewise=False)
-            else:
-                print 'no color data'
-                common.image_qauto(crop_ref, crop_color, tilewise=False)
-        else:
-            crop_color = ''
-
-        triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
-	                                      off_x, off_y)
-    common.garbage_cleanup()
-
 
 def getMinMaxFromExtract(fullInfo):
     """
@@ -244,7 +157,7 @@ def colorCropRef(fullInfo,clr=None):
 	        
         
 
-def generate_cloud2(fullInfo, do_offset=False):
+def generate_cloud(fullInfo, do_offset=False):
     """
     Args:
         clr:  path to the xs (multispectral, ie color) reference image
@@ -253,7 +166,7 @@ def generate_cloud2(fullInfo, do_offset=False):
             not (translated to be close to 0, to avoid precision loss due to
             huge numbers)
     """
-    print "\nComputing point cloud (2)..."
+    print "\nComputing point cloud..."
     
     # Get useful info
     tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo
@@ -746,352 +659,6 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     return
 
 					 
-def process_pair(out_dir, images, x, y, w, h, tw=None, th=None,
-                 ov=None, cld_msk=None, roi_msk=None):
-    """
-    Computes a height map from a Pair of pushbroom images, using tiles.
-
-    Args:
-        out_dir: path to the output directory
-        images: list of images (the first one being considered as the reference one) and their relative rpc coefficients.
-        x, y, w, h: four integers defining the rectangular ROI in the reference
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle. The ROI may be as big as you want, as it will be
-            cutted into small tiles for processing.
-        tw, th: dimensions of the tiles
-        ov: width of overlapping bands between tiles
-        cld_msk (optional): path to a gml file containing a cloud mask
-        roi_msk (optional): path to a gml file containing a mask defining the
-            area contained in the full image.
-
-    Returns:
-        path to height map tif file
-    """
-    # create a directory for the experiment
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-
-    # duplicate stdout and stderr to log file
-    tee.Tee('%s/stdout.log' % out_dir, 'w')
-
-    # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problems.
-    z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-
-    # TODO: automatically compute optimal size for tiles
-    if tw is None and th is None and ov is None:
-        ov = z * 100
-        if w <= z * cfg['tile_size']:
-            tw = w
-        else:
-            tw = z * cfg['tile_size']
-        if h <= z * cfg['tile_size']:
-            th = h
-        else:
-            th = z * cfg['tile_size']
-    ntx = np.ceil(float(w - ov) / (tw - ov))
-    nty = np.ceil(float(h - ov) / (th - ov))
-    nt = ntx * nty
-
-    print 'tiles size: (%d, %d)' % (tw, th)
-    print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
-    NbPairs = len(images[0])-1
-    print 'total number of pairs: %d ' % NbPairs
-
-    # create pool with less workers than available cores
-    nb_workers = multiprocessing.cpu_count()
-    if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
-    pool = multiprocessing.Pool(nb_workers)
-    
-
-    # process the tiles
-    # don't parallellize if in debug mode
-    print 'Computing tile by tile...' 
-    
-
-    # Build a simple tile dico
-    tilesInfo={}
-    tilesLoc = {}
-    for numImSec in range(1,len(images)) :
-        tilesLoc[numImSec]=[]
-        for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
-            for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
-                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d/' % (out_dir, tw, th, row, col, numImSec)
-                tilesInfo[tile_dir]=[col,row,tw,th,i,j,images[numImSec]['img'],images[numImSec]['rpc'],numImSec]
-                tilesLoc[numImSec].append(tile_dir)
-
-
-    img1 = images[0]['img']
-    rpc1 = images[0]['rpc']
-
-	     
-    # 1 - Pointing correction  
-    results = []
-    show_progress.counter = 0
-    try:
-        print 'Computing pointing correction...'
-        for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_id=tab
-			
-            # check if the tile is already done, or masked
-            if os.path.isfile('%s/rectified_disp.tif' % tile_dir):
-                if cfg['skip_existing']:
-                    print "stereo on tile %d %d already done, skip" % (col,
-                                                                           row)
-                    #tiles.append(tile_dir)
-                    continue
-            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                print "tile %d %d already masked, skip" % (col, row)
-                #tiles.append(tile_dir)
-                continue
-
-            
-            if cfg['debug']:
-                pointing_correction(tile_dir, img1, rpc1, img2, rpc2,
-                                             col, row, tw, th, None, cld_msk,
-                                             roi_msk)
-            else:
-                p = pool.apply_async(pointing_correction,
-                                         args=(tile_dir, img1, rpc1, img2, rpc2,
-                                               col, row, tw, th, None, cld_msk,
-                                               roi_msk), callback=show_progress)
-                results.append(p)
-            
-
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while computing tile "+str(r)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-
-
-    # 2 - Global pointing correction
-    results = []
-    show_progress.counter = 0
-    try:
-        print 'Computing global pointing correction...'
-        A_globalDic={}
-        for pair_id,tiles in tilesLoc.items():
-            A_globalDic[pair_id] = pointing_accuracy.global_from_local(tiles)
-            np.savetxt('%s/global_pointing_pair_%d.txt' % (out_dir,pair_id), A_globalDic[pair_id])
-            
-
-        # Check if all tiles were computed
-        # The only cause of a tile failure is a lack of sift matches, which breaks
-        # the pointing correction step. Thus it is enough to check if the pointing
-        # correction matrix was computed.
-        
-        for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_id=tab
-        
-            # check if the tile is masked, or if the pointing correction is already computed
-            if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                if not os.path.isfile('%s/pointing.txt' % tile_dir):
-                    print "%s retrying pointing corr..." % tile_dir
-                    # estimate pointing correction matrix from neighbors, if it
-                    # fails use A_global, then rerun the disparity map
-                    # computation
-                    A = pointing_accuracy.from_next_tiles(tilesLoc[pair_id], ntx, nty, j, i)
-                    if A is not None:
-                        np.savetxt('%s/next_tile_pointing.txt' % tile_dir, A)
-                    else:
-                        np.savetxt('%s/global_pointing.txt' % tile_dir, A_globalDic[pair_id])
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-
-
-    # 3 - Rectify each tile
-    results = []
-    show_progress.counter = 0
-    try:
-        for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_id=tab                     
-                     
-            # check if the tile is already done, or masked
-            if not os.path.isfile('%s/rectified_disp.tif' % tile_dir):
-                if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):                   
-         
-                    if cfg['debug']:
-                        rectify(tile_dir, img1, rpc1, img2,
-                                                 rpc2, col, row, tw, th, None,
-                                                 cld_msk, roi_msk)
-                    else:
-                        p = pool.apply_async(rectify,
-                                             args=(tile_dir, img1, rpc1, img2,
-                                                   rpc2, col, row, tw, th, None,
-                                                   cld_msk, roi_msk),
-                                             callback=show_progress)
-                        results.append(p)
-
-
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while computing tile "+str(r)  
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-
-
-
-    # 4 - Disparity
-    results = []
-    show_progress.counter = 0
-    try:
-        for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_id=tab                     
-                     
-            # check if the tile is already done, or masked
-            if not os.path.isfile('%s/rectified_disp.tif' % tile_dir):
-                if not os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):                
-         
-                    if cfg['debug']:
-                        disparity(tile_dir, img1, rpc1, img2,
-                                                 rpc2, col, row, tw, th, None,
-                                                 cld_msk, roi_msk)
-                    else:
-                        p = pool.apply_async(disparity,
-                                             args=(tile_dir, img1, rpc1, img2,
-                                                   rpc2, col, row, tw, th, None,
-                                                   cld_msk, roi_msk),
-                                             callback=show_progress)
-                        results.append(p)
-
-  
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while computing tile "+str(r)  
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-
-
-    # 5 - Triangulation
-    results = []
-    show_progress.counter = 0
-    print 'Computing height maps tile by tile...'
-    try:
-        for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_id=tab
-
-            height_map = '%s/height_map.tif' % tile_dir
-            # check if the tile is already done, or masked
-            if os.path.isfile(height_map):
-                if cfg['skip_existing']:
-                    print "triangulation on tile %d %d is done, skip" % (col, row)
-                    continue
-            if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                print "tile %d %d already masked, skip" % (col, row)
-                continue
-
-            # process the tile
-            if cfg['debug']:
-				triangulate(tile_dir, img1, rpc1, img2,
-                                                 rpc2, col, row, tw, th, None,
-                                                 cld_msk, roi_msk, A_globalDic[pair_id])
-				
-            else:
-                p = pool.apply_async(triangulate,
-                                         args=(tile_dir, img1, rpc1, img2,
-                                                 rpc2, col, row, tw, th, None,
-                                                 cld_msk, roi_msk, A_globalDic[pair_id]),
-                                         callback=show_progress)
-                results.append(p)
-        
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while computing tile "+str(r)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-        
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-
-    # 6 - Tiles composition
-    out=set([])
-    try:
-        for tile_dir,tab in tilesInfo.items():
-            col,row,tw,th,i,j,img2,rpc2,pair_id=tab 
-            
-            height_map_path = '%s/height_map_pair_%d.tif' % (out_dir,pair_id)
-            out.add( height_map_path )
-            tmp = ['%s/height_map.tif' % t for t in tilesLoc[pair_id]]
-            if not os.path.isfile(height_map_path) or not cfg['skip_existing']:
-                print "Mosaicing tiles with %s..." % cfg['mosaic_method']
-                if cfg['mosaic_method'] == 'gdal':
-                    tile_composer.mosaic_gdal(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
-                else:
-                    tile_composer.mosaic(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
-            
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-    
-    
-    common.garbage_cleanup()
-
-    return list(out)
-
-
-
-def mergeHeightMaps(height_maps,thresh,conservative,k=1,garbage=[]):
-
-    final_height_map = cfg['out_dir']+'/final_height_map.tif'
-    if os.path.isfile(final_height_map) and cfg['skip_existing']:
-        print 'final height map %s already done, skip' % final_height_map
-    else:
-        list_height_maps=[]
-        for i in range(len(height_maps)-1):
-            height_map = cfg['temporary_dir'] +'/height_map_'+str(i)+'_'+str(i+1)+'_'+str(k)+'.tif'
-            fusion.merge(height_maps[i], height_maps[i+1], thresh, height_map,
-                     conservative)
-            list_height_maps.append(height_map)
-            garbage.append(height_map)
-        
-        if len(list_height_maps) > 1:
-            mergeHeightMaps(list_height_maps,thresh,conservative,k+1,garbage)
-        else:
-            common.run('cp %s %s' % (list_height_maps[0],final_height_map))
-            for imtemp in garbage:
-                common.run('rm -f %s' % imtemp )
-
 
 
 def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
@@ -1312,7 +879,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cl
        
 
 
-def mergeHeightMaps2(height_maps,out,thresh,conservative,k=1,garbage=[]):
+def mergeHeightMaps(height_maps,out,thresh,conservative,k=1,garbage=[]):
 
     final_height_map = out +'/final_height_map.tif'
     if os.path.isfile(final_height_map) and cfg['skip_existing']:
@@ -1327,7 +894,7 @@ def mergeHeightMaps2(height_maps,out,thresh,conservative,k=1,garbage=[]):
             garbage.append(height_map)
         
         if len(list_height_maps) > 1:
-            mergeHeightMaps2(list_height_maps,out,thresh,conservative,k+1,garbage)
+            mergeHeightMaps(list_height_maps,out,thresh,conservative,k+1,garbage)
         else:
             common.run('cp %s %s' % (list_height_maps[0],final_height_map))
             for imtemp in garbage:
@@ -1376,13 +943,13 @@ def process_tile(fullInfoNpairs,cld_msk=None, roi_msk=None):
                 
     # merge the n height maps
     out=os.path.dirname(fullInfo[0])
-    mergeHeightMaps2(height_maps,out,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])    
+    mergeHeightMaps(height_maps,out,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])    
     
     #Colors 
     colorCropRef(fullInfo,None)
     
     #Generate cloud 
-    generate_cloud2(fullInfo,cfg['offset_ply'])
+    generate_cloud(fullInfo,cfg['offset_ply'])
     
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,cld_msk=None, roi_msk=None):
@@ -1455,7 +1022,6 @@ def tile_composition(height_map_path, tiles, x, y, w, h, tw=None, th=None, ov=No
                 th = h
             else:
                 th = z * cfg['tile_size']
-    
         
         tmp = ['%s/height_map.tif' % t for t in tiles]
         print "Mosaicing tiles with %s..." % cfg['mosaic_method']
@@ -1585,7 +1151,7 @@ def main(config_file):
     for s in srtm_tiles:
         srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
-    # height maps
+
     tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs = prepare_fullProcess(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
@@ -1599,12 +1165,6 @@ def main(config_file):
     process_tiles(cfg['out_dir'],tilesFullInfo,tilesLocPerPairId,ensTiles,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
                            
-    height_maps=tiles_composition(cfg['out_dir'],ensTiles,tilesLocPerPairId,NbPairs, 
-                           cfg['roi']['x'], cfg['roi']['y'], 
-                           cfg['roi']['w'], cfg['roi']['h'], None, None, None)
-
-    # merge the n height maps
-    mergeHeightMaps(height_maps,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
 
     #debug
     for tile in ensTiles:
@@ -1616,19 +1176,13 @@ def main(config_file):
             
             print tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2
 
-    # point cloud
-    generate_cloud(cfg['out_dir'], height_maps, cfg['images'][0]['rpc'],
-                   cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'],
-                   cfg['roi']['h'], cfg['images'][0]['img'],
-                   cfg['images'][0]['clr'], cfg['offset_ply'])
-
 
     # digital surface model
-    for i,height_map in enumerate(height_maps):
-        pair_id = i+1
-        out_dsm = '%s/dsm_pair_%d.tif' % (cfg['out_dir'] , pair_id)
-        cloud   = '%s/cloud_pair_%d.ply' % ( cfg['out_dir'] , pair_id )
-        common.run("ls %s | plyflatten %f %s" % (cloud, cfg['dsm_resolution'], out_dsm))
+    #for i,height_map in enumerate(height_maps):
+     #   pair_id = i+1
+      #  out_dsm = '%s/dsm_pair_%d.tif' % (cfg['out_dir'] , pair_id)
+       # cloud   = '%s/cloud_pair_%d.ply' % ( cfg['out_dir'] , pair_id )
+        #common.run("ls %s | plyflatten %f %s" % (cloud, cfg['dsm_resolution'], out_dsm))
         
 
     # crop corresponding areas in the secondary images
