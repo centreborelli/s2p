@@ -171,7 +171,7 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     col,row,tw,th,ntx,nty,i,j,images = tilesFullInfo[tile_dir]
     img1,rpc1 = images[0]['img'],images[0]['rpc']
     
-    height_map = tile_dir + '/final_height_map.tif'
+    height_map = tile_dir + '/local_merged_height_map.tif'
     crop_color = tile_dir + '/roi_color_ref.tif'
     if not os.path.exists(crop_color):
         crop_color=''
@@ -899,9 +899,9 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
 
 def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
 
-    final_height_map = tile_dir +'/final_height_map.tif'
-    if os.path.isfile(final_height_map) and cfg['skip_existing']:
-        print 'final height map %s already done, skip' % final_height_map
+    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
+    if os.path.isfile(local_merged_height_map) and cfg['skip_existing']:
+        print 'final height map %s already done, skip' % local_merged_height_map
     else:
         list_height_maps=[]
         for i in range(len(height_maps)-1):
@@ -914,7 +914,7 @@ def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
         if len(list_height_maps) > 1:
             mergeHeightMaps(list_height_maps,tile_dir,thresh,conservative,k+1,garbage)
         else:
-            common.run('cp %s %s' % (list_height_maps[0],final_height_map))
+            common.run('cp %s %s' % (list_height_maps[0],local_merged_height_map))
             for imtemp in garbage:
                 common.run('rm -f %s' % imtemp )
 
