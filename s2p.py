@@ -175,6 +175,26 @@ def getMinMaxFromExtract(fullInfo):
     
 def colorCropRef(fullInfo,clr=None):
 
+    """
+    Colorization of a crop_ref (for a given tile)
+    
+    Args:
+        - fullInfo : all that you need to process a tile:
+        tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2
+        
+        - clr (optional) : if crop_ref is a pan image, will perform the pansharpening with the color image clr
+            
+            If clr is None then:
+                case 1 : tile is an RGBI image, so get rid of I channel, and perform rescaling of the remaining channels
+                case 2 : tile is already an RGB image, so just perform rescaling
+
+                Note that if rescaling is already performed, then the file applied_minmax.txt exists :
+                - if applied_minmax.txt exists and cfg['skip_existing'] is True, rescaling won't be performed again
+                - if applied_minmax.txt exists and is different from global_minmax, rescaling will be compulsorily performed (can occur if a new tile is added)
+
+
+    """
+
     # Get info
     tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2=fullInfo    
     root_tile_dir = os.path.dirname(tile_dir)
