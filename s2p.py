@@ -175,6 +175,7 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     if not os.path.exists(crop_color):
         crop_color=''
 
+    z = cfg['subsampling_factor']
     if cfg['full_img'] and z == 1:
         crop_ref = img1
     else: #Crop image has already been computed by getMinMaxFromExtract 
