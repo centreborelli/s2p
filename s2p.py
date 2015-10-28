@@ -918,7 +918,6 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
 
         img2,rpc2 = images[pair_id]['img'],images[pair_id]['rpc']
         A_global = '%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id)
-        print '#'*10, A_global
 
         if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
             print "tile %s already masked, skip" % paired_tile_dir
@@ -1175,8 +1174,6 @@ def main(config_file):
     process_tiles(cfg['out_dir'],tilesFullInfo,pairedTilesPerPairId,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
 
-
-    print tilesFullInfo
 
     #TODO
     # digital surface model
