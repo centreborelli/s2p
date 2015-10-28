@@ -965,7 +965,11 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
     ## Finalization ##
                 
     # merge the n height maps
-    mergeHeightMaps(height_maps,tile_dir,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])    
+    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
+    if len(height_maps)>1:
+        mergeHeightMaps(height_maps,tile_dir,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
+    else:    
+        common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
     
     #Colors 
     colorCropRef(tile_dir,tilesFullInfo,None)
