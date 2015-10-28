@@ -994,7 +994,10 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
     if pos == 'U':
         cropImage(local_merged_height_map,local_merged_height_map_crop,ov/2,0,tw-ov,th-ov/2)
         cropImage(crop_ref,crop_ref_crop,ov/2,0,tw-ov,th-ov/2)
-        tilesFullInfo[tile_dir]=[col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images]    
+        tilesFullInfo[tile_dir]=[col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images] 
+        
+    if not cfg['debug']:
+         common.run('rm -f %s' % (local_merged_height_map))   
 
     
     # Colors 
