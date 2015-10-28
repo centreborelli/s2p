@@ -620,20 +620,10 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     """
     
     # output files
-    rect1 = '%s/rectified_ref.tif' % (out_dir)
-    rect2 = '%s/rectified_sec.tif' % (out_dir)
     disp = '%s/rectified_disp.tif' % (out_dir)
     mask = '%s/rectified_mask.png' % (out_dir)
-    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
-    subsampling = '%s/subsampling.txt' % (out_dir)
-    pointing = '%s/pointing.txt' % out_dir
-    center = '%s/center_keypts_sec.txt' % out_dir
-    sift_matches = '%s/sift_matches.txt' % out_dir
-    sift_matches_plot = '%s/sift_matches_plot.png' % out_dir
     H_ref = '%s/H_ref.txt' % out_dir
     H_sec = '%s/H_sec.txt' % out_dir
-    disp_min_max = '%s/disp_min_max.txt' % out_dir
-    config = '%s/config.json' % out_dir
     rpc_err = '%s/rpc_err.tif' % out_dir
     height_map = '%s/height_map.tif' % out_dir
 
