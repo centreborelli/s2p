@@ -67,7 +67,7 @@ def getMinMaxFromExtract(tile_dir,tilesFullInfo):
     print "\nCrop ref image and compute min/max intensities..."
 
     #Get info
-    col,row,tw,th,ov,i,j,images=tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
     img1 = images[0]['img']
     
     # output files
@@ -105,11 +105,10 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
                 - if applied_minmax.txt exists and cfg['skip_existing'] is True, rescaling won't be performed again
                 - if applied_minmax.txt exists and is different from global_minmax, rescaling will be compulsorily performed (can occur if a new tile is added)
 
-
     """
 
     # Get info
-    col,row,tw,th,ov,i,j,images = tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,images = tilesFullInfo[tile_dir]
 
     # Paths
     crop_ref = tile_dir + '/roi_ref.tif'
@@ -168,7 +167,7 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     print "\nComputing point cloud..."
     
     # Get info
-    col,row,tw,th,ov,i,j,images = tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,images = tilesFullInfo[tile_dir]
     img1,rpc1 = images[0]['img'],images[0]['rpc']
     
     height_map = tile_dir + '/local_merged_height_map.tif'
@@ -713,15 +712,31 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     # Build tiles dicos
     tilesFullInfo={}
     pairedTilesPerPairId = {}
+    
+    rangey = np.arange(y, y + h - ov, th - ov)
+    rangex = np.arange(x, x + w - ov, tw - ov)
+    rowmin,rowmax = rangey[0],rangey[-1]
+    colmin,colmax = rangex[0],rangex[-1]
+    
     for pair_id in range(1,len(images)) :
         pairedTilesPerPairId[pair_id]=[]
-        for i, row in enumerate(np.arange(y, y + h - ov, th - ov)):
-            for j, col in enumerate(np.arange(x, x + w - ov, tw - ov)):
+        for i, row in enumerate(rangey):
+            for j, col in enumerate(rangex):
                 # ensure that the coordinates of the ROI are multiples of the zoom factor
                 col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row, tw, th)
                 tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (out_dir, tw, th, row, col)
                 paired_tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (out_dir, tw, th, row, col, pair_id)
-                tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,images]
+                
+                if i==rowmin and j==colmin:
+                    pos='UL'
+                elif i==rowmin and j>colmin and j<colmax:
+                    pos='U'
+                elif i>rowmin and i<rowmax and j==colmin:
+                    pos='L'
+                else:
+                    pos='M'
+                
+                tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,pos,images]
                 pairedTilesPerPairId[pair_id].append(paired_tile_dir )
 
 
@@ -750,7 +765,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
                 paired_tile_dir=tile_dir + 'pair_%d' % pair_id
                 
                 #tile_dir,pair_id,A_global,
-                col,row,tw,th,ov,i,j,images=tilesFullInfo[tile_dir]
+                col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
                 img1,rpc1,img2,rpc2 = images[0]['img'],images[0]['rpc'],images[pair_id]['img'],images[pair_id]['rpc']
 
 
@@ -908,7 +923,7 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
 
     #Get all info
     fullInfo=tilesFullInfo[tile_dir]
-    col,row,tw,th,ov,i,j,images=fullInfo
+    col,row,tw,th,ov,i,j,pos,images=fullInfo
     img1,rpc1 = images[0]['img'],images[0]['rpc']
 
     for i in range(0,NbPairs):
