@@ -1221,6 +1221,25 @@ def main(config_file):
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
 
 
+    print '-->'*10,tilesFullInfo
+    
+    for tile_dir in tilesFullInfo:
+
+        col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+
+        if pos == 'M':
+            tilesFullInfo[tile_dir]=[col+ov/2-cfg['roi']['x'],row+ov/2-cfg['roi']['y'],tw-ov,th-ov,ov,i,j,pos,images]
+        if pos == 'UL':
+            tilesFullInfo[tile_dir]=[col-cfg['roi']['x'],row-cfg['roi']['y'],tw-ov/2,th-ov/2,ov,i,j,pos,images]  
+        if pos == 'L':
+            tilesFullInfo[tile_dir]=[col-cfg['roi']['x'],row+ov/2-cfg['roi']['y'],tw-ov/2,th-ov,ov,i,j,pos,images]
+        if pos == 'U':
+            tilesFullInfo[tile_dir]=[col+ov/2-cfg['roi']['x'],row-cfg['roi']['y'],tw-ov,th-ov/2,ov,i,j,pos,images] 
+
+    print '-->'*10,tilesFullInfo
+
+    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/mergedTiles.vrt', tilesFullInfo, cfg['roi']['w'], cfg['roi']['h'])
+
     #TODO
     # digital surface model
     #for i,height_map in enumerate(height_maps):
