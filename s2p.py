@@ -54,6 +54,20 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
+def cropImage(inp,out,col,row,tw,th):
+    """
+    Extract an ROI from inp to out, with ROI defined as (col,row,tw,th) <==> (Upper left corner, size of ROI)
+    """
+    
+    z = cfg['subsampling_factor']
+    if z == 1:
+        common.image_crop_TIFF(inp, col,row,tw,th, out)
+    else:
+        # gdal is used for the zoom because it handles BigTIFF files, and
+        # before the zoom out the image may be that big
+        tmp_crop = common.image_crop_TIFF(inp, col,row,tw,th)
+        common.image_zoom_gdal(tmp_crop, z, out, tw,th)
+
 
 def getMinMaxFromExtract(tile_dir,tilesFullInfo):
     """
@@ -73,15 +87,8 @@ def getMinMaxFromExtract(tile_dir,tilesFullInfo):
     # output files
     crop_ref = tile_dir + '/roi_ref.tif'
     local_minmax = tile_dir + '/local_minmax.txt'
-    
-    z = cfg['subsampling_factor']
-    if z == 1:
-        common.image_crop_TIFF(img1, col,row,tw,th, crop_ref)
-    else:
-        # gdal is used for the zoom because it handles BigTIFF files, and
-        # before the zoom out the image may be that big
-        tmp_crop = common.image_crop_TIFF(im1, col,row,tw,th)
-        common.image_zoom_gdal(tmp_crop, z, crop_ref, tw,th)
+	
+    cropImage(img1,crop_ref,col,row,tw,th)
 		
     common.image_getminmax(crop_ref,local_minmax)
     
