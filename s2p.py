@@ -118,7 +118,8 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
     col,row,tw,th,ov,i,j,pos,images = tilesFullInfo[tile_dir]
 
     # Paths
-    crop_ref = tile_dir + '/roi_ref.tif'
+    #crop_ref = tile_dir + '/roi_ref.tif'
+    crop_ref = tile_dir + '/roi_ref_crop.tif'
     global_minmax = cfg['out_dir']+'/global_minmax.txt'
     applied_minmax = tile_dir + '/applied_minmax.txt'
     
@@ -177,7 +178,8 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     col,row,tw,th,ov,i,j,pos,images = tilesFullInfo[tile_dir]
     img1,rpc1 = images[0]['img'],images[0]['rpc']
     
-    height_map = tile_dir + '/local_merged_height_map.tif'
+    #height_map = tile_dir + '/local_merged_height_map.tif'
+    height_map = tile_dir +'/local_merged_height_map_crop.tif'
     crop_color = tile_dir + '/roi_color_ref.tif'
     if not os.path.exists(crop_color):
         crop_color=''
@@ -725,11 +727,11 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
                 tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (out_dir, tw, th, row, col)
                 paired_tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (out_dir, tw, th, row, col, pair_id)
                 
-                if i==rowmin and j==colmin:
+                if row==rowmin and col==colmin:
                     pos='UL'
-                elif i==rowmin and j>colmin and j<colmax:
+                elif row==rowmin and col>colmin:
                     pos='U'
-                elif i>rowmin and i<rowmax and j==colmin:
+                elif col==colmin and row>rowmin:
                     pos='L'
                 else:
                     pos='M'
@@ -894,7 +896,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
 
 
 def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
-
+    print '-->'*10,k
     local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
     if os.path.isfile(local_merged_height_map) and cfg['skip_existing']:
         print 'final height map %s already done, skip' % local_merged_height_map
@@ -970,11 +972,35 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
         mergeHeightMaps(height_maps,tile_dir,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
     else:    
         common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
+
+    # Remove margins
+    #local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
+    local_merged_height_map_crop = tile_dir +'/local_merged_height_map_crop.tif'
+    crop_ref = tile_dir + '/roi_ref.tif'
+    crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
     
-    #Colors 
+    if pos == 'M':
+        cropImage(local_merged_height_map,local_merged_height_map_crop,ov/2,ov/2,tw-ov,th-ov)
+        cropImage(crop_ref,crop_ref_crop,ov/2,ov/2,tw-ov,th-ov)
+        tilesFullInfo[tile_dir]=[col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images]
+    if pos == 'UL':
+        cropImage(local_merged_height_map,local_merged_height_map_crop,0,0,tw-ov/2,th-ov/2)
+        cropImage(crop_ref,crop_ref_crop,0,0,tw-ov/2,th-ov/2)
+        tilesFullInfo[tile_dir]=[col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images]  
+    if pos == 'L':
+        cropImage(local_merged_height_map,local_merged_height_map_crop,0,ov/2,tw-ov/2,th-ov)
+        cropImage(crop_ref,crop_ref_crop,0,ov/2,tw-ov/2,th-ov)
+        tilesFullInfo[tile_dir]=[col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images]
+    if pos == 'U':
+        cropImage(local_merged_height_map,local_merged_height_map_crop,ov/2,0,tw-ov,th-ov/2)
+        cropImage(crop_ref,crop_ref_crop,ov/2,0,tw-ov,th-ov/2)
+        tilesFullInfo[tile_dir]=[col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images]    
+
+    
+    # Colors 
     colorCropRef(tile_dir,tilesFullInfo,None)
     
-    #Generate cloud 
+    # Generate cloud 
     generate_cloud(tile_dir,tilesFullInfo,cfg['offset_ply'])
     
 
