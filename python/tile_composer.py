@@ -92,7 +92,7 @@ def mosaic_gdal2(fout, tilesFullInfo,w,h):
 
     for tile_dir in tilesFullInfo:
         
-        col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+        col,row,tw,th=tilesFullInfo[tile_dir]
         
         height_map = tile_dir +'/local_merged_height_map_crop.tif'
         

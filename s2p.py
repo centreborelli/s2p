@@ -708,6 +708,12 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     NbPairs = len(images)-1
     print 'total number of pairs: %d ' % NbPairs
 
+    #Tile composer info : will be useful for the contruction of the vrt file that merge all the local height maps
+    ULw , ULh = tw-ov/2, th-ov/2 #Size of Upper Left tile
+    Lw , Lh   = tw-ov/2,th-ov    #Size of Left tile
+    Uw , Uh   = tw-ov,th-ov/2    #Size of Upper tile
+    Mw , Mh   = tw-ov,th-ov      #Size of Middle tile
+    tileComposerInfo=[ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh]
 
     # Build tiles dicos
     tilesFullInfo={}
@@ -717,6 +723,15 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     rangex = np.arange(x, x + w - ov, tw - ov)
     rowmin,rowmax = rangey[0],rangey[-1]
     colmin,colmax = rangex[0],rangex[-1]
+    
+    #Tile composer info (bis)
+    imax=len(rangey)-1
+    jmax=len(rangex)-1
+    fh = ULh+(imax)*Mh
+    fw = ULw+(jmax)*Mw
+    tileComposerInfo.append(fh) #height of the final height map after removing margins
+    tileComposerInfo.append(fw) #width of the final height map after removing margins
+    
     
     for pair_id in range(1,len(images)) :
         pairedTilesPerPairId[pair_id]=[]
@@ -741,7 +756,7 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
 
 
 
-    return tilesFullInfo,pairedTilesPerPairId,NbPairs
+    return tilesFullInfo,pairedTilesPerPairId,NbPairs,tileComposerInfo
 
 
 
@@ -1207,7 +1222,7 @@ def main(config_file):
         srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
-    tilesFullInfo,pairedTilesPerPairId,NbPairs = prepare_fullProcess(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
+    tilesFullInfo,pairedTilesPerPairId,NbPairs,tileComposerInfo = prepare_fullProcess(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'])
@@ -1221,24 +1236,26 @@ def main(config_file):
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
 
 
-    print '-->'*10,tilesFullInfo
-    
+
+    #Build the VRT file that merge all the local height maps    
+    ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh, fh, fw = tileComposerInfo
+    tileSizeAndPositions={}
     for tile_dir in tilesFullInfo:
 
         col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+        
+        tile_reldir = 'tile_%d_%d_row_%d/col_%d/' % (tw, th, row, col)
 
         if pos == 'M':
-            tilesFullInfo[tile_dir]=[col+ov/2-cfg['roi']['x'],row+ov/2-cfg['roi']['y'],tw-ov,th-ov,ov,i,j,pos,images]
+            tileSizeAndPositions[tile_reldir]=[ULw+(j-1)*Mw, ULh+(i-1)*Mh , Mw, Mh]
         if pos == 'UL':
-            tilesFullInfo[tile_dir]=[col-cfg['roi']['x'],row-cfg['roi']['y'],tw-ov/2,th-ov/2,ov,i,j,pos,images]  
+            tileSizeAndPositions[tile_reldir]=[0,0, ULw, ULh]  
         if pos == 'L':
-            tilesFullInfo[tile_dir]=[col-cfg['roi']['x'],row+ov/2-cfg['roi']['y'],tw-ov/2,th-ov,ov,i,j,pos,images]
+            tileSizeAndPositions[tile_reldir]=[0,ULh+(i-1)*Lh, Lw, Lh]
         if pos == 'U':
-            tilesFullInfo[tile_dir]=[col+ov/2-cfg['roi']['x'],row-cfg['roi']['y'],tw-ov,th-ov/2,ov,i,j,pos,images] 
+            tileSizeAndPositions[tile_reldir]=[ULw+(j-1)*Uw, 0, Uw, Uh] 
 
-    print '-->'*10,tilesFullInfo
-
-    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/mergedTiles.vrt', tilesFullInfo, cfg['roi']['w'], cfg['roi']['h'])
+    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/mergedTiles.vrt', tileSizeAndPositions, fw, fh)
 
     #TODO
     # digital surface model
