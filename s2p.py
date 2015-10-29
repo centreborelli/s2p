@@ -24,6 +24,8 @@ import sys
 import json
 import numpy as np
 import os.path
+from os import mkdir
+from shutil import rmtree
 import copy
 import glob
 import time
@@ -1301,13 +1303,23 @@ def main(config_file):
         tile_composer.mosaic_gdal2(cfg['out_dir'] + '/rpc_err_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'rpc_err_crop.tif', fw, fh)
             
 
-    #TODO
+        
     # digital surface model
-    #for i,height_map in enumerate(height_maps):
-     #   pair_id = i+1
-      #  out_dsm = '%s/dsm_pair_%d.tif' % (cfg['out_dir'] , pair_id)
-       # cloud   = '%s/cloud_pair_%d.ply' % ( cfg['out_dir'] , pair_id )
-        #common.run("ls %s | plyflatten %f %s" % (cloud, cfg['dsm_resolution'], out_dsm))
+    clouds_dir = cfg['out_dir']+'/clouds'
+    if (os.path.exists(clouds_dir)):
+        rmtree(clouds_dir)
+    mkdir(clouds_dir)    
+    
+    for tile_dir in tilesFullInfo:
+        
+        col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+        cloud = tile_dir + '/cloud.ply'
+        cloud_link_name = clouds_dir + '/cloud_%d_%d_row_%d_col_%d.ply' % (tw, th, row, col)
+        common.run('ln %s %s' % (cloud,cloud_link_name) )
+        
+    out_dsm = '%s/dsm.tif' % (cfg['out_dir'])
+    common.run("ls %s | plyflatten %f %s" % (clouds_dir+'/cloud*',cfg['dsm_resolution'], out_dsm))  
+      
         
 
     # crop corresponding areas in the secondary images
