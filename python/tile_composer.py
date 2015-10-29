@@ -69,7 +69,7 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
     return
 
 
-def mosaic_gdal2(fout, tilesFullInfo,w,h):
+def mosaic_gdal2(fout, tilesFullInfo, filename, w,h):
     """
     Compose several tiles of differents sizes into a bigger image (using gdal vrt)
 
@@ -94,7 +94,7 @@ def mosaic_gdal2(fout, tilesFullInfo,w,h):
         
         col,row,tw,th=tilesFullInfo[tile_dir]
         
-        height_map = tile_dir +'/local_merged_height_map_crop.tif'
+        height_map = tile_dir +'/' + filename
         
         vrtfile.write("\t\t<SimpleSource>\n")
         vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n" % height_map)
