@@ -759,7 +759,7 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
                 elif row==rowmax and col>colmin:
                     pos='B'
                 elif col==colmax and row>rowmin:
-                    pos='L'
+                    pos='R'
                 else:
                     pos='M'
                 
