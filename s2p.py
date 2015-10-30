@@ -711,9 +711,9 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     print 'total number of pairs: %d ' % NbPairs
 
     #Tile composer info : will be useful for the contruction of the vrt file that merge all the local height maps
-    ULw , ULh = tw-ov/2, th-ov/2 #Size of Upper Left tile
-    Lw , Lh   = tw-ov/2,th-ov    #Size of Left tile
-    Uw , Uh   = tw-ov,th-ov/2    #Size of Upper tile
+    ULw , ULh = tw-ov/2, th-ov/2 #Size of Corner tiles (UL UR BL BR)
+    Lw , Lh   = tw-ov/2,th-ov    #Size of Left/Right tile (L R)
+    Uw , Uh   = tw-ov,th-ov/2    #Size of Upper/Bottom tile (U B)
     Mw , Mh   = tw-ov,th-ov      #Size of Middle tile
     tileComposerInfo=[ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh]
 
@@ -729,8 +729,8 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     #Tile composer info (bis)
     imax=len(rangey)-1
     jmax=len(rangex)-1
-    fh = ULh+(imax)*Mh
-    fw = ULw+(jmax)*Mw
+    fh = 2*ULh+(imax-1)*Mh
+    fw = 2*ULw+(jmax-1)*Mh
     tileComposerInfo.append(fh) #height of the final height map after removing margins
     tileComposerInfo.append(fw) #width of the final height map after removing margins
     
@@ -746,9 +746,19 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
                 
                 if row==rowmin and col==colmin:
                     pos='UL'
+                elif row==rowmin and col==colmax:
+                    pos='UR'
+                elif row==rowmax and col==colmax:
+                    pos='BR'
+                elif row==rowmax and col==colmin:
+                    pos='BL'
                 elif row==rowmin and col>colmin:
                     pos='U'
                 elif col==colmin and row>rowmin:
+                    pos='L'
+                elif row==rowmax and col>colmin:
+                    pos='B'
+                elif col==colmax and row>rowmin:
                     pos='L'
                 else:
                     pos='M'
@@ -989,32 +999,34 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
     else:    
         common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
 
-    # Remove margins
+    # Remove overlapping
     #By tile
     local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
     local_merged_height_map_crop = tile_dir +'/local_merged_height_map_crop.tif'
     crop_ref = tile_dir + '/roi_ref.tif'
     crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
     
-    if pos == 'M':
-        cropImage(local_merged_height_map,local_merged_height_map_crop,ov/2,ov/2,tw-ov,th-ov)
-        cropImage(crop_ref,crop_ref_crop,ov/2,ov/2,tw-ov,th-ov)   
-        tilesFullInfo[tile_dir]=[col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images]
-        
-    if pos == 'UL':
-        cropImage(local_merged_height_map,local_merged_height_map_crop,0,0,tw-ov/2,th-ov/2)
-        cropImage(crop_ref,crop_ref_crop,0,0,tw-ov/2,th-ov/2)            
-        tilesFullInfo[tile_dir]=[col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images] 
-        
-    if pos == 'L':
-        cropImage(local_merged_height_map,local_merged_height_map_crop,0,ov/2,tw-ov/2,th-ov)
-        cropImage(crop_ref,crop_ref_crop,0,ov/2,tw-ov/2,th-ov)   
-        tilesFullInfo[tile_dir]=[col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images]
-        
-    if pos == 'U':
-        cropImage(local_merged_height_map,local_merged_height_map_crop,ov/2,0,tw-ov,th-ov/2)
-        cropImage(crop_ref,crop_ref_crop,ov/2,0,tw-ov,th-ov/2)
-        tilesFullInfo[tile_dir]=[col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images] 
+    dicoPos={}
+    dicoPos['M']  = ([col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images],[ov/2,ov/2,tw-ov,th-ov])
+    
+    dicoPos['L']  = ([col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],     [0,ov/2,tw-ov/2,th-ov])
+    dicoPos['R']  = ([col+ov/2,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],[ov/2,ov/2,tw-ov/2,th-ov])
+    
+    dicoPos['U']  = ([col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images],      [ov/2,0,tw-ov,th-ov/2])
+    dicoPos['B']  = ([col+ov/2,row+ov/2,tw-ov,th-ov/2,ov,i,j,pos,images], [ov/2,ov/2,tw-ov,th-ov/2])
+    
+    
+    dicoPos['UL'] = ([col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],[0,0,tw-ov/2,th-ov/2])
+    dicoPos['UR'] = ([col+ov/2,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],[ov/2,0,tw-ov/2,th-ov/2])
+    dicoPos['BR'] = ([col+ov/2,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],[ov/2,ov/2,tw-ov/2,th-ov/2])
+    dicoPos['BL'] = ([col,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],[0,ov/2,tw-ov/2,th-ov/2])
+    
+    tilesFullInfo[tile_dir] = dicoPos[pos][0]
+    newcol,newrow,newtw,newth = dicoPos[pos][1]
+   
+    cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,newtw,newth)
+    cropImage(crop_ref,crop_ref_crop,newcol,newrow,newtw,newth)   
+
         
     #By pair    
     for i in range(0,NbPairs):
@@ -1026,30 +1038,24 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
             single_rpc_err = tile_dir + '/pair_%d/rpc_err.tif' % pair_id
             single_rpc_err_crop =tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
             
-            if pos == 'M':
-                cropImage(single_height_map,single_height_map_crop,ov/2,ov/2,tw-ov,th-ov)
-                cropImage(single_rpc_err,single_rpc_err_crop,ov/2,ov/2,tw-ov,th-ov)
-            if pos == 'UL':
-                cropImage(single_height_map,single_height_map_crop,0,0,tw-ov/2,th-ov/2)
-                cropImage(single_rpc_err,single_rpc_err_crop,0,0,tw-ov/2,th-ov/2)
-            if pos == 'L':
-                cropImage(single_height_map,single_height_map_crop,0,ov/2,tw-ov/2,th-ov) 
-                cropImage(single_rpc_err,single_rpc_err_crop,0,ov/2,tw-ov/2,th-ov) 
-            if pos == 'U':
-                cropImage(single_height_map,single_height_map_crop,ov/2,0,tw-ov,th-ov/2)
-                cropImage(single_rpc_err,single_rpc_err_crop,ov/2,0,tw-ov,th-ov/2)
+            cropImage(single_height_map,single_height_map_crop,newcol,newrow,newtw,newth)
+            cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,newtw,newth)
+
     
     
     if not cfg['debug']:
          common.run('rm -f %s' % (local_merged_height_map)) 
-           
-
+         #common.run('rm -f %s' % (crop_ref))
+                   
     
     # Colors 
     colorCropRef(tile_dir,tilesFullInfo,None)
     
     # Generate cloud 
     generate_cloud(tile_dir,tilesFullInfo,cfg['offset_ply'])
+    
+    
+    
     
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,NbPairs,cld_msk=None, roi_msk=None):
@@ -1270,20 +1276,27 @@ def main(config_file):
     #VRT file : height map (N pairs)    
     ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh, fh, fw = tileComposerInfo
     tileSizeAndPositions={}
+
+    
     for tile_dir in tilesFullInfo:
 
         col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
         
+        dicoPos={}
+        dicoPos['M']  = [ULw+(j-1)*Mw, ULh+(i-1)*Mh , Mw, Mh]
+        dicoPos['UL'] = [0,0, ULw, ULh]
+        dicoPos['UR'] = [fw-ULw,0, ULw, ULh]
+        dicoPos['BR'] = [fw-ULw,fh-ULh, ULw, ULh]
+        dicoPos['BL'] = [0,fh-ULh, ULw, ULh]
+        dicoPos['L']  = [0,ULh+(i-1)*Lh, Lw, Lh]
+        dicoPos['R']  = [fw-ULw,ULh+(i-1)*Lh, Lw, Lh]
+        dicoPos['U']  = [ULw+(j-1)*Uw, 0, Uw, Uh]
+        dicoPos['B']  = [ULw+(j-1)*Uw, fh-ULh, Uw, Uh]
+        
         tile_reldir = 'tile_%d_%d_row_%d/col_%d/' % (tw, th, row, col)
 
-        if pos == 'M':
-            tileSizeAndPositions[tile_reldir]=[ULw+(j-1)*Mw, ULh+(i-1)*Mh , Mw, Mh]
-        if pos == 'UL':
-            tileSizeAndPositions[tile_reldir]=[0,0, ULw, ULh]  
-        if pos == 'L':
-            tileSizeAndPositions[tile_reldir]=[0,ULh+(i-1)*Lh, Lw, Lh]
-        if pos == 'U':
-            tileSizeAndPositions[tile_reldir]=[ULw+(j-1)*Uw, 0, Uw, Uh] 
+        tileSizeAndPositions[tile_reldir] = dicoPos[pos]  
+   
 
     tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_N_pairs.vrt', tileSizeAndPositions, 'local_merged_height_map_crop.tif', fw, fh)
     
