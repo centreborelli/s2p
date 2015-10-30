@@ -772,6 +772,31 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
 
 
 
+
+def global_pointing_correction(pairedTilesPerPairId,NbPairs):
+
+	for i in range(0,NbPairs):
+	
+		pair_id = i+1
+		tiles = pairedTilesPerPairId[pair_id]
+		A_globalMat = pointing_accuracy.global_from_local(tiles)
+		np.savetxt('%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id), A_globalMat)
+		
+
+def global_minmax_intensities(tilesFullInfo):
+
+	minlist=[]
+	maxlist=[]
+	for tile_dir in tilesFullInfo:
+		minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
+		minlist.append(minmax[0])
+		maxlist.append(minmax[1])
+		
+	global_minmax=[min(minlist),max(maxlist)]
+	
+	np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
+		
+
 def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
 
     # create pool with less workers than available cores
@@ -838,12 +863,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
     try:
         print 'Computing global pointing correction...'
         
-        for i in range(0,NbPairs):
-            
-                pair_id = i+1
-                tiles = pairedTilesPerPairId[pair_id]
-                A_globalMat = pointing_accuracy.global_from_local(tiles)
-                np.savetxt('%s/global_pointing_pair_%d.txt' % (out_dir,pair_id), A_globalMat)
+        global_pointing_correction(pairedTilesPerPairId,NbPairs)
             
 
     except KeyboardInterrupt:
@@ -900,16 +920,8 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
     try:
         print 'Computing global min max intensities...'
         
-        minlist=[]
-        maxlist=[]
-        for tile_dir in tilesFullInfo:
-            minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
-            minlist.append(minmax[0])
-            maxlist.append(minmax[1])
-            
-        global_minmax=[min(minlist),max(maxlist)]
-        
-        np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)			        
+        global_minmax_intensities(tilesFullInfo)
+			        
 
     except KeyboardInterrupt:
         pool.terminate()
