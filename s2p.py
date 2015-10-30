@@ -955,55 +955,63 @@ def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
                 common.run('rm -f %s' % imtemp )
 
 
-def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
 
-    height_maps = []
+
+def process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
 
     #Get all info
     fullInfo=tilesFullInfo[tile_dir]
     col,row,tw,th,ov,i,j,pos,images=fullInfo
     img1,rpc1 = images[0]['img'],images[0]['rpc']
 
-    for i in range(0,NbPairs):
-            
-        pair_id = i+1
-        paired_tile_dir=tile_dir + 'pair_%d' % pair_id
+    paired_tile_dir=tile_dir + 'pair_%d' % pair_id
 
-        img2,rpc2 = images[pair_id]['img'],images[pair_id]['rpc']
-        A_global = '%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id)
+    img2,rpc2 = images[pair_id]['img'],images[pair_id]['rpc']
+    A_global = '%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id)
 
-        if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-            print "tile %s already masked, skip" % paired_tile_dir
+    if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+        print "tile %s already masked, skip" % paired_tile_dir
+        return None
 
+    else:
+        print 'process tile %d %d...' % (col,row)
+       
+        #height_maps.append('%s/height_map.tif' % paired_tile_dir)
+
+        # Rectification
+        if os.path.isfile('%s/rectified_ref.tif' % paired_tile_dir) and os.path.isfile('%s/rectified_sec.tif' % paired_tile_dir) and cfg['skip_existing']:
+            print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
         else:
-            print 'process tile %d %d...' % (col,row)
-           
-            height_maps.append('%s/height_map.tif' % paired_tile_dir)
-
-            # Rectification
-            if os.path.isfile('%s/rectified_ref.tif' % paired_tile_dir) and os.path.isfile('%s/rectified_sec.tif' % paired_tile_dir) and cfg['skip_existing']:
-                print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-            else:
-                print 'rectification : process tile %d %d (pair %d)...' % (col,row,pair_id)
-                rectify(paired_tile_dir, A_global, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+            print 'rectification : process tile %d %d (pair %d)...' % (col,row,pair_id)
+            rectify(paired_tile_dir, A_global, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+        
+        # Disparity
+        if os.path.isfile('%s/rectified_disp.tif' % paired_tile_dir) and cfg['skip_existing']:
+            print 'disparity on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+        else:
+            print 'disparity : process tile %d %d (pair %d)...' % (col,row,pair_id)
+            disparity(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
             
-            # Disparity
-            if os.path.isfile('%s/rectified_disp.tif' % paired_tile_dir) and cfg['skip_existing']:
-                print 'disparity on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-            else:
-                print 'disparity : process tile %d %d (pair %d)...' % (col,row,pair_id)
-                disparity(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
-                
-            # Triangulate
-            if os.path.isfile('%s/height_map.tif' % paired_tile_dir) and cfg['skip_existing']:
-                print 'Triangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-            else:
-                print 'Triangulation : process tile %d %d (pair %d)...' % (col,row,pair_id)    
-                triangulate(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
+        # Triangulate
+        if os.path.isfile('%s/height_map.tif' % paired_tile_dir) and cfg['skip_existing']:
+            print 'Triangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+        else:
+            print 'Triangulation : process tile %d %d (pair %d)...' % (col,row,pair_id)    
+            triangulate(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
+
+        return '%s/height_map.tif' % paired_tile_dir
 
 
-    ## Finalization ##
-                
+
+
+def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
+
+    # Get all info
+    fullInfo=tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,images=fullInfo
+    img1,rpc1 = images[0]['img'],images[0]['rpc']
+
+
     # merge the n height maps
     local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
     if len(height_maps)>1:
@@ -1011,7 +1019,7 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
     else:    
         common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
 
-    # Remove overlapping
+    # Remove overlapping 
     #By tile
     local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
     local_merged_height_map_crop = tile_dir +'/local_merged_height_map_crop.tif'
@@ -1019,19 +1027,15 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
     crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
     
     dicoPos={}
-    dicoPos['M']  = ([col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images],[ov/2,ov/2,tw-ov,th-ov])
-    
-    dicoPos['L']  = ([col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],     [0,ov/2,tw-ov/2,th-ov])
-    dicoPos['R']  = ([col+ov/2,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],[ov/2,ov/2,tw-ov/2,th-ov])
-    
-    dicoPos['U']  = ([col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images],      [ov/2,0,tw-ov,th-ov/2])
-    dicoPos['B']  = ([col+ov/2,row+ov/2,tw-ov,th-ov/2,ov,i,j,pos,images], [ov/2,ov/2,tw-ov,th-ov/2])
-    
-    
-    dicoPos['UL'] = ([col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],[0,0,tw-ov/2,th-ov/2])
-    dicoPos['UR'] = ([col+ov/2,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],[ov/2,0,tw-ov/2,th-ov/2])
-    dicoPos['BR'] = ([col+ov/2,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],[ov/2,ov/2,tw-ov/2,th-ov/2])
-    dicoPos['BL'] = ([col,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],[0,ov/2,tw-ov/2,th-ov/2])
+    dicoPos['M']  = ([col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images],       [ov/2,ov/2,tw-ov,th-ov])
+    dicoPos['L']  = ([col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],          [0,ov/2,tw-ov/2,th-ov])
+    dicoPos['R']  = ([col+ov/2,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov/2,th-ov])
+    dicoPos['U']  = ([col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images],          [ov/2,0,tw-ov,th-ov/2])
+    dicoPos['B']  = ([col+ov/2,row+ov/2,tw-ov,th-ov/2,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov,th-ov/2])
+    dicoPos['UL'] = ([col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],             [0,0,tw-ov/2,th-ov/2])
+    dicoPos['UR'] = ([col+ov/2,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [ov/2,0,tw-ov/2,th-ov/2])
+    dicoPos['BR'] = ([col+ov/2,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],   [ov/2,ov/2,tw-ov/2,th-ov/2])
+    dicoPos['BL'] = ([col,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [0,ov/2,tw-ov/2,th-ov/2])
     
     tilesFullInfo[tile_dir] = dicoPos[pos][0]
     newcol,newrow,newtw,newth = dicoPos[pos][1]
@@ -1042,22 +1046,22 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
         
     #By pair    
     for i in range(0,NbPairs):
-            pair_id = i+1
+        pair_id = i+1
             
-            single_height_map = tile_dir + '/pair_%d/height_map.tif' % pair_id
-            single_height_map_crop =tile_dir + '/pair_%d/height_map_crop.tif' % pair_id
+        single_height_map = tile_dir + '/pair_%d/height_map.tif' % pair_id
+        single_height_map_crop =tile_dir + '/pair_%d/height_map_crop.tif' % pair_id
+          
+        single_rpc_err = tile_dir + '/pair_%d/rpc_err.tif' % pair_id
+        single_rpc_err_crop =tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
             
-            single_rpc_err = tile_dir + '/pair_%d/rpc_err.tif' % pair_id
-            single_rpc_err_crop =tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
-            
-            cropImage(single_height_map,single_height_map_crop,newcol,newrow,newtw,newth)
-            cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,newtw,newth)
+        cropImage(single_height_map,single_height_map_crop,newcol,newrow,newtw,newth)
+        cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,newtw,newth)
 
     
     
     if not cfg['debug']:
          common.run('rm -f %s' % (local_merged_height_map)) 
-         #common.run('rm -f %s' % (crop_ref))
+         #don't rm crop_ref !!
                    
     
     # Colors 
@@ -1065,9 +1069,26 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
     
     # Generate cloud 
     generate_cloud(tile_dir,tilesFullInfo,cfg['offset_ply'])
+
+
+
+
+def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
+
     
-    
-    
+    # Process each pair
+    height_maps = []
+    for i in range(0,NbPairs):
+        pair_id = i+1
+        height_map = process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk, roi_msk)
+        if height_map:
+            height_maps.append(height_map)
+
+
+    ## Finalization ##
+    finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo)
+
+
     
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,NbPairs,cld_msk=None, roi_msk=None):
