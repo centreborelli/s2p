@@ -1019,7 +1019,7 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
     else:    
         common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
 
-    # Remove overlapping 
+    # Remove overlapping areas
     #By tile
     local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
     local_merged_height_map_crop = tile_dir +'/local_merged_height_map_crop.tif'
@@ -1061,7 +1061,7 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
     
     if not cfg['debug']:
          common.run('rm -f %s' % (local_merged_height_map)) 
-         #don't rm crop_ref !!
+         #don't remove crop_ref !!
                    
     
     # Colors 
@@ -1213,7 +1213,70 @@ def tiles_composition(out_dir,ensTiles,tilesLocPerPairId,NbPairs, x, y, w, h, tw
     
     return out
     
+
+def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
+
+    #VRT file : height map (N pairs)    
+    ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh, fh, fw = tileComposerInfo
+    tileSizeAndPositions={}
+
     
+    for tile_dir in tilesFullInfo:
+
+        col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+        
+        dicoPos={}
+        dicoPos['M']  = [ULw+(j-1)*Mw, ULh+(i-1)*Mh , Mw, Mh]
+        dicoPos['UL'] = [0,0, ULw, ULh]
+        dicoPos['UR'] = [fw-ULw,0, ULw, ULh]
+        dicoPos['BR'] = [fw-ULw,fh-ULh, ULw, ULh]
+        dicoPos['BL'] = [0,fh-ULh, ULw, ULh]
+        dicoPos['L']  = [0,ULh+(i-1)*Lh, Lw, Lh]
+        dicoPos['R']  = [fw-ULw,ULh+(i-1)*Lh, Lw, Lh]
+        dicoPos['U']  = [ULw+(j-1)*Uw, 0, Uw, Uh]
+        dicoPos['B']  = [ULw+(j-1)*Uw, fh-ULh, Uw, Uh]
+        
+        tile_reldir = 'tile_%d_%d_row_%d/col_%d/' % (tw, th, row, col)
+
+        tileSizeAndPositions[tile_reldir] = dicoPos[pos]  
+   
+
+    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_N_pairs.vrt', tileSizeAndPositions, 'local_merged_height_map_crop.tif', fw, fh)
+    
+    
+    # VRT file : height map (for each single pair)
+    # VRT file : rpc_err (for each single pair)
+    for i in range(0,NbPairs):
+        
+        pair_id = i+1
+        
+        pairsSizeAndPositions={}
+        for tile_reldir in tileSizeAndPositions:
+            pair_reldir = tile_reldir + '/pair_%d' % (pair_id)
+            pairsSizeAndPositions[pair_reldir] = tileSizeAndPositions[tile_reldir]  
+        
+        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'height_map_crop.tif', fw, fh)
+        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/rpc_err_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'rpc_err_crop.tif', fw, fh)    
+
+
+
+def writeDSM(tilesFullInfo):
+    clouds_dir = cfg['out_dir']+'/clouds'
+    if (os.path.exists(clouds_dir)):
+        rmtree(clouds_dir)
+    mkdir(clouds_dir)    
+    
+    for tile_dir in tilesFullInfo:
+        
+        col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+        cloud = tile_dir + '/cloud.ply'
+        cloud_link_name = clouds_dir + '/cloud_%d_%d_row_%d_col_%d.ply' % (tw, th, row, col)
+        common.run('ln %s %s' % (cloud,cloud_link_name) )
+        
+    out_dsm = '%s/dsm.tif' % (cfg['out_dir'])
+    common.run("ls %s | plyflatten %f %s" % (clouds_dir+'/cloud*',cfg['dsm_resolution'], out_dsm))
+
+
 
 def main(config_file):
     """
@@ -1305,75 +1368,22 @@ def main(config_file):
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])                         
 
 
-
-    #VRT file : height map (N pairs)    
-    ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh, fh, fw = tileComposerInfo
-    tileSizeAndPositions={}
-
-    
-    for tile_dir in tilesFullInfo:
-
-        col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
-        
-        dicoPos={}
-        dicoPos['M']  = [ULw+(j-1)*Mw, ULh+(i-1)*Mh , Mw, Mh]
-        dicoPos['UL'] = [0,0, ULw, ULh]
-        dicoPos['UR'] = [fw-ULw,0, ULw, ULh]
-        dicoPos['BR'] = [fw-ULw,fh-ULh, ULw, ULh]
-        dicoPos['BL'] = [0,fh-ULh, ULw, ULh]
-        dicoPos['L']  = [0,ULh+(i-1)*Lh, Lw, Lh]
-        dicoPos['R']  = [fw-ULw,ULh+(i-1)*Lh, Lw, Lh]
-        dicoPos['U']  = [ULw+(j-1)*Uw, 0, Uw, Uh]
-        dicoPos['B']  = [ULw+(j-1)*Uw, fh-ULh, Uw, Uh]
-        
-        tile_reldir = 'tile_%d_%d_row_%d/col_%d/' % (tw, th, row, col)
-
-        tileSizeAndPositions[tile_reldir] = dicoPos[pos]  
-   
-
-    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_N_pairs.vrt', tileSizeAndPositions, 'local_merged_height_map_crop.tif', fw, fh)
-    
-    
-    # VRT file : height map (for each single pair)
-    # VRT file : rpc_err (for each single pair)
-    for i in range(0,NbPairs):
-        
-        pair_id = i+1
-        
-        pairsSizeAndPositions={}
-        for tile_reldir in tileSizeAndPositions:
-            pair_reldir = tile_reldir + '/pair_%d' % (pair_id)
-            pairsSizeAndPositions[pair_reldir] = tileSizeAndPositions[tile_reldir]  
-        
-        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'height_map_crop.tif', fw, fh)
-        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/rpc_err_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'rpc_err_crop.tif', fw, fh)
+    # Write final outputs in VRT format
+    writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs)
             
 
         
-    # digital surface model
-    clouds_dir = cfg['out_dir']+'/clouds'
-    if (os.path.exists(clouds_dir)):
-        rmtree(clouds_dir)
-    mkdir(clouds_dir)    
-    
-    for tile_dir in tilesFullInfo:
-        
-        col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
-        cloud = tile_dir + '/cloud.ply'
-        cloud_link_name = clouds_dir + '/cloud_%d_%d_row_%d_col_%d.ply' % (tw, th, row, col)
-        common.run('ln %s %s' % (cloud,cloud_link_name) )
-        
-    out_dsm = '%s/dsm.tif' % (cfg['out_dir'])
-    common.run("ls %s | plyflatten %f %s" % (clouds_dir+'/cloud*',cfg['dsm_resolution'], out_dsm))  
+    # Also digital surface model
+    writeDSM(tilesFullInfo)
       
         
 
-    # crop corresponding areas in the secondary images
+    # Bonus : crop corresponding areas in the secondary images
     if not cfg['full_img']:
         crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
 
 
-    # also copy the RPC's
+    # Bonus : also copy the RPC's
     for i in range(len(cfg['images'])):
         from shutil import copy2
         copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
