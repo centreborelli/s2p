@@ -118,6 +118,7 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
 
     # Get info
     col,row,tw,th,ov,i,j,pos,images = tilesFullInfo[tile_dir]
+    z = cfg['subsampling_factor']
 
     # Paths
     #crop_ref = tile_dir + '/roi_ref.tif'
@@ -131,7 +132,6 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
         
         crop_color = tile_dir + '/roi_color_ref.tif'
         if clr is not None:
-            print 'colorizing...'
             triangulation.colorize(crop_ref, clr, col,row, z, crop_color)
         
         else: # use of image_rescaleintensities
@@ -1065,7 +1065,7 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
                    
     
     # Colors 
-    colorCropRef(tile_dir,tilesFullInfo,None)
+    colorCropRef(tile_dir,tilesFullInfo,cfg['images'][0]['clr'])
     
     # Generate cloud 
     generate_cloud(tile_dir,tilesFullInfo,cfg['offset_ply'])
