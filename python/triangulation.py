@@ -182,9 +182,9 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
     #   translation (-1 - x/4, -y/4)
     #   zoom 4/z
     w, h = common.image_size_tiffinfo(crop_panchro)
-    xx = np.floor(x / 4.0) + 1
+    xx = np.floor(x / 4.0) 
     yy = np.floor(y / 4.0)
-    ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
+    ww = np.ceil((x + w * zoom) / 4.0) - xx 
     hh = np.ceil((y + h * zoom) / 4.0) - yy
     crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
     crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
@@ -192,9 +192,11 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
-    x0 = x - 4*xx
-    y0 = y - 4*yy
+    x0 = max(0,x - 4*xx)
+    y0 = max(0,y - 4*yy)
+    print '>>>'*10,common.image_size_tiffinfo(crop_ms),x0,y0
     crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
+    print '>o>'*10,common.image_size_tiffinfo(crop_ms)
     assert(common.image_size_tiffinfo(crop_panchro) ==
            common.image_size_tiffinfo(crop_ms))
 
