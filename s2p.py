@@ -130,29 +130,29 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
             
     if cfg['color_ply']:
         
-        crop_color = tile_dir + '/roi_color_ref.tif'
-        if clr is not None:
-            triangulation.colorize(crop_ref, clr, col,row, z, crop_color)
+        doProcess=False
+        if not os.path.exists(applied_minmax):
+            doProcess=True
+            applied_minmax_arr = global_minmax_arr
+        else:     
+            applied_minmax_arr = np.loadtxt(applied_minmax)
         
-        else: # use of image_rescaleintensities
-        
-            doProcess=False
-            if not os.path.exists(applied_minmax):
+            if (applied_minmax_arr[0]!=global_minmax_arr[0]) or (applied_minmax_arr[1]!=global_minmax_arr[1]):
                 doProcess=True
                 applied_minmax_arr = global_minmax_arr
-            else:     
-                applied_minmax_arr = np.loadtxt(applied_minmax)
-		    
-                if (applied_minmax_arr[0]!=global_minmax_arr[0]) or (applied_minmax_arr[1]!=global_minmax_arr[1]):
-		            doProcess=True
-		            applied_minmax_arr = global_minmax_arr
         
-            if not doProcess and cfg['skip_existing']:
+
+        if not doProcess and cfg['skip_existing']:
                 print 'Rescaling of tile %s already done, skip' % tile_dir
-            else:
+        else:
 
+            crop_color = tile_dir + '/roi_color_ref.tif'
+            if clr is not None:
+                triangulation.colorize(crop_ref, clr, col,row, z, crop_color, applied_minmax_arr[0],applied_minmax_arr[1])
+            else: # use of image_rescaleintensities
+            
                 np.savetxt(applied_minmax,applied_minmax_arr)
-
+    
                 if common.image_pix_dim_tiffinfo(crop_ref) == 4:
                     print 'the image is pansharpened fusioned'
                     tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
@@ -162,7 +162,7 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
                     print 'no color data'
                     #common.image_qauto(crop_ref, crop_color, tilewise=False)
                     common.image_rescaleintensities(crop_ref,crop_color,applied_minmax_arr[0],applied_minmax_arr[1])
-	        
+        
         
 
 def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):

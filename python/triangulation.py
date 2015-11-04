@@ -161,7 +161,7 @@ def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
     return
 
 
-def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
+def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
     """
     Colorizes a Pleiades gray crop using low-resolution color information.
 
@@ -214,7 +214,8 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     if w * h > 25e6:  # image larger than 5000 x 5000 pixels
         common.image_qauto_otb(out_colorized, tmp)
     else:
-        common.image_qauto(tmp, out_colorized)
+        #common.image_qauto(tmp, out_colorized)
+        common.image_rescaleintensities(tmp, out_colorized, rmin, rmax)
     return
 
 
