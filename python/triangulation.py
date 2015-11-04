@@ -194,9 +194,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
     # followed by zoom
     x0 = max(0,x - 4*xx)
     y0 = max(0,y - 4*yy)
-    print '>>>'*10,common.image_size_tiffinfo(crop_ms),x0,y0
     crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
-    print '>o>'*10,common.image_size_tiffinfo(crop_ms)
     assert(common.image_size_tiffinfo(crop_panchro) ==
            common.image_size_tiffinfo(crop_ms))
 
