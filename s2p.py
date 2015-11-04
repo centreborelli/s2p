@@ -767,6 +767,10 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
                 pairedTilesPerPairId[pair_id].append(paired_tile_dir )
 
 
+    if len(tilesFullInfo) == 1 : #Only one tile : put position 'Single'
+        tile_dir,info=tilesFullInfo.items()[0]
+        col,row,tw,th,ov,i,j,pos,images=info
+        tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,'Single',images]
 
     return tilesFullInfo,pairedTilesPerPairId,NbPairs,tileComposerInfo
 
@@ -1036,7 +1040,8 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
     dicoPos['UR'] = ([col+ov/2,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [ov/2,0,tw-ov/2,th-ov/2])
     dicoPos['BR'] = ([col+ov/2,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],   [ov/2,ov/2,tw-ov/2,th-ov/2])
     dicoPos['BL'] = ([col,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [0,ov/2,tw-ov/2,th-ov/2])
-    
+    dicoPos['Single'] = ([col,row,tw,th,ov,i,j,pos,images],                   [0,0,tw,th])    
+
     tilesFullInfo[tile_dir] = dicoPos[pos][0]
     newcol,newrow,newtw,newth = dicoPos[pos][1]
    
@@ -1235,6 +1240,7 @@ def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
         dicoPos['R']  = [fw-ULw,ULh+(i-1)*Lh, Lw, Lh]
         dicoPos['U']  = [ULw+(j-1)*Uw, 0, Uw, Uh]
         dicoPos['B']  = [ULw+(j-1)*Uw, fh-ULh, Uw, Uh]
+        dicoPos['Single'] = [0,0, tw, th]
         
         tile_reldir = 'tile_%d_%d_row_%d/col_%d/' % (tw, th, row, col)
 
@@ -1358,7 +1364,7 @@ def main(config_file):
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'])
-                           
+    
                     
     preprocess_tiles(cfg['out_dir'],tilesFullInfo,pairedTilesPerPairId,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])         
