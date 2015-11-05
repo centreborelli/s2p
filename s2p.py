@@ -58,7 +58,7 @@ def show_progress(a):
 
 def cropImage(inp,out,col,row,tw,th,z):
     """
-    Extract an ROI from inp to out, with ROI defined as (col,row,tw,th) <==> (Upper left corner, size of ROI)
+    Extract an ROI from inp to out, with ROI defined as (col,row,tw,th) <==> (Upper left corner, size of ROI), and apply a zoom z.
     """
     
     if z == 1:
@@ -75,8 +75,8 @@ def getMinMaxFromExtract(tile_dir,tilesFullInfo):
     Get min/max intensities of an extract ROI from the ref image.
     
     Args:
-        fullInfo : all that you need to process a tile:
-        tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2
+        tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
+        tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,images
     """
     
     print "\nCrop ref image and compute min/max intensities..."
@@ -101,19 +101,18 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
     Colorization of a crop_ref (for a given tile)
     
     Args:
-        - fullInfo : all that you need to process a tile:
-        tile_dir,pair_id,A_global,col,row,tw,th,ntx,nty,i,j,img1,rpc1,img2,rpc2
+        - tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
+        - tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,images
         
         - clr (optional) : if crop_ref is a pan image, will perform the pansharpening with the color image clr
             
             If clr is None then:
-                case 1 : tile is an RGBI image, so get rid of I channel, and perform rescaling of the remaining channels
+                case 1 : tile is an RGBI image, so removes I channel, and perform rescaling of the remaining channels
                 case 2 : tile is already an RGB image, so just perform rescaling
 
                 Note that if rescaling is already performed, then the file applied_minmax.txt exists :
                 - if applied_minmax.txt exists and cfg['skip_existing'] is True, rescaling won't be performed again
                 - if applied_minmax.txt exists and is different from global_minmax, rescaling will be compulsorily performed (can occur if a new tile is added)
-
     """
 
     # Get info
@@ -168,8 +167,9 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
 def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     """
     Args:
-        clr:  path to the xs (multispectral, ie color) reference image
-        do_offset (optional, default: False): boolean flag to decide wether the
+        - tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
+        - tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,images
+        - do_offset (optional, default: False): boolean flag to decide wether the
             x, y coordinates of points in the ply file will be translated or
             not (translated to be close to 0, to avoid precision loss due to
             huge numbers)
@@ -661,7 +661,9 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
 def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
                  ov=None, cld_msk=None, roi_msk=None):
-              
+    """
+    TODO
+    """          
 
     # create a directory for the experiment
     if not os.path.exists(out_dir):
@@ -774,30 +776,38 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
 
 
 def global_pointing_correction(pairedTilesPerPairId,NbPairs):
+    """
+    TODO
+    """
 
-	for i in range(0,NbPairs):
-	
-		pair_id = i+1
-		tiles = pairedTilesPerPairId[pair_id]
-		A_globalMat = pointing_accuracy.global_from_local(tiles)
-		np.savetxt('%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id), A_globalMat)
+    for i in range(0,NbPairs):
+        pair_id = i+1
+        tiles = pairedTilesPerPairId[pair_id]
+        A_globalMat = pointing_accuracy.global_from_local(tiles)
+        np.savetxt('%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id), A_globalMat)
 		
 
 def global_minmax_intensities(tilesFullInfo):
+    """
+    TODO
+    """
 
-	minlist=[]
-	maxlist=[]
-	for tile_dir in tilesFullInfo:
-		minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
-		minlist.append(minmax[0])
-		maxlist.append(minmax[1])
+    minlist=[]
+    maxlist=[]
+    for tile_dir in tilesFullInfo:
+        minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
+        minlist.append(minmax[0])
+        maxlist.append(minmax[1])
 		
-	global_minmax=[min(minlist),max(maxlist)]
+    global_minmax=[min(minlist),max(maxlist)]
 	
-	np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
+    np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
 		
 
 def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
+    """
+    TODO
+    """
 
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
@@ -935,6 +945,10 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
 
 
 def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
+    """
+    TODO
+    """
+
     local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
     if os.path.isfile(local_merged_height_map) and cfg['skip_existing']:
         print 'final height map %s already done, skip' % local_merged_height_map
@@ -958,6 +972,9 @@ def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
 
 
 def process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
+    """
+    TODO
+    """
 
     #Get all info
     fullInfo=tilesFullInfo[tile_dir]
@@ -1005,6 +1022,9 @@ def process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=No
 
 
 def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
+    """
+    TODO
+    """
 
     # Get all info
     fullInfo=tilesFullInfo[tile_dir]
@@ -1083,7 +1103,9 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
 
 
 def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
-
+    """
+    TODO
+    """
     
     # Process each pair
     height_maps = []
@@ -1101,7 +1123,9 @@ def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
     
 
 def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,NbPairs,cld_msk=None, roi_msk=None):
-    
+    """
+    TODO
+    """
     # create pool with less workers than available cores
     nb_workers = multiprocessing.cpu_count()
     if cfg['max_nb_threads']:
@@ -1142,7 +1166,9 @@ def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,NbPairs,cld_msk=None, 
 
 
 def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
-
+    """
+    TODO
+    """
     #VRT file : height map (N pairs)    
     ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh, fh, fw = tileComposerInfo
     tileSizeAndPositions={}
@@ -1189,6 +1215,9 @@ def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
 
 
 def writeDSM(tilesFullInfo):
+    """
+    TODO
+    """
     clouds_dir = cfg['out_dir']+'/clouds'
     if (os.path.exists(clouds_dir)):
         rmtree(clouds_dir)
