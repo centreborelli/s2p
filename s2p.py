@@ -804,7 +804,7 @@ def global_minmax_intensities(tilesFullInfo):
     np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
 		
 
-def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
+def preprocess_tiles_step1(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
     """
     TODO
     """
@@ -869,23 +869,8 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
         print "\toutput: ", e.args[0]["output"]
         
         
-    # 2 - Global pointing correction
-    try:
-        print 'Computing global pointing correction...'
         
-        global_pointing_correction(pairedTilesPerPairId,NbPairs)
-            
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-        
-        
-    # 3 - Crop ref image into tile, and get min/max intensities values  
+    # 2 - Crop ref image into tile, and get min/max intensities values  
     results = []
     show_progress.counter = 0
     try:
@@ -926,7 +911,39 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
         print "\toutput: ", e.args[0]["output"]
         
         
-    # 4 - Global Min/max
+
+        
+
+def preprocess_tiles_step2(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
+    """
+    TODO
+    """
+
+    # create pool with less workers than available cores
+    nb_workers = multiprocessing.cpu_count()
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
+    pool = multiprocessing.Pool(nb_workers)
+        
+        
+    # 1 - Global pointing correction
+    try:
+        print 'Computing global pointing correction...'
+        
+        global_pointing_correction(pairedTilesPerPairId,NbPairs)
+            
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+        
+        
+        
+    # 2 - Global Min/max
     try:
         print 'Computing global min max intensities...'
         
@@ -941,7 +958,7 @@ def preprocess_tiles(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
         
-       
+              
 
 
 def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
@@ -1317,7 +1334,11 @@ def main(config_file):
                            cfg['images'][0]['roi'])
     
                     
-    preprocess_tiles(cfg['out_dir'],tilesFullInfo,pairedTilesPerPairId,NbPairs,
+    preprocess_tiles_step1(cfg['out_dir'],tilesFullInfo,pairedTilesPerPairId,NbPairs,
+                        cfg['images'][0]['cld'], cfg['images'][0]['roi'])  
+
+
+    preprocess_tiles_step2(cfg['out_dir'],tilesFullInfo,pairedTilesPerPairId,NbPairs,
                         cfg['images'][0]['cld'], cfg['images'][0]['roi'])         
      
      
