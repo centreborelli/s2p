@@ -56,12 +56,11 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
-def cropImage(inp,out,col,row,tw,th):
+def cropImage(inp,out,col,row,tw,th,z):
     """
     Extract an ROI from inp to out, with ROI defined as (col,row,tw,th) <==> (Upper left corner, size of ROI)
     """
     
-    z = cfg['subsampling_factor']
     if z == 1:
         common.image_crop_TIFF(inp, col,row,tw,th, out)
     else:
@@ -89,8 +88,9 @@ def getMinMaxFromExtract(tile_dir,tilesFullInfo):
     # output files
     crop_ref = tile_dir + '/roi_ref.tif'
     local_minmax = tile_dir + '/local_minmax.txt'
-	
-    cropImage(img1,crop_ref,col,row,tw,th)
+
+    z = cfg['subsampling_factor']
+    cropImage(img1,crop_ref,col,row,tw,th,z)
 		
     common.image_getminmax(crop_ref,local_minmax)
     
@@ -187,15 +187,11 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
         crop_color=''
 
     z = cfg['subsampling_factor']
-    if cfg['full_img'] and z == 1:
-        crop_ref = img1
-    else: #Crop image has already been computed by getMinMaxFromExtract 
-        crop_ref = tile_dir + '/roi_ref.tif'
 
     #Compute the homography transforming the coordinates system of the
     #original full size image into the coordinates system 
     #of the crop we are dealing with
-    A = common.matrix_translation(-col, -row)
+    A = common.matrix_translation(-col*z, -row*z)
     z = cfg['subsampling_factor']
     f = 1.0/z
     Z = np.diag([f, f, 1])
@@ -1030,23 +1026,43 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
     crop_ref = tile_dir + '/roi_ref.tif'
     crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
     
-    dicoPos={}
-    dicoPos['M']  = ([col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images],       [ov/2,ov/2,tw-ov,th-ov])
-    dicoPos['L']  = ([col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],          [0,ov/2,tw-ov/2,th-ov])
-    dicoPos['R']  = ([col+ov/2,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov/2,th-ov])
-    dicoPos['U']  = ([col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images],          [ov/2,0,tw-ov,th-ov/2])
-    dicoPos['B']  = ([col+ov/2,row+ov/2,tw-ov,th-ov/2,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov,th-ov/2])
-    dicoPos['UL'] = ([col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],             [0,0,tw-ov/2,th-ov/2])
-    dicoPos['UR'] = ([col+ov/2,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [ov/2,0,tw-ov/2,th-ov/2])
-    dicoPos['BR'] = ([col+ov/2,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],   [ov/2,ov/2,tw-ov/2,th-ov/2])
-    dicoPos['BL'] = ([col,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [0,ov/2,tw-ov/2,th-ov/2])
-    dicoPos['Single'] = ([col,row,tw,th,ov,i,j,pos,images],                   [0,0,tw,th])    
+    #dicoPos={}
+    #dicoPos['M']  = ([col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images],       [ov/2,ov/2,tw-ov,th-ov])
+    #dicoPos['L']  = ([col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],          [0,ov/2,tw-ov/2,th-ov])
+    #dicoPos['R']  = ([col+ov/2,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov/2,th-ov])
+    #dicoPos['U']  = ([col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images],          [ov/2,0,tw-ov,th-ov/2])
+    #dicoPos['B']  = ([col+ov/2,row+ov/2,tw-ov,th-ov/2,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov,th-ov/2])
+    #dicoPos['UL'] = ([col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],             [0,0,tw-ov/2,th-ov/2])
+    #dicoPos['UR'] = ([col+ov/2,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [ov/2,0,tw-ov/2,th-ov/2])
+    #dicoPos['BR'] = ([col+ov/2,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],   [ov/2,ov/2,tw-ov/2,th-ov/2])
+    #dicoPos['BL'] = ([col,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [0,ov/2,tw-ov/2,th-ov/2])
+    #dicoPos['Single'] = ([col,row,tw,th,ov,i,j,pos,images],                   [0,0,tw,th])   
 
-    tilesFullInfo[tile_dir] = dicoPos[pos][0]
-    newcol,newrow,newtw,newth = dicoPos[pos][1]
+
+    dicoPos={}
+    dicoPos['M']  = [ov/2,ov/2,-ov,-ov]
+    dicoPos['L']  = [0,ov/2,-ov/2,-ov]
+    dicoPos['R']  = [ov/2,ov/2,-ov/2,-ov]
+    dicoPos['U']  = [ov/2,0,-ov,-ov/2]
+    dicoPos['B']  = [ov/2,ov/2,-ov,-ov/2]
+    dicoPos['UL'] = [0,0,-ov/2,-ov/2]
+    dicoPos['UR'] = [ov/2,0,-ov/2,-ov/2]
+    dicoPos['BR'] = [ov/2,ov/2,-ov/2,-ov/2]
+    dicoPos['BL'] = [0,ov/2,-ov/2,-ov/2]
+    dicoPos['Single'] = [0,0,0,0]  
+
+    z = cfg['subsampling_factor']
+    #tilesFullInfo[tile_dir] = dicoPos[pos][0]
+    newcol,newrow,difftw,diffth = np.array(dicoPos[pos])/z
+    info=tilesFullInfo[tile_dir]
+    info[0] = info[0]/z + newcol
+    info[1] = info[1]/z + newrow
+    info[2] = info[2]/z + difftw
+    info[3] = info[3]/z + diffth
+    tilesFullInfo[tile_dir]=info   
    
-    cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,newtw,newth)
-    cropImage(crop_ref,crop_ref_crop,newcol,newrow,newtw,newth)   
+    cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,info[2],info[3],1)
+    cropImage(crop_ref,crop_ref_crop,newcol,newrow,info[2],info[3],1)   
 
         
     #By pair    
@@ -1059,13 +1075,13 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
         single_rpc_err = tile_dir + '/pair_%d/rpc_err.tif' % pair_id
         single_rpc_err_crop =tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
             
-        cropImage(single_height_map,single_height_map_crop,newcol,newrow,newtw,newth)
-        cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,newtw,newth)
+        cropImage(single_height_map,single_height_map_crop,newcol,newrow,info[2],info[3],1)
+        cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,info[2],info[3],1)
 
     
     
-    if not cfg['debug']:
-         common.run('rm -f %s' % (local_merged_height_map)) 
+    #if not cfg['debug']:
+     #    common.run('rm -f %s' % (local_merged_height_map)) 
          #don't remove crop_ref !!
                    
     
@@ -1246,8 +1262,8 @@ def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
 
         tileSizeAndPositions[tile_reldir] = dicoPos[pos]  
    
-
-    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_N_pairs.vrt', tileSizeAndPositions, 'local_merged_height_map_crop.tif', fw, fh)
+    z = cfg['subsampling_factor']
+    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_N_pairs.vrt', tileSizeAndPositions, 'local_merged_height_map_crop.tif', fw, fh,z)
     
     
     # VRT file : height map (for each single pair)
@@ -1261,8 +1277,8 @@ def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
             pair_reldir = tile_reldir + '/pair_%d' % (pair_id)
             pairsSizeAndPositions[pair_reldir] = tileSizeAndPositions[tile_reldir]  
         
-        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'height_map_crop.tif', fw, fh)
-        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/rpc_err_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'rpc_err_crop.tif', fw, fh)    
+        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'height_map_crop.tif', fw, fh,z)
+        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/rpc_err_pair_%d.vrt' % (pair_id), pairsSizeAndPositions, 'rpc_err_crop.tif', fw, fh,z)    
 
 
 

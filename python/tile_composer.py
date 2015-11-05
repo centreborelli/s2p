@@ -69,7 +69,7 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
     return
 
 
-def mosaic_gdal2(fout, tilesFullInfo, filename, w,h):
+def mosaic_gdal2(fout, tilesFullInfo, filename, w,h,z=1):
     """
     Compose several tiles of differents sizes into a bigger image (using gdal vrt)
 
@@ -85,8 +85,8 @@ def mosaic_gdal2(fout, tilesFullInfo, filename, w,h):
 
     vrtfile = open(vrtfilename, 'w')
 
-    vrtfile.write("<VRTDataset rasterXSize=\"%i\" rasterYSize=\"%i\">\n" % (w,
-                                                                            h))
+    vrtfile.write("<VRTDataset rasterXSize=\"%i\" rasterYSize=\"%i\">\n" % (w/z,
+                                                                            h/z))
     vrtfile.write("\t<VRTRasterBand dataType=\"Float32\" band=\"1\">\n")
     vrtfile.write("\t\t<ColorInterp>Gray</ColorInterp>\n")
 
@@ -99,8 +99,8 @@ def mosaic_gdal2(fout, tilesFullInfo, filename, w,h):
         vrtfile.write("\t\t<SimpleSource>\n")
         vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n" % height_map)
         vrtfile.write("\t\t\t<SourceBand>1</SourceBand>\n")
-        vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (0, 0, tw, th))
-        vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (col, row, tw, th))
+        vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (0, 0, tw/z, th/z))
+        vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (col/z, row/z, tw/z, th/z))
         vrtfile.write("\t\t</SimpleSource>\n")
 
     vrtfile.write("\t</VRTRasterBand>\n")
