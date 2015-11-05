@@ -1025,18 +1025,6 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
     local_merged_height_map_crop = tile_dir +'/local_merged_height_map_crop.tif'
     crop_ref = tile_dir + '/roi_ref.tif'
     crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
-    
-    #dicoPos={}
-    #dicoPos['M']  = ([col+ov/2,row+ov/2,tw-ov,th-ov,ov,i,j,pos,images],       [ov/2,ov/2,tw-ov,th-ov])
-    #dicoPos['L']  = ([col,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],          [0,ov/2,tw-ov/2,th-ov])
-    #dicoPos['R']  = ([col+ov/2,row+ov/2,tw-ov/2,th-ov,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov/2,th-ov])
-    #dicoPos['U']  = ([col+ov/2,row,tw-ov,th-ov/2,ov,i,j,pos,images],          [ov/2,0,tw-ov,th-ov/2])
-    #dicoPos['B']  = ([col+ov/2,row+ov/2,tw-ov,th-ov/2,ov,i,j,pos,images],     [ov/2,ov/2,tw-ov,th-ov/2])
-    #dicoPos['UL'] = ([col,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],             [0,0,tw-ov/2,th-ov/2])
-    #dicoPos['UR'] = ([col+ov/2,row,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [ov/2,0,tw-ov/2,th-ov/2])
-    #dicoPos['BR'] = ([col+ov/2,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],   [ov/2,ov/2,tw-ov/2,th-ov/2])
-    #dicoPos['BL'] = ([col,row+ov/2,tw-ov/2,th-ov/2,ov,i,j,pos,images],        [0,ov/2,tw-ov/2,th-ov/2])
-    #dicoPos['Single'] = ([col,row,tw,th,ov,i,j,pos,images],                   [0,0,tw,th])   
 
 
     dicoPos={}
@@ -1126,13 +1114,6 @@ def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,NbPairs,cld_msk=None, 
     show_progress.counter = 0
     try:
         for tile_dir in tilesFullInfo:
-
-            #fullInfoNpairs=[]
-            #for i in range(0,NbPairs):
-            #    pair_id = i+1
-            #    tile_dir=tile + 'pair_%d' % pair_id
-            #    fullInfo=tilesFullInfo[tile_dir]
-            #    fullInfoNpairs.append(fullInfo)
             
 
             if cfg['debug']:
@@ -1159,81 +1140,6 @@ def process_tiles(out_dir,tilesFullInfo,tilesLocPerPairId,NbPairs,cld_msk=None, 
     
 
 
-    
-def tile_composition(height_map_path, tiles, x, y, w, h, tw=None, th=None, ov=None):
-
-
-    if os.path.isfile(height_map_path) and cfg['skip_existing']:
-        print 'tile composition for %s already done, skip' % height_map_path
-    else:
-        # ensure that the coordinates of the ROI are multiples of the zoom factor,
-        # to avoid bad registration of tiles due to rounding problems.
-        z = cfg['subsampling_factor']
-        x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-    
-        # TODO: automatically compute optimal size for tiles
-        if tw is None and th is None and ov is None:
-            ov = z * 100
-            if w <= z * cfg['tile_size']:
-                tw = w
-            else:
-                tw = z * cfg['tile_size']
-            if h <= z * cfg['tile_size']:
-                th = h
-            else:
-                th = z * cfg['tile_size']
-        
-        tmp = ['%s/height_map.tif' % t for t in tiles]
-        print "Mosaicing tiles with %s..." % cfg['mosaic_method']
-        if cfg['mosaic_method'] == 'gdal':
-            tile_composer.mosaic_gdal(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
-        else:
-            tile_composer.mosaic(height_map_path, w/z, h/z, tmp, tw/z, th/z, ov/z)
-
-
-def tiles_composition(out_dir,ensTiles,tilesLocPerPairId,NbPairs, x, y, w, h, tw=None, th=None, ov=None):
-
-    # create pool with less workers than available cores
-    nb_workers = multiprocessing.cpu_count()
-    if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
-    pool = multiprocessing.Pool(nb_workers)
-
-    # Tiles composition
-    results = []
-    show_progress.counter = 0
-    out=[]
-    try:
-
-        for i in range(0,NbPairs):
-        
-            pair_id = i+1 
-            height_map_path = '%s/height_map_pair_%d.tif' % (out_dir,pair_id)
-            out.append(height_map_path)
-
-            if cfg['debug']:
-                    tile_composition(height_map_path,tilesLocPerPairId[pair_id],x, y, w, h, tw, th, ov)
-            else:
-                    p = pool.apply_async(tile_composition,
-                                             args=(height_map_path,tilesLocPerPairId[pair_id],x, y, w, h, tw, th, ov), callback=show_progress)
-                    results.append(p)
-
-            for r in results:
-                try:
-                    r.get(3600)  # wait at most one hour per tile
-                except multiprocessing.TimeoutError:
-                    print "Timeout while computing tile "+str(r)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]    
-    
-    return out
-    
 
 def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
 
