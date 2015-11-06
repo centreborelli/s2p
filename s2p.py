@@ -56,10 +56,536 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
+def check_parameters(usr_cfg):
+    """
+    Checks that the provided dictionary defines all the mandatory
+    arguments, and warns about unknown optional arguments.
+
+    Args:
+        usr_cfg: python dict read from the json input file
+
+    Returns:
+        nothing
+    """
+
+    # verify that i/o files are defined
+    if 'out_dir' not in usr_cfg:
+        print "missing output dir: abort"
+        sys.exit(1)
+    if 'images' not in usr_cfg or len(usr_cfg['images']) < 2:
+        print "missing input data paths: abort"
+        sys.exit(1)
+    for i in range(0,len(usr_cfg['images'])):
+        if 'img' not in usr_cfg['images'][i] or 'rpc' not in usr_cfg['images'][i]:
+            errMsg = 'missing input data paths for image ' + str(i) + ': abort'
+            print errMsg
+            sys.exit(1)           
+	        
+
+    # verify that roi or path to preview file are defined
+    if ('full_img' not in usr_cfg) or (not usr_cfg['full_img']):
+        if 'roi' not in usr_cfg or any(p not in usr_cfg['roi'] for p in ['x',
+                                                                         'y',
+                                                                         'w',
+                                                                         'h']):
+            if 'prv' not in usr_cfg['images'][0]:
+                print """missing or incomplete roi definition, and no preview
+                file is specified: abort"""
+                sys.exit(1)
+
+    # warn about unknown optional parameters: these parameters have no default
+    # value in the global config.cfg dictionary, and thus they are not used
+    # anywhere.  They may appear in the usr_cfg because of a typo.
+    l = usr_cfg.keys()
+
+    # remove mandatory parameters (they are not in config.cfg)
+    l.remove('out_dir')
+    l.remove('images')
+    if 'roi' in l:
+        l.remove('roi')
+
+    # check
+    for k in l:
+        if k not in cfg:
+            print """parameter %s unknown: you should remove it from the input
+            json file. It will be ignored.""" % k
 
 
+# ----------------------------------------------------------------------------------------------------
+# ---------------------------------------  prepare_fullProcess ---------------------------------------
+# ----------------------------------------------------------------------------------------------------
+
+def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
+                 ov=None, cld_msk=None, roi_msk=None):
+    """
+    Prepare the entire process : 
+    1) Select a ROI, make sure its coordinates are multiples of the zoom factor
+    2) Compute optimal size for tiles, get the number of pairs
+    3) Build the tileComposerInfo : a simple list that gives the size of the tiles (after having removed the overlapping areas), regarding their positions inside the ROI.
+       It will be useful for the contruction of the vrt file that merge all the local height maps and other data.
+    4) Build tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,images. USED EVERYWHERE IN THIS CODE.
+       * col/row : position of the tile (upper left corner)
+       * tw/th : size of the tile
+       * ov : size of the overlapping
+       * i/j : relative position of the tile
+       * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
+       * images : a dictionnary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
+    
+    Args:
+        - out_dir : outputs directory
+        - images : a dictionnary directly given by the json config file, that will be stored into tilesFullInfo
+        - x, y, w, h: four integers defining the rectangular ROI in the reference
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle. The ROI may be as big as you want, as it will be
+            cutted into small tiles for processing.
+        - tw, th (optional) : dimensions of the tiles
+        - ov (optional) : width of overlapping bands between tiles
+        - cld_msk (optional) : path to a gml file containing a cloud mask
+        - roi_msk (optional) : path to a gml file containing a mask defining the
+            area contained in the full image.
+    
+    """          
+
+    # create a directory for the experiment
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    # duplicate stdout and stderr to log file
+    tee.Tee('%s/stdout.log' % out_dir, 'w')
+
+    # select ROI
+    try:
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+    except TypeError:
+        if prv1:
+            x, y, w, h = common.get_roi_coordinates(img1, prv1)
+        else:
+            print 'Neither a ROI nor a preview file are defined. Aborting.'
+            return
+
+    # ensure that the coordinates of the ROI are multiples of the zoom factor,
+    # to avoid bad registration of tiles due to rounding problems.
+    z = cfg['subsampling_factor']
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
+    
+
+    # TODO: automatically compute optimal size for tiles
+    if tw is None and th is None and ov is None:
+        ov = z * 100
+        if w <= z * cfg['tile_size']:
+            tw = w
+        else:
+            tw = z * cfg['tile_size']
+        if h <= z * cfg['tile_size']:
+            th = h
+        else:
+            th = z * cfg['tile_size']
+    ntx = np.ceil(float(w - ov) / (tw - ov))
+    nty = np.ceil(float(h - ov) / (th - ov))
+    nt = ntx * nty
+
+    print 'tiles size: (%d, %d)' % (tw, th)
+    print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
+    NbPairs = len(images)-1
+    print 'total number of pairs: %d ' % NbPairs
+
+    #Tile composer info : will be useful for the contruction of the vrt file that merge all the local height maps
+    ULw , ULh = tw-ov/2, th-ov/2 #Size of Corner tiles (UL UR BL BR)
+    Lw , Lh   = tw-ov/2,th-ov    #Size of Left/Right tile (L R)
+    Uw , Uh   = tw-ov,th-ov/2    #Size of Upper/Bottom tile (U B)
+    Mw , Mh   = tw-ov,th-ov      #Size of Middle tile
+    tileComposerInfo=[ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh]
+
+    # Build tiles dicos
+    tilesFullInfo={}
+    pairedTilesPerPairId = {}
+    
+    rangey = np.arange(y, y + h - ov, th - ov)
+    rangex = np.arange(x, x + w - ov, tw - ov)
+    rowmin,rowmax = rangey[0],rangey[-1]
+    colmin,colmax = rangex[0],rangex[-1]
+    
+    #Tile composer info (bis)
+    imax=len(rangey)-1
+    jmax=len(rangex)-1
+    fh = 2*ULh+(imax-1)*Mh
+    fw = 2*ULw+(jmax-1)*Mh
+    tileComposerInfo.append(fh) #height of the final height map after removing margins
+    tileComposerInfo.append(fw) #width of the final height map after removing margins
     
     
+    for pair_id in range(1,len(images)) :
+        pairedTilesPerPairId[pair_id]=[]
+        for i, row in enumerate(rangey):
+            for j, col in enumerate(rangex):
+                # ensure that the coordinates of the ROI are multiples of the zoom factor
+                col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row, tw, th)
+                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (out_dir, tw, th, row, col)
+                paired_tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (out_dir, tw, th, row, col, pair_id)
+                
+                if row==rowmin and col==colmin:
+                    pos='UL'
+                elif row==rowmin and col==colmax:
+                    pos='UR'
+                elif row==rowmax and col==colmax:
+                    pos='BR'
+                elif row==rowmax and col==colmin:
+                    pos='BL'
+                elif row==rowmin and col>colmin:
+                    pos='U'
+                elif col==colmin and row>rowmin:
+                    pos='L'
+                elif row==rowmax and col>colmin:
+                    pos='B'
+                elif col==colmax and row>rowmin:
+                    pos='R'
+                else:
+                    pos='M'
+                
+                tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,pos,images]
+                pairedTilesPerPairId[pair_id].append(paired_tile_dir )
+
+
+    if len(tilesFullInfo) == 1 : #Only one tile : put position 'Single'
+        tile_dir,info=tilesFullInfo.items()[0]
+        col,row,tw,th,ov,i,j,pos,images=info
+        tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,'Single',images]
+
+    return tilesFullInfo,pairedTilesPerPairId,NbPairs,tileComposerInfo
+
+# ----------------------------------------------------------------------------------------------------------
+# ---------------------------------------  prepare_fullProcess (end) ---------------------------------------
+# ----------------------------------------------------------------------------------------------------------
+    
+
+# ----------------------------------------------------------------------------------------------------
+# ---------------------------------------  preprocess_tiles_step1 ------------------------------------
+# ----------------------------------------------------------------------------------------------------
+
+def pointing_correction(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
+                             w=None, h=None, prv1=None, cld_msk=None,
+                             roi_msk=None):
+    """
+    Computes pointing corrections, without tiling
+
+    Args:
+        out_dir: path to the output directory
+        img1: path to the reference image.
+        rpc1: paths to the xml file containing the rpc coefficients of the
+            reference image
+        img2: path to the secondary image.
+        rpc2: paths to the xml file containing the rpc coefficients of the
+            secondary image
+        x, y, w, h: four integers defining the rectangular ROI in the reference
+            image. (x, y) is the top-left corner, and (w, h) are the dimensions
+            of the rectangle.
+        prv1 (optional): path to a preview of the reference image
+        cld_msk (optional): path to a gml file containing a cloud mask
+        roi_msk (optional): path to a gml file containing a mask defining the
+            area contained in the full image.
+
+    Returns:
+        nothing
+    """
+    
+    
+    # create a directory for the experiment
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    # output files
+    rect1 = '%s/rectified_ref.tif' % (out_dir)
+    rect2 = '%s/rectified_sec.tif' % (out_dir)
+    disp = '%s/rectified_disp.tif' % (out_dir)
+    mask = '%s/rectified_mask.png' % (out_dir)
+    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
+    subsampling = '%s/subsampling.txt' % (out_dir)
+    pointing = '%s/pointing.txt' % out_dir
+    center = '%s/center_keypts_sec.txt' % out_dir
+    sift_matches = '%s/sift_matches.txt' % out_dir
+    sift_matches_plot = '%s/sift_matches_plot.png' % out_dir
+    H_ref = '%s/H_ref.txt' % out_dir
+    H_sec = '%s/H_sec.txt' % out_dir
+    disp_min_max = '%s/disp_min_max.txt' % out_dir
+    config = '%s/config.json' % out_dir
+
+
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
+    # debug print
+    print 'tile %d %d running on process %s' % (x, y,
+                                                multiprocessing.current_process())
+
+    # ensure that the coordinates of the ROI are multiples of the zoom factor
+    z = cfg['subsampling_factor']
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
+
+    # check if the ROI is completely masked (water, or outside the image domain)
+    H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
+    if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk,
+                                        cld_msk):
+        print "Tile masked by water or outside definition domain, skip"
+        open("%s/this_tile_is_masked.txt" % out_dir, 'a').close()
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        if not cfg['debug']:
+            fout.close()
+        return
+
+    # correct pointing error
+    # A is the correction matrix and m is the list of sift matches
+
+    A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
+                                                    y, w, h)
+    if A is not None:
+        np.savetxt(pointing, A)
+    if m is not None:
+        np.savetxt(sift_matches, m)
+        np.savetxt(center, np.mean(m[:, 2:4], 0))
+        visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y,
+                                                w, h, sift_matches_plot)
+   
+    # close logs
+    common.garbage_cleanup()
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
+
+    return
+
+def preprocess_tiles_step1(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
+    """
+    Compute pointing corrections, crop ref image into tile, and get min/max intensities values 
+
+    Args: 
+         - out_dir :outputs directory
+         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
+         - pairedTilesPerPairId : a dictionnary that provides the list of all the tiles for a given pair_id (key)
+         - NbPairs : number of pairs
+         - cld_msk (optional): path to a gml file containing a cloud mask
+         - roi_msk (optional): path to a gml file containing a mask defining the
+            area contained in the full image.
+    """
+
+    # create pool with less workers than available cores
+    nb_workers = multiprocessing.cpu_count()
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
+    pool = multiprocessing.Pool(nb_workers)
+    
+    # 1 - Pointing correction  
+    results = []
+    show_progress.counter = 0
+    try:
+        print 'Computing pointing correction...'
+        for tile_dir in tilesFullInfo:
+            for i in range(0,NbPairs):
+            
+                pair_id = i+1
+                paired_tile_dir=tile_dir + 'pair_%d' % pair_id
+                
+                #tile_dir,pair_id,A_global,
+                col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+                img1,rpc1,img2,rpc2 = images[0]['img'],images[0]['rpc'],images[pair_id]['img'],images[pair_id]['rpc']
+
+
+                # check if the tile is already done, or masked
+                if os.path.isfile('%s/pointing.txt' % paired_tile_dir):
+                    if cfg['skip_existing']:
+                        print "pointing correction on tile %d %d (pair %d) already done, skip" % (col,row,pair_id)
+                        #tiles.append(tile_dir)
+                        continue
+                    if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+                        print "tile %s already masked, skip" % tile_dir
+                        #tiles.append(tile_dir)
+                        continue
+    
+                
+                if cfg['debug']:
+                    pointing_correction(paired_tile_dir, img1, rpc1, img2, rpc2,
+                                                 col, row, tw, th, None, cld_msk,
+                                                 roi_msk)
+                else:
+                    p = pool.apply_async(pointing_correction,
+                                             args=(paired_tile_dir, img1, rpc1, img2, rpc2,
+                                                   col, row, tw, th, None, cld_msk,
+                                                   roi_msk), callback=show_progress)
+                    results.append(p)
+
+        for r in results:
+            try:
+                r.get(3600)  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+        
+        
+        
+    # 2 - Crop ref image into tile, and get min/max intensities values  
+    results = []
+    show_progress.counter = 0
+    try:
+        print 'Croping ref image into tiles, get min/max intensities values from each tile...'
+        for tile_dir in tilesFullInfo:
+
+			# check if the tile is already done, or masked
+			if os.path.isfile('%s/local_minmax.txt' % tile_dir):
+				if cfg['skip_existing']:
+					print "Compute min/max intensities values on tile %s already done, skip" % (tile_dir)
+					#tiles.append(tile_dir)
+					continue
+				if os.path.isfile('%s/this_tile_is_masked.txt' % (tile_dir)):
+					print "tile %s already masked, skip" % (tile_dir)
+					#tiles.append(tile_dir)
+					continue
+
+			
+			if cfg['debug']:
+				common.getMinMaxFromExtract(tile_dir,tilesFullInfo)
+			else:
+				p = pool.apply_async(common.getMinMaxFromExtract,
+										 args=(tile_dir,tilesFullInfo), callback=show_progress)
+				results.append(p)
+
+        for r in results:
+            try:
+                r.get(3600)  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+
+
+# ----------------------------------------------------------------------------------------------------
+# ---------------------------------------  preprocess_tiles_step1 (end) ------------------------------
+# ----------------------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------------------
+# ---------------------------------------  preprocess_tiles_step2 ------------------------------------
+# ----------------------------------------------------------------------------------------------------
+
+def global_pointing_correction(pairedTilesPerPairId,NbPairs):
+    """
+    Compute the global pointing correction. For that purpose, global_pointing_correction needs all the tile related to one pair (given by pairedTilesPerPairId),
+    and the total number of pairs as well.
+
+    Args :
+         - pairedTilesPerPairId : a dictionnary that provides the list of all the tile for a given pair_id (key)
+         - NbPairs : number of pairs
+
+
+    """
+
+    for i in range(0,NbPairs):
+        pair_id = i+1
+        tiles = pairedTilesPerPairId[pair_id]
+        A_globalMat = pointing_accuracy.global_from_local(tiles)
+        np.savetxt('%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id), A_globalMat)
+		
+
+def global_minmax_intensities(tilesFullInfo):
+    """
+    Compute the min and max intensities from the tiles that will be processed.
+    This will allow to re-code colors by using 8-bits instead of 12-bits or more, and to better vizualise the ply files.
+
+    Args:
+        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
+
+    """
+
+    minlist=[]
+    maxlist=[]
+    for tile_dir in tilesFullInfo:
+        minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
+        minlist.append(minmax[0])
+        maxlist.append(minmax[1])
+		
+    global_minmax=[min(minlist),max(maxlist)]
+	
+    np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
+        
+
+def preprocess_tiles_step2(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
+    """
+    Compute global pointing correction and gloabl min/max intensities values 
+
+    Args: 
+         - out_dir :outputs directory
+         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
+         - pairedTilesPerPairId : a dictionnary that provides the list of all the tile for a given pair_id (key)
+         - NbPairs : number of pairs
+         - cld_msk (optional): path to a gml file containing a cloud mask
+         - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
+    """
+
+    # create pool with less workers than available cores
+    nb_workers = multiprocessing.cpu_count()
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
+    pool = multiprocessing.Pool(nb_workers)
+        
+        
+    # 1 - Global pointing correction
+    try:
+        print 'Computing global pointing correction...'
+        
+        global_pointing_correction(pairedTilesPerPairId,NbPairs)
+            
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+        
+        
+        
+    # 2 - Global Min/max
+    try:
+        print 'Computing global min max intensities...'
+        
+        global_minmax_intensities(tilesFullInfo)
+			        
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+
+# ----------------------------------------------------------------------------------------------------
+# ---------------------------------------  preprocess_tiles_step2 (end) ------------------------------
+# ----------------------------------------------------------------------------------------------------
+
+
+
+# ----------------------------------------------------------------------------------------------------
+# ---------------------------------------------- process_tiles ---------------------------------------
+# ----------------------------------------------------------------------------------------------------
+
 def colorCropRef(tile_dir,tilesFullInfo,clr=None):
 
     """
@@ -182,167 +708,277 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
                                       off_x, off_y)
                                                                             
     common.garbage_cleanup()
-
-
-
-
-
-
-
-def check_parameters(usr_cfg):
-    """
-    Checks that the provided dictionary defines all the mandatory
-    arguments, and warns about unknown optional arguments.
-
-    Args:
-        usr_cfg: python dict read from the json input file
-
-    Returns:
-        nothing
-    """
-
-    # verify that i/o files are defined
-    if 'out_dir' not in usr_cfg:
-        print "missing output dir: abort"
-        sys.exit(1)
-    if 'images' not in usr_cfg or len(usr_cfg['images']) < 2:
-        print "missing input data paths: abort"
-        sys.exit(1)
-    for i in range(0,len(usr_cfg['images'])):
-        if 'img' not in usr_cfg['images'][i] or 'rpc' not in usr_cfg['images'][i]:
-            errMsg = 'missing input data paths for image ' + str(i) + ': abort'
-            print errMsg
-            sys.exit(1)           
-	        
-
-    # verify that roi or path to preview file are defined
-    if ('full_img' not in usr_cfg) or (not usr_cfg['full_img']):
-        if 'roi' not in usr_cfg or any(p not in usr_cfg['roi'] for p in ['x',
-                                                                         'y',
-                                                                         'w',
-                                                                         'h']):
-            if 'prv' not in usr_cfg['images'][0]:
-                print """missing or incomplete roi definition, and no preview
-                file is specified: abort"""
-                sys.exit(1)
-
-    # warn about unknown optional parameters: these parameters have no default
-    # value in the global config.cfg dictionary, and thus they are not used
-    # anywhere.  They may appear in the usr_cfg because of a typo.
-    l = usr_cfg.keys()
-
-    # remove mandatory parameters (they are not in config.cfg)
-    l.remove('out_dir')
-    l.remove('images')
-    if 'roi' in l:
-        l.remove('roi')
-
-    # check
-    for k in l:
-        if k not in cfg:
-            print """parameter %s unknown: you should remove it from the input
-            json file. It will be ignored.""" % k
-
-
-
-
-
-def pointing_correction(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-                             w=None, h=None, prv1=None, cld_msk=None,
-                             roi_msk=None):
-    """
-    Computes pointing corrections, without tiling
-
-    Args:
-        out_dir: path to the output directory
-        img1: path to the reference image.
-        rpc1: paths to the xml file containing the rpc coefficients of the
-            reference image
-        img2: path to the secondary image.
-        rpc2: paths to the xml file containing the rpc coefficients of the
-            secondary image
-        x, y, w, h: four integers defining the rectangular ROI in the reference
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle.
-        prv1 (optional): path to a preview of the reference image
-        cld_msk (optional): path to a gml file containing a cloud mask
-        roi_msk (optional): path to a gml file containing a mask defining the
-            area contained in the full image.
-
-    Returns:
-        nothing
-    """
     
     
-    # create a directory for the experiment
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
+    """
+    Merge a list of height maps recursively, computed for one tile from N image pairs.
+  
+    Args :
+         - height_maps : list of height map directories
+         - tile_dir : directory of the tile from which to get a merged height map
+         - thresh : threshold used for the fusion algorithm, in meters.
+         - conservative (optional, default is False): if True, keep only the
+            pixels where the two height map agree (fusion algorithm)
+         - k : used to identify the current call of mergeHeightMaps (default = 1, first call)
+         - garbage : a list used to remove temp data (default = [], first call)
 
-    # output files
-    rect1 = '%s/rectified_ref.tif' % (out_dir)
-    rect2 = '%s/rectified_sec.tif' % (out_dir)
-    disp = '%s/rectified_disp.tif' % (out_dir)
-    mask = '%s/rectified_mask.png' % (out_dir)
-    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
-    subsampling = '%s/subsampling.txt' % (out_dir)
-    pointing = '%s/pointing.txt' % out_dir
-    center = '%s/center_keypts_sec.txt' % out_dir
-    sift_matches = '%s/sift_matches.txt' % out_dir
-    sift_matches_plot = '%s/sift_matches_plot.png' % out_dir
-    H_ref = '%s/H_ref.txt' % out_dir
-    H_sec = '%s/H_sec.txt' % out_dir
-    disp_min_max = '%s/disp_min_max.txt' % out_dir
-    config = '%s/config.json' % out_dir
+    """
+
+    #output file
+    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
+
+    if os.path.isfile(local_merged_height_map) and cfg['skip_existing']:
+        print 'final height map %s already done, skip' % local_merged_height_map
+    else:
+        list_height_maps=[]
+        for i in range(len(height_maps)-1):
+            height_map = tile_dir +'/height_map_'+str(i)+'_'+str(i+1)+'_'+str(k)+'.tif'
+            fusion.merge(height_maps[i], height_maps[i+1], thresh, height_map,
+                     conservative)
+            list_height_maps.append(height_map)
+            garbage.append(height_map)
+        
+        if len(list_height_maps) > 1:
+            mergeHeightMaps(list_height_maps,tile_dir,thresh,conservative,k+1,garbage)
+        else:
+            common.run('cp %s %s' % (list_height_maps[0],local_merged_height_map))
+            for imtemp in garbage:
+                common.run('rm -f %s' % imtemp )    
 
 
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
+def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
+    """
+    Finalize the processing of a tile : merge the height maps from the N pairs, remove overlapping areas, 
+    get the colors from a XS image and use it to color and generate a ply file (colorization is not mandatory)
 
-    # debug print
-    print 'tile %d %d running on process %s' % (x, y,
-                                                multiprocessing.current_process())
+    Args:
+        - tile_dir : directory of the tile to be processed
+        - height_maps : list of the height maps generated from N pairs
+        - NbPairs : number of pairs
+        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
+    """
 
-    # ensure that the coordinates of the ROI are multiples of the zoom factor
+    # Get all info
+    fullInfo=tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,images=fullInfo
+    img1,rpc1 = images[0]['img'],images[0]['rpc']
+
+
+    # merge the n height maps
+    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
+    if len(height_maps)>1:
+        mergeHeightMaps(height_maps,tile_dir,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
+    else:    
+        common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
+
+    # Remove overlapping areas
+    #By tile
+    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
+    local_merged_height_map_crop = tile_dir +'/local_merged_height_map_crop.tif'
+    crop_ref = tile_dir + '/roi_ref.tif'
+    crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
+
+
+    dicoPos={}
+    dicoPos['M']  = [ov/2,ov/2,-ov,-ov]
+    dicoPos['L']  = [0,ov/2,-ov/2,-ov]
+    dicoPos['R']  = [ov/2,ov/2,-ov/2,-ov]
+    dicoPos['U']  = [ov/2,0,-ov,-ov/2]
+    dicoPos['B']  = [ov/2,ov/2,-ov,-ov/2]
+    dicoPos['UL'] = [0,0,-ov/2,-ov/2]
+    dicoPos['UR'] = [ov/2,0,-ov/2,-ov/2]
+    dicoPos['BR'] = [ov/2,ov/2,-ov/2,-ov/2]
+    dicoPos['BL'] = [0,ov/2,-ov/2,-ov/2]
+    dicoPos['Single'] = [0,0,0,0]  
+
     z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-
-    # check if the ROI is completely masked (water, or outside the image domain)
-    H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
-    if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk,
-                                        cld_msk):
-        print "Tile masked by water or outside definition domain, skip"
-        open("%s/this_tile_is_masked.txt" % out_dir, 'a').close()
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        if not cfg['debug']:
-            fout.close()
-        return
-
-    # correct pointing error
-    # A is the correction matrix and m is the list of sift matches
-
-    A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
-                                                    y, w, h)
-    if A is not None:
-        np.savetxt(pointing, A)
-    if m is not None:
-        np.savetxt(sift_matches, m)
-        np.savetxt(center, np.mean(m[:, 2:4], 0))
-        visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y,
-                                                w, h, sift_matches_plot)
+    #tilesFullInfo[tile_dir] = dicoPos[pos][0]
+    newcol,newrow,difftw,diffth = np.array(dicoPos[pos])/z
+    info=tilesFullInfo[tile_dir]
+    info[0] = info[0]/z + newcol
+    info[1] = info[1]/z + newrow
+    info[2] = info[2]/z + difftw
+    info[3] = info[3]/z + diffth
+    tilesFullInfo[tile_dir]=info   
    
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
+    # z=1 beacause local_merged_height_map, crop_ref (and so forth) have already been zoomed. So don't zoom again to crop this images.
+    common.cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,info[2],info[3],1)
+    common.cropImage(crop_ref,crop_ref_crop,newcol,newrow,info[2],info[3],1)   
 
-    return
+        
+    #By pair    
+    for i in range(0,NbPairs):
+        pair_id = i+1
+            
+        single_height_map = tile_dir + '/pair_%d/height_map.tif' % pair_id
+        single_height_map_crop =tile_dir + '/pair_%d/height_map_crop.tif' % pair_id
+          
+        single_rpc_err = tile_dir + '/pair_%d/rpc_err.tif' % pair_id
+        single_rpc_err_crop =tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
+            
+        common.cropImage(single_height_map,single_height_map_crop,newcol,newrow,info[2],info[3],1)
+        common.cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,info[2],info[3],1)
 
+    
+    
+    #if not cfg['debug']:
+     #    common.run('rm -f %s' % (local_merged_height_map)) 
+         #don't remove crop_ref !!
+                   
+    
+    # Colors 
+    colorCropRef(tile_dir,tilesFullInfo,cfg['images'][0]['clr'])
+    
+    # Generate cloud 
+    generate_cloud(tile_dir,tilesFullInfo,cfg['offset_ply'])
+    
+    
+
+def process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
+    """
+    For a given tile, process pair #pair_id : rectification, disparity map, triangulation, 
+
+    Args:
+         - tile_dir : directory of the tile 
+         - pair_id : id of the pair to be processed
+         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
+         - cld_msk (optional): path to a gml file containing a cloud mask
+         - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
+
+    """
+
+    #Get all info
+    fullInfo=tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,images=fullInfo
+    img1,rpc1 = images[0]['img'],images[0]['rpc']
+
+    paired_tile_dir=tile_dir + 'pair_%d' % pair_id
+
+    img2,rpc2 = images[pair_id]['img'],images[pair_id]['rpc']
+    A_global = '%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id)
+
+    if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
+        print "tile %s already masked, skip" % paired_tile_dir
+        return None
+
+    else:
+        print 'process tile %d %d...' % (col,row)
+       
+        #height_maps.append('%s/height_map.tif' % paired_tile_dir)
+
+        # Rectification
+        if os.path.isfile('%s/rectified_ref.tif' % paired_tile_dir) and os.path.isfile('%s/rectified_sec.tif' % paired_tile_dir) and cfg['skip_existing']:
+            print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+        else:
+            print 'rectification : process tile %d %d (pair %d)...' % (col,row,pair_id)
+            rectify(paired_tile_dir, A_global, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+        
+        # Disparity
+        if os.path.isfile('%s/rectified_disp.tif' % paired_tile_dir) and cfg['skip_existing']:
+            print 'disparity on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+        else:
+            print 'disparity : process tile %d %d (pair %d)...' % (col,row,pair_id)
+            disparity(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+            
+        # Triangulate
+        if os.path.isfile('%s/height_map.tif' % paired_tile_dir) and cfg['skip_existing']:
+            print 'Triangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+        else:
+            print 'Triangulation : process tile %d %d (pair %d)...' % (col,row,pair_id)    
+            triangulate(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
+
+        return '%s/height_map.tif' % paired_tile_dir
+        
+        
+
+def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
+    """
+    Process a tile : compute the height maps from the N pairs, and finalize the processing, ie.:
+    1) Produce a merged height map, without overlapping areas, 
+    2) And produce a ply file.
+
+    Args:
+        - tile_dir : directory of the tile to be processed
+        - NbPairs : number of pairs
+        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
+        - cld_msk (optional): path to a gml file containing a cloud mask
+        - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
+
+    """
+    
+    # Process each pair : get a height map
+    height_maps = []
+    for i in range(0,NbPairs):
+        pair_id = i+1
+        height_map = process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk, roi_msk)
+        if height_map:
+            height_maps.append(height_map)
+
+
+    ## Finalization ##
+    finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo)
+
+
+    
+
+def process_tiles(out_dir,tilesFullInfo,NbPairs,cld_msk=None, roi_msk=None):
+    """
+    Process all the tiles, ie. launch process_tile for each tile
+
+    Args:
+        - out_dir : outputs directory
+        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
+        - NbPairs : number of pairs
+        - cld_msk (optional): path to a gml file containing a cloud mask
+        - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
+
+    """
+
+    # create pool with less workers than available cores
+    nb_workers = multiprocessing.cpu_count()
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
+    pool = multiprocessing.Pool(nb_workers)
+    
+    
+    #process_tiles
+    results = []
+    show_progress.counter = 0
+    try:
+        for tile_dir in tilesFullInfo:
+            
+
+            if cfg['debug']:
+                process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk,roi_msk)
+            else:
+                p = pool.apply_async(process_tile,
+                                         args=(tile_dir,NbPairs,tilesFullInfo, cld_msk,
+                                               roi_msk), callback=show_progress)
+                results.append(p)
+
+        for r in results:
+            try:
+                r.get(3600)  # wait at most one hour per tile
+            except multiprocessing.TimeoutError:
+                print "Timeout while computing tile "+str(r)
+
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+
+# ----------------------------------------------------------------------------------------------------
+# ------------------------------------------ process_tiles (end) -------------------------------------
+# ----------------------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------------------
+# ----------------------------------- rectify disparity triangulate ----------------------------------
+# ----------------------------------------------------------------------------------------------------
 
 def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
                              w=None, h=None, prv1=None, cld_msk=None,
@@ -567,15 +1203,12 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
                                                 multiprocessing.current_process())
 
     
-    
-
     # triangulation
     z = cfg['subsampling_factor']
     triangulation.compute_dem(height_map, x, y, w, h, z,
                                               rpc1, rpc2, H_ref, H_sec, disp, mask,
                                               rpc_err, A)
                                                             
-
     # close logs
     common.garbage_cleanup()
     if not cfg['debug']:
@@ -585,632 +1218,14 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     return
 
-					 
-
-
-def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
-                 ov=None, cld_msk=None, roi_msk=None):
-    """
-    Prepare the entire process : 
-    1) Select a ROI, make sure its coordinates are multiples of the zoom factor
-    2) Compute optimal size for tiles, get the number of pairs
-    3) Build the tileComposerInfo : a simple list that gives the size of the tiles (after having removed the overlapping areas), regarding their positions inside the ROI.
-       It will be useful for the contruction of the vrt file that merge all the local height maps and other data.
-    4) Build tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,images. USED EVERYWHERE IN THIS CODE.
-       * col/row : position of the tile (upper left corner)
-       * tw/th : size of the tile
-       * ov : size of the overlapping
-       * i/j : relative position of the tile
-       * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
-       * images : a dictionnary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
-    
-    Args:
-        - out_dir : outputs directory
-        - images : a dictionnary directly given by the json config file, that will be stored into tilesFullInfo
-        - x, y, w, h: four integers defining the rectangular ROI in the reference
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle. The ROI may be as big as you want, as it will be
-            cutted into small tiles for processing.
-        - tw, th (optional) : dimensions of the tiles
-        - ov (optional) : width of overlapping bands between tiles
-        - cld_msk (optional) : path to a gml file containing a cloud mask
-        - roi_msk (optional) : path to a gml file containing a mask defining the
-            area contained in the full image.
-    
-    """          
-
-    # create a directory for the experiment
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-
-    # duplicate stdout and stderr to log file
-    tee.Tee('%s/stdout.log' % out_dir, 'w')
-
-    # select ROI
-    try:
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except TypeError:
-        if prv1:
-            x, y, w, h = common.get_roi_coordinates(img1, prv1)
-        else:
-            print 'Neither a ROI nor a preview file are defined. Aborting.'
-            return
-
-    # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problems.
-    z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-    
-
-    # TODO: automatically compute optimal size for tiles
-    if tw is None and th is None and ov is None:
-        ov = z * 100
-        if w <= z * cfg['tile_size']:
-            tw = w
-        else:
-            tw = z * cfg['tile_size']
-        if h <= z * cfg['tile_size']:
-            th = h
-        else:
-            th = z * cfg['tile_size']
-    ntx = np.ceil(float(w - ov) / (tw - ov))
-    nty = np.ceil(float(h - ov) / (th - ov))
-    nt = ntx * nty
-
-    print 'tiles size: (%d, %d)' % (tw, th)
-    print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
-    NbPairs = len(images)-1
-    print 'total number of pairs: %d ' % NbPairs
-
-    #Tile composer info : will be useful for the contruction of the vrt file that merge all the local height maps
-    ULw , ULh = tw-ov/2, th-ov/2 #Size of Corner tiles (UL UR BL BR)
-    Lw , Lh   = tw-ov/2,th-ov    #Size of Left/Right tile (L R)
-    Uw , Uh   = tw-ov,th-ov/2    #Size of Upper/Bottom tile (U B)
-    Mw , Mh   = tw-ov,th-ov      #Size of Middle tile
-    tileComposerInfo=[ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh]
-
-    # Build tiles dicos
-    tilesFullInfo={}
-    pairedTilesPerPairId = {}
-    
-    rangey = np.arange(y, y + h - ov, th - ov)
-    rangex = np.arange(x, x + w - ov, tw - ov)
-    rowmin,rowmax = rangey[0],rangey[-1]
-    colmin,colmax = rangex[0],rangex[-1]
-    
-    #Tile composer info (bis)
-    imax=len(rangey)-1
-    jmax=len(rangex)-1
-    fh = 2*ULh+(imax-1)*Mh
-    fw = 2*ULw+(jmax-1)*Mh
-    tileComposerInfo.append(fh) #height of the final height map after removing margins
-    tileComposerInfo.append(fw) #width of the final height map after removing margins
-    
-    
-    for pair_id in range(1,len(images)) :
-        pairedTilesPerPairId[pair_id]=[]
-        for i, row in enumerate(rangey):
-            for j, col in enumerate(rangex):
-                # ensure that the coordinates of the ROI are multiples of the zoom factor
-                col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row, tw, th)
-                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (out_dir, tw, th, row, col)
-                paired_tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (out_dir, tw, th, row, col, pair_id)
-                
-                if row==rowmin and col==colmin:
-                    pos='UL'
-                elif row==rowmin and col==colmax:
-                    pos='UR'
-                elif row==rowmax and col==colmax:
-                    pos='BR'
-                elif row==rowmax and col==colmin:
-                    pos='BL'
-                elif row==rowmin and col>colmin:
-                    pos='U'
-                elif col==colmin and row>rowmin:
-                    pos='L'
-                elif row==rowmax and col>colmin:
-                    pos='B'
-                elif col==colmax and row>rowmin:
-                    pos='R'
-                else:
-                    pos='M'
-                
-                tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,pos,images]
-                pairedTilesPerPairId[pair_id].append(paired_tile_dir )
-
-
-    if len(tilesFullInfo) == 1 : #Only one tile : put position 'Single'
-        tile_dir,info=tilesFullInfo.items()[0]
-        col,row,tw,th,ov,i,j,pos,images=info
-        tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,'Single',images]
-
-    return tilesFullInfo,pairedTilesPerPairId,NbPairs,tileComposerInfo
-
-
-
-
-def global_pointing_correction(pairedTilesPerPairId,NbPairs):
-    """
-    Compute the global pointing correction. For that purpose, global_pointing_correction needs all the tile related to one pair (given by pairedTilesPerPairId),
-    and the total number of pairs as well.
-
-    Args :
-         - pairedTilesPerPairId : a dictionnary that provides the list of all the tile for a given pair_id (key)
-         - NbPairs : number of pairs
-
-
-    """
-
-    for i in range(0,NbPairs):
-        pair_id = i+1
-        tiles = pairedTilesPerPairId[pair_id]
-        A_globalMat = pointing_accuracy.global_from_local(tiles)
-        np.savetxt('%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id), A_globalMat)
-		
-
-def global_minmax_intensities(tilesFullInfo):
-    """
-    Compute the min and max intensities from the tiles that will be processed.
-    This will allow to re-code colors by using 8-bits instead of 12-bits or more, and to better vizualise the ply files.
-
-    Args:
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
-
-    """
-
-    minlist=[]
-    maxlist=[]
-    for tile_dir in tilesFullInfo:
-        minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
-        minlist.append(minmax[0])
-        maxlist.append(minmax[1])
-		
-    global_minmax=[min(minlist),max(maxlist)]
-	
-    np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
-		
-
-def preprocess_tiles_step1(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
-    """
-    Compute pointing corrections, crop ref image into tile, and get min/max intensities values 
-
-    Args: 
-         - out_dir :outputs directory
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
-         - pairedTilesPerPairId : a dictionnary that provides the list of all the tiles for a given pair_id (key)
-         - NbPairs : number of pairs
-         - cld_msk (optional): path to a gml file containing a cloud mask
-         - roi_msk (optional): path to a gml file containing a mask defining the
-            area contained in the full image.
-    """
-
-    # create pool with less workers than available cores
-    nb_workers = multiprocessing.cpu_count()
-    if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
-    pool = multiprocessing.Pool(nb_workers)
-    
-    # 1 - Pointing correction  
-    results = []
-    show_progress.counter = 0
-    try:
-        print 'Computing pointing correction...'
-        for tile_dir in tilesFullInfo:
-            for i in range(0,NbPairs):
-            
-                pair_id = i+1
-                paired_tile_dir=tile_dir + 'pair_%d' % pair_id
-                
-                #tile_dir,pair_id,A_global,
-                col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
-                img1,rpc1,img2,rpc2 = images[0]['img'],images[0]['rpc'],images[pair_id]['img'],images[pair_id]['rpc']
-
-
-                # check if the tile is already done, or masked
-                if os.path.isfile('%s/pointing.txt' % paired_tile_dir):
-                    if cfg['skip_existing']:
-                        print "pointing correction on tile %d %d (pair %d) already done, skip" % (col,row,pair_id)
-                        #tiles.append(tile_dir)
-                        continue
-                    if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-                        print "tile %s already masked, skip" % tile_dir
-                        #tiles.append(tile_dir)
-                        continue
-    
-                
-                if cfg['debug']:
-                    pointing_correction(paired_tile_dir, img1, rpc1, img2, rpc2,
-                                                 col, row, tw, th, None, cld_msk,
-                                                 roi_msk)
-                else:
-                    p = pool.apply_async(pointing_correction,
-                                             args=(paired_tile_dir, img1, rpc1, img2, rpc2,
-                                                   col, row, tw, th, None, cld_msk,
-                                                   roi_msk), callback=show_progress)
-                    results.append(p)
-
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while computing tile "+str(r)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-        
-        
-        
-    # 2 - Crop ref image into tile, and get min/max intensities values  
-    results = []
-    show_progress.counter = 0
-    try:
-        print 'Croping ref image into tiles, get min/max intensities values from each tile...'
-        for tile_dir in tilesFullInfo:
-
-			# check if the tile is already done, or masked
-			if os.path.isfile('%s/local_minmax.txt' % tile_dir):
-				if cfg['skip_existing']:
-					print "Compute min/max intensities values on tile %s already done, skip" % (tile_dir)
-					#tiles.append(tile_dir)
-					continue
-				if os.path.isfile('%s/this_tile_is_masked.txt' % (tile_dir)):
-					print "tile %s already masked, skip" % (tile_dir)
-					#tiles.append(tile_dir)
-					continue
-
-			
-			if cfg['debug']:
-				common.getMinMaxFromExtract(tile_dir,tilesFullInfo)
-			else:
-				p = pool.apply_async(common.getMinMaxFromExtract,
-										 args=(tile_dir,tilesFullInfo), callback=show_progress)
-				results.append(p)
-
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while computing tile "+str(r)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-        
+# ----------------------------------------------------------------------------------------------------
+# ------------------------------- rectify disparity triangulate (end) --------------------------------
+# ----------------------------------------------------------------------------------------------------					 
         
 
-        
-
-def preprocess_tiles_step2(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cld_msk=None, roi_msk=None):
-    """
-    Compute global pointing correction and gloabl min/max intensities values 
-
-    Args: 
-         - out_dir :outputs directory
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
-         - pairedTilesPerPairId : a dictionnary that provides the list of all the tile for a given pair_id (key)
-         - NbPairs : number of pairs
-         - cld_msk (optional): path to a gml file containing a cloud mask
-         - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
-    """
-
-    # create pool with less workers than available cores
-    nb_workers = multiprocessing.cpu_count()
-    if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
-    pool = multiprocessing.Pool(nb_workers)
-        
-        
-    # 1 - Global pointing correction
-    try:
-        print 'Computing global pointing correction...'
-        
-        global_pointing_correction(pairedTilesPerPairId,NbPairs)
-            
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-        
-        
-        
-    # 2 - Global Min/max
-    try:
-        print 'Computing global min max intensities...'
-        
-        global_minmax_intensities(tilesFullInfo)
-			        
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-        
-              
-
-
-def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
-    """
-    Merge a list of height maps recursively, computed for one tile from N image pairs.
-  
-    Args :
-         - height_maps : list of height map directories
-         - tile_dir : directory of the tile from which to get a merged height map
-         - thresh : threshold used for the fusion algorithm, in meters.
-         - conservative (optional, default is False): if True, keep only the
-            pixels where the two height map agree (fusion algorithm)
-         - k : used to identify the current call of mergeHeightMaps (default = 1, first call)
-         - garbage : a list used to remove temp data (default = [], first call)
-
-    """
-
-    #output file
-    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
-
-    if os.path.isfile(local_merged_height_map) and cfg['skip_existing']:
-        print 'final height map %s already done, skip' % local_merged_height_map
-    else:
-        list_height_maps=[]
-        for i in range(len(height_maps)-1):
-            height_map = tile_dir +'/height_map_'+str(i)+'_'+str(i+1)+'_'+str(k)+'.tif'
-            fusion.merge(height_maps[i], height_maps[i+1], thresh, height_map,
-                     conservative)
-            list_height_maps.append(height_map)
-            garbage.append(height_map)
-        
-        if len(list_height_maps) > 1:
-            mergeHeightMaps(list_height_maps,tile_dir,thresh,conservative,k+1,garbage)
-        else:
-            common.run('cp %s %s' % (list_height_maps[0],local_merged_height_map))
-            for imtemp in garbage:
-                common.run('rm -f %s' % imtemp )
-
-
-
-
-def process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
-    """
-    For a given tile, process pair #pair_id : rectification, disparity map, triangulation, 
-
-    Args:
-         - tile_dir : directory of the tile 
-         - pair_id : id of the pair to be processed
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
-         - cld_msk (optional): path to a gml file containing a cloud mask
-         - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
-
-    """
-
-    #Get all info
-    fullInfo=tilesFullInfo[tile_dir]
-    col,row,tw,th,ov,i,j,pos,images=fullInfo
-    img1,rpc1 = images[0]['img'],images[0]['rpc']
-
-    paired_tile_dir=tile_dir + 'pair_%d' % pair_id
-
-    img2,rpc2 = images[pair_id]['img'],images[pair_id]['rpc']
-    A_global = '%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id)
-
-    if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
-        print "tile %s already masked, skip" % paired_tile_dir
-        return None
-
-    else:
-        print 'process tile %d %d...' % (col,row)
-       
-        #height_maps.append('%s/height_map.tif' % paired_tile_dir)
-
-        # Rectification
-        if os.path.isfile('%s/rectified_ref.tif' % paired_tile_dir) and os.path.isfile('%s/rectified_sec.tif' % paired_tile_dir) and cfg['skip_existing']:
-            print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-        else:
-            print 'rectification : process tile %d %d (pair %d)...' % (col,row,pair_id)
-            rectify(paired_tile_dir, A_global, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
-        
-        # Disparity
-        if os.path.isfile('%s/rectified_disp.tif' % paired_tile_dir) and cfg['skip_existing']:
-            print 'disparity on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-        else:
-            print 'disparity : process tile %d %d (pair %d)...' % (col,row,pair_id)
-            disparity(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
-            
-        # Triangulate
-        if os.path.isfile('%s/height_map.tif' % paired_tile_dir) and cfg['skip_existing']:
-            print 'Triangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-        else:
-            print 'Triangulation : process tile %d %d (pair %d)...' % (col,row,pair_id)    
-            triangulate(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
-
-        return '%s/height_map.tif' % paired_tile_dir
-
-
-
-
-def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
-    """
-    Finalize the processing of a tile : merge the height maps from the N pairs, remove overlapping areas, 
-    get the colors from a XS image and use it to color and generate a ply file (colorization is not mandatory)
-
-    Args:
-        - tile_dir : directory of the tile to be processed
-        - height_maps : list of the height maps generated from N pairs
-        - NbPairs : number of pairs
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
-    """
-
-    # Get all info
-    fullInfo=tilesFullInfo[tile_dir]
-    col,row,tw,th,ov,i,j,pos,images=fullInfo
-    img1,rpc1 = images[0]['img'],images[0]['rpc']
-
-
-    # merge the n height maps
-    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
-    if len(height_maps)>1:
-        mergeHeightMaps(height_maps,tile_dir,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
-    else:    
-        common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
-
-    # Remove overlapping areas
-    #By tile
-    local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
-    local_merged_height_map_crop = tile_dir +'/local_merged_height_map_crop.tif'
-    crop_ref = tile_dir + '/roi_ref.tif'
-    crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
-
-
-    dicoPos={}
-    dicoPos['M']  = [ov/2,ov/2,-ov,-ov]
-    dicoPos['L']  = [0,ov/2,-ov/2,-ov]
-    dicoPos['R']  = [ov/2,ov/2,-ov/2,-ov]
-    dicoPos['U']  = [ov/2,0,-ov,-ov/2]
-    dicoPos['B']  = [ov/2,ov/2,-ov,-ov/2]
-    dicoPos['UL'] = [0,0,-ov/2,-ov/2]
-    dicoPos['UR'] = [ov/2,0,-ov/2,-ov/2]
-    dicoPos['BR'] = [ov/2,ov/2,-ov/2,-ov/2]
-    dicoPos['BL'] = [0,ov/2,-ov/2,-ov/2]
-    dicoPos['Single'] = [0,0,0,0]  
-
-    z = cfg['subsampling_factor']
-    #tilesFullInfo[tile_dir] = dicoPos[pos][0]
-    newcol,newrow,difftw,diffth = np.array(dicoPos[pos])/z
-    info=tilesFullInfo[tile_dir]
-    info[0] = info[0]/z + newcol
-    info[1] = info[1]/z + newrow
-    info[2] = info[2]/z + difftw
-    info[3] = info[3]/z + diffth
-    tilesFullInfo[tile_dir]=info   
-   
-    # z=1 beacause local_merged_height_map, crop_ref (and so forth) have already been zoomed. So don't zoom again to crop this images.
-    common.cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,info[2],info[3],1)
-    common.cropImage(crop_ref,crop_ref_crop,newcol,newrow,info[2],info[3],1)   
-
-        
-    #By pair    
-    for i in range(0,NbPairs):
-        pair_id = i+1
-            
-        single_height_map = tile_dir + '/pair_%d/height_map.tif' % pair_id
-        single_height_map_crop =tile_dir + '/pair_%d/height_map_crop.tif' % pair_id
-          
-        single_rpc_err = tile_dir + '/pair_%d/rpc_err.tif' % pair_id
-        single_rpc_err_crop =tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
-            
-        common.cropImage(single_height_map,single_height_map_crop,newcol,newrow,info[2],info[3],1)
-        common.cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,info[2],info[3],1)
-
-    
-    
-    #if not cfg['debug']:
-     #    common.run('rm -f %s' % (local_merged_height_map)) 
-         #don't remove crop_ref !!
-                   
-    
-    # Colors 
-    colorCropRef(tile_dir,tilesFullInfo,cfg['images'][0]['clr'])
-    
-    # Generate cloud 
-    generate_cloud(tile_dir,tilesFullInfo,cfg['offset_ply'])
-
-
-
-
-def process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk=None, roi_msk=None):
-    """
-    Process a tile : compute the height maps from the N pairs, and finalize the processing, ie.:
-    1) Produce a merged height map, without overlapping areas, 
-    2) And produce a ply file.
-
-    Args:
-        - tile_dir : directory of the tile to be processed
-        - NbPairs : number of pairs
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
-        - cld_msk (optional): path to a gml file containing a cloud mask
-        - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
-
-    """
-    
-    # Process each pair : get a height map
-    height_maps = []
-    for i in range(0,NbPairs):
-        pair_id = i+1
-        height_map = process_pair(tile_dir,pair_id,NbPairs,tilesFullInfo,cld_msk, roi_msk)
-        if height_map:
-            height_maps.append(height_map)
-
-
-    ## Finalization ##
-    finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo)
-
-
-    
-
-def process_tiles(out_dir,tilesFullInfo,NbPairs,cld_msk=None, roi_msk=None):
-    """
-    Process all the tiles, ie. launch process_tile for each tile
-
-    Args:
-        - out_dir : outputs directory
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,images) for a given tile directory (key)
-        - NbPairs : number of pairs
-        - cld_msk (optional): path to a gml file containing a cloud mask
-        - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
-
-    """
-
-    # create pool with less workers than available cores
-    nb_workers = multiprocessing.cpu_count()
-    if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
-    pool = multiprocessing.Pool(nb_workers)
-    
-    
-    #process_tiles
-    results = []
-    show_progress.counter = 0
-    try:
-        for tile_dir in tilesFullInfo:
-            
-
-            if cfg['debug']:
-                process_tile(tile_dir,NbPairs,tilesFullInfo,cld_msk,roi_msk)
-            else:
-                p = pool.apply_async(process_tile,
-                                         args=(tile_dir,NbPairs,tilesFullInfo, cld_msk,
-                                               roi_msk), callback=show_progress)
-                results.append(p)
-
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while computing tile "+str(r)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-    
-
-
+# ----------------------------------------------------------------------------------------------------
+# --------------------------------------------- Write outputs ----------------------------------------
+# ----------------------------------------------------------------------------------------------------   
 
 def writeVRTFiles(tileComposerInfo,tilesFullInfo,NbPairs):
     """
@@ -1287,6 +1302,10 @@ def writeDSM(tilesFullInfo):
         
     out_dsm = '%s/dsm.tif' % (cfg['out_dir'])
     common.run("ls %s | plyflatten %f %s" % (clouds_dir+'/cloud*',cfg['dsm_resolution'], out_dsm))
+    
+# ----------------------------------------------------------------------------------------------------
+# --------------------------------------- Write outputs (end) ----------------------------------------
+# ----------------------------------------------------------------------------------------------------
 
 
 
