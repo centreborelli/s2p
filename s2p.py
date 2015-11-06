@@ -56,43 +56,8 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
-def cropImage(inp,out,col,row,tw,th,z):
-    """
-    Extract an ROI from inp to out, with ROI defined as (col,row,tw,th) <==> (Upper left corner, size of ROI), and apply a zoom z.
-    """
-    
-    if z == 1:
-        common.image_crop_TIFF(inp, col,row,tw,th, out)
-    else:
-        # gdal is used for the zoom because it handles BigTIFF files, and
-        # before the zoom out the image may be that big
-        tmp_crop = common.image_crop_TIFF(inp, col,row,tw,th)
-        common.image_zoom_gdal(tmp_crop, z, out, tw,th)
 
 
-def getMinMaxFromExtract(tile_dir,tilesFullInfo):
-    """
-    Get min/max intensities of an extract ROI from the ref image.
-    
-    Args:
-        tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
-        tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,images
-    """
-    
-    print "\nCrop ref image and compute min/max intensities..."
-
-    #Get info
-    col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
-    img1 = images[0]['img']
-    
-    # output files
-    crop_ref = tile_dir + '/roi_ref.tif'
-    local_minmax = tile_dir + '/local_minmax.txt'
-
-    z = cfg['subsampling_factor']
-    cropImage(img1,crop_ref,col,row,tw,th,z)
-		
-    common.image_getminmax(crop_ref,local_minmax)
     
     
 def colorCropRef(tile_dir,tilesFullInfo,clr=None):
@@ -221,30 +186,7 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
 
 
 
-def crop_corresponding_areas(out_dir, images, roi, zoom=1):
-    """
-    Crops areas corresponding to the reference ROI in the secondary images.
 
-    Args:
-        out_dir:
-        images: sequence of dicts containing the paths to input data
-        roi: dictionary containing the ROI definition
-        zoom: integer zoom out factor
-    """
-    rpc_ref = images[0]['rpc']
-    for i, image in enumerate(images[1:]):
-        x, y, w, h = rpc_utils.corresponding_roi(rpc_ref, image['rpc'],
-                                                 roi['x'], roi['y'], roi['w'],
-                                                 roi['h'])
-        if zoom == 1:
-            common.image_crop_TIFF(image['img'], x, y, w, h,
-                                   '%s/roi_sec_%d.tif' % (out_dir, i))
-        else:
-            # gdal is used for the zoom because it handles BigTIFF files, and
-            # before the zoom out the image may be that big
-            tmp = common.image_crop_TIFF(image['img'], x, y, w, h)
-            common.image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir,
-                                                                     i), w, h)
 
 
 def check_parameters(usr_cfg):
@@ -923,9 +865,9 @@ def preprocess_tiles_step1(out_dir,tilesFullInfo,pairedTilesPerPairId,NbPairs,cl
 
 			
 			if cfg['debug']:
-				getMinMaxFromExtract(tile_dir,tilesFullInfo)
+				common.getMinMaxFromExtract(tile_dir,tilesFullInfo)
 			else:
-				p = pool.apply_async(getMinMaxFromExtract,
+				p = pool.apply_async(common.getMinMaxFromExtract,
 										 args=(tile_dir,tilesFullInfo), callback=show_progress)
 				results.append(p)
 
@@ -1155,8 +1097,8 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
     tilesFullInfo[tile_dir]=info   
    
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have already been zoomed. So don't zoom again to crop this images.
-    cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,info[2],info[3],1)
-    cropImage(crop_ref,crop_ref_crop,newcol,newrow,info[2],info[3],1)   
+    common.cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,info[2],info[3],1)
+    common.cropImage(crop_ref,crop_ref_crop,newcol,newrow,info[2],info[3],1)   
 
         
     #By pair    
@@ -1169,8 +1111,8 @@ def finalize_tile(tile_dir, height_maps, NbPairs, tilesFullInfo):
         single_rpc_err = tile_dir + '/pair_%d/rpc_err.tif' % pair_id
         single_rpc_err_crop =tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
             
-        cropImage(single_height_map,single_height_map_crop,newcol,newrow,info[2],info[3],1)
-        cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,info[2],info[3],1)
+        common.cropImage(single_height_map,single_height_map_crop,newcol,newrow,info[2],info[3],1)
+        common.cropImage(single_rpc_err,single_rpc_err_crop,newcol,newrow,info[2],info[3],1)
 
     
     
@@ -1454,7 +1396,7 @@ def main(config_file):
 
     # Bonus : crop corresponding areas in the secondary images
     if not cfg['full_img']:
-        crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
+        common.crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
 
 
     # Bonus : also copy the RPC's
