@@ -123,17 +123,17 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     2) Compute optimal size for tiles, get the number of pairs
     3) Build the tileComposerInfo : a simple list that gives the size of the tiles (after having removed the overlapping areas), regarding their positions inside the ROI.
        It will be useful for the contruction of the vrt file that merge all the local height maps and other data.
-    4) Build tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk. USED EVERYWHERE IN THIS CODE.
+    4) Build tilesFullInfo : a dictionary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk. USED EVERYWHERE IN THIS CODE.
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
        * ov : size of the overlapping
        * i/j : relative position of the tile
        * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
-       * images : a dictionnary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
+       * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
     
     Args:
         - out_dir : outputs directory
-        - images : a dictionnary directly given by the json config file, that will be stored into tilesFullInfo
+        - images : a dictionary directly given by the json config file, that will be stored into tilesFullInfo
         - x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want, as it will be
@@ -350,7 +350,7 @@ def preprocess_tiles_step1(tilesFullInfo):
     Compute pointing corrections, crop ref image into tile, and get min/max intensities values 
 
     Args: 
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+         - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
     """
 
     # create pool with less workers than available cores
@@ -498,7 +498,7 @@ def global_minmax_intensities(tilesFullInfo):
     This will allow to re-code colors by using 8-bits instead of 12-bits or more, and to better vizualise the ply files.
 
     Args:
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+        - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
 
     """
 
@@ -519,7 +519,7 @@ def preprocess_tiles_step2(tilesFullInfo):
     Compute global pointing correction and gloabl min/max intensities values 
 
     Args: 
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+         - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
     """
 
     # create pool with less workers than available cores
@@ -577,8 +577,8 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
     Colorization of a crop_ref (for a given tile)
     
     Args:
-        - tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
+        - tile_dir : a key for the dictionary tilesFullInfo; refers to a particular tile
+        - tilesFullInfo : a dictionary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
         
         - clr (optional) : if crop_ref is a pan image, will perform the pansharpening with the color image clr
             
@@ -643,8 +643,8 @@ def colorCropRef(tile_dir,tilesFullInfo,clr=None):
 def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     """
     Args:
-        - tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
+        - tile_dir : a key for the dictionary tilesFullInfo; refers to a particular tile
+        - tilesFullInfo : a dictionary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
         - do_offset (optional, default: False): boolean flag to decide wether the
             x, y coordinates of points in the ply file will be translated or
             not (translated to be close to 0, to avoid precision loss due to
@@ -740,7 +740,7 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
     Args:
         - tile_dir : directory of the tile to be processed
         - height_maps : list of the height maps generated from N pairs
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+        - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
     """
 
     # Get all info
@@ -786,7 +786,7 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
     info[3] = info[3]/z + diffth
     tilesFullInfo[tile_dir]=info   
    
-    # z=1 beacause local_merged_height_map, crop_ref (and so forth) have already been zoomed. So don't zoom again to crop this images.
+    # z=1 beacause local_merged_height_map, crop_ref (and so forth) have already been zoomed. So don't zoom again to crop these images.
     common.cropImage(local_merged_height_map,local_merged_height_map_crop,newcol,newrow,info[2],info[3],1)
     common.cropImage(crop_ref,crop_ref_crop,newcol,newrow,info[2],info[3],1)   
 
@@ -826,7 +826,7 @@ def process_pair(tile_dir,pair_id,tilesFullInfo):
     Args:
          - tile_dir : directory of the tile 
          - pair_id : id of the pair to be processed
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+         - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
          - cld_msk (optional): path to a gml file containing a cloud mask
          - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
 
@@ -884,7 +884,7 @@ def process_tile(tile_dir,tilesFullInfo):
 
     Args:
         - tile_dir : directory of the tile to be processed
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+        - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
     """
     
     # Process each pair : get a height map
@@ -908,7 +908,7 @@ def process_tiles(tilesFullInfo):
     Process all the tiles, ie. launch process_tile for each tile
 
     Args:
-        - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+        - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
     """
 
     # create pool with less workers than available cores
@@ -1207,7 +1207,7 @@ def writeVRTFiles(tilesFullInfo):
     Merge pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc 
 
     Args:
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+         - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
          - NbPairs : number of pairs
     """
     #VRT file : height map (N pairs)    
@@ -1281,7 +1281,7 @@ def writeDSM(tilesFullInfo):
     Write the DSM, from the ply files given by each tile.
 
     Args :
-         - tilesFullInfo : a dictionnary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+         - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
     """
     clouds_dir = cfg['out_dir']+'/clouds'
     if (os.path.exists(clouds_dir)):
