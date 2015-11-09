@@ -36,6 +36,6 @@
   "skip_existing" : true,
   "mosaic_method" : "piio",
   "msk_erosion": 0,
-  "dsm_resolution": 0.5
+  "dsm_resolution": 0.5,
   "max_nb_threads": 3
 }

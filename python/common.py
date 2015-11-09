@@ -410,13 +410,13 @@ def getMinMaxFromExtract(tile_dir,tilesFullInfo):
     
     Args:
         tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
-        tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,images
+        tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
     """
     
     print "\nCrop ref image and compute min/max intensities..."
 
     #Get info
-    col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
     img1 = images[0]['img']
     
     # output files
