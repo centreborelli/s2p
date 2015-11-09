@@ -85,6 +85,7 @@ def geodetic_to_utm(lat, lon, zone=None):
 
     Returns:
         x, y, zone: the UTM coordinates of the input point, and the zone
+        when lat and lon are lists returns three lists (x, y, zone)
     """
 
     command = ['GeoConvert']
@@ -98,16 +99,34 @@ def geodetic_to_utm(lat, lon, zone=None):
         command.append("-z")
         command.append(zone)
 
-    p1 = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(command, stdin=p1.stdout, stdout=subprocess.PIPE)
-    line = p2.stdout.readline()
+    # detemine if inputs are lists
+    if not hasattr(lon, "__iter__"):
+       lon = [lon]
+       lat = [lat]
+       n = 1
+    else:
+       if not len(lon) == len(lat):
+          print "geodetic_to_utm: ERROR: lon and lat should be the same lenght!"
+       n = len(lon)
 
-    splits = line.split()
-    zone = splits[0]
-    x = float(splits[1])
-    y = float(splits[2])
+    x, y, zone = [], [], []
+    for t in range(n):
+       p2 = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+       pout = p2.communicate(input='%s %s\n'%(str(lat[t]), str(lon[t])))
+       line = pout[0].strip()
+       #p1 = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
+       #p2 = subprocess.Popen(command, stdin=p1.stdout, stdout=subprocess.PIPE)
+       #line = p2.stdout.readline()
+   
+       splits = line.split()
+       zone.append( splits[0] )
+       x.append( float(splits[1]) )
+       y.append( float(splits[2]) )
 
-    return x, y, zone
+    if n == 1:
+       return x[0], y[0], zone[0]
+    else:
+       return x, y, zone
 
 
 def geoid_above_ellipsoid(lat, lon):
