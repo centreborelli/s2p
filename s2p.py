@@ -112,10 +112,10 @@ def check_parameters(usr_cfg):
 
 
 # ----------------------------------------------------------------------------------------------------
-# ---------------------------------------  prepare_fullProcess ---------------------------------------
+# ---------------------------------------  initialize ---------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
-def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
+def initialize(out_dir, images, x, y, w, h, tw=None, th=None,
                  ov=None, cld_msk=None, roi_msk=None):
     """
     Prepare the entire process : 
@@ -241,12 +241,12 @@ def prepare_fullProcess(out_dir, images, x, y, w, h, tw=None, th=None,
     return tilesFullInfo,pairedTilesPerPairId
 
 # ----------------------------------------------------------------------------------------------------------
-# ---------------------------------------  prepare_fullProcess (end) ---------------------------------------
+# ---------------------------------------  initialize (end) ---------------------------------------
 # ----------------------------------------------------------------------------------------------------------
     
 
 # ----------------------------------------------------------------------------------------------------
-# ---------------------------------------  preprocess_tiles_step1 ------------------------------------
+# ---------------------------------------  map_preprocess_tiles ------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
 def pointing_correction(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
@@ -345,7 +345,7 @@ def pointing_correction(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
 
     return
 
-def preprocess_tiles_step1(tilesFullInfo):
+def map_preprocess_tiles(tilesFullInfo):
     """
     Compute pointing corrections, crop ref image into tile, and get min/max intensities values 
 
@@ -458,12 +458,12 @@ def preprocess_tiles_step1(tilesFullInfo):
 
 
 # ----------------------------------------------------------------------------------------------------
-# ---------------------------------------  preprocess_tiles_step1 (end) ------------------------------
+# ---------------------------------------  map_preprocess_tiles (end) ------------------------------
 # ----------------------------------------------------------------------------------------------------
 
 
 # ----------------------------------------------------------------------------------------------------
-# ---------------------------------------  preprocess_tiles_step2 ------------------------------------
+# ---------------------------------------  reduce_preprocess_tiles ------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
 def global_pointing_correction(tilesFullInfo):
@@ -514,7 +514,7 @@ def global_minmax_intensities(tilesFullInfo):
     np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
         
 
-def preprocess_tiles_step2(tilesFullInfo):
+def reduce_preprocess_tiles(tilesFullInfo):
     """
     Compute global pointing correction and gloabl min/max intensities values 
 
@@ -562,16 +562,16 @@ def preprocess_tiles_step2(tilesFullInfo):
         print "\toutput: ", e.args[0]["output"]
 
 # ----------------------------------------------------------------------------------------------------
-# ---------------------------------------  preprocess_tiles_step2 (end) ------------------------------
+# ---------------------------------------  reduce_preprocess_tiles (end) ------------------------------
 # ----------------------------------------------------------------------------------------------------
 
 
 
 # ----------------------------------------------------------------------------------------------------
-# ---------------------------------------------- process_tiles ---------------------------------------
+# ---------------------------------------------- map_process_tiles ---------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
-def colorCropRef(tile_dir,tilesFullInfo,clr=None):
+def color_crop_ref(tile_dir,tilesFullInfo,clr=None):
 
     """
     Colorization of a crop_ref (for a given tile)
@@ -695,7 +695,7 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     common.garbage_cleanup()
     
     
-def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
+def merge_height_maps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
     """
     Merge a list of height maps recursively, computed for one tile from N image pairs.
   
@@ -705,7 +705,7 @@ def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
          - thresh : threshold used for the fusion algorithm, in meters.
          - conservative (optional, default is False): if True, keep only the
             pixels where the two height map agree (fusion algorithm)
-         - k : used to identify the current call of mergeHeightMaps (default = 1, first call)
+         - k : used to identify the current call of merge_height_maps (default = 1, first call)
          - garbage : a list used to remove temp data (default = [], first call)
 
     """
@@ -725,7 +725,7 @@ def mergeHeightMaps(height_maps,tile_dir,thresh,conservative,k=1,garbage=[]):
             garbage.append(height_map)
         
         if len(list_height_maps) > 1:
-            mergeHeightMaps(list_height_maps,tile_dir,thresh,conservative,k+1,garbage)
+            merge_height_maps(list_height_maps,tile_dir,thresh,conservative,k+1,garbage)
         else:
             common.run('cp %s %s' % (list_height_maps[0],local_merged_height_map))
             for imtemp in garbage:
@@ -752,7 +752,7 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
     # merge the n height maps
     local_merged_height_map = tile_dir +'/local_merged_height_map.tif'
     if len(height_maps)>1:
-        mergeHeightMaps(height_maps,tile_dir,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
+        merge_height_maps(height_maps,tile_dir,cfg['fusion_thresh'],cfg['fusion_conservative'],1,[])
     else:    
         common.run('cp %s %s' % (height_maps[0],local_merged_height_map))
 
@@ -812,7 +812,7 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
                    
     
     # Colors 
-    colorCropRef(tile_dir,tilesFullInfo,cfg['images'][0]['clr'])
+    color_crop_ref(tile_dir,tilesFullInfo,cfg['images'][0]['clr'])
     
     # Generate cloud 
     generate_cloud(tile_dir,tilesFullInfo,cfg['offset_ply'])
@@ -900,7 +900,7 @@ def process_tile(tile_dir,tilesFullInfo):
 
     
 
-def process_tiles(tilesFullInfo):
+def map_process_tiles(tilesFullInfo):
     """
     Process all the tiles, ie. launch process_tile for each tile
 
@@ -915,7 +915,7 @@ def process_tiles(tilesFullInfo):
     pool = multiprocessing.Pool(nb_workers)
     
     
-    #process_tiles
+    #map_process_tiles
     results = []
     show_progress.counter = 0
     try:
@@ -944,7 +944,7 @@ def process_tiles(tilesFullInfo):
         print "\toutput: ", e.args[0]["output"]
 
 # ----------------------------------------------------------------------------------------------------
-# ------------------------------------------ process_tiles (end) -------------------------------------
+# ------------------------------------------ map_process_tiles (end) -------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -1196,16 +1196,15 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         
 
 # ----------------------------------------------------------------------------------------------------
-# --------------------------------------------- Write outputs ----------------------------------------
+# ------------------------------- global finalization : reduce_process_tiles -------------------------
 # ----------------------------------------------------------------------------------------------------   
 
-def writeVRTFiles(tilesFullInfo):
+def write_vrt_files(tilesFullInfo):
     """
     Merge pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc 
 
     Args:
          - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
-         - NbPairs : number of pairs
     """
     #VRT file : height map (N pairs)    
 
@@ -1273,7 +1272,7 @@ def writeVRTFiles(tilesFullInfo):
 
 
 
-def writeDSM(tilesFullInfo):
+def write_dsm(tilesFullInfo):
     """
     Write the DSM, from the ply files given by each tile.
 
@@ -1294,9 +1293,34 @@ def writeDSM(tilesFullInfo):
         
     out_dsm = '%s/dsm.tif' % (cfg['out_dir'])
     common.run("ls %s | plyflatten %f %s" % (clouds_dir+'/cloud*',cfg['dsm_resolution'], out_dsm))
+
+
+
+def reduce_process_tiles(tilesFullInfo):
+    """
+    Merge pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc.
+    Write the DSM, from the ply files given by each tile.
+    Crop corresponding areas in the secondary images.
+    Copy the RPC'. 
+
+    Args:
+         - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
+
+    """
+
+    write_vrt_files(tilesFullInfo)
+    write_dsm(tilesFullInfo)
+
+    if not cfg['full_img']:
+        common.crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
+
+    for i in range(len(cfg['images'])):
+        from shutil import copy2
+        copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
+
     
 # ----------------------------------------------------------------------------------------------------
-# --------------------------------------- Write outputs (end) ----------------------------------------
+# ------------------------- global finalization : reduce_process_tiles (end) -------------------------
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -1377,41 +1401,19 @@ def main(config_file):
         srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
-    tilesFullInfo,pairedTilesPerPairId = prepare_fullProcess(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
+    tilesFullInfo,pairedTilesPerPairId = initialize(cfg['out_dir'], cfg['images'], cfg['roi']['x'],
                            cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                            None, None, None, cfg['images'][0]['cld'],
                            cfg['images'][0]['roi'])
     
                     
-    preprocess_tiles_step1(tilesFullInfo)  
-
-
-    preprocess_tiles_step2(tilesFullInfo)         
+    map_preprocess_tiles(tilesFullInfo)  
+    reduce_preprocess_tiles(tilesFullInfo)         
      
      
-    process_tiles(tilesFullInfo)                         
-
-
-    # Write final outputs in VRT format
-    writeVRTFiles(tilesFullInfo)
-            
-
+    map_process_tiles(tilesFullInfo)                         
+    reduce_process_tiles(tilesFullInfo)
         
-    # Also digital surface model
-    writeDSM(tilesFullInfo)
-      
-        
-
-    # Bonus : crop corresponding areas in the secondary images
-    if not cfg['full_img']:
-        common.crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
-
-
-    # Bonus : also copy the RPC's
-    for i in range(len(cfg['images'])):
-        from shutil import copy2
-        copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
-
 
     # runtime
     t = int(time.time() - t0)
