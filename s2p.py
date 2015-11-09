@@ -827,9 +827,6 @@ def process_pair(tile_dir,pair_id,tilesFullInfo):
          - tile_dir : directory of the tile 
          - pair_id : id of the pair to be processed
          - tilesFullInfo : a dictionary that provides all you need to process a tile (col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk) for a given tile directory (key)
-         - cld_msk (optional): path to a gml file containing a cloud mask
-         - roi_msk (optional): path to a gml file containing a mask defining the area contained in the full image.
-
     """
 
     #Get all info
