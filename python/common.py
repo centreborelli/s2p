@@ -425,8 +425,15 @@ def getMinMaxFromExtract(tile_dir,tilesFullInfo):
 
     z = cfg['subsampling_factor']
     cropImage(img1,crop_ref,col,row,tw,th,z)
+    
+    if os.path.isfile('%s/local_minmax.txt' % tile_dir) and cfg['skip_existing']:
+        print "Compute min/max intensities values on tile %s already done, skip" % (tile_dir)
+    else:
+        if os.path.isfile('%s/this_tile_is_masked.txt' % (tile_dir)):
+            print "tile %s already masked, skip" % (tile_dir)
 		
-    image_getminmax(crop_ref,local_minmax)
+        else:
+            image_getminmax(crop_ref,local_minmax)
     
     
     
