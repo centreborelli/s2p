@@ -115,7 +115,91 @@ def check_parameters(usr_cfg):
 # ---------------------------------------  initialize ---------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
-def initialize(config_file,write=True):
+def init_dirs(config_file):
+	
+	# read the json configuration file
+    f = open(config_file)
+    user_cfg = json.load(f)
+    f.close()
+
+    # Check that all the mandatory arguments are defined, and warn about
+    # 'unknown' params
+    check_parameters(user_cfg)
+
+    # fill the config module: updates the content of the config.cfg dictionary
+    # with the content of the user_cfg dictionary
+    cfg.update(user_cfg)
+
+    # sets keys 'clr', 'cld' and 'roi' of the reference image to None if they
+    # are not already defined. The default values of these optional arguments
+    # can not be defined directly in the config.py module. They would be
+    # overwritten by the previous update, because they are in a nested dict.
+    cfg['images'][0].setdefault('clr')
+    cfg['images'][0].setdefault('cld')
+    cfg['images'][0].setdefault('roi')
+
+    # update roi definition if the full_img flag is set to true
+    if ('full_img' in cfg) and cfg['full_img']:
+        sz = common.image_size_tiffinfo(cfg['images'][0]['img'])
+        cfg['roi'] = {}
+        cfg['roi']['x'] = 0
+        cfg['roi']['y'] = 0
+        cfg['roi']['w'] = sz[0]
+        cfg['roi']['h'] = sz[1]
+
+    # check that the roi is well defined
+    if 'roi' not in cfg or any(p not in cfg['roi'] for p in ['x', 'y', 'w',
+                                                             'h']):
+        print "missing or incomplete ROI definition"
+        print "ROI will be redefined by interactive selection"
+        x, y, w, h = common.get_roi_coordinates(cfg['images'][0]['img'],
+                                                cfg['images'][0]['prv'])
+        cfg['roi'] = {}
+        cfg['roi']['x'] = x
+        cfg['roi']['y'] = y
+        cfg['roi']['w'] = w
+        cfg['roi']['h'] = h
+    else :
+        x = cfg['roi']['x']    
+        y = cfg['roi']['y']
+        w = cfg['roi']['w']
+        h = cfg['roi']['h']
+
+    try:
+        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
+    except TypeError:
+        print 'Neither a ROI nor a preview file are defined. Aborting.'
+        return
+
+    # check the zoom factor
+    z = cfg['subsampling_factor']
+    assert(z > 0 and z == np.floor(z))
+
+    # create tmp dir and output directory for the experiment, and store a json
+    # dump of the config.cfg dictionary there, download srtm files...
+    if not os.path.exists(cfg['out_dir']):
+        os.makedirs(cfg['out_dir'])
+
+	if not os.path.exists(cfg['temporary_dir']):
+		os.makedirs(cfg['temporary_dir'])
+		
+	if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
+		os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
+	f = open('%s/config.json' % cfg['out_dir'], 'w')
+	json.dump(cfg, f, indent=2)
+	f.close()
+
+	# duplicate stdout and stderr to log file
+	tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
+
+	# needed srtm tiles
+	srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+										   *cfg['roi'].values())
+	for s in srtm_tiles:
+		srtm.get_srtm_tile(s, cfg['srtm_dir'])
+		
+
+def initialize(config_file):
     """
     Prepares the entire process : 
     1) Select a ROI, check it, make sure its coordinates are multiples of the zoom factor, and so forth.
@@ -193,31 +277,6 @@ def initialize(config_file,write=True):
     # check the zoom factor
     z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
-    
-
-
-    # create tmp dir and output directory for the experiment, and store a json
-    # dump of the config.cfg dictionary there, download srtm files...
-    if not os.path.exists(cfg['out_dir']):
-        os.makedirs(cfg['out_dir'])
-    if (write):
-        if not os.path.exists(cfg['temporary_dir']):
-            os.makedirs(cfg['temporary_dir'])
-        if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
-            os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
-        f = open('%s/config.json' % cfg['out_dir'], 'w')
-        json.dump(cfg, f, indent=2)
-        f.close()
-    
-        # duplicate stdout and stderr to log file
-        tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
-    
-        # needed srtm tiles
-        srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
-                                               *cfg['roi'].values())
-        for s in srtm_tiles:
-            srtm.get_srtm_tile(s, cfg['srtm_dir'])
-
 
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
@@ -1189,6 +1248,9 @@ def map_processing(config_file,steps):
     
     try:
     
+        if "init_dirs" in steps:
+			init_dirs(config_file)
+    
         tilesFullInfo = initialize(config_file)
     
         if cfg['debug']: #monoprocessing
@@ -1271,7 +1333,7 @@ def map_processing(config_file,steps):
         print "\toutput: ", e.args[0]["output"]
         
         
-def execute_job(config_file,job):
+def execute_job(config_file,tile_dir,command):
     """
     Execute a job
 
@@ -1280,8 +1342,8 @@ def execute_job(config_file,job):
          - job <==> [tile_dir,step]
     
     """
-    tile_dir = job.split(' ')[0]
-    command = job.split(' ')[1]
+    #tile_dir = job.split(' ')[0]
+    #command = job.split(' ')[1]
     
     try:
     
@@ -1315,8 +1377,8 @@ def execute_job(config_file,job):
         
 def list_jobs(config_file,step):
 
-    tilesFullInfo = initialize(config_file,False)
-    filename = step[0] + ".json"
+    tilesFullInfo = initialize(config_file)
+    filename = step[0] + ".jobs"
     
     if step[0] in ["preprocess_tiles","process_tiles"]:
         f = open(os.path.join(cfg['out_dir'],filename),'w')
@@ -1351,7 +1413,7 @@ def main(config_file,steps=None,running_mode=None,job=None):
     if running_mode in ['all','run']:
         map_processing(config_file,steps)
     elif running_mode == 'job':
-        execute_job(config_file,job)    
+        execute_job(config_file,job[0],job[1])    
     elif running_mode == 'list_jobs':
         list_jobs(config_file,steps) 
     ###########################                
@@ -1368,7 +1430,7 @@ def main(config_file,steps=None,running_mode=None,job=None):
 
 if __name__ == '__main__':
 
-    possible_steps = ["preprocess_tiles","global_values","process_tiles","global_finalization"]
+    possible_steps = ["init_dirs", "preprocess_tiles","global_values","process_tiles","global_finalization"]
 
     error = False
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -1386,8 +1448,8 @@ if __name__ == '__main__':
         if not error:
                 main(sys.argv[2],sys.argv[3:],sys.argv[1])
                 
-    elif len(sys.argv) == 4 and sys.argv[1] == "job":
-        main(sys.argv[2],None,'job',sys.argv[3]) 
+    elif len(sys.argv) == 5 and sys.argv[1] == "job":
+        main(sys.argv[2],None,'job',sys.argv[3:]) 
                 
     else:
         error=True
@@ -1401,11 +1463,11 @@ if __name__ == '__main__':
           Launches the s2p pipeline. All the parameters, paths to input and
           output files, are defined in the json configuration file.
 
-         > %s run config.json [preprocess_tiles global_values process_tiles global_finalization]
+         > %s run config.json [init_dir preprocess_tiles global_values process_tiles global_finalization]
           
           Run specific steps of the s2p pipeline, while skipping the remaining ones.
 
-        > %s job config.json json_string
+        > %s job config.json tile_dir command
 
           Run a specific job defined by a json string. This mode allows to run jobs returned
           by the list_jobs running mode in configuration file.
