@@ -86,11 +86,8 @@ def matches_from_sift(im1, im2, asift_only=False):
     im2_8b = common.image_qauto(im2)
 
     if not asift_only:
-        p1 = common.image_sift_keypoints(im1_8b, max_nb=14000)
-        p2 = common.image_sift_keypoints(im2_8b, max_nb=14000)
-#        thresh_dog = 0.00033
-#        p1 = common.image_sift_keypoints(im1_8b,  extra_params='-thresh_dog %f' % thresh_dog)
-#        p2 = common.image_sift_keypoints(im2_8b,  extra_params='-thresh_dog %f' % thresh_dog)
+        p1 = common.image_sift_keypoints(im1_8b, max_nb=2000)
+        p2 = common.image_sift_keypoints(im2_8b, max_nb=2000)
         matches = common.sift_keypoints_match(p1, p2, 'relative',
                                               cfg['sift_match_thresh'])
 
