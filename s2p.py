@@ -115,7 +115,7 @@ def check_parameters(usr_cfg):
 # ---------------------------------------  initialize ---------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
-def initialize(config_file):
+def initialize(config_file,write=True):
     """
     Prepares the entire process : 
     1) Select a ROI, check it, make sure its coordinates are multiples of the zoom factor, and so forth.
@@ -129,6 +129,10 @@ def initialize(config_file):
        * i/j : relative position of the tile
        * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
        * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
+       
+    Args:
+         - config_file : a json configuratio file
+         - write : if False, initialize will just create the output dir and nothing else. 
     """          
 
 
@@ -193,25 +197,26 @@ def initialize(config_file):
 
 
     # create tmp dir and output directory for the experiment, and store a json
-    # dump of the config.cfg dictionary there
-    if not os.path.exists(cfg['temporary_dir']):
-        os.makedirs(cfg['temporary_dir'])
-    if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
-        os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
+    # dump of the config.cfg dictionary there, download srtm files...
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
-    f = open('%s/config.json' % cfg['out_dir'], 'w')
-    json.dump(cfg, f, indent=2)
-    f.close()
+    if (write):
+        if not os.path.exists(cfg['temporary_dir']):
+            os.makedirs(cfg['temporary_dir'])
+        if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
+            os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
+        f = open('%s/config.json' % cfg['out_dir'], 'w')
+        json.dump(cfg, f, indent=2)
+        f.close()
     
-    # duplicate stdout and stderr to log file
-    tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
+        # duplicate stdout and stderr to log file
+        tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
     
-    # needed srtm tiles
-    srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
-                                           *cfg['roi'].values())
-    for s in srtm_tiles:
-        srtm.get_srtm_tile(s, cfg['srtm_dir'])
+        # needed srtm tiles
+        srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                               *cfg['roi'].values())
+        for s in srtm_tiles:
+            srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
@@ -1173,7 +1178,7 @@ def global_finalization(tilesFullInfo):
 # ----------------------------------------------------------------------------------------------------
 # ------------------------------------------- map_processing -----------------------------------------
 # ----------------------------------------------------------------------------------------------------
-def map_processing(config_file):
+def map_processing(config_file,steps):
     """
     Init +  reprocessing + global_values + processing + global finalization
 
@@ -1188,19 +1193,23 @@ def map_processing(config_file):
     
         if cfg['debug']: #monoprocessing
     
-            print 'preprocess_tile...'
-            for tile_dir in tilesFullInfo:
-                preprocess_tile(tile_dir, tilesFullInfo)
-            print 'global values...'
+            if "preprocess_tiles" in steps:
+                print 'preprocess_tiles...'
+                for tile_dir in tilesFullInfo:
+                    preprocess_tile(tile_dir, tilesFullInfo)
             
-            global_values(tilesFullInfo)
+            if "global_values" in steps:
+                print 'global values...'
+                global_values(tilesFullInfo)
             
-            print 'process_tile...'
-            for tile_dir in tilesFullInfo:
-                process_tile(tile_dir, tilesFullInfo)
+            if "process_tiles" in steps:
+                print 'process_tiles...'
+                for tile_dir in tilesFullInfo:
+                    process_tile(tile_dir, tilesFullInfo)
                 
-            print 'global finalization...'     
-            global_finalization(tilesFullInfo)
+            if "global_finalization" in steps:    
+                print 'global finalization...'     
+                global_finalization(tilesFullInfo)
             
         else: # multiprocessing
         
@@ -1209,43 +1218,49 @@ def map_processing(config_file):
             if cfg['max_nb_threads']:
                 nb_workers = min(nb_workers, cfg['max_nb_threads'])
             
-            print 'preprocess_tile...'
+            
             results = []
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
-            for tile_dir in tilesFullInfo:
-    
-                p = pool.apply_async(preprocess_tile,
-                                             args=(tile_dir, tilesFullInfo), callback=show_progress)
-                results.append(p)
-                
-            for r in results:
-                try:
-                    r.get(3600)  # wait at most one hour per tile
-                except multiprocessing.TimeoutError:
-                    print "Timeout while computing tile "+str(r)       
-                    
-            print 'global values...'        
-            global_values(tilesFullInfo)        
-                    
-            print 'process_tile...'
-            results = []
-            show_progress.counter = 0   
-            pool = multiprocessing.Pool(nb_workers)     
-            for tile_dir in tilesFullInfo:
-                
-                p = pool.apply_async(process_tile,
-                                             args=(tile_dir, tilesFullInfo), callback=show_progress)
-                results.append(p)
-                
-            for r in results:
-                try:
-                    r.get(3600)  # wait at most one hour per tile
-                except multiprocessing.TimeoutError:
-                    print "Timeout while computing tile "+str(r)
             
-            print 'global finalization...'        
-            global_finalization(tilesFullInfo)
+            if "preprocess_tiles" in steps:
+                print 'preprocess_tile...'
+                for tile_dir in tilesFullInfo:
+                  
+                    p = pool.apply_async(preprocess_tile,
+                                                 args=(tile_dir, tilesFullInfo), callback=show_progress)
+                    results.append(p)
+                    
+                for r in results:
+                    try:
+                        r.get(3600)  # wait at most one hour per tile
+                    except multiprocessing.TimeoutError:
+                        print "Timeout while computing tile "+str(r)       
+                    
+            if "global_values" in steps:        
+                print 'global values...'        
+                global_values(tilesFullInfo)        
+                    
+            if "process_tiles" in steps:        
+                print 'process_tiles...'
+                results = []
+                show_progress.counter = 0   
+                pool = multiprocessing.Pool(nb_workers)     
+                for tile_dir in tilesFullInfo:
+                    
+                    p = pool.apply_async(process_tile,
+                                                 args=(tile_dir, tilesFullInfo), callback=show_progress)
+                    results.append(p)
+                    
+                for r in results:
+                    try:
+                        r.get(3600)  # wait at most one hour per tile
+                    except multiprocessing.TimeoutError:
+                        print "Timeout while computing tile "+str(r)
+            
+            if "global_finalization" in steps:
+                print 'global finalization...'        
+                global_finalization(tilesFullInfo)
     
     except KeyboardInterrupt:
         pool.terminate()
@@ -1255,12 +1270,71 @@ def map_processing(config_file):
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
         
+        
+def execute_job(config_file,job):
+    """
+    Execute a job
+
+    Args: 
+         - json config file
+         - job <==> [tile_dir,step]
+    
+    """
+    tile_dir = job.split(' ')[0]
+    command = job.split(' ')[1]
+    
+    try:
+    
+        tilesFullInfo = initialize(config_file)
+    
+        if command == "preprocess_tiles":
+            print 'preprocess_tiles on %s ...' %tile_dir
+            preprocess_tile(tile_dir, tilesFullInfo)
+        
+        if command == "global_values":
+            print 'global values...'
+            global_values(tilesFullInfo)
+        
+        if command == "process_tiles" :
+            print 'process_tiles on %s ...' %tile_dir
+            process_tile(tile_dir, tilesFullInfo)
+            
+        if command == "global_finalization":    
+            print 'global finalization...'     
+            global_finalization(tilesFullInfo)  
+                
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
+
+    except common.RunFailure as e:
+        print "FAILED call: ", e.args[0]["command"]
+        print "\toutput: ", e.args[0]["output"]
+        
+            
+        
+def list_jobs(config_file,step):
+
+    tilesFullInfo = initialize(config_file,False)
+    filename = step[0] + ".json"
+    
+    if step[0] in ["preprocess_tiles","process_tiles"]:
+        f = open(os.path.join(cfg['out_dir'],filename),'w')
+        for tile_dir in tilesFullInfo:
+            f.write(tile_dir + ' ' + step[0] + '\n')
+        f.close()
+    elif step[0] in ["global_values","global_finalization"]:
+        f = open(os.path.join(cfg['out_dir'],filename),'w')
+        f.write('all_tiles ' + step[0] + '\n')
+        f.close()
+    else:
+        print "Unkown step required: %s" %step[0]
 # ----------------------------------------------------------------------------------------------------
 # ------------------------------------- map_processing (end) -----------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
 
-def main(config_file):
+def main(config_file,steps=None,running_mode=None,job=None):
     """
     Launches s2p with the parameters given by a json file.
 
@@ -1274,7 +1348,12 @@ def main(config_file):
 
 
     ###########################
-    map_processing(config_file)
+    if running_mode in ['all','run']:
+        map_processing(config_file,steps)
+    elif running_mode == 'job':
+        execute_job(config_file,job)    
+    elif running_mode == 'list_jobs':
+        list_jobs(config_file,steps) 
     ###########################                
         
 
@@ -1289,14 +1368,51 @@ def main(config_file):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) == 2:
-        main(sys.argv[1])
+    possible_steps = ["preprocess_tiles","global_values","process_tiles","global_finalization"]
+
+    error = False
+    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+        main(sys.argv[1],possible_steps,'all')
+        
+    elif len(sys.argv) > 3 and sys.argv[1] != "job":
+    
+        if sys.argv[1] not in ['run','list_jobs','job']:
+            error = True
+        for step in sys.argv[3:]:
+                if step not in possible_steps:
+                    print "Unkown step required: %s" %step
+                    error = True    
+        
+        if not error:
+                main(sys.argv[2],sys.argv[3:],sys.argv[1])
+                
+    elif len(sys.argv) == 4 and sys.argv[1] == "job":
+        main(sys.argv[2],None,'job',sys.argv[3]) 
+                
     else:
+        error=True
+         
+         
+    if error:
         print """
         Incorrect syntax, use:
           > %s config.json
 
           Launches the s2p pipeline. All the parameters, paths to input and
           output files, are defined in the json configuration file.
-        """ % sys.argv[0]
+
+         > %s run config.json [preprocess_tiles global_values process_tiles global_finalization]
+          
+          Run specific steps of the s2p pipeline, while skipping the remaining ones.
+
+        > %s job config.json json_string
+
+          Run a specific job defined by a json string. This mode allows to run jobs returned
+          by the list_jobs running mode in configuration file.
+          
+        > %s list_jobs config.json [preprocess_tiles global_values process_tiles global_finalization]
+        
+          Return the list of jobs for a specific step.
+          
+        """ % (sys.argv[0],sys.argv[0],sys.argv[0],sys.argv[0])
         sys.exit(1)
