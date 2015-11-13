@@ -19,16 +19,16 @@
 
 static void parse_utm_string(int *zone, bool *hem, char *s)
 {
-    char hem_string[FILENAME_MAX];
-    if (2 == sscanf(s, "%02d%s", zone, hem_string)) {
-        // hem_string must be equal to "N" or "S"
-        if (hem_string[1] == '\0')
-            if (hem_string[0] == 'N' || hem_string[0] == 'S') {
-                *hem = (hem_string[0] == 'N');
-                fprintf(stderr, "zone: %d\them: %s\n", *zone, hem_string);
-                return;
-            }
-    }
+	char hem_string[FILENAME_MAX];
+	if (2 == sscanf(s, "%02d%s", zone, hem_string)) {
+		// hem_string must be equal to "N" or "S"
+		if (hem_string[1] == '\0')
+			if (hem_string[0] == 'N' || hem_string[0] == 'S') {
+				*hem = (hem_string[0] == 'N');
+				fprintf(stderr, "zone: %d\them: %s\n", *zone, hem_string);
+				return;
+			}
+	}
 }
 
 // convert string like '28N' into a number like 32628, according to:
@@ -37,45 +37,45 @@ static void parse_utm_string(int *zone, bool *hem, char *s)
 // http://www.remotesensing.org/geotiff/spec/geotiff6.html#6.3.3.1
 static int get_utm_zone_index_for_geotiff(char *utm_zone)
 {
-    int out = 32000;
-    if (utm_zone[2] == 'N')
-        out += 600;
-    else if (utm_zone[2] == 'S')
-        out += 700;
-    else
-        fprintf(stderr, "error: bad utm zone value: %s\n", utm_zone);
-    utm_zone[2] = '\0';
-    out += atoi(utm_zone);
-    return out;
+	int out = 32000;
+	if (utm_zone[2] == 'N')
+		out += 600;
+	else if (utm_zone[2] == 'S')
+		out += 700;
+	else
+		fprintf(stderr, "error: bad utm zone value: %s\n", utm_zone);
+	utm_zone[2] = '\0';
+	out += atoi(utm_zone);
+	return out;
 }
 
 void set_geotif_header(char *tiff_fname, char *utm_zone, float xoff,
-        float yoff, float scale)
+		float yoff, float scale)
 {
-    // open tiff file
-    TIFF *tif = XTIFFOpen(tiff_fname, "r+");
-    if (!tif)
-        fail("failed in XTIFFOpen\n");
+	// open tiff file
+	TIFF *tif = XTIFFOpen(tiff_fname, "r+");
+	if (!tif)
+		fail("failed in XTIFFOpen\n");
 
-    GTIF *gtif = GTIFNew(tif);
-    if (!gtif)
-        fail("failed in GTIFNew\n");
+	GTIF *gtif = GTIFNew(tif);
+	if (!gtif)
+		fail("failed in GTIFNew\n");
 
-    // write TIFF tags
-    double pixsize[3] = {scale, scale, 0.0};
-    TIFFSetField(tif, GTIFF_PIXELSCALE, 3, pixsize);
+	// write TIFF tags
+	double pixsize[3] = {scale, scale, 0.0};
+	TIFFSetField(tif, GTIFF_PIXELSCALE, 3, pixsize);
 
-    double tiepoint[6] = {0.0, 0.0, 0.0, xoff, yoff, 0.0};
-    TIFFSetField(tif, GTIFF_TIEPOINTS, 6, tiepoint);
+	double tiepoint[6] = {0.0, 0.0, 0.0, xoff, yoff, 0.0};
+	TIFFSetField(tif, GTIFF_TIEPOINTS, 6, tiepoint);
 
-    // write GEOTIFF keys
-    int utm_ind = get_utm_zone_index_for_geotiff(utm_zone);
-    GTIFKeySet(gtif, ProjectedCSTypeGeoKey, TYPE_SHORT, 1, utm_ind);
-    GTIFWriteKeys(gtif);
+	// write GEOTIFF keys
+	int utm_ind = get_utm_zone_index_for_geotiff(utm_zone);
+	GTIFKeySet(gtif, ProjectedCSTypeGeoKey, TYPE_SHORT, 1, utm_ind);
+	GTIFWriteKeys(gtif);
 
-    // free and close
-    GTIFFree(gtif);
-    XTIFFClose(tif);
+	// free and close
+	GTIFFree(gtif);
+	XTIFFClose(tif);
 }
 
 
@@ -105,9 +105,9 @@ static bool parse_property_line(struct ply_property *t, char *buf)
 // the properties in bytes, isbin is set if binary encoded
 // and reads the utm zone
 static size_t header_get_record_length_and_utm_zone(FILE *f_in, char *utm, 
-	int *isbin, struct ply_property *t)
+		int *isbin, struct ply_property *t)
 {
-    	size_t n = 0;
+	size_t n = 0;
 	*isbin = 0;
 
 	char buf[FILENAME_MAX] = {0};
@@ -117,9 +117,9 @@ static size_t header_get_record_length_and_utm_zone(FILE *f_in, char *utm,
 		else {
 			if (parse_property_line(t+n, buf))
 				n += 1;
-        		else if (0 == strncmp(buf, "comment projection:", 19)) {
-        		    sscanf(buf, "comment projection: UTM %s", utm);
-        		}
+			else if (0 == strncmp(buf, "comment projection:", 19)) {
+				sscanf(buf, "comment projection: UTM %s", utm);
+			}
 		}
 		if (0 == strcmp(buf, "end_header\n"))
 			break;
@@ -129,8 +129,8 @@ static size_t header_get_record_length_and_utm_zone(FILE *f_in, char *utm,
 
 static void update_min_max(float *min, float *max, float x)
 {
-    if (x < *min) *min = x;
-    if (x > *max) *max = x;
+	if (x < *min) *min = x;
+	if (x > *max) *max = x;
 }
 
 // re-scale a float between 0 and w
@@ -165,27 +165,27 @@ int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *dat
 	if(isbin) {
 		for (int i = 0; i < n; i++) {
 			switch(t[i].type) {
-			case UCHAR: {
-				unsigned char X;
-				rec += fread(&X, 1, 1, f_in);
-				data[i] = X;
-				break; }
-			case FLOAT: {
-				float X;
-				rec += fread(&X, sizeof(float), 1, f_in);
-				data[i] = X;
-				break; }
-			case DOUBLE: {
-				double X;
-				rec += fread(&X, sizeof(double), 1, f_in);
-				data[i] = X;
-				break; }
+				case UCHAR: {
+						    unsigned char X;
+						    rec += fread(&X, 1, 1, f_in);
+						    data[i] = X;
+						    break; }
+				case FLOAT: {
+						    float X;
+						    rec += fread(&X, sizeof(float), 1, f_in);
+						    data[i] = X;
+						    break; }
+				case DOUBLE: {
+						     double X;
+						     rec += fread(&X, sizeof(double), 1, f_in);
+						     data[i] = X;
+						     break; }
 			}
 		}
 	} else {
 		int i=0;
 		while (i < n && !feof(f_in)) {
-      			rec += fscanf(f_in,"%lf", &data[i]);  i++;
+			rec += fscanf(f_in,"%lf", &data[i]);  i++;
 		}
 	}
 	return rec;
@@ -226,15 +226,15 @@ static void add_ply_points_to_images(struct images *x,
 		return;
 	}
 
-    // check that the utm zone is the same as the provided one
-    char utm[3];
-    int isbin=1;
-    struct ply_property t[100];
-    size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, t);
-    if (0 != strncmp(utm_zone, utm, 3))
-        fprintf(stderr, "error: different UTM zones among ply files\n");
+	// check that the utm zone is the same as the provided one
+	char utm[3];
+	int isbin=1;
+	struct ply_property t[100];
+	size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, t);
+	if (0 != strncmp(utm_zone, utm, 3))
+		fprintf(stderr, "error: different UTM zones among ply files\n");
 
-    	if (col_idx < 2 || col_idx > 5)
+	if (col_idx < 2 || col_idx > 5)
 		exit(fprintf(stderr, "error: bad col_idx %d\n", col_idx));
 
 
@@ -261,9 +261,9 @@ static void add_ply_points_to_images(struct images *x,
 
 void help(char *s)
 {
-    fprintf(stderr, "usage:\n\t"
-            "ls files | %s [-c column] resolution out.tif\n", s);
-    fprintf(stderr, "\t the resolution is in meters per pixel\n");
+	fprintf(stderr, "usage:\n\t"
+			"ls files | %s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out.tif\n", s);
+	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
 #include "pickopt.c"
@@ -271,37 +271,40 @@ void help(char *s)
 int main(int c, char *v[])
 {
 	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
+	char *bbminmax = pick_option(&c, &v, "bb", "");
 
 	// process input arguments
 	if (c != 3) {
-        help(*v);
+		help(*v);
 		return 1;
 	}
 	float resolution = atof(v[1]);
 	char *filename_out = v[2];
 
-    // initialize x, y extrema values
-    float xmin = INFINITY;
-    float xmax = -INFINITY;
-    float ymin = INFINITY;
-    float ymax = -INFINITY;
+	// initialize x, y extrema values
+	float xmin = INFINITY;
+	float xmax = -INFINITY;
+	float ymin = INFINITY;
+	float ymax = -INFINITY;
 
-    // process each filename from stdin to determine x, y extremas and store the
-    // filenames in a list of strings, to be able to open the files again
+	// process each filename from stdin to determine x, y extremas and store the
+	// filenames in a list of strings, to be able to open the files again
 	char fname[FILENAME_MAX], utm[3];
-    struct list *l = NULL;
+	struct list *l = NULL;
 	while (fgets(fname, FILENAME_MAX, stdin))
 	{
 		strtok(fname, "\n");
-        l = push(l, fname);
-        parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, fname);
+		l = push(l, fname);
+		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, fname);
 	}
-    //fprintf(stderr, "xmin: %f, xmax: %f, ymin: %f, ymax: %f\n", xmin, xmax,
-    //        ymin, ymax);
+	if (0 != strcmp(bbminmax, "") ) {
+		sscanf(bbminmax, "%f %f %f %f", &xmin, &xmax, &ymin, &ymax);
+	}
+	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin, xmax, ymin, ymax);
 
-    // compute output image dimensions
-    int w = 1 + (xmax - xmin) / resolution;
-    int h = 1 + (ymax - ymin) / resolution;
+	// compute output image dimensions
+	int w = 1 + (xmax - xmin) / resolution;
+	int h = 1 + (ymax - ymin) / resolution;
 
 	// allocate and initialize output images
 	struct images x;
@@ -324,7 +327,7 @@ int main(int c, char *v[])
 	{
 		// printf("FILENAME: \"%s\"\n", l->current);
 		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx);
-        l = l->next;
+		l = l->next;
 	}
 
 	// set unknown values to NAN
@@ -334,7 +337,7 @@ int main(int c, char *v[])
 
 	// save output image
 	iio_save_image_float(filename_out, x.avg, w, h);
-    set_geotif_header(filename_out, utm, xmin, ymax, resolution);
+	set_geotif_header(filename_out, utm, xmin, ymax, resolution);
 
 	// cleanup and exit
 	free(x.min);
