@@ -401,40 +401,7 @@ def cropImage(inp,out,col,row,tw,th,z):
         # before the zoom out the image may be that big
         tmp_crop = image_crop_TIFF(inp, col,row,tw,th)
         image_zoom_gdal(tmp_crop, z, out, tw,th)
-        
-
-
-def getMinMaxFromExtract(tile_dir,tilesFullInfo):
-    """
-    Get min/max intensities of an extract ROI from the ref image.
-    
-    Args:
-        tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
-        tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
-    """
-    
-    print "\nCrop ref image and compute min/max intensities..."
-
-    #Get info
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
-    img1 = images[0]['img']
-    
-    # output files
-    crop_ref = tile_dir + '/roi_ref.tif'
-    local_minmax = tile_dir + '/local_minmax.txt'
-
-    z = cfg['subsampling_factor']
-    cropImage(img1,crop_ref,col,row,tw,th,z)
-    
-    if os.path.isfile('%s/local_minmax.txt' % tile_dir) and cfg['skip_existing']:
-        print "Compute min/max intensities values on tile %s already done, skip" % (tile_dir)
-    else:
-        if os.path.isfile('%s/this_tile_is_masked.txt' % (tile_dir)):
-            print "tile %s already masked, skip" % (tile_dir)
-		
-        else:
-            image_getminmax(crop_ref,local_minmax)
-    
+            
     
     
 def crop_corresponding_areas(out_dir, images, roi, zoom=1):
