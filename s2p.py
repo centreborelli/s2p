@@ -247,12 +247,11 @@ def map_processing(config_file,steps):
                 nb_workers = min(nb_workers, cfg['max_nb_threads'])
             
             
-            results = []
-            show_progress.counter = 0
-            pool = multiprocessing.Pool(nb_workers)
-            
             if "preprocess_tiles" in steps:
                 print 'preprocess_tile...'
+                results = []
+                show_progress.counter = 0
+                pool = multiprocessing.Pool(nb_workers)
                 for tile_dir in tilesFullInfo:
                   
                     p = pool.apply_async(preprocess_tile,
