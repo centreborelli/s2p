@@ -77,8 +77,9 @@ def init_dirs_srtm_roi(config_file):
     """
     1) Loads configuration file
     2) Checks parameters
-    3) Selects a ROI, check it, make sure its coordinates are multiples of the zoom factor
-    4) Creates different directories : output, temp...
+    3) Selects the ROI
+    4) Checks the zoom factor
+    5) Creates different directories : output, temp...
     
     Args:
         - config_file : a json configuratio file
@@ -143,15 +144,6 @@ def init_dirs_srtm_roi(config_file):
     z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
     
-    
-    # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problems.
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-    cfg['roi']['x'] = x    
-    cfg['roi']['y'] = y
-    cfg['roi']['w'] = w
-    cfg['roi']['h'] = h
-    
 
     # create tmp dir and output directory for the experiment, and store a json
     # dump of the config.cfg dictionary there, download srtm files...
@@ -181,8 +173,9 @@ def init_dirs_srtm_roi(config_file):
 def init_tilesFullInfo(config_file):
     """
     Prepares the entire process : 
-    1) Computes optimal size for tiles, get the number of pairs
-    2) Builds tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]. USED EVERYWHERE IN THIS CODE.
+    1) Makes sure coordinates of the ROI are multiples of the zoom factor
+    2) Computes optimal size for tiles, get the number of pairs
+    3) Builds tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]. USED EVERYWHERE IN THIS CODE.
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
        * ov : size of the overlapping
@@ -198,12 +191,18 @@ def init_tilesFullInfo(config_file):
          - tilesFullInfo
     """          
 
-    #Get
+    # ensure that the coordinates of the ROI are multiples of the zoom factor,
+    # to avoid bad registration of tiles due to rounding problems.
     x = cfg['roi']['x']    
     y = cfg['roi']['y']
     w = cfg['roi']['w']
     h = cfg['roi']['h']    
     z = cfg['subsampling_factor']
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
+    cfg['roi']['x'] = x    
+    cfg['roi']['y'] = y
+    cfg['roi']['w'] = w
+    cfg['roi']['h'] = h
 
     # Automatically compute optimal size for tiles
     #tw, th : dimensions of the tiles
