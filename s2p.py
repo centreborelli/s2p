@@ -55,7 +55,7 @@ def initialize(config_file):
     """
     1) Loads configuration file
     2) Checks parameters
-    3) Selects a ROI, check it, make sure its coordinates are multiples of the zoom factor
+    3) Selects a ROI, checks the zoom factor; make sure coordinates of the ROI are multiples of the zoom factor
     4) Creates different directories : output, temp...
     5) Builds tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]. USED EVERYWHERE IN THIS CODE.
        * col/row : position of the tile (upper left corner)
@@ -88,7 +88,8 @@ def initialize(config_file):
 
 def preprocess_tile(tile_dir, tilesFullInfo):
     """
-    Computes pointing corrections, crop ref image into tile, and get min/max intensities values 
+    1) Computes pointing corrections, 
+    2) Crops ref image into tiles and get min/max intensities values for each one 
     """
     
     preprocess.pointing_correction(tile_dir, tilesFullInfo)
@@ -105,7 +106,8 @@ def preprocess_tile(tile_dir, tilesFullInfo):
 
 def global_values(tilesFullInfo):
     """
-    Computes the global pointing correction + Compute the min and max intensities from the tiles that will be processed.
+    1) Computes the global pointing correction 
+    2) Computes the min and max intensities from the tiles that will be processed (to later rescale colors to 8-bits ones, useful for utils such as cloudcompare)
     """
     globalvalues.global_pointing_correction(tilesFullInfo)
     globalvalues.global_minmax_intensities(tilesFullInfo)
@@ -122,7 +124,7 @@ def global_values(tilesFullInfo):
 
 def process_pair(tile_dir,pair_id,tilesFullInfo):
     """
-    For a given tile, processes pair #pair_id : rectification, process.disparity map, triangulation, 
+    For a given tile, processes pair #pair_id : rectification, disparity map, triangulation.
 
     Args:
          - tile_dir : directory of the tile 
