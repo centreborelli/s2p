@@ -70,23 +70,17 @@ def check_parameters(usr_cfg):
         if k not in cfg:
             print """parameter %s unknown: you should remove it from the input
             json file. It will be ignored.""" % k
-            
-
-
-def init_dirs_srtm_roi(config_file):
+        
+        
+def prepare_config(config_file):
     """
     1) Loads configuration file
     2) Checks parameters
     3) Selects the ROI
     4) Checks the zoom factor
-    5) Creates different directories : output, temp...
-    
-    Args:
-        - config_file : a json configuratio file
-    
     """
 	
-	# read the json configuration file
+    # read the json configuration file
     f = open(config_file)
     user_cfg = json.load(f)
     f.close()
@@ -143,7 +137,26 @@ def init_dirs_srtm_roi(config_file):
     # check the zoom factor
     z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
+       
+    # ensure that the coordinates of the ROI are multiples of the zoom factor,
+    # to avoid bad registration of tiles due to rounding problems.          
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
+    cfg['roi']['x'] = x    
+    cfg['roi']['y'] = y
+    cfg['roi']['w'] = w
+    cfg['roi']['h'] = h
+
+
+def init_dirs_srtm(config_file):
+    """
+    1) Creates different directories : output, temp...
+    2) Downloads srtm files
     
+    Args:
+        - config_file : a json configuratio file
+    """
+
+    prepare_config(config_file)
 
     # create tmp dir and output directory for the experiment, and store a json
     # dump of the config.cfg dictionary there, download srtm files...
@@ -191,18 +204,15 @@ def init_tilesFullInfo(config_file):
          - tilesFullInfo
     """          
 
-    # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problems.
+    prepare_config(config_file)
+
+    #Get ROI
     x = cfg['roi']['x']    
     y = cfg['roi']['y']
     w = cfg['roi']['w']
     h = cfg['roi']['h']    
     z = cfg['subsampling_factor']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-    cfg['roi']['x'] = x    
-    cfg['roi']['y'] = y
-    cfg['roi']['w'] = w
-    cfg['roi']['h'] = h
+
 
     # Automatically compute optimal size for tiles
     #tw, th : dimensions of the tiles
