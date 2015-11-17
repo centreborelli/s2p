@@ -44,8 +44,6 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
-    
-
 # ----------------------------------------------------------------------------------------------------
 # ---------------------------------------  preprocess_tiles ------------------------------------------
 # ----------------------------------------------------------------------------------------------------
@@ -53,7 +51,7 @@ def show_progress(a):
 def preprocess_tile(tile_dir, tilesFullInfo):
     """
     1) Computes pointing corrections, 
-    2) Crops ref image into tiles and get min/max intensities values for each one 
+    2) Crops ref image into tiles and get min/max intensity values for each one (useful for colorizing ply files with 8-bits colors)
     """
     
     preprocess.pointing_correction(tile_dir, tilesFullInfo)
@@ -71,7 +69,7 @@ def preprocess_tile(tile_dir, tilesFullInfo):
 def global_values(tilesFullInfo):
     """
     1) Computes the global pointing correction 
-    2) Computes the min and max intensities from the tiles that will be processed (to later rescale colors to 8-bits ones, useful for utils such as cloudcompare)
+    2) Computes the global min and max intensities from the tiles that will be processed 
     """
     globalvalues.global_pointing_correction(tilesFullInfo)
     globalvalues.global_minmax_intensities(tilesFullInfo)
