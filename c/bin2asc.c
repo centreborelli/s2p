@@ -6,8 +6,7 @@
 
 void print_help(char *bin_name)
 {
-    fprintf(stderr, "usage:\n\t %s input_binary.ply [--strip-normals] "
-            "[--strip-colors] [--strip-header] [-o output_ascii.ply]\n",
+    fprintf(stderr, "usage:\n\t %s input_binary.ply [-o output_ascii.ply]\n",
             bin_name);
 }
 
