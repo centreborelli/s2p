@@ -56,17 +56,20 @@ def initialize(config_file):
     1) Loads configuration file
     2) Checks parameters
     3) Selects a ROI, checks the zoom factor; make sure coordinates of the ROI are multiples of the zoom factor
-    4) Creates different directories : output, temp...
+    4) Creates different directories : output, temp... + downloads SRTM files
     5) Builds tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]. USED EVERYWHERE IN THIS CODE.
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
        * ov : size of the overlapping
        * i/j : relative position of the tile
        * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
+       * x/y/w/h : information about the ROI
        * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
+       * NbPairs : number of pairs
+       * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
     
     Args :
-         - config_file : a json configuratio file
+         - config_file : a json configuration file
     Returns :
          - tilesFullInfo 
     """
@@ -89,7 +92,7 @@ def initialize(config_file):
 def preprocess_tile(tile_dir, tilesFullInfo):
     """
     1) Computes pointing corrections, 
-    2) Crops ref image into tiles and get min/max intensities values for each one 
+    2) Crops ref image into tiles and get min/max intensity values for each one (useful for colorizing ply files with 8-bits colors)
     """
     
     preprocess.pointing_correction(tile_dir, tilesFullInfo)
@@ -107,7 +110,7 @@ def preprocess_tile(tile_dir, tilesFullInfo):
 def global_values(tilesFullInfo):
     """
     1) Computes the global pointing correction 
-    2) Computes the min and max intensities from the tiles that will be processed (to later rescale colors to 8-bits ones, useful for utils such as cloudcompare)
+    2) Computes the global min and max intensities from the tiles that will be processed 
     """
     globalvalues.global_pointing_correction(tilesFullInfo)
     globalvalues.global_minmax_intensities(tilesFullInfo)

@@ -181,7 +181,10 @@ def init_tilesFullInfo(config_file):
        * ov : size of the overlapping
        * i/j : relative position of the tile
        * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
+       * x/y/w/h : information about the ROI
        * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
+       * NbPairs : number of pairs
+       * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
        
     Args:
          - config_file : a json configuratio file
