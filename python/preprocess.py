@@ -97,7 +97,7 @@ def pointing_correction(tile_dir, tilesFullInfo):
         
             # check if the ROI is completely masked (water, or outside the image domain)
             H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
-            if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk,cld_msk):
+            if masking.cloud_water_image_domain(cwid_msk, tw, th, H, rpc1, roi_msk,cld_msk):
                 print "Tile masked by water or outside definition domain, skip"
                 open("%s/this_tile_is_masked.txt" % paired_tile_dir, 'a').close()
                 sys.stdout = sys.__stdout__
