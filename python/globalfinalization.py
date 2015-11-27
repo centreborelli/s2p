@@ -87,7 +87,7 @@ def write_vrt_files(tilesFullInfo):
 
 
 
-def write_dsm(tilesFullInfo):
+def write_dsm(tilesFullInfo,n=5):
     """
     Writes the DSM, from the ply files given by each tile.
 
@@ -106,5 +106,10 @@ def write_dsm(tilesFullInfo):
         cloud_link_name = clouds_dir + '/cloud_%d_%d_row_%d_col_%d.ply' % (tw, th, row, col)
         common.run('ln %s %s' % (cloud,cloud_link_name) )
         
-    out_dsm = '%s/dsm.tif' % (cfg['out_dir'])
-    common.run("ls %s | plyflatten %f %s" % (clouds_dir+'/cloud*',cfg['dsm_resolution'], out_dsm))
+    out_dsm_dir = '%s/dsm' % (cfg['out_dir'])
+    if (os.path.exists(out_dsm_dir)):
+        shutil.rmtree(out_dsm_dir)
+    os.mkdir(out_dsm_dir) 
+     
+    common.run("ls %s | plyflatten %f %i %s" % (clouds_dir+'/cloud*',cfg['dsm_resolution'], n, out_dsm_dir))
+    common.run("gdalbuildvrt %s %s" %(cfg['out_dir']+'/dsm.vrt',out_dsm_dir+'/dsm*'))
