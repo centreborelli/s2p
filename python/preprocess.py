@@ -108,15 +108,14 @@ def pointing_correction(tile_dir, tilesFullInfo):
             
                 # correct pointing error
                 # A is the correction matrix and m is the list of sift matches
-                A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x,
-                                                                y, w, h)
+                A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, col,
+                                                                row, tw, th)
                 if A is not None:
                     np.savetxt(pointing, A)
                 if m is not None:
                     np.savetxt(sift_matches, m)
                     np.savetxt(center, np.mean(m[:, 2:4], 0))
-                    visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, x, y,
-                                                            w, h, sift_matches_plot)
+                    visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, col, row, tw, th, sift_matches_plot)
        
         # close logs
         common.garbage_cleanup()
