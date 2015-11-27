@@ -143,8 +143,6 @@ static int rescale_float_to_int(double x, double min, double max, int w)
 }
 
 struct images {
-	float *min;
-	float *max;
 	float *cnt;
 	float *avg;
 	int w, h;
@@ -154,8 +152,6 @@ struct images {
 static void add_height_to_images(struct images *x, int i, int j, float v)
 {
 	uint64_t k = (uint64_t) x->w * j + i;
-	x->min[k] = fmin(x->min[k], v);
-	x->max[k] = fmax(x->max[k], v);
 	x->avg[k] = (v + x->cnt[k] * x->avg[k]) / (1 + x->cnt[k]);
 	x->cnt[k] += 1;
 }
@@ -218,7 +214,8 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 // open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
 		float xmin, float xmax, float ymin, float ymax,
-		char utm_zone[3], char *fname, int col_idx)
+		int inf, int sup, float *newxmin, int w, int h,
+        char utm_zone[3], char *fname, int col_idx)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -241,17 +238,23 @@ static void add_ply_points_to_images(struct images *x,
 	double data[n];
 	while ( n == get_record(f, isbin, t, n, data) ) {
 
-		int i = rescale_float_to_int(data[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(-data[1], -ymax, -ymin, x->h);
-		if (col_idx == 2) {
-			add_height_to_images(x, i, j, data[2]);
-			assert(isfinite(data[2]));
-		}
-		else
-		{
-			unsigned int rgb = data[col_idx];
-			add_height_to_images(x, i, j, rgb);
-		}
+		int i = rescale_float_to_int(data[0], xmin, xmax, w);
+        int j = rescale_float_to_int(-data[1], -ymax, -ymin, h);
+        if (  (i>=inf) && (i<=sup) )
+            {
+               if (data[0] < *newxmin)
+                   *newxmin=data[0];
+            
+               if (col_idx == 2) {
+                add_height_to_images(x, i-inf, j, data[2]);
+                assert(isfinite(data[2]));
+                }
+               else
+                {
+                    unsigned int rgb = data[col_idx];
+                    add_height_to_images(x, i-inf, j, rgb);
+                }
+            }
 
 	}
 
@@ -262,11 +265,49 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"ls files | %s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out.tif\n", s);
+			"ls files | %s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution n out_dir\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
 #include "pickopt.c"
+
+
+int * subdiv(int s, int e, int n)
+{
+ 
+    float coef=1/( (float) (n-1));
+
+    int * res = malloc(n*sizeof(int));
+    
+    for(int i=0;i<n;i++)
+    {
+        res[i]=(int) (i*coef*e+s+0.5);
+    }
+        
+    return res;
+}
+
+typedef struct  {
+	int inf, sup;
+} range;
+
+
+range *computeRanges(int *subdiv,int n)
+{
+    range * res = malloc(n*sizeof(range));
+    for(int i=0; i<n; i++)
+        {res[i].inf=0; res[i].sup=0;}
+
+    res[0].inf=subdiv[0]; res[0].sup=subdiv[1];
+    for(int i=1; i<n; i++)
+    {
+       res[i].inf=res[i-1].sup+1;
+       res[i].sup=subdiv[i+1];
+    }
+    
+    return res;
+}
+
 
 int main(int c, char *v[])
 {
@@ -274,12 +315,13 @@ int main(int c, char *v[])
 	char *bbminmax = pick_option(&c, &v, "bb", "");
 
 	// process input arguments
-	if (c != 3) {
+	if (c != 4) {
 		help(*v);
 		return 1;
 	}
 	float resolution = atof(v[1]);
-	char *filename_out = v[2];
+	int n = atof(v[2]);
+	char *out_dir = v[3];
 
 	// initialize x, y extrema values
 	float xmin = INFINITY;
@@ -305,44 +347,55 @@ int main(int c, char *v[])
 	// compute output image dimensions
 	int w = 1 + (xmax - xmin) / resolution;
 	int h = 1 + (ymax - ymin) / resolution;
+    
+    int *res_subdiv=subdiv(0, w-1, n+1);
+    range *res_ranges=computeRanges(res_subdiv,n);
+    
+    struct list *begin=l;
+    for(int k=0;k<n;k++)
+    {
+        // allocate and initialize output images
+        struct images x;
+        x.w = res_ranges[k].sup-res_ranges[k].inf+1;
+        x.h = h;
+        x.cnt = malloc(x.w*x.h*sizeof(float));
+        x.avg = malloc(x.w*x.h*sizeof(float));
+        for (uint64_t i = 0; i < (uint64_t) x.w*x.h; i++)
+        {
+            x.cnt[i] = 0;
+            x.avg[i] = 0;
+        }
+        
+        float newxmin=INFINITY;
+        char looputm[3];
+        strcpy(looputm,utm);
+        
+        // process each filename to accumulate points in the dem
+        l=begin;
+        while (l != NULL)
+        {
+            // printf("FILENAME: \"%s\"\n", l->current);
+            add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, res_ranges[k].inf, res_ranges[k].sup, &newxmin, w, h, looputm, l->current, col_idx);
+            l = l->next;
+        }
 
-	// allocate and initialize output images
-	struct images x;
-	x.w = w;
-	x.h = h;
-	x.min = xmalloc(w*h*sizeof(float));
-	x.max = xmalloc(w*h*sizeof(float));
-	x.cnt = xmalloc(w*h*sizeof(float));
-	x.avg = xmalloc(w*h*sizeof(float));
-	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-	{
-		x.min[i] = INFINITY;
-		x.max[i] = -INFINITY;
-		x.cnt[i] = 0;
-		x.avg[i] = 0;
-	}
 
-	// process each filename to accumulate points in the dem
-	while (l != NULL)
-	{
-		// printf("FILENAME: \"%s\"\n", l->current);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx);
-		l = l->next;
-	}
+        // set unknown values to NAN
+        for (uint64_t i = 0; i < (uint64_t) x.w*x.h; i++)
+            if (!x.cnt[i])
+                x.avg[i] = NAN;
 
-	// set unknown values to NAN
-	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-		if (!x.cnt[i])
-			x.avg[i] = NAN;
+        // save output image
+        char out[100];
+        sprintf(out, "%s/dsm_%d.tif",out_dir, k);
+        iio_save_image_float(out, x.avg, x.w, x.h);
+        set_geotif_header(out, looputm, newxmin, ymax, resolution);
 
-	// save output image
-	iio_save_image_float(filename_out, x.avg, w, h);
-	set_geotif_header(filename_out, utm, xmin, ymax, resolution);
-
-	// cleanup and exit
-	free(x.min);
-	free(x.max);
-	free(x.cnt);
-	free(x.avg);
+        // cleanup and exit
+        free(x.cnt);
+        free(x.avg);
+    }
+    free(res_subdiv);
+    free(res_ranges);
 	return 0;
 }
