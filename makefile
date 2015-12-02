@@ -1,5 +1,5 @@
 #CC  = gcc
-CC99 = $(CC) -std=c99
+C99 = $(CC) -std=c99
 CFLAGS = -g -O3 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
 #CXX = g++
 CPPFLAGS = -g -O3
