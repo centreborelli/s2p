@@ -118,7 +118,7 @@ def process_pair(tile_dir,pair_id,tilesFullInfo):
             print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
         else:
             print 'rectification : process tile %d %d (pair %d)...' % (col,row,pair_id)
-            process.rectify(paired_tile_dir, A_global, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+            process.rectify(paired_tile_dir, np.loadtxt(A_global), img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
         
         # process.disparity
         if os.path.isfile('%s/rectified_disp.tif' % paired_tile_dir) and cfg['skip_existing']:
