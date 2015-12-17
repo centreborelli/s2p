@@ -106,7 +106,7 @@ tvl1:
 
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC)) plambda_without_fopenmp
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
-SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop morsi\
+SRCIIO = downsa backflow synflow imprintf iion qauto getminmax rescaleintensities qeasy crop morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective tiffu
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
