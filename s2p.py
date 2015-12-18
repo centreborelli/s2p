@@ -187,12 +187,6 @@ def global_finalization(tilesFullInfo):
     globalfinalization.write_vrt_files(tilesFullInfo)
     globalfinalization.write_dsm(tilesFullInfo)
 
-    if not cfg['full_img']:
-        common.crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
-
-    for i in range(len(cfg['images'])):
-        from shutil import copy2
-        copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
 
 # ----------------------------------------------------------------------------------------------------
 # --------------------------------------- global finalization (end) ----------------------------------
