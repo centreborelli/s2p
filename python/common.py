@@ -72,6 +72,8 @@ def run(cmd, env=os.environ):
     Both stdout and stderr of the shell in which the command is run are those
     of the parent process.
     """
+    
+    print cmd
     #print("\nRUN: %s\n"%cmd)
     try:
         subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
