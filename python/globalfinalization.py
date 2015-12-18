@@ -104,7 +104,8 @@ def write_dsm(tilesFullInfo,n=5):
         col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
         cloud = tile_dir + '/cloud.ply'
         cloud_link_name = clouds_dir + '/cloud_%d_%d_row_%d_col_%d.ply' % (tw, th, row, col)
-        common.run('ln -s %s %s' % (cloud,cloud_link_name) )
+        if (os.path.exists(cloud)):
+            common.run('ln -s %s %s' % (cloud,cloud_link_name) )
         
     out_dsm_dir = '%s/dsm' % (cfg['out_dir'])
     if (os.path.exists(out_dsm_dir)):
