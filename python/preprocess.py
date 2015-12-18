@@ -115,7 +115,8 @@ def pointing_correction(tile_dir, tilesFullInfo):
                 if m is not None:
                     np.savetxt(sift_matches, m)
                     np.savetxt(center, np.mean(m[:, 2:4], 0))
-                    visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, col, row, tw, th, sift_matches_plot)
+                    if cfg['debug']:
+                        visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2, m, col, row, tw, th, sift_matches_plot)
        
         # close logs
         common.garbage_cleanup()
