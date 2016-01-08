@@ -1,16 +1,16 @@
 {
   "out_dir" : "test",
   "images" : [
-    { "img" : "data/test_data_pleiades_reunion/img_01.tif",
-      "rpc" : "data/test_data_pleiades_reunion/rpc_01.xml" },
-    { "img" : "data/test_data_pleiades_reunion/img_02.tif",
-      "rpc" : "data/test_data_pleiades_reunion/rpc_02.xml" }
+    { "img" : "data/test_data_pleiades_iceland/img_01.tif",
+      "rpc" : "data/test_data_pleiades_iceland/rpc_01.xml" },
+    { "img" : "data/test_data_pleiades_iceland/img_02.tif",
+      "rpc" : "data/test_data_pleiades_iceland/rpc_02.xml" }
     ],
   "roi" : {
-      "x" : 150,
-      "y" : 150,
-      "w" : 700,
-      "h" : 700
+      "x" : 19,
+      "y" : 23,
+      "w" : 500,
+      "h" : 500
   },
   "full_img" : false,
   "matching_algorithm" : "mgm",
