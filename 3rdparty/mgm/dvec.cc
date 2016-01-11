@@ -8,7 +8,8 @@
 
 
 //http://stackoverflow.com/questions/5958572/how-can-i-avoid-stdvector-to-initialize-all-its-elements
-
+// THIS OLD FUNCTION WAS A HACK 
+/*
 template<typename T>
 inline static T create_uninitialized(size_t size, size_t capacity) {
     T v;
@@ -36,6 +37,7 @@ inline static T create_uninitialized(size_t size, size_t capacity) {
 #endif
     return v;
 }
+*/
 
 
 
