@@ -1,15 +1,17 @@
-#CC  = gcc
 C99 = $(CC) -std=c99
-CFLAGS = -g -O3 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
-#CXX = g++
+CFLAGS = -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN
 CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
 IIOLIBS = $(TIFDIR)/lib/libtiff.a -lz -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
+ifeq ($(CC), gcc)
+	CFLAGS += -fopenmp
+endif
+
 OS := $(shell uname -s)
-ifeq ($(OS),Linux)
+ifeq ($(OS), Linux)
 	LDLIBS += -lrt
 endif
 
@@ -129,6 +131,9 @@ $(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
 	$(C99) $(CFLAGS) -c $< -o $@
 
+$(SRCDIR)/mt/mt.o: c/mt/mt.c c/mt/mt.h
+	$(C99) $(CFLAGS) -c $< -o $@
+
 $(BINDIR)/bin2asc: c/bin2asc.c
 	$(C99) $(CFLAGS) $^ -o $@
 
@@ -136,8 +141,8 @@ $(BINDIR)/siftu: c/siftu.c c/siftie.c
 	$(C99) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/cmphomod.c\
-	c/ransac_cases.c c/parsenumbers.c
-	$(C99) $(CFLAGS) $< -lm -o $@
+	c/ransac_cases.c c/parsenumbers.c c/mt/mt.h c/mt/mt.o
+	$(C99) $(CFLAGS) $< $(SRCDIR)/mt/mt.o -lm -o $@
 
 $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
 	$(C99) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -o $@
