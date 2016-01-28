@@ -185,7 +185,6 @@ def init_tilesFullInfo(config_file):
        
     Args:
          - config_file : a json configuratio file
-         - write : if False, initialize will just create the output dir and nothing else. 
          
     Returns:
          - tilesFullInfo
