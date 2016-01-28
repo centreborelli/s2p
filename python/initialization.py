@@ -5,7 +5,6 @@
 
 
 import numpy as np
-from config import cfg
 import sys
 import os
 import json
@@ -14,6 +13,7 @@ import json
 from python import common
 from python import srtm
 from python import tee
+from config import cfg
 
 
 
@@ -24,9 +24,6 @@ def check_parameters(usr_cfg):
 
     Args:
         usr_cfg: python dict read from the json input file
-
-    Returns:
-        nothing
     """
 
     # verify that i/o files are defined
@@ -269,9 +266,7 @@ def init_tilesFullInfo(config_file):
                 tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,pos,x,y,w,h,cfg['images'],NbPairs,cfg['images'][0]['cld'],cfg['images'][0]['roi']]
 
 
-    if len(tilesFullInfo) == 1 : #Only one tile : put position 'Single'
-        tile_dir,info=tilesFullInfo.items()[0]
-        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=info
-        tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,'Single',x,y,w,h,images,NbPairs,cld_msk,roi_msk]
+    if len(tilesFullInfo) == 1 : # set position to 'Single'
+        tilesFullInfo[tilesFullInfo.keys()[0]][7] = 'Single'
 
     return tilesFullInfo
