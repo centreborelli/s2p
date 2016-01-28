@@ -205,8 +205,8 @@ def init_tilesFullInfo(config_file):
     cfg['roi']['h'] = h
 
     # Automatically compute optimal size for tiles
-    #tw, th : dimensions of the tiles
-    #ov : width of overlapping bands between tiles
+    # tw, th : dimensions of the tiles
+    # ov : width of overlapping bands between tiles
     ov = z * 100
     if w <= z * cfg['tile_size']:
         tw = w
@@ -226,17 +226,15 @@ def init_tilesFullInfo(config_file):
     NbPairs = len(cfg['images'])-1
     print 'total number of pairs: %d ' % NbPairs
 
-
-    # Build tiles dicos
-    tilesFullInfo={}
+    # build tiles dicos
+    tilesFullInfo = {}
     
     rangey = np.arange(y, y + h - ov, th - ov)
     rangex = np.arange(x, x + w - ov, tw - ov)
-    rowmin,rowmax = rangey[0],rangey[-1]
-    colmin,colmax = rangex[0],rangex[-1]
-    
+    rowmin, rowmax = rangey[0], rangey[-1]
+    colmin, colmax = rangex[0], rangex[-1]
 
-    for pair_id in range(1,len(cfg['images'])) :
+    for pair_id in range(1, len(cfg['images'])) :
         for i, row in enumerate(rangey):
             for j, col in enumerate(rangex):
                 # ensure that the coordinates of the ROI are multiples of the zoom factor
@@ -263,8 +261,12 @@ def init_tilesFullInfo(config_file):
                 else:
                     pos='M'
                 
-                tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,pos,x,y,w,h,cfg['images'],NbPairs,cfg['images'][0]['cld'],cfg['images'][0]['roi']]
-
+                tilesFullInfo[tile_dir] = [col, row, tw, th,
+                                           ov, i, j, pos,
+                                           x, y, w, h,
+                                           cfg['images'], NbPairs,
+                                           cfg['images'][0]['cld'],
+                                           cfg['images'][0]['roi']]
 
     if len(tilesFullInfo) == 1 : # set position to 'Single'
         tilesFullInfo[tilesFullInfo.keys()[0]][7] = 'Single'
