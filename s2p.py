@@ -44,47 +44,6 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
-
-
-
-# ----------------------------------------------------------------------------------------------------
-# ------------------------------------------  initialize ---------------------------------------------
-# ----------------------------------------------------------------------------------------------------
-
-def initialize(config_file):
-    """
-    1) Loads configuration file
-    2) Checks parameters
-    3) Selects a ROI, checks the zoom factor; make sure coordinates of the ROI are multiples of the zoom factor
-    4) Creates different directories : output, temp... + downloads SRTM files
-    5) Builds tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]. USED EVERYWHERE IN THIS CODE.
-       * col/row : position of the tile (upper left corner)
-       * tw/th : size of the tile
-       * ov : size of the overlapping
-       * i/j : relative position of the tile
-       * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
-       * x/y/w/h : information about the ROI
-       * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
-       * NbPairs : number of pairs
-       * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
-    
-    Args :
-         - config_file : a json configuration file
-    Returns :
-         - tilesFullInfo 
-    """
-
-
-    initialization.init_dirs_srtm_roi(config_file)
-    tilesFullInfo = initialization.init_tilesFullInfo(config_file)
-   
-    return tilesFullInfo
-
-# -----------------------------------------------------------------------------------------------------
-# ---------------------------------------  initialize (end) -------------------------------------------
-# -----------------------------------------------------------------------------------------------------
-    
-
 # ----------------------------------------------------------------------------------------------------
 # ---------------------------------------  preprocess_tiles ------------------------------------------
 # ----------------------------------------------------------------------------------------------------
@@ -250,18 +209,18 @@ def map_processing(config_file):
     Args: 
          - json config file
     """
-    
     try:
     
-        tilesFullInfo = initialize(config_file)
+        initialization.init_dirs_srtm_roi(config_file)
+        tilesFullInfo = initialization.init_tilesFullInfo(config_file)
     
-        if cfg['debug']: #monoprocessing
+        if cfg['debug']: # monoprocessing
     
             print 'preprocess_tile...'
             for tile_dir in tilesFullInfo:
                 preprocess_tile(tile_dir, tilesFullInfo)
+
             print 'global values...'
-            
             global_values(tilesFullInfo)
             
             print 'process_tile...'
@@ -273,9 +232,9 @@ def map_processing(config_file):
             
         else: # multiprocessing
         
-            # create pool with less workers than available cores
             nb_workers = multiprocessing.cpu_count()
             if cfg['max_nb_threads']:
+                # use less workers than available cores
                 nb_workers = min(nb_workers, cfg['max_nb_threads'])
             
             print 'preprocess_tile...'
@@ -284,8 +243,9 @@ def map_processing(config_file):
             pool = multiprocessing.Pool(nb_workers)
             for tile_dir in tilesFullInfo:
     
-                p = pool.apply_async(preprocess_tile,
-                                             args=(tile_dir, tilesFullInfo), callback=show_progress)
+                p = pool.apply_async(preprocess_tile, args=(tile_dir,
+                                                            tilesFullInfo),
+                                     callback=show_progress)
                 results.append(p)
                 
             for r in results:
@@ -303,8 +263,9 @@ def map_processing(config_file):
             pool = multiprocessing.Pool(nb_workers)     
             for tile_dir in tilesFullInfo:
                 
-                p = pool.apply_async(process_tile,
-                                             args=(tile_dir, tilesFullInfo), callback=show_progress)
+                p = pool.apply_async(process_tile, args=(tile_dir,
+                                                         tilesFullInfo),
+                                     callback=show_progress)
                 results.append(p)
                 
             for r in results:
