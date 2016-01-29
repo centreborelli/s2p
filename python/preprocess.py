@@ -16,19 +16,20 @@ from python import visualisation
 
 
 
-def getMinMaxFromExtract(tile_dir,tilesFullInfo):
+def getMinMaxFromExtract(tile_info):
     """
     Gets min/max intensities of an extract ROI from the ref image.
     
     Args:
-        tile_dir : a key for the dictionnary tilesFullInfo; refers to a particular tile
-        tilesFullInfo : a dictionnary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
+        tile_info : a list that provides all you need to process a tile: col,
+            row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk,
+            roi_msk
     """
     
     print "\nCrop ref image and compute min/max intensities..."
 
     #Get info
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk, tile_dir = tile_info
     img1 = images[0]['img']
     
     # output files
@@ -49,17 +50,17 @@ def getMinMaxFromExtract(tile_dir,tilesFullInfo):
 
 
 
-def pointing_correction(tile_dir, tilesFullInfo):
+def pointing_correction(tile_info):
     """                        
     Computes pointing corrections
     
     Args: 
-         - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]         
+        tile_info : a list that provides all you need to process a tile: col,
+            row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk,
+            roi_msk
     """     
-                                                          
-    
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
-            
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk,
+    roi_msk, tile_dir = tile_info
 
     for i in range(0,NbPairs):
         pair_id = i+1

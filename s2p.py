@@ -48,14 +48,14 @@ def show_progress(a):
 # ---------------------------------------  preprocess_tiles ------------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
-def preprocess_tile(tile_dir, tilesFullInfo):
+def preprocess_tile(tile_info):
     """
     1) Computes pointing corrections, 
     2) Crops ref image into tiles and get min/max intensity values for each one (useful for colorizing ply files with 8-bits colors)
     """
     
-    preprocess.pointing_correction(tile_dir, tilesFullInfo)
-    preprocess.getMinMaxFromExtract(tile_dir,tilesFullInfo)
+    preprocess.pointing_correction(tile_info)
+    preprocess.getMinMaxFromExtract(tile_info)
         
 # ----------------------------------------------------------------------------------------------------
 # ------------------------------------------  preprocess_tiles (end) ---------------------------------
@@ -211,14 +211,15 @@ def map_processing(config_file):
     """
     try:
     
+        # initialization
         initialization.init_dirs_srtm_roi(config_file)
         tilesFullInfo = initialization.init_tilesFullInfo(config_file)
     
         if cfg['debug']: # monoprocessing
     
             print 'preprocess_tile...'
-            for tile_dir in tilesFullInfo:
-                preprocess_tile(tile_dir, tilesFullInfo)
+            for tile_info in tilesFullInfo:
+                preprocess_tile(tile_info)
 
             print 'global values...'
             global_values(tilesFullInfo)
@@ -241,10 +242,8 @@ def map_processing(config_file):
             results = []
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
-            for tile_dir in tilesFullInfo:
-    
-                p = pool.apply_async(preprocess_tile, args=(tile_dir,
-                                                            tilesFullInfo),
+            for tile_info in tilesFullInfo:
+                p = pool.apply_async(preprocess_tile, args=(tile_info,
                                      callback=show_progress)
                 results.append(p)
                 
@@ -262,7 +261,6 @@ def map_processing(config_file):
             show_progress.counter = 0   
             pool = multiprocessing.Pool(nb_workers)     
             for tile_dir in tilesFullInfo:
-                
                 p = pool.apply_async(process_tile, args=(tile_dir,
                                                          tilesFullInfo),
                                      callback=show_progress)
