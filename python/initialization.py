@@ -265,7 +265,8 @@ def init_tilesFullInfo(config_file):
                                            x, y, w, h,
                                            cfg['images'], NbPairs,
                                            cfg['images'][0]['cld'],
-                                           cfg['images'][0]['roi']]
+                                           cfg['images'][0]['roi'],
+                                           tile_dir]
 
     if len(tilesFullInfo) == 1 : # set position to 'Single'
         tilesFullInfo[tilesFullInfo.keys()[0]][7] = 'Single'

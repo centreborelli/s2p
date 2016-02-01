@@ -19,7 +19,7 @@ def global_pointing_correction(tilesFullInfo):
     # Build pairedTilesPerPairId : a dictionary that provides the list of all the tile for a given pair_id (key)
     pairedTilesPerPairId = {}
     for tile_dir in tilesFullInfo:
-        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
+        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = tilesFullInfo[tile_dir]
 
         for i in range(0,NbPairs):
             pair_id = i+1

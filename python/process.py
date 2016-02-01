@@ -40,7 +40,7 @@ def color_crop_ref(tile_dir,tilesFullInfo,clr=None):
     """
 
     # Get info
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk, tile_dir = tilesFullInfo[tile_dir]
     z = cfg['subsampling_factor']
 
     # Paths
@@ -101,7 +101,7 @@ def generate_cloud(tile_dir,tilesFullInfo, do_offset=False):
     print "\nComputing point cloud..."
     
     # Get info
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk, tile_dir = tilesFullInfo[tile_dir]
     img1,rpc1 = images[0]['img'],images[0]['rpc']
     
     #height_map = tile_dir + '/local_merged_height_map.tif'
@@ -193,7 +193,7 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
 
     # Get all info
     fullInfo=tilesFullInfo[tile_dir]
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=fullInfo
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk, tile_dir = fullInfo
     img1,rpc1 = images[0]['img'],images[0]['rpc']
 
 

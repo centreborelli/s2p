@@ -96,7 +96,7 @@ def process_pair(tile_dir,pair_id,tilesFullInfo):
 
     #Get all info
     fullInfo=tilesFullInfo[tile_dir]
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=fullInfo
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = fullInfo
     img1,rpc1 = images[0]['img'],images[0]['rpc']
 
     paired_tile_dir=tile_dir + 'pair_%d' % pair_id
@@ -150,7 +150,7 @@ def process_tile(tile_dir,tilesFullInfo):
     """
     
     # Process each pair : get a height map
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = tilesFullInfo[tile_dir]
     height_maps = []
     for i in range(0,NbPairs):
         pair_id = i+1
@@ -218,7 +218,7 @@ def map_processing(config_file):
         if cfg['debug']: # monoprocessing
     
             print 'preprocess_tile...'
-            for tile_info in tilesFullInfo:
+            for tile_info in tilesFullInfo.values():
                 preprocess_tile(tile_info)
 
             print 'global values...'
@@ -242,8 +242,9 @@ def map_processing(config_file):
             results = []
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
-            for tile_info in tilesFullInfo:
-                p = pool.apply_async(preprocess_tile, args=(tile_info,
+            for tile_info in tilesFullInfo.values():
+                print tile_info
+                p = pool.apply_async(preprocess_tile, args=tile_info,
                                      callback=show_progress)
                 results.append(p)
                 

@@ -59,8 +59,7 @@ def pointing_correction(tile_info):
             row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk,
             roi_msk
     """     
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk,
-    roi_msk, tile_dir = tile_info
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tile_info
 
     for i in range(0,NbPairs):
         pair_id = i+1
