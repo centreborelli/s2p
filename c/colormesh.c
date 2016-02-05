@@ -265,7 +265,7 @@ int main(int c, char *v[])
         if (!isnan(height[pix])) {
 
             // if the buffer is full, write to file and reset
-            int i = 1;
+            int i = 0;
             #ifdef _OPENMP
             i = omp_get_thread_num();
             #endif
