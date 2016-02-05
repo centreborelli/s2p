@@ -10,30 +10,29 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# F
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import multiprocessing
 import sys
-import numpy as np
-import os.path
 import time
+import os.path
+import numpy as np
+import multiprocessing
 
-from python import common
 from python.config import cfg
-
-
+from python import common
 from python import initialization
 from python import preprocess
 from python import globalvalues
 from python import process
 from python import globalfinalization
+
 
 
 def show_progress(a):
@@ -44,27 +43,14 @@ def show_progress(a):
         print "Processed 1 tile"
 
 
-# ----------------------------------------------------------------------------------------------------
-# ---------------------------------------  preprocess_tiles ------------------------------------------
-# ----------------------------------------------------------------------------------------------------
-
 def preprocess_tile(tile_info):
     """
     1) Computes pointing corrections, 
     2) Crops ref image into tiles and get min/max intensity values for each one (useful for colorizing ply files with 8-bits colors)
     """
-    
     preprocess.pointing_correction(tile_info)
     preprocess.getMinMaxFromExtract(tile_info)
         
-# ----------------------------------------------------------------------------------------------------
-# ------------------------------------------  preprocess_tiles (end) ---------------------------------
-# ----------------------------------------------------------------------------------------------------
-
-
-# ----------------------------------------------------------------------------------------------------
-# --------------------------------------------  global_values  ---------------------------------------
-# ----------------------------------------------------------------------------------------------------
 
 def global_values(tilesFullInfo):
     """
@@ -74,15 +60,6 @@ def global_values(tilesFullInfo):
     globalvalues.global_pointing_correction(tilesFullInfo)
     globalvalues.global_minmax_intensities(tilesFullInfo)
     
-# ----------------------------------------------------------------------------------------------------
-# ---------------------------------------------  global_values --------------------------------------
-# ----------------------------------------------------------------------------------------------------
-
-
-
-# ----------------------------------------------------------------------------------------------------
-# ---------------------------------------------- process_tiles ---------------------------------------
-# ----------------------------------------------------------------------------------------------------
 
 def process_pair(tile_dir,pair_id,tilesFullInfo):
     """
@@ -93,7 +70,6 @@ def process_pair(tile_dir,pair_id,tilesFullInfo):
          - pair_id : id of the pair to be processed
          - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
     """
-
     #Get all info
     fullInfo=tilesFullInfo[tile_dir]
     col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = fullInfo
@@ -136,7 +112,6 @@ def process_pair(tile_dir,pair_id,tilesFullInfo):
 
         return '%s/height_map.tif' % paired_tile_dir
         
-        
 
 def process_tile(tile_dir,tilesFullInfo):
     """
@@ -148,7 +123,6 @@ def process_tile(tile_dir,tilesFullInfo):
         - tile_dir : directory of the tile to be processed
         - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
     """
-    
     # Process each pair : get a height map
     col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = tilesFullInfo[tile_dir]
     height_maps = []
@@ -162,15 +136,6 @@ def process_tile(tile_dir,tilesFullInfo):
     ## Finalization ##
     process.finalize_tile(tile_dir, height_maps, tilesFullInfo)
 
-# ----------------------------------------------------------------------------------------------------
-# ------------------------------------------- process_tiles ------------------------------------------
-# ----------------------------------------------------------------------------------------------------
-			 
-        
-
-# ----------------------------------------------------------------------------------------------------
-# ----------------------------------------- global finalization --------------------------------------
-# ----------------------------------------------------------------------------------------------------   
 
 def global_finalization(tilesFullInfo):
     """
@@ -183,7 +148,6 @@ def global_finalization(tilesFullInfo):
          - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
 
     """
-
     globalfinalization.write_vrt_files(tilesFullInfo)
     globalfinalization.write_dsm(tilesFullInfo)
 
@@ -194,14 +158,7 @@ def global_finalization(tilesFullInfo):
         from shutil import copy2
         copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
 
-# ----------------------------------------------------------------------------------------------------
-# --------------------------------------- global finalization (end) ----------------------------------
-# ----------------------------------------------------------------------------------------------------
 
-
-# ----------------------------------------------------------------------------------------------------
-# ------------------------------------------- map_processing -----------------------------------------
-# ----------------------------------------------------------------------------------------------------
 def map_processing(config_file):
     """
     Initialization + preprocessing + global_values + processing + global finalization
@@ -283,10 +240,6 @@ def map_processing(config_file):
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
         
-# ----------------------------------------------------------------------------------------------------
-# ------------------------------------- map_processing (end) -----------------------------------------
-# ----------------------------------------------------------------------------------------------------
-
 
 def main(config_file):
     """
@@ -295,23 +248,19 @@ def main(config_file):
     Args:
         config_file: path to the config json file
     """
-
-
-    # measure total runtime
     t0 = time.time()
 
-
-    ###########################
+    # run the pipeline
     map_processing(config_file)
-    ###########################                
-        
 
-    # runtime
+    # measure total runtime
     t = int(time.time() - t0)
     h = t/3600
     m = (t/60) % 60
     s = t % 60
     print "Total runtime: %dh:%dm:%ds" % (h, m, s)
+
+    # cleanup
     common.garbage_cleanup()
 
 
