@@ -26,7 +26,7 @@ def write_vrt_files(tilesFullInfo):
     #-------------- tileComposerInfo -------------- 
     # tileComposerInfo : a simple list that gives the size of the tiles (after having removed the overlapping areas), 
     # regarding their positions inside the ROI --> ULw , ULh, Lw , Lh, Uw , Uh, Mw , Mh
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo.values()[0]
+    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk, tile_dir = tilesFullInfo.values()[0]
     ULw , ULh = tw-ov/2, th-ov/2 #Size of Corner tiles (UL UR BL BR)
     Lw , Lh   = tw-ov/2,th-ov    #Size of Left/Right tile (L R)
     Uw , Uh   = tw-ov,th-ov/2    #Size of Upper/Bottom tile (U B)
@@ -46,9 +46,9 @@ def write_vrt_files(tilesFullInfo):
     
     
     tileSizesAndPositions={}
-    for tile_dir in tilesFullInfo:
+    for tile_info in tilesFullInfo.values():
 
-        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
+        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk, tile_dir = tile_info
         
         dicoPos={}
         dicoPos['M']  = [ULw+(j-1)*Mw, ULh+(i-1)*Mh , Mw, Mh]
@@ -99,9 +99,9 @@ def write_dsm(tilesFullInfo,n=5):
         shutil.rmtree(clouds_dir)
     os.mkdir(clouds_dir)    
     
-    for tile_dir in tilesFullInfo:
+    for tile_info in tilesFullInfo.values():
         
-        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=tilesFullInfo[tile_dir]
+        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk, tile_dir = tile_info
         cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
         cloud_link_name = clouds_dir + '/cloud_%d_%d_row_%d_col_%d.ply' % (tw, th, row, col)
         common.run('ln -s %s %s' % (cloud,cloud_link_name) )
