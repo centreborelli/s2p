@@ -244,7 +244,7 @@ def map_processing(config_file):
             pool = multiprocessing.Pool(nb_workers)
             for tile_info in tilesFullInfo.values():
                 print tile_info
-                p = pool.apply_async(preprocess_tile, args=tile_info,
+                p = pool.apply_async(preprocess_tile, args=(tile_info,),
                                      callback=show_progress)
                 results.append(p)
                 
