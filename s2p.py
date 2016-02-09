@@ -21,6 +21,7 @@
 
 import sys
 import time
+import shutil
 import os.path
 import numpy as np
 import multiprocessing
@@ -44,7 +45,7 @@ def show_progress(a):
 
 def preprocess_tile(tile_info):
     """
-    1) Computes pointing corrections, 
+    1) Computes pointing corrections,
     2) Crops ref image into tiles and get min/max intensity values for each one (useful for colorizing ply files with 8-bits colors)
     """
     preprocess.pointing_correction(tile_info)
@@ -53,8 +54,8 @@ def preprocess_tile(tile_info):
 
 def global_values(tilesFullInfo):
     """
-    1) Computes the global pointing correction 
-    2) Computes the global min and max intensities from the tiles that will be processed 
+    1) Computes the global pointing correction
+    2) Computes the global min and max intensities from the tiles that will be processed
     """
     globalvalues.global_pointing_correction(tilesFullInfo)
     globalvalues.global_minmax_intensities(tilesFullInfo)
@@ -65,7 +66,7 @@ def process_pair(tile_dir, pair_id, tilesFullInfo):
     For a given tile, processes pair #pair_id : rectification, disparity map, triangulation.
 
     Args:
-         - tile_dir : directory of the tile 
+         - tile_dir : directory of the tile
          - pair_id : id of the pair to be processed
          - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
     """
@@ -118,7 +119,7 @@ def process_pair(tile_dir, pair_id, tilesFullInfo):
 def process_tile(tile_dir, tilesFullInfo):
     """
     Processes a tile : compute the height maps from the N pairs, and finalize the processing, ie.:
-    1) Produce a merged height map, without overlapping areas, 
+    1) Produce a merged height map, without overlapping areas,
     2) And produces a ply file.
 
     Args:
@@ -141,25 +142,27 @@ def process_tile(tile_dir, tilesFullInfo):
 
 def global_finalization(tilesFullInfo):
     """
-    Merges pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc.
-    Writes the DSM, from the ply files given by each tile.
-    Crops corresponding areas in the secondary images.
-    Copies the RPC'. 
+    Produce single height map and DSM for the whole region of interest.
+
+    The height maps associated to each pair, as well as the height map obtained
+    by merging all the pairs, are stored as VRT files. The final DSM is obtained
+    by projecting the 3D points from the ply files obtained on each tile.
 
     Args:
-         - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
-
+        tilesFullInfo: dictionary providing all the information about the
+            processed tiles
     """
     globalfinalization.write_vrt_files(tilesFullInfo)
     globalfinalization.write_dsm(tilesFullInfo)
 
+    # crop area corresponding to the ROI in the secondary images
     if not cfg['full_img']:
-        common.crop_corresponding_areas(
-            cfg['out_dir'], cfg['images'], cfg['roi'])
+        common.crop_corresponding_areas(cfg['out_dir'], cfg['images'],
+                                        cfg['roi'])
 
-    for i in range(len(cfg['images'])):
-        from shutil import copy2
-        copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
+    # copy RPC xml files in the output directory
+    for img in cfg['images']:
+        shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
 def map_processing(config_file):
@@ -173,7 +176,7 @@ def map_processing(config_file):
         processing
         global_finalization
 
-    Args: 
+    Args:
         config_file: path to a json config file
     """
     try:
