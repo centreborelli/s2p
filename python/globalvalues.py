@@ -16,25 +16,27 @@ def global_pointing_correction(tilesFullInfo):
     and the total number of pairs as well.
     """
 
-    # Build pairedTilesPerPairId : a dictionary that provides the list of all the tile for a given pair_id (key)
+    # Build pairedTilesPerPairId : a dictionary that provides the list of all
+    # the tile for a given pair_id (key)
     pairedTilesPerPairId = {}
     for tile_dir in tilesFullInfo:
-        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = tilesFullInfo[tile_dir]
+        col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tilesFullInfo[
+            tile_dir]
 
-        for i in range(0,NbPairs):
-            pair_id = i+1
+        for i in range(0, NbPairs):
+            pair_id = i + 1
             pair_dir = tile_dir + 'pair_%d' % pair_id
             if pairedTilesPerPairId.has_key(pair_dir):
                 pairedTilesPerPairId[pair_id].append(pair_dir)
             else:
-                pairedTilesPerPairId[pair_id]=[]
+                pairedTilesPerPairId[pair_id] = []
      # Build pairedTilesPerPairId (end)
 
     for pair_id in pairedTilesPerPairId:
         tiles = pairedTilesPerPairId[pair_id]
         A_globalMat = pointing_accuracy.global_from_local(tiles)
-        np.savetxt('%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id), A_globalMat)
-		
+        np.savetxt('%s/global_pointing_pair_%d.txt' %
+                   (cfg['out_dir'], pair_id), A_globalMat)
 
 
 def global_minmax_intensities(tilesFullInfo):
@@ -47,13 +49,13 @@ def global_minmax_intensities(tilesFullInfo):
 
     """
 
-    minlist=[]
-    maxlist=[]
+    minlist = []
+    maxlist = []
     for tile_dir in tilesFullInfo:
         minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
         minlist.append(minmax[0])
         maxlist.append(minmax[1])
-		
-    global_minmax=[min(minlist),max(maxlist)]
-	
-    np.savetxt(cfg['out_dir']+'/global_minmax.txt',global_minmax)
+
+    global_minmax = [min(minlist), max(maxlist)]
+
+    np.savetxt(cfg['out_dir'] + '/global_minmax.txt', global_minmax)

@@ -34,7 +34,6 @@ from python import process
 from python import globalfinalization
 
 
-
 def show_progress(a):
     show_progress.counter += 1
     if show_progress.counter > 1:
@@ -50,7 +49,7 @@ def preprocess_tile(tile_info):
     """
     preprocess.pointing_correction(tile_info)
     preprocess.getMinMaxFromExtract(tile_info)
-        
+
 
 def global_values(tilesFullInfo):
     """
@@ -59,9 +58,9 @@ def global_values(tilesFullInfo):
     """
     globalvalues.global_pointing_correction(tilesFullInfo)
     globalvalues.global_minmax_intensities(tilesFullInfo)
-    
 
-def process_pair(tile_dir,pair_id,tilesFullInfo):
+
+def process_pair(tile_dir, pair_id, tilesFullInfo):
     """
     For a given tile, processes pair #pair_id : rectification, disparity map, triangulation.
 
@@ -70,50 +69,53 @@ def process_pair(tile_dir,pair_id,tilesFullInfo):
          - pair_id : id of the pair to be processed
          - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
     """
-    #Get all info
-    fullInfo=tilesFullInfo[tile_dir]
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = fullInfo
-    img1,rpc1 = images[0]['img'],images[0]['rpc']
+    # Get all info
+    fullInfo = tilesFullInfo[tile_dir]
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = fullInfo
+    img1, rpc1 = images[0]['img'], images[0]['rpc']
 
-    paired_tile_dir=tile_dir + 'pair_%d' % pair_id
+    paired_tile_dir = tile_dir + 'pair_%d' % pair_id
 
-    img2,rpc2 = images[pair_id]['img'],images[pair_id]['rpc']
-    A_global = '%s/global_pointing_pair_%d.txt' % (cfg['out_dir'],pair_id)
+    img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
+    A_global = '%s/global_pointing_pair_%d.txt' % (cfg['out_dir'], pair_id)
 
     if os.path.isfile('%s/this_tile_is_masked.txt' % tile_dir):
         print "tile %s already masked, skip" % paired_tile_dir
         return None
 
     else:
-        print 'process tile %d %d...' % (col,row)
-       
+        print 'process tile %d %d...' % (col, row)
+
         #height_maps.append('%s/height_map.tif' % paired_tile_dir)
 
         # Rectification
         if os.path.isfile('%s/rectified_ref.tif' % paired_tile_dir) and os.path.isfile('%s/rectified_sec.tif' % paired_tile_dir) and cfg['skip_existing']:
             print 'rectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
         else:
-            print 'rectification : process tile %d %d (pair %d)...' % (col,row,pair_id)
-            process.rectify(paired_tile_dir, np.loadtxt(A_global), img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
-        
+            print 'rectification : process tile %d %d (pair %d)...' % (col, row, pair_id)
+            process.rectify(paired_tile_dir, np.loadtxt(
+                A_global), img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+
         # process.disparity
         if os.path.isfile('%s/rectified_disp.tif' % paired_tile_dir) and cfg['skip_existing']:
             print 'process.disparity on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
         else:
-            print 'process.disparity : process tile %d %d (pair %d)...' % (col,row,pair_id)
-            process.disparity(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk)
-            
+            print 'process.disparity : process tile %d %d (pair %d)...' % (col, row, pair_id)
+            process.disparity(paired_tile_dir, img1, rpc1, img2,
+                              rpc2, col, row, tw, th, None, cld_msk, roi_msk)
+
         # process.triangulate
         if os.path.isfile('%s/height_map.tif' % paired_tile_dir) and cfg['skip_existing']:
             print 'Triangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
         else:
-            print 'Triangulation : process tile %d %d (pair %d)...' % (col,row,pair_id)    
-            process.triangulate(paired_tile_dir, img1, rpc1, img2, rpc2, col, row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
+            print 'Triangulation : process tile %d %d (pair %d)...' % (col, row, pair_id)
+            process.triangulate(paired_tile_dir, img1, rpc1, img2, rpc2, col,
+                                row, tw, th, None, cld_msk, roi_msk, np.loadtxt(A_global))
 
         return '%s/height_map.tif' % paired_tile_dir
-        
 
-def process_tile(tile_dir,tilesFullInfo):
+
+def process_tile(tile_dir, tilesFullInfo):
     """
     Processes a tile : compute the height maps from the N pairs, and finalize the processing, ie.:
     1) Produce a merged height map, without overlapping areas, 
@@ -124,14 +126,14 @@ def process_tile(tile_dir,tilesFullInfo):
         - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
     """
     # Process each pair : get a height map
-    col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk,tile_dir = tilesFullInfo[tile_dir]
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tilesFullInfo[
+        tile_dir]
     height_maps = []
-    for i in range(0,NbPairs):
-        pair_id = i+1
-        height_map = process_pair(tile_dir,pair_id,tilesFullInfo)
+    for i in range(0, NbPairs):
+        pair_id = i + 1
+        height_map = process_pair(tile_dir, pair_id, tilesFullInfo)
         if height_map:
             height_maps.append(height_map)
-
 
     ## Finalization ##
     process.finalize_tile(tile_dir, height_maps, tilesFullInfo)
@@ -152,7 +154,8 @@ def global_finalization(tilesFullInfo):
     globalfinalization.write_dsm(tilesFullInfo)
 
     if not cfg['full_img']:
-        common.crop_corresponding_areas(cfg['out_dir'], cfg['images'], cfg['roi'])
+        common.crop_corresponding_areas(
+            cfg['out_dir'], cfg['images'], cfg['roi'])
 
     for i in range(len(cfg['images'])):
         from shutil import copy2
@@ -177,30 +180,30 @@ def map_processing(config_file):
         # initialization
         initialization.init_dirs_srtm_roi(config_file)
         tilesFullInfo = initialization.init_tilesFullInfo(config_file)
-    
-        if cfg['debug']: # monoprocessing
-    
+
+        if cfg['debug']:  # monoprocessing
+
             print 'preprocess_tile...'
             for tile_info in tilesFullInfo.values():
                 preprocess_tile(tile_info)
 
             print 'global values...'
             global_values(tilesFullInfo)
-            
+
             print 'process_tile...'
             for tile_dir in tilesFullInfo:
                 process_tile(tile_dir, tilesFullInfo)
-                
-            print 'global finalization...'     
+
+            print 'global finalization...'
             global_finalization(tilesFullInfo)
-            
-        else: # multiprocessing
-        
+
+        else:  # multiprocessing
+
             nb_workers = multiprocessing.cpu_count()
             if cfg['max_nb_threads']:
                 # use less workers than available cores
                 nb_workers = min(nb_workers, cfg['max_nb_threads'])
-            
+
             print 'preprocess_tile...'
             results = []
             show_progress.counter = 0
@@ -209,35 +212,35 @@ def map_processing(config_file):
                 p = pool.apply_async(preprocess_tile, args=(tile_info,),
                                      callback=show_progress)
                 results.append(p)
-                
+
             for r in results:
                 try:
                     r.get(3600)  # wait at most one hour per tile
                 except multiprocessing.TimeoutError:
-                    print "Timeout while computing tile "+str(r)       
-                    
-            print 'global values...'        
-            global_values(tilesFullInfo)        
-                    
+                    print "Timeout while computing tile " + str(r)
+
+            print 'global values...'
+            global_values(tilesFullInfo)
+
             print 'process_tile...'
             results = []
-            show_progress.counter = 0   
-            pool = multiprocessing.Pool(nb_workers)     
+            show_progress.counter = 0
+            pool = multiprocessing.Pool(nb_workers)
             for tile_dir in tilesFullInfo:
                 p = pool.apply_async(process_tile, args=(tile_dir,
                                                          tilesFullInfo),
                                      callback=show_progress)
                 results.append(p)
-                
+
             for r in results:
                 try:
                     r.get(3600)  # wait at most one hour per tile
                 except multiprocessing.TimeoutError:
-                    print "Timeout while computing tile "+str(r)
-            
-            print 'global finalization...'        
+                    print "Timeout while computing tile " + str(r)
+
+            print 'global finalization...'
             global_finalization(tilesFullInfo)
-    
+
     except KeyboardInterrupt:
         pool.terminate()
         sys.exit(1)
@@ -245,7 +248,7 @@ def map_processing(config_file):
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
-        
+
 
 def main(config_file):
     """
@@ -261,8 +264,8 @@ def main(config_file):
 
     # measure total runtime
     t = int(time.time() - t0)
-    h = t/3600
-    m = (t/60) % 60
+    h = t / 3600
+    m = (t / 60) % 60
     s = t % 60
     print "Total runtime: %dh:%dm:%ds" % (h, m, s)
 

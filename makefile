@@ -202,7 +202,7 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
 
 test:
-	./s2p.py test.json
+	python s2p.py test.json
 
 clean: clean_libtiff clean_geographiclib clean_monasse clean_sift\
 	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_mgm
