@@ -10,7 +10,7 @@ from config import cfg
 from python import pointing_accuracy
 
 
-def global_pointing_correction(tilesFullInfo):
+def global_pointing_correction(tiles_full_info):
     """
     Computes the global pointing correction. For that purpose, global_pointing_correction needs all the tile related to one pair (given by pairedTilesPerPairId),
     and the total number of pairs as well.
@@ -19,8 +19,8 @@ def global_pointing_correction(tilesFullInfo):
     # Build pairedTilesPerPairId : a dictionary that provides the list of all
     # the tile for a given pair_id (key)
     pairedTilesPerPairId = {}
-    for tile_dir in tilesFullInfo:
-        col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tilesFullInfo[
+    for tile_dir in tiles_full_info:
+        col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tiles_full_info[
             tile_dir]
 
         for i in range(0, NbPairs):
@@ -39,19 +39,19 @@ def global_pointing_correction(tilesFullInfo):
                    (cfg['out_dir'], pair_id), A_globalMat)
 
 
-def global_minmax_intensities(tilesFullInfo):
+def global_minmax_intensities(tiles_full_info):
     """
     Computes the min and max intensities from the tiles that will be processed.
     This will allow to re-code colors by using 8-bits instead of 12-bits or more, and to better vizualise the ply files.
 
     Args:
-        - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+        - tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]
 
     """
 
     minlist = []
     maxlist = []
-    for tile_dir in tilesFullInfo:
+    for tile_dir in tiles_full_info:
         minmax = np.loadtxt(tile_dir + '/local_minmax.txt')
         minlist.append(minmax[0])
         maxlist.append(minmax[1])

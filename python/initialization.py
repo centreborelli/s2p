@@ -158,12 +158,12 @@ def init_dirs_srtm_roi(config_file):
             srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
-def init_tilesFullInfo(config_file):
+def init_tiles_full_info(config_file):
     """
     Prepares the entire process : 
     1) Makes sure coordinates of the ROI are multiples of the zoom factor
     2) Computes optimal size for tiles, get the number of pairs
-    3) Builds tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]. USED EVERYWHERE IN THIS CODE.
+    3) Builds tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]. USED EVERYWHERE IN THIS CODE.
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
        * ov : size of the overlapping
@@ -178,7 +178,7 @@ def init_tilesFullInfo(config_file):
          - config_file : a json configuratio file
 
     Returns:
-         - tilesFullInfo
+         - tiles_full_info
     """
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
@@ -216,7 +216,7 @@ def init_tilesFullInfo(config_file):
     print 'total number of pairs: %d ' % NbPairs
 
     # build tiles dicos
-    tilesFullInfo = {}
+    tiles_full_info = {}
 
     rangey = np.arange(y, y + h - ov, th - ov)
     rangex = np.arange(x, x + w - ov, tw - ov)
@@ -254,7 +254,7 @@ def init_tilesFullInfo(config_file):
                 else:
                     pos = 'M'
 
-                tilesFullInfo[tile_dir] = [col, row, tw, th,
+                tiles_full_info[tile_dir] = [col, row, tw, th,
                                            ov, i, j, pos,
                                            x, y, w, h,
                                            cfg['images'], NbPairs,
@@ -262,7 +262,7 @@ def init_tilesFullInfo(config_file):
                                            cfg['images'][0]['roi'],
                                            tile_dir]
 
-    if len(tilesFullInfo) == 1:  # set position to 'Single'
-        tilesFullInfo[tilesFullInfo.keys()[0]][7] = 'Single'
+    if len(tiles_full_info) == 1:  # set position to 'Single'
+        tiles_full_info[tiles_full_info.keys()[0]][7] = 'Single'
 
-    return tilesFullInfo
+    return tiles_full_info

@@ -52,26 +52,26 @@ def preprocess_tile(tile_info):
     preprocess.getMinMaxFromExtract(tile_info)
 
 
-def global_values(tilesFullInfo):
+def global_values(tiles_full_info):
     """
     1) Computes the global pointing correction
     2) Computes the global min and max intensities from the tiles that will be processed
     """
-    globalvalues.global_pointing_correction(tilesFullInfo)
-    globalvalues.global_minmax_intensities(tilesFullInfo)
+    globalvalues.global_pointing_correction(tiles_full_info)
+    globalvalues.global_minmax_intensities(tiles_full_info)
 
 
-def process_pair(tile_dir, pair_id, tilesFullInfo):
+def process_pair(tile_dir, pair_id, tiles_full_info):
     """
     For a given tile, processes pair #pair_id : rectification, disparity map, triangulation.
 
     Args:
          - tile_dir : directory of the tile
          - pair_id : id of the pair to be processed
-         - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+         - tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]
     """
     # Get all info
-    fullInfo = tilesFullInfo[tile_dir]
+    fullInfo = tiles_full_info[tile_dir]
     col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = fullInfo
     img1, rpc1 = images[0]['img'], images[0]['rpc']
 
@@ -116,7 +116,7 @@ def process_pair(tile_dir, pair_id, tilesFullInfo):
         return '%s/height_map.tif' % paired_tile_dir
 
 
-def process_tile(tile_dir, tilesFullInfo):
+def process_tile(tile_dir, tiles_full_info):
     """
     Processes a tile : compute the height maps from the N pairs, and finalize the processing, ie.:
     1) Produce a merged height map, without overlapping areas,
@@ -124,23 +124,23 @@ def process_tile(tile_dir, tilesFullInfo):
 
     Args:
         - tile_dir : directory of the tile to be processed
-        - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+        - tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]
     """
     # Process each pair : get a height map
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tilesFullInfo[
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tiles_full_info[
         tile_dir]
     height_maps = []
     for i in range(0, NbPairs):
         pair_id = i + 1
-        height_map = process_pair(tile_dir, pair_id, tilesFullInfo)
+        height_map = process_pair(tile_dir, pair_id, tiles_full_info)
         if height_map:
             height_maps.append(height_map)
 
     ## Finalization ##
-    process.finalize_tile(tile_dir, height_maps, tilesFullInfo)
+    process.finalize_tile(tile_dir, height_maps, tiles_full_info)
 
 
-def global_finalization(tilesFullInfo):
+def global_finalization(tiles_full_info):
     """
     Produce single height map and DSM for the whole region of interest.
 
@@ -149,11 +149,11 @@ def global_finalization(tilesFullInfo):
     by projecting the 3D points from the ply files obtained on each tile.
 
     Args:
-        tilesFullInfo: dictionary providing all the information about the
+        tiles_full_info: dictionary providing all the information about the
             processed tiles
     """
-    globalfinalization.write_vrt_files(tilesFullInfo)
-    globalfinalization.write_dsm(tilesFullInfo)
+    globalfinalization.write_vrt_files(tiles_full_info)
+    globalfinalization.write_dsm(tiles_full_info)
 
     # crop area corresponding to the ROI in the secondary images
     if not cfg['full_img']:
@@ -182,23 +182,23 @@ def map_processing(config_file):
     try:
         # initialization
         initialization.init_dirs_srtm_roi(config_file)
-        tilesFullInfo = initialization.init_tilesFullInfo(config_file)
+        tiles_full_info = initialization.init_tiles_full_info(config_file)
 
         if cfg['debug']:  # monoprocessing
 
             print 'preprocess_tile...'
-            for tile_info in tilesFullInfo.values():
+            for tile_info in tiles_full_info.values():
                 preprocess_tile(tile_info)
 
             print 'global values...'
-            global_values(tilesFullInfo)
+            global_values(tiles_full_info)
 
             print 'process_tile...'
-            for tile_dir in tilesFullInfo:
-                process_tile(tile_dir, tilesFullInfo)
+            for tile_dir in tiles_full_info:
+                process_tile(tile_dir, tiles_full_info)
 
             print 'global finalization...'
-            global_finalization(tilesFullInfo)
+            global_finalization(tiles_full_info)
 
         else:  # multiprocessing
 
@@ -211,7 +211,7 @@ def map_processing(config_file):
             results = []
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
-            for tile_info in tilesFullInfo.values():
+            for tile_info in tiles_full_info.values():
                 p = pool.apply_async(preprocess_tile, args=(tile_info,),
                                      callback=show_progress)
                 results.append(p)
@@ -223,15 +223,15 @@ def map_processing(config_file):
                     print "Timeout while computing tile " + str(r)
 
             print 'global values...'
-            global_values(tilesFullInfo)
+            global_values(tiles_full_info)
 
             print 'process_tile...'
             results = []
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
-            for tile_dir in tilesFullInfo:
+            for tile_dir in tiles_full_info:
                 p = pool.apply_async(process_tile, args=(tile_dir,
-                                                         tilesFullInfo),
+                                                         tiles_full_info),
                                      callback=show_progress)
                 results.append(p)
 
@@ -242,7 +242,7 @@ def map_processing(config_file):
                     print "Timeout while computing tile " + str(r)
 
             print 'global finalization...'
-            global_finalization(tilesFullInfo)
+            global_finalization(tiles_full_info)
 
     except KeyboardInterrupt:
         pool.terminate()

@@ -19,13 +19,13 @@ from python import rectification
 from python import masking
 
 
-def color_crop_ref(tile_dir, tilesFullInfo, clr=None):
+def color_crop_ref(tile_dir, tiles_full_info, clr=None):
     """
     Colorizations of a crop_ref (for a given tile)
 
     Args:
-        - tile_dir : a key for the dictionary tilesFullInfo; refers to a particular tile
-        - tilesFullInfo : a dictionary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
+        - tile_dir : a key for the dictionary tiles_full_info; refers to a particular tile
+        - tiles_full_info : a dictionary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
 
         - clr (optional) : if crop_ref is a pan image, will perform the pansharpening with the color image clr
 
@@ -39,7 +39,7 @@ def color_crop_ref(tile_dir, tilesFullInfo, clr=None):
     """
 
     # Get info
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tilesFullInfo[
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tiles_full_info[
         tile_dir]
     z = cfg['subsampling_factor']
 
@@ -89,11 +89,11 @@ def color_crop_ref(tile_dir, tilesFullInfo, clr=None):
                                                     0], applied_minmax_arr[1])
 
 
-def generate_cloud(tile_dir, tilesFullInfo, do_offset=False):
+def generate_cloud(tile_dir, tiles_full_info, do_offset=False):
     """
     Args:
-        - tile_dir : a key for the dictionary tilesFullInfo; refers to a particular tile
-        - tilesFullInfo : a dictionary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
+        - tile_dir : a key for the dictionary tiles_full_info; refers to a particular tile
+        - tiles_full_info : a dictionary that provides all you need to process a tile -> col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk
         - do_offset (optional, default: False): boolean flag to decide wether the
             x, y coordinates of points in the ply file will be translated or
             not (translated to be close to 0, to avoid precision loss due to
@@ -102,7 +102,7 @@ def generate_cloud(tile_dir, tilesFullInfo, do_offset=False):
     print "\nComputing point cloud..."
 
     # Get info
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tilesFullInfo[
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tiles_full_info[
         tile_dir]
     img1, rpc1 = images[0]['img'], images[0]['rpc']
 
@@ -186,7 +186,7 @@ def merge_height_maps(height_maps, tile_dir, thresh, conservative, k=1, garbage=
                 common.run('rm -f %s' % imtemp)
 
 
-def finalize_tile(tile_dir, height_maps, tilesFullInfo):
+def finalize_tile(tile_dir, height_maps, tiles_full_info):
     """
     Finalizes the processing of a tile : merge the height maps from the N pairs, remove overlapping areas, 
     get the colors from a XS image and use it to color and generate a ply file (colorization is not mandatory)
@@ -194,11 +194,11 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
     Args:
         - tile_dir : directory of the tile to be processed
         - height_maps : list of the height maps generated from N pairs
-        - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+        - tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]
     """
 
     # Get all info
-    fullInfo = tilesFullInfo[tile_dir]
+    fullInfo = tiles_full_info[tile_dir]
     col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = fullInfo
     img1, rpc1 = images[0]['img'], images[0]['rpc']
 
@@ -230,14 +230,14 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
     dicoPos['Single'] = [0, 0, 0, 0]
 
     z = cfg['subsampling_factor']
-    #tilesFullInfo[tile_dir] = dicoPos[pos][0]
+    #tiles_full_info[tile_dir] = dicoPos[pos][0]
     newcol, newrow, difftw, diffth = np.array(dicoPos[pos]) / z
-    info = tilesFullInfo[tile_dir]
+    info = tiles_full_info[tile_dir]
     info[0] = info[0] / z + newcol
     info[1] = info[1] / z + newrow
     info[2] = info[2] / z + difftw
     info[3] = info[3] / z + diffth
-    tilesFullInfo[tile_dir] = info
+    tiles_full_info[tile_dir] = info
 
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have
     # already been zoomed. So don't zoom again to crop these images.
@@ -266,10 +266,10 @@ def finalize_tile(tile_dir, height_maps, tilesFullInfo):
         # don't remove crop_ref !!
 
     # Colors
-    color_crop_ref(tile_dir, tilesFullInfo, cfg['images'][0]['clr'])
+    color_crop_ref(tile_dir, tiles_full_info, cfg['images'][0]['clr'])
 
     # Generate cloud
-    generate_cloud(tile_dir, tilesFullInfo, cfg['offset_ply'])
+    generate_cloud(tile_dir, tiles_full_info, cfg['offset_ply'])
 
 
 # ----------------------------------------------------------------------------------------------------

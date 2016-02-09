@@ -13,12 +13,12 @@ from python import tile_composer
 from python import common
 
 
-def write_vrt_files(tilesFullInfo):
+def write_vrt_files(tiles_full_info):
     """
     Merges pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc 
 
     Args:
-         - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+         - tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]
     """
     # VRT file : height map (N pairs)
 
@@ -26,7 +26,7 @@ def write_vrt_files(tilesFullInfo):
     # tileComposerInfo : a simple list that gives the size of the tiles (after having removed the overlapping areas),
     # regarding their positions inside the ROI --> ULw , ULh, Lw , Lh, Uw ,
     # Uh, Mw , Mh
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tilesFullInfo.values()[
+    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tiles_full_info.values()[
         0]
     ULw, ULh = tw - ov / 2, th - ov / 2  # Size of Corner tiles (UL UR BL BR)
     Lw, Lh = tw - ov / 2, th - ov  # Size of Left/Right tile (L R)
@@ -48,7 +48,7 @@ def write_vrt_files(tilesFullInfo):
     #-------------- tileComposerInfo (end) --------------
 
     tileSizesAndPositions = {}
-    for tile_info in tilesFullInfo.values():
+    for tile_info in tiles_full_info.values():
 
         col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tile_info
 
@@ -90,19 +90,19 @@ def write_vrt_files(tilesFullInfo):
             pair_id), pairSizesAndPositions, 'rpc_err_crop.tif', fw, fh, z)
 
 
-def write_dsm(tilesFullInfo, n=5):
+def write_dsm(tiles_full_info, n=5):
     """
     Writes the DSM, from the ply files given by each tile.
 
     Args :
-         - tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]
+         - tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]
     """
     clouds_dir = cfg['out_dir'] + '/clouds'
     if (os.path.exists(clouds_dir)):
         shutil.rmtree(clouds_dir)
     os.mkdir(clouds_dir)
 
-    for tile_info in tilesFullInfo.values():
+    for tile_info in tiles_full_info.values():
 
         col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tile_info
         cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
