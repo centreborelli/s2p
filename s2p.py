@@ -161,13 +161,19 @@ def global_finalization(tilesFullInfo):
 
 def map_processing(config_file):
     """
-    Initialization + preprocessing + global_values + processing + global finalization
+    Runs the entire s2p pipeline.
+
+    It is a succession of five steps:
+        initialization
+        preprocessing
+        global_values
+        processing
+        global_finalization
 
     Args: 
-         - json config file
+        config_file: path to a json config file
     """
     try:
-    
         # initialization
         initialization.init_dirs_srtm_roi(config_file)
         tilesFullInfo = initialization.init_tilesFullInfo(config_file)

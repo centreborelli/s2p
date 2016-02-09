@@ -3,18 +3,15 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
-
-import numpy as np
-import sys
 import os
+import sys
 import json
-
+import numpy as np
 
 from python import common
 from python import srtm
 from python import tee
 from config import cfg
-
 
 
 def check_parameters(usr_cfg):
@@ -69,7 +66,6 @@ def check_parameters(usr_cfg):
             json file. It will be ignored.""" % k
             
 
-
 def init_dirs_srtm_roi(config_file):
     """
     1) Loads configuration file
@@ -79,10 +75,8 @@ def init_dirs_srtm_roi(config_file):
     5) Creates different directories : output, temp...
     
     Args:
-        - config_file : a json configuratio file
-    
+        config_file : path to a json configuration file
     """
-	
 	# read the json configuration file
     f = open(config_file)
     user_cfg = json.load(f)
@@ -164,7 +158,6 @@ def init_dirs_srtm_roi(config_file):
 										   *cfg['roi'].values())
 	for s in srtm_tiles:
 		srtm.get_srtm_tile(s, cfg['srtm_dir'])
-		
 
 
 def init_tilesFullInfo(config_file):
@@ -189,7 +182,6 @@ def init_tilesFullInfo(config_file):
     Returns:
          - tilesFullInfo
     """          
-
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
     x = cfg['roi']['x']    
