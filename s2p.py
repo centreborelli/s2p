@@ -40,10 +40,7 @@ def show_progress(a):
     Print the number of tiles that have been processed.
     """
     show_progress.counter += 1
-    if show_progress.counter > 1:
-        print "Processed %d tiles" % show_progress.counter
-    else:
-        print "Processed 1 tile"
+    print 'done %d / %d tiles' % (show_progress.counter, show_progress.total)
 
 
 def preprocess_tile(tile_info):
@@ -51,7 +48,7 @@ def preprocess_tile(tile_info):
     Compute pointing corrections and extrema intensities for a single tile.
     """
     preprocess.pointing_correction(tile_info)
-    preprocess.getMinMaxFromExtract(tile_info)
+    preprocess.get_minmax_color_on_tile(tile_info)
 
 
 def global_values(tiles_full_info):
@@ -185,30 +182,29 @@ def map_processing(config_file):
         tiles_full_info = initialization.init_tiles_full_info(config_file)
 
         if cfg['debug']:  # monoprocessing
-
-            print 'preprocess_tile...'
+            print '\npreprocessing tiles...'
             for tile_info in tiles_full_info.values():
                 preprocess_tile(tile_info)
 
-            print 'global values...'
+            print '\ncomputing global values...'
             global_values(tiles_full_info)
 
-            print 'process_tile...'
+            print '\nprocessing tiles...'
             for tile_dir in tiles_full_info:
                 process_tile(tile_dir, tiles_full_info)
 
-            print 'global finalization...'
+            print '\nglobal finalization...'
             global_finalization(tiles_full_info)
 
         else:  # multiprocessing
-
             nb_workers = multiprocessing.cpu_count()
             if cfg['max_nb_threads']:
                 # use less workers than available cores
                 nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
-            print 'preprocess_tile...'
+            print '\npreprocessing tiles...'
             results = []
+            show_progress.total = len(tiles_full_info)
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
             for tile_info in tiles_full_info.values():
@@ -220,12 +216,12 @@ def map_processing(config_file):
                 try:
                     r.get(3600)  # wait at most one hour per tile
                 except multiprocessing.TimeoutError:
-                    print "Timeout while computing tile " + str(r)
+                    print "Timeout while preprocessing tile %s" % str(r)
 
-            print 'global values...'
+            print '\ncomputing global values...'
             global_values(tiles_full_info)
 
-            print 'process_tile...'
+            print '\nprocessing tiles...'
             results = []
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
@@ -239,9 +235,9 @@ def map_processing(config_file):
                 try:
                     r.get(3600)  # wait at most one hour per tile
                 except multiprocessing.TimeoutError:
-                    print "Timeout while computing tile " + str(r)
+                    print "Timeout while processing tile %s" % str(r)
 
-            print 'global finalization...'
+            print '\nglobal finalization...'
             global_finalization(tiles_full_info)
 
     except KeyboardInterrupt:

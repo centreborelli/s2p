@@ -389,18 +389,25 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
 
 
 
-def cropImage(inp,out,col,row,tw,th,z):
+def cropImage(inp, out, x, y, w, h, zoom=1):
     """
-    Extract an ROI from inp to out, with ROI defined as (col,row,tw,th) <==> (Upper left corner, size of ROI), and apply a zoom z.
+    Crop a rectangular region and apply a zoom.
+
+    Args:
+        inp: path to the input file
+        out: path to the output file
+        x, y, w, h: upper left corner and size of the rectangular region of
+            interest
+        zoom (default is 1): zoom factor
     """
     
-    if z == 1:
-        image_crop_TIFF(inp, col,row,tw,th, out)
+    if zoom == 1:
+        image_crop_TIFF(inp, x, y, w, h, out)
     else:
         # gdal is used for the zoom because it handles BigTIFF files, and
         # before the zoom out the image may be that big
-        tmp_crop = image_crop_TIFF(inp, col,row,tw,th)
-        image_zoom_gdal(tmp_crop, z, out, tw,th)
+        tmp = image_crop_TIFF(inp, x, y, w, h)
+        image_zoom_gdal(tmp, zoom, out, w, h)
             
     
     

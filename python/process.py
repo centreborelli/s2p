@@ -242,9 +242,9 @@ def finalize_tile(tile_dir, height_maps, tiles_full_info):
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have
     # already been zoomed. So don't zoom again to crop these images.
     common.cropImage(local_merged_height_map, local_merged_height_map_crop,
-                     newcol, newrow, info[2], info[3], 1)
+                     newcol, newrow, info[2], info[3])
     common.cropImage(crop_ref, crop_ref_crop, newcol,
-                     newrow, info[2], info[3], 1)
+                     newrow, info[2], info[3])
 
     # By pair
     for i in range(0, NbPairs):
@@ -257,9 +257,9 @@ def finalize_tile(tile_dir, height_maps, tiles_full_info):
         single_rpc_err_crop = tile_dir + '/pair_%d/rpc_err_crop.tif' % pair_id
 
         common.cropImage(single_height_map, single_height_map_crop,
-                         newcol, newrow, info[2], info[3], 1)
+                         newcol, newrow, info[2], info[3])
         common.cropImage(single_rpc_err, single_rpc_err_crop,
-                         newcol, newrow, info[2], info[3], 1)
+                         newcol, newrow, info[2], info[3])
 
     # if not cfg['debug']:
      #    common.run('rm -f %s' % (local_merged_height_map))

@@ -15,37 +15,31 @@ from python import pointing_accuracy
 from python import visualisation
 
 
-def getMinMaxFromExtract(tile_info):
+def get_minmax_color_on_tile(tile_info):
     """
-    Gets min/max intensities of an extract ROI from the ref image.
+    Compute min and max intensities on a given tile and save them to a txt file.
 
     Args:
-        tile_info : a list that provides all you need to process a tile: col,
-            row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk,
-            roi_msk
+        tile_info : a list that provides all you need to process a tile
     """
-
-    print "\nCrop ref image and compute min/max intensities..."
-
-    # Get info
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tile_info
-    img1 = images[0]['img']
+    # read info
+    img1 = tile_info[12][0]['img']
+    roi = tile_info[:4]
+    tile_dir = tile_info[-1]
+    z = cfg['subsampling_factor']
 
     # output files
-    crop_ref = tile_dir + '/roi_ref.tif'
-    local_minmax = tile_dir + '/local_minmax.txt'
+    crop_ref = os.path.join(tile_dir, 'roi_ref.tif')
+    local_minmax = os.path.join(tile_dir, 'local_minmax.txt')
 
-    z = cfg['subsampling_factor']
-    common.cropImage(img1, crop_ref, col, row, tw, th, z)
-
-    if os.path.isfile('%s/local_minmax.txt' % tile_dir) and cfg['skip_existing']:
-        print "Compute min/max intensities values on tile %s already done, skip" % (tile_dir)
+    # do the job
+    common.cropImage(img1, crop_ref, *roi, zoom=z)
+    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
+        print 'tile %s is masked, skip' % tile_dir
+    elif os.path.isfile(os.path.join(tile_dir, 'local_minmax.txt')) and cfg['skip_existing']:
+        print 'extrema intensities on tile %s already computed, skip' % tile_dir
     else:
-        if os.path.isfile('%s/this_tile_is_masked.txt' % (tile_dir)):
-            print "tile %s already masked, skip" % (tile_dir)
-
-        else:
-            common.image_getminmax(crop_ref, local_minmax)
+        common.image_getminmax(crop_ref, local_minmax)
 
 
 def pointing_correction(tile_info):
