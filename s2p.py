@@ -38,6 +38,10 @@ from python import globalfinalization
 def show_progress(a):
     """
     Print the number of tiles that have been processed.
+
+    Args:
+        a: useless argument, but since this function is used as a callback by
+            apply_async, it has to take one argument.
     """
     show_progress.counter += 1
     print 'done %d / %d tiles' % (show_progress.counter, show_progress.total)
@@ -176,35 +180,23 @@ def map_processing(config_file):
     Args:
         config_file: path to a json config file
     """
-    try:
-        # initialization
-        initialization.init_dirs_srtm_roi(config_file)
-        tiles_full_info = initialization.init_tiles_full_info(config_file)
+    # multiprocessing setup
+    nb_workers = multiprocessing.cpu_count()  # nb of available cores
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
-        if cfg['debug']:  # monoprocessing
-            print '\npreprocessing tiles...'
+    # initialization
+    initialization.init_dirs_srtm_roi(config_file)
+    tiles_full_info = initialization.init_tiles_full_info(config_file)
+    show_progress.total = len(tiles_full_info)
+
+    try:
+        print '\npreprocessing tiles...'
+        if cfg['debug']:
             for tile_info in tiles_full_info.values():
                 preprocess_tile(tile_info)
-
-            print '\ncomputing global values...'
-            global_values(tiles_full_info)
-
-            print '\nprocessing tiles...'
-            for tile_dir in tiles_full_info:
-                process_tile(tile_dir, tiles_full_info)
-
-            print '\nglobal finalization...'
-            global_finalization(tiles_full_info)
-
-        else:  # multiprocessing
-            nb_workers = multiprocessing.cpu_count()
-            if cfg['max_nb_threads']:
-                # use less workers than available cores
-                nb_workers = min(nb_workers, cfg['max_nb_threads'])
-
-            print '\npreprocessing tiles...'
+        else:
             results = []
-            show_progress.total = len(tiles_full_info)
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
             for tile_info in tiles_full_info.values():
@@ -218,13 +210,16 @@ def map_processing(config_file):
                 except multiprocessing.TimeoutError:
                     print "Timeout while preprocessing tile %s" % str(r)
 
-            print '\ncomputing global values...'
-            global_values(tiles_full_info)
+        print '\ncomputing global values...'
+        global_values(tiles_full_info)
 
-            print '\nprocessing tiles...'
+        print '\nprocessing tiles...'
+        if cfg['debug']:
+            for tile_dir in tiles_full_info:
+                process_tile(tile_dir, tiles_full_info)
+        else:
             results = []
             show_progress.counter = 0
-            pool = multiprocessing.Pool(nb_workers)
             for tile_dir in tiles_full_info:
                 p = pool.apply_async(process_tile, args=(tile_dir,
                                                          tiles_full_info),
@@ -237,8 +232,8 @@ def map_processing(config_file):
                 except multiprocessing.TimeoutError:
                     print "Timeout while processing tile %s" % str(r)
 
-            print '\nglobal finalization...'
-            global_finalization(tiles_full_info)
+        print '\nglobal finalization...'
+        global_finalization(tiles_full_info)
 
     except KeyboardInterrupt:
         pool.terminate()
