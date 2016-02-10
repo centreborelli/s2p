@@ -36,6 +36,9 @@ from python import globalfinalization
 
 
 def show_progress(a):
+    """
+    Print the number of tiles that have been processed.
+    """
     show_progress.counter += 1
     if show_progress.counter > 1:
         print "Processed %d tiles" % show_progress.counter
@@ -45,8 +48,7 @@ def show_progress(a):
 
 def preprocess_tile(tile_info):
     """
-    1) Computes pointing corrections,
-    2) Crops ref image into tiles and get min/max intensity values for each one (useful for colorizing ply files with 8-bits colors)
+    Compute pointing corrections and extrema intensities for a single tile.
     """
     preprocess.pointing_correction(tile_info)
     preprocess.getMinMaxFromExtract(tile_info)
@@ -54,8 +56,7 @@ def preprocess_tile(tile_info):
 
 def global_values(tiles_full_info):
     """
-    1) Computes the global pointing correction
-    2) Computes the global min and max intensities from the tiles that will be processed
+    Compute the global pointing correction and extrema intensities for the ROI.
     """
     globalvalues.global_pointing_correction(tiles_full_info)
     globalvalues.global_minmax_intensities(tiles_full_info)
@@ -81,47 +82,38 @@ def process_tile_pair(tile_dir, pair_id, tiles_full_info):
     img1, rpc1 = images[0]['img'], images[0]['rpc']
     img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
 
-    paired_tile_dir = os.path.join(tile_dir, 'pair_%d' % pair_id)
+    out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id)
 
     A_global = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_%d.txt' % pair_id)
 
-    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-        print 'tile %s already masked, skip' % paired_tile_dir
-        return
-
+    print 'processing tile %d %d...' % (col, row)
+    # rectification
+    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif')):
+        print '\trectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
-        print 'processing tile %d %d...' % (col, row)
+        print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
+        process.rectify(out_dir, np.loadtxt(A_global), img1, rpc1,
+                        img2, rpc2, col, row, tw, th, None, cld_msk,
+                        roi_msk)
 
-        # rectification
-        if cfg['skip_existing'] and os.path.isfile(os.path.join(paired_tile_dir, 'rectified_ref.tif')) and os.path.isfile(os.path.join(paired_tile_dir, 'rectified_sec.tif')):
-            print '\trectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-        else:
-            print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
-            process.rectify(paired_tile_dir, np.loadtxt(A_global), img1, rpc1,
-                            img2, rpc2, col, row, tw, th, None, cld_msk,
-                            roi_msk)
+    # disparity estimation
+    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif')):
+        print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+    else:
+        print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
+        process.disparity(out_dir, img1, rpc1, img2, rpc2, col, row,
+                          tw, th, None, cld_msk, roi_msk)
 
-        # disparity estimation
-        if cfg['skip_existing'] and os.path.isfile(os.path.join(paired_tile_dir,
-                                                                'rectified_disp.tif')):
-            print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-        else:
-            print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
-            process.disparity(paired_tile_dir, img1, rpc1, img2, rpc2, col, row,
-                              tw, th, None, cld_msk, roi_msk)
-
-        # triangulation
-        if cfg['skip_existing'] and os.path.isfile(os.path.join(paired_tile_dir,
-                                                                'height_map.tif')):
-            print '\ttriangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-        else:
-            print '\ttriangulating tile %d %d (pair %d)...' % (col, row, pair_id)
-            process.triangulate(paired_tile_dir, img1, rpc1, img2, rpc2, col,
-                                row, tw, th, None, cld_msk, roi_msk,
-                                np.loadtxt(A_global))
-
-        return os.path.join(paired_tile_dir, 'height_map.tif')
+    # triangulation
+    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
+                                                            'height_map.tif')):
+        print '\ttriangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+    else:
+        print '\ttriangulating tile %d %d (pair %d)...' % (col, row, pair_id)
+        process.triangulate(out_dir, img1, rpc1, img2, rpc2, col,
+                            row, tw, th, None, cld_msk, roi_msk,
+                            np.loadtxt(A_global))
 
 
 def process_tile(tile_dir, tiles_full_info):
@@ -132,16 +124,19 @@ def process_tile(tile_dir, tiles_full_info):
         tile_dir: directory of the tile to be processed
         tiles_full_info: a dictionary providing all you need to process a tile
     """
-    nb_pairs = tiles_full_info[tile_dir][13]
-    height_maps = []
+    # check that the tile is not masked
+    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
+        print 'tile %s already masked, skip' % tile_dir
+        return
 
     # process each pair to get a height map
+    nb_pairs = tiles_full_info[tile_dir][13]
     for pair_id in range(1, nb_pairs + 1):
-        height_map = process_tile_pair(tile_dir, pair_id, tiles_full_info)
-        if height_map:
-            height_maps.append(height_map)
+        process_tile_pair(tile_dir, pair_id, tiles_full_info)
 
     # finalization
+    height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i
+                   in range(1, nb_pairs + 1)]
     process.finalize_tile(tile_dir, height_maps, tiles_full_info)
 
 
@@ -172,7 +167,7 @@ def global_finalization(tiles_full_info):
 
 def map_processing(config_file):
     """
-    Runs the entire s2p pipeline.
+    Run the entire s2p pipeline.
 
     It is a succession of five steps:
         initialization
@@ -260,7 +255,7 @@ def map_processing(config_file):
 
 def main(config_file):
     """
-    Launches s2p with the parameters given by a json file.
+    Launch s2p with the parameters given by a json file.
 
     Args:
         config_file: path to the config json file
