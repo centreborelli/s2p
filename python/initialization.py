@@ -223,44 +223,41 @@ def init_tiles_full_info(config_file):
     rowmin, rowmax = rangey[0], rangey[-1]
     colmin, colmax = rangex[0], rangex[-1]
 
-    for pair_id in range(1, len(cfg['images'])):
-        for i, row in enumerate(rangey):
-            for j, col in enumerate(rangex):
-                # ensure that the coordinates of the tile are multiples of the
-                # zoom factor
-                col, row, tw, th = common.round_roi_to_nearest_multiple(
-                    z, col, row, tw, th)
-                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (
-                    cfg['out_dir'], tw, th, row, col)
-                paired_tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (
-                    cfg['out_dir'], tw, th, row, col, pair_id)
+    for i, row in enumerate(rangey):
+        for j, col in enumerate(rangex):
+            # ensure that the coordinates of the tile are multiples of the
+            # zoom factor
+            col, row, tw, th = common.round_roi_to_nearest_multiple(
+                z, col, row, tw, th)
+            tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (
+                cfg['out_dir'], tw, th, row, col)
 
-                if row == rowmin and col == colmin:
-                    pos = 'UL'
-                elif row == rowmin and col == colmax:
-                    pos = 'UR'
-                elif row == rowmax and col == colmax:
-                    pos = 'BR'
-                elif row == rowmax and col == colmin:
-                    pos = 'BL'
-                elif row == rowmin and col > colmin:
-                    pos = 'U'
-                elif col == colmin and row > rowmin:
-                    pos = 'L'
-                elif row == rowmax and col > colmin:
-                    pos = 'B'
-                elif col == colmax and row > rowmin:
-                    pos = 'R'
-                else:
-                    pos = 'M'
+            if row == rowmin and col == colmin:
+                pos = 'UL'
+            elif row == rowmin and col == colmax:
+                pos = 'UR'
+            elif row == rowmax and col == colmax:
+                pos = 'BR'
+            elif row == rowmax and col == colmin:
+                pos = 'BL'
+            elif row == rowmin and col > colmin:
+                pos = 'U'
+            elif col == colmin and row > rowmin:
+                pos = 'L'
+            elif row == rowmax and col > colmin:
+                pos = 'B'
+            elif col == colmax and row > rowmin:
+                pos = 'R'
+            else:
+                pos = 'M'
 
-                tiles_full_info.append([col, row, tw, th,
-                                        ov, i, j, pos,
-                                        x, y, w, h,
-                                        cfg['images'], NbPairs,
-                                        cfg['images'][0]['cld'],
-                                        cfg['images'][0]['roi'],
-                                        tile_dir])
+            tiles_full_info.append([col, row, tw, th,
+                                    ov, i, j, pos,
+                                    x, y, w, h,
+                                    cfg['images'], NbPairs,
+                                    cfg['images'][0]['cld'],
+                                    cfg['images'][0]['roi'],
+                                    tile_dir])
 
     if len(tiles_full_info) == 1:  # set position to 'Single'
         tiles_full_info[0][7] = 'Single'
