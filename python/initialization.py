@@ -226,7 +226,7 @@ def init_tiles_full_info(config_file):
     for pair_id in range(1, len(cfg['images'])):
         for i, row in enumerate(rangey):
             for j, col in enumerate(rangex):
-                # ensure that the coordinates of the ROI are multiples of the
+                # ensure that the coordinates of the tile are multiples of the
                 # zoom factor
                 col, row, tw, th = common.round_roi_to_nearest_multiple(
                     z, col, row, tw, th)

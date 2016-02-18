@@ -50,6 +50,10 @@ def show_progress(a):
 def preprocess_tile(tile_info):
     """
     Compute pointing corrections and extrema intensities for a single tile.
+
+    Args:
+        tile_info: list containing all the informations needed to process a
+            tile.
     """
     preprocess.pointing_correction(tile_info)
     preprocess.get_minmax_color_on_tile(tile_info)
@@ -63,22 +67,23 @@ def global_values(tiles_full_info):
     globalvalues.global_minmax_intensities(tiles_full_info)
 
 
-def process_tile_pair(tile_dir, pair_id, tiles_full_info):
+def process_tile_pair(tile_info, pair_id):
     """
     Process a pair of images on a given tile.
 
     Processing includes rectification, disparity estimation and triangulation.
 
     Args:
-        tile_dir: directory of the tile
+        tile_info: list containing all the informations needed to process a
+            tile.
         pair_id: index of the pair to process
-        tiles_full_info: a dictionary providing all you need to process a tile
     """
     # read all the information
-    col, row, tw, th = tiles_full_info[tile_dir][:4]
-    images = tiles_full_info[tile_dir][12]
-    cld_msk = tiles_full_info[tile_dir][14]
-    roi_msk = tiles_full_info[tile_dir][15]
+    tile_dir = tile_info[-1]
+    col, row, tw, th = tile_info[:4]
+    images = tile_info[12]
+    cld_msk = tile_info[14]
+    roi_msk = tile_info[15]
 
     img1, rpc1 = images[0]['img'], images[0]['rpc']
     img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
@@ -117,28 +122,29 @@ def process_tile_pair(tile_dir, pair_id, tiles_full_info):
                             np.loadtxt(A_global))
 
 
-def process_tile(tile_dir, tiles_full_info):
+def process_tile(tile_info):
     """
     Process a tile by merging the height maps computed for each image pair.
 
     Args:
-        tile_dir: directory of the tile to be processed
-        tiles_full_info: a dictionary providing all you need to process a tile
+        tile_info: a dictionary that provides all you need to process a tile
     """
+    tile_dir = tile_info[-1]
+
     # check that the tile is not masked
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
         print 'tile %s already masked, skip' % tile_dir
         return
 
     # process each pair to get a height map
-    nb_pairs = tiles_full_info[tile_dir][13]
+    nb_pairs = tile_info[13]
     for pair_id in range(1, nb_pairs + 1):
-        process_tile_pair(tile_dir, pair_id, tiles_full_info)
+        process_tile_pair(tile_info, pair_id)
 
     # finalization
     height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i
                    in range(1, nb_pairs + 1)]
-    process.finalize_tile(tile_dir, height_maps, tiles_full_info)
+    process.finalize_tile(tile_info, height_maps)
 
 
 def global_finalization(tiles_full_info):
@@ -215,14 +221,13 @@ def map_processing(config_file):
 
         print '\nprocessing tiles...'
         if cfg['debug']:
-            for tile_dir in tiles_full_info:
-                process_tile(tile_dir, tiles_full_info)
+            for tile_info in tiles_full_info.values():
+                process_tile(tile_info)
         else:
             results = []
             show_progress.counter = 0
-            for tile_dir in tiles_full_info:
-                p = pool.apply_async(process_tile, args=(tile_dir,
-                                                         tiles_full_info),
+            for tile_info in tiles_full_info.values():
+                p = pool.apply_async(process_tile, args=(tile_info,),
                                      callback=show_progress)
                 results.append(p)
 
