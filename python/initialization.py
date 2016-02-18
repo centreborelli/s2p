@@ -160,10 +160,11 @@ def init_dirs_srtm_roi(config_file):
 
 def init_tiles_full_info(config_file):
     """
-    Prepares the entire process : 
-    1) Makes sure coordinates of the ROI are multiples of the zoom factor
-    2) Computes optimal size for tiles, get the number of pairs
-    3) Builds tiles_full_info : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tiles_full_info[tile_dir]. USED EVERYWHERE IN THIS CODE.
+    Prepare the entire process.
+
+    1) Make sure coordinates of the ROI are multiples of the zoom factor
+    2) Compute optimal size for tiles, get the number of pairs
+    3) Build tiles_full_info: a list of dictionaries, one per tile, providing all you need to process a tile
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
        * ov : size of the overlapping
@@ -175,10 +176,10 @@ def init_tiles_full_info(config_file):
        * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
 
     Args:
-         - config_file : a json configuratio file
+         config_file: path to a json configuration file
 
     Returns:
-         - tiles_full_info
+        tiles_full_info: list containing dictionaries
     """
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
@@ -215,9 +216,8 @@ def init_tiles_full_info(config_file):
     NbPairs = len(cfg['images']) - 1
     print 'total number of pairs: %d ' % NbPairs
 
-    # build tiles dicos
-    tiles_full_info = {}
-
+    # build tile_info dictionaries and store them in a list
+    tiles_full_info = list()
     rangey = np.arange(y, y + h - ov, th - ov)
     rangex = np.arange(x, x + w - ov, tw - ov)
     rowmin, rowmax = rangey[0], rangey[-1]
@@ -254,15 +254,15 @@ def init_tiles_full_info(config_file):
                 else:
                     pos = 'M'
 
-                tiles_full_info[tile_dir] = [col, row, tw, th,
-                                           ov, i, j, pos,
-                                           x, y, w, h,
-                                           cfg['images'], NbPairs,
-                                           cfg['images'][0]['cld'],
-                                           cfg['images'][0]['roi'],
-                                           tile_dir]
+                tiles_full_info.append([col, row, tw, th,
+                                        ov, i, j, pos,
+                                        x, y, w, h,
+                                        cfg['images'], NbPairs,
+                                        cfg['images'][0]['cld'],
+                                        cfg['images'][0]['roi'],
+                                        tile_dir])
 
     if len(tiles_full_info) == 1:  # set position to 'Single'
-        tiles_full_info[tiles_full_info.keys()[0]][7] = 'Single'
+        tiles_full_info[0][7] = 'Single'
 
     return tiles_full_info

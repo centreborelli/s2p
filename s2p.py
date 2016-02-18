@@ -199,13 +199,13 @@ def map_processing(config_file):
     try:
         print '\npreprocessing tiles...'
         if cfg['debug']:
-            for tile_info in tiles_full_info.values():
+            for tile_info in tiles_full_info:
                 preprocess_tile(tile_info)
         else:
             results = []
             show_progress.counter = 0
             pool = multiprocessing.Pool(nb_workers)
-            for tile_info in tiles_full_info.values():
+            for tile_info in tiles_full_info:
                 p = pool.apply_async(preprocess_tile, args=(tile_info,),
                                      callback=show_progress)
                 results.append(p)
@@ -221,12 +221,12 @@ def map_processing(config_file):
 
         print '\nprocessing tiles...'
         if cfg['debug']:
-            for tile_info in tiles_full_info.values():
+            for tile_info in tiles_full_info:
                 process_tile(tile_info)
         else:
             results = []
             show_progress.counter = 0
-            for tile_info in tiles_full_info.values():
+            for tile_info in tiles_full_info:
                 p = pool.apply_async(process_tile, args=(tile_info,),
                                      callback=show_progress)
                 results.append(p)
