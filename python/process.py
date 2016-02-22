@@ -36,7 +36,8 @@ def color_crop_ref(tile_info, clr=None):
             if applied_minmax.txt exists and is different from global_minmax, rescaling will be compulsorily performed (can occur if a new tile is added)
     """
     # get info
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, nb_pairs, cld_msk, roi_msk, tile_dir = tile_info
+    x, y, w, h = tile_info['coordinates']
+    tile_dir = tile_info['directory']
     z = cfg['subsampling_factor']
 
     # paths
@@ -65,23 +66,25 @@ def color_crop_ref(tile_info, clr=None):
 
             crop_color = tile_dir + '/roi_color_ref.tif'
             if clr is not None:
-                triangulation.colorize(crop_ref, clr, col, row, z, crop_color, applied_minmax_arr[
-                                       0], applied_minmax_arr[1])
+                triangulation.colorize(crop_ref, clr, x, y, z, crop_color,
+                                       applied_minmax_arr[0],
+                                       applied_minmax_arr[1])
             else:  # use of image_rescaleintensities
-
                 np.savetxt(applied_minmax, applied_minmax_arr)
 
                 if common.image_pix_dim_tiffinfo(crop_ref) == 4:
                     print 'the image is pansharpened fusioned'
                     tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
                     #common.image_qauto(tmp, crop_color, tilewise=False)
-                    common.image_rescaleintensities(tmp, crop_color, applied_minmax_arr[
-                                                    0], applied_minmax_arr[1])
+                    common.image_rescaleintensities(tmp, crop_color,
+                                                    applied_minmax_arr[0],
+                                                    applied_minmax_arr[1])
                 else:
                     print 'no color data'
                     #common.image_qauto(crop_ref, crop_color, tilewise=False)
-                    common.image_rescaleintensities(crop_ref, crop_color, applied_minmax_arr[
-                                                    0], applied_minmax_arr[1])
+                    common.image_rescaleintensities(crop_ref, crop_color,
+                                                    applied_minmax_arr[0],
+                                                    applied_minmax_arr[1])
 
 
 def generate_cloud(tile_info, do_offset=False):
@@ -95,8 +98,9 @@ def generate_cloud(tile_info, do_offset=False):
     """
     print "\nComputing point cloud..."
     # get info
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, nb_pairs, cld_msk, roi_msk, tile_dir = tile_info
-    img1, rpc1 = images[0]['img'], images[0]['rpc']
+    tile_dir = tile_info['directory']
+    x, y, w, h = tile_info['coordinates']
+    img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
 
     #height_map = tile_dir + '/local_merged_height_map.tif'
     height_map = tile_dir + '/local_merged_height_map_crop.tif'
@@ -111,7 +115,7 @@ def generate_cloud(tile_info, do_offset=False):
     # of the crop we are dealing with
     # col and row have been divided by z inside 'finalize_tile' for
     # convinience; col*z and row*z allow to get the initial values back.
-    A = common.matrix_translation(-col * z, -row * z)
+    A = common.matrix_translation(-x * z, -y * z)
     z = cfg['subsampling_factor']
     f = 1.0 / z
     Z = np.diag([f, f, 1])
@@ -191,15 +195,19 @@ def finalize_tile(tile_info, height_maps):
         height_maps: list of the height maps generated from N pairs
     """
     # get info
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, nb_pairs, cld_msk, roi_msk, tile_dir = tile_info
-    img1, rpc1 = images[0]['img'], images[0]['rpc']
+    tile_dir = tile_info['directory']
+    nb_pairs = tile_info['number_of_pairs']
+    x, y, w, h = tile_info['coordinates']
+    ov = tile_info['overlap']
+    pos = tile_info['position_type']
+    img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
 
     # merge the n height maps
     local_merged_height_map = os.path.join(tile_dir,
                                            'local_merged_height_map.tif')
     if len(height_maps) > 1:
-        merge_height_maps(height_maps, tile_dir, cfg['fusion_thresh'], cfg[
-                          'fusion_conservative'], 1, [])
+        merge_height_maps(height_maps, tile_dir, cfg['fusion_thresh'],
+                          cfg['fusion_conservative'], 1, [])
     else:
         common.run('cp %s %s' % (height_maps[0], local_merged_height_map))
 
@@ -224,18 +232,16 @@ def finalize_tile(tile_info, height_maps):
 
     z = cfg['subsampling_factor']
     newcol, newrow, difftw, diffth = np.array(dicoPos[pos]) / z
-    tile_info['coordinates'][0] = tile_info['coordinates'][0] / z + newcol
-    tile_info['coordinates'][1] = tile_info['coordinates'][1] / z + newrow
-    tile_info['coordinates'][2] = tile_info['coordinates'][2] / z + difftw
-    tile_info['coordinates'][3] = tile_info['coordinates'][3] / z + diffth
+    x = x / z + newcol
+    y = y / z + newrow
+    w = w / z + difftw
+    h = h / z + diffth
 
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have
     # already been zoomed. So don't zoom again to crop these images.
     common.cropImage(local_merged_height_map, local_merged_height_map_crop,
-                     newcol, newrow, tile_info['coordinates'][2],
-                     tile_info['coordinates'][3])
-    common.cropImage(crop_ref, crop_ref_crop, newcol, newrow,
-                     tile_info['coordinates'][2], tile_info['coordinates'][3])
+                     newcol, newrow, w, h)
+    common.cropImage(crop_ref, crop_ref_crop, newcol, newrow, w, h)
 
     # by pair
     for i in range(1, nb_pairs + 1):
@@ -244,12 +250,8 @@ def finalize_tile(tile_info, height_maps):
         single_rpc_err = os.path.join(tile_dir, 'pair_%d/rpc_err.tif' % i)
         single_rpc_err_crop = os.path.join(tile_dir, 'pair_%d/rpc_err_crop.tif' % i)
         common.cropImage(single_height_map, single_height_map_crop, newcol,
-                         newrow, tile_info['coordinates'][2],
-                         tile_info['coordinates'][3])
-        common.cropImage(single_rpc_err, single_rpc_err_crop, newcol, newrow,
-                         tile_info['coordinates'][2],
-                         tile_info['coordinates'][3])
-
+                         newrow, w, h)
+        common.cropImage(single_rpc_err, single_rpc_err_crop, newcol, newrow, w, h)
     # colors
     color_crop_ref(tile_info, cfg['images'][0]['clr'])
 

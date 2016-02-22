@@ -26,7 +26,11 @@ def write_vrt_files(tiles_full_info):
     # tileComposerInfo : a simple list that gives the size of the tiles (after having removed the overlapping areas),
     # regarding their positions inside the ROI --> ULw , ULh, Lw , Lh, Uw ,
     # Uh, Mw , Mh
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tiles_full_info[0]
+    x0, y0, tw, th = tiles_full_info[0]['coordinates']
+    x, y, w, h = tiles_full_info[0]['roi_coordinates']
+    ov = tiles_full_info[0]['overlap']
+    nb_pairs = tiles_full_info[0]['number_of_pairs']
+
     ULw, ULh = tw - ov / 2, th - ov / 2  # Size of Corner tiles (UL UR BL BR)
     Lw, Lh = tw - ov / 2, th - ov  # Size of Left/Right tile (L R)
     Uw, Uh = tw - ov, th - ov / 2  # Size of Upper/Bottom tile (U B)
@@ -48,7 +52,9 @@ def write_vrt_files(tiles_full_info):
 
     tileSizesAndPositions = {}
     for tile_info in tiles_full_info:
-        col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tile_info
+        col, row, tw, th = tile_info['coordinates']
+        pos = tile_info['position_type']
+        i, j = tile_info['index_in_roi']
 
         dicoPos = {}
         dicoPos['M'] = [ULw + (j - 1) * Mw, ULh + (i - 1) * Mh, Mw, Mh]
@@ -72,7 +78,7 @@ def write_vrt_files(tiles_full_info):
 
     # VRT file : height map (for each single pair)
     # VRT file : rpc_err (for each single pair)
-    for i in range(0, NbPairs):
+    for i in range(0, nb_pairs):
 
         pair_id = i + 1
 
@@ -101,11 +107,11 @@ def write_dsm(tiles_full_info, n=5):
     os.mkdir(clouds_dir)
 
     for tile_info in tiles_full_info:
-
-        col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tile_info
+        tile_dir = tile_info['directory']
+        x, y, w, h = tile_info['coordinates']
         cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
         cloud_link_name = clouds_dir + \
-            '/cloud_%d_%d_row_%d_col_%d.ply' % (tw, th, row, col)
+            '/cloud_%d_%d_row_%d_col_%d.ply' % (w, h, x, y)
         common.run('ln -s %s %s' % (cloud, cloud_link_name))
 
     out_dsm_dir = '%s/dsm' % (cfg['out_dir'])
