@@ -172,7 +172,7 @@ def init_tiles_full_info(config_file):
        * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
        * x/y/w/h : information about the ROI
        * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
-       * NbPairs : number of pairs
+       * nb_pairs : number of pairs
        * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
 
     Args:
@@ -213,24 +213,25 @@ def init_tiles_full_info(config_file):
 
     print 'tiles size: (%d, %d)' % (tw, th)
     print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
-    NbPairs = len(cfg['images']) - 1
-    print 'total number of pairs: %d ' % NbPairs
+    nb_pairs = len(cfg['images']) - 1
+    print 'total number of pairs: %d ' % nb_pairs
 
     # build tile_info dictionaries and store them in a list
     tiles_full_info = list()
-    rangey = np.arange(y, y + h - ov, th - ov)
-    rangex = np.arange(x, x + w - ov, tw - ov)
-    rowmin, rowmax = rangey[0], rangey[-1]
-    colmin, colmax = rangex[0], rangex[-1]
+    range_y = np.arange(y, y + h - ov, th - ov)
+    range_x = np.arange(x, x + w - ov, tw - ov)
+    rowmin, rowmax = range_y[0], range_y[-1]
+    colmin, colmax = range_x[0], range_x[-1]
 
-    for i, row in enumerate(rangey):
-        for j, col in enumerate(rangex):
-            # ensure that the coordinates of the tile are multiples of the
-            # zoom factor
-            col, row, tw, th = common.round_roi_to_nearest_multiple(
-                z, col, row, tw, th)
-            tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (
-                cfg['out_dir'], tw, th, row, col)
+    for i, row in enumerate(range_y):
+        for j, col in enumerate(range_x):
+            # ensure that tile coordinates are multiples of the zoom factor
+            col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row,
+                                                                    tw, th)
+            tile_dir = os.path.join(cfg['out_dir'], 'tile_%d_%d_row_%d' % (tw,
+                                                                           th,
+                                                                           row),
+                                    'col_%d' % col)
 
             if row == rowmin and col == colmin:
                 pos = 'UL'
@@ -251,15 +252,18 @@ def init_tiles_full_info(config_file):
             else:
                 pos = 'M'
 
-            tiles_full_info.append([col, row, tw, th,
-                                    ov, i, j, pos,
-                                    x, y, w, h,
-                                    cfg['images'], NbPairs,
-                                    cfg['images'][0]['cld'],
-                                    cfg['images'][0]['roi'],
-                                    tile_dir])
+            tile_info = {}
+            tile_info['directory'] = tile_dir
+            tile_info['coordinates'] = (col, row, tw, th)
+            tile_info['index_in_roi'] = (i, j)
+            tile_info['position_type'] = pos
+            tile_info['roi_coordinates'] = (x, y, w, h)
+            tile_info['overlap'] = ov
+            tile_info['number_of_pairs'] = nb_pairs
+            tile_info['images'] = cfg['images']
+            tiles_full_info.append(tile_info)
 
-    if len(tiles_full_info) == 1:  # set position to 'Single'
-        tiles_full_info[0][7] = 'Single'
+    if len(tiles_full_info) == 1:
+        tiles_full_info[0]['position_type'] = 'Single'
 
     return tiles_full_info

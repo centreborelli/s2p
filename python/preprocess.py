@@ -15,17 +15,18 @@ from python import pointing_accuracy
 from python import visualisation
 
 
-def get_minmax_color_on_tile(tile_info):
+def minmax_color_on_tile(tile_info):
     """
     Compute min and max intensities on a given tile and save them to a txt file.
 
     Args:
-        tile_info : a list that provides all you need to process a tile
+        tile_info: dictionary containing all the information needed to process
+            the tile
     """
     # read info
-    img1 = tile_info[12][0]['img']
-    roi = tile_info[:4]
-    tile_dir = tile_info[-1]
+    img1 = cfg['images'][0]['img']
+    coords = tile_info['coordinates']
+    tile_dir = tile_info['directory']
     z = cfg['subsampling_factor']
 
     # output files
@@ -33,7 +34,7 @@ def get_minmax_color_on_tile(tile_info):
     local_minmax = os.path.join(tile_dir, 'local_minmax.txt')
 
     # do the job
-    common.cropImage(img1, crop_ref, *roi, zoom=z)
+    common.cropImage(img1, crop_ref, *coords, zoom=z)
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
         print 'tile %s is masked, skip' % tile_dir
     elif os.path.isfile(os.path.join(tile_dir, 'local_minmax.txt')) and cfg['skip_existing']:
@@ -43,22 +44,22 @@ def get_minmax_color_on_tile(tile_info):
 
 
 def pointing_correction(tile_info):
-    """                        
+    """
     Computes pointing corrections
 
-    Args: 
-        tile_info : a list that provides all you need to process a tile: col,
-            row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk,
-            roi_msk
+    Args:
+        tile_info: dictionary containing all the information needed to process
+            the tile
     """
-    col, row, tw, th, ov, i, j, pos, x, y, w, h, images, NbPairs, cld_msk, roi_msk, tile_dir = tile_info
+    tile_dir = tile_info['directory']
+    x, y, w, h = tile_info['coordinates']
 
-    for i in range(0, NbPairs):
-        pair_id = i + 1
-        paired_tile_dir = tile_dir + 'pair_%d' % pair_id
-
-        img1, rpc1, img2, rpc2 = images[0]['img'], images[0][
-            'rpc'], images[pair_id]['img'], images[pair_id]['rpc']
+    for i in range(1, tile_info['number_of_pairs'] + 1):
+        paired_tile_dir = os.path.join(tile_dir, 'pair_%d' % i)
+        img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
+        img2, rpc2 = cfg['images'][i]['img'], cfg['images'][i]['rpc']
+        roi_msk = cfg['images'][0]['roi']
+        cld_msk = cfg['images'][0]['cld']
 
         # create a directory for the experiment
         if not os.path.exists(paired_tile_dir):
@@ -66,14 +67,13 @@ def pointing_correction(tile_info):
 
         # redirect stdout and stderr to log file
         if not cfg['debug']:
-            fout = open('%s/stdout.log' % paired_tile_dir,
-                        'w', 0)  # '0' for no buffering
+            # the last arg '0' is for no buffering
+            fout = open(os.path.join(paired_tile_dir, 'stdout.log'), 'w', 0)
             sys.stdout = fout
             sys.stderr = fout
 
         # debug print
-        print 'tile %d %d running on process %s' % (x, y,
-                                                    multiprocessing.current_process())
+        print 'tile %d %d running on process %s' % (x, y, multiprocessing.current_process())
 
         # output files
         cwid_msk = '%s/cloud_water_image_domain_mask.png' % (paired_tile_dir)
@@ -84,16 +84,15 @@ def pointing_correction(tile_info):
 
         # check if the tile is already done
         if os.path.isfile('%s/pointing.txt' % paired_tile_dir) and cfg['skip_existing']:
-            print "pointing correction on tile %d %d (pair %d) already done, skip" % (col, row, pair_id)
+            print "pointing correction on tile %d %d (pair %d) already done, skip" % (x, y, i)
         else:
 
             # check if the ROI is completely masked (water, or outside the
             # image domain)
             H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
-            if masking.cloud_water_image_domain(cwid_msk, tw, th, H, rpc1, roi_msk, cld_msk):
+            if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk, cld_msk):
                 print "Tile masked by water or outside definition domain, skip"
-                open("%s/this_tile_is_masked.txt" %
-                     paired_tile_dir, 'a').close()
+                open("%s/this_tile_is_masked.txt" % paired_tile_dir, 'a').close()
                 sys.stdout = sys.__stdout__
                 sys.stderr = sys.__stderr__
                 if not cfg['debug']:
@@ -102,15 +101,17 @@ def pointing_correction(tile_info):
 
                 # correct pointing error
                 # A is the correction matrix and m is the list of sift matches
-                A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, col,
-                                                            row, tw, th)
+                A, m = pointing_accuracy.compute_correction(img1, rpc1, img2,
+                                                            rpc2, x, y, w, h)
                 if A is not None:
                     np.savetxt(pointing, A)
                 if m is not None:
                     np.savetxt(sift_matches, m)
                     np.savetxt(center, np.mean(m[:, 2:4], 0))
-                    visualisation.plot_matches_pleiades(
-                        img1, img2, rpc1, rpc2, m, col, row, tw, th, sift_matches_plot)
+                    if cfg['debug']:
+                        visualisation.plot_matches_pleiades(img1, img2, rpc1,
+                                                            rpc2, m, x, y, w, h,
+                                                            sift_matches_plot)
 
         # close logs
         common.garbage_cleanup()

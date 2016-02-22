@@ -56,15 +56,15 @@ def preprocess_tile(tile_info):
             tile.
     """
     preprocess.pointing_correction(tile_info)
-    preprocess.get_minmax_color_on_tile(tile_info)
+    preprocess.minmax_color_on_tile(tile_info)
 
 
 def global_values(tiles_full_info):
     """
     Compute the global pointing correction and extrema intensities for the ROI.
     """
-    globalvalues.global_pointing_correction(tiles_full_info)
-    globalvalues.global_minmax_intensities(tiles_full_info)
+    globalvalues.pointing_correction(tiles_full_info)
+    globalvalues.minmax_intensities(tiles_full_info)
 
 
 def process_tile_pair(tile_info, pair_id):
@@ -79,11 +79,11 @@ def process_tile_pair(tile_info, pair_id):
         pair_id: index of the pair to process
     """
     # read all the information
-    tile_dir = tile_info[-1]
-    col, row, tw, th = tile_info[:4]
-    images = tile_info[12]
-    cld_msk = tile_info[14]
-    roi_msk = tile_info[15]
+    tile_dir = tile_info['directory']
+    col, row, tw, th = tile_info['coordinates']
+    images = cfg['images']
+    cld_msk = cfg['images'][0]['cld']
+    roi_msk = cfg['images'][0]['roi']
 
     img1, rpc1 = images[0]['img'], images[0]['rpc']
     img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
@@ -129,7 +129,7 @@ def process_tile(tile_info):
     Args:
         tile_info: a dictionary that provides all you need to process a tile
     """
-    tile_dir = tile_info[-1]
+    tile_dir = tile_info['directory']
 
     # check that the tile is not masked
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
@@ -137,7 +137,7 @@ def process_tile(tile_info):
         return
 
     # process each pair to get a height map
-    nb_pairs = tile_info[13]
+    nb_pairs = tile_info['number_of_pairs']
     for pair_id in range(1, nb_pairs + 1):
         process_tile_pair(tile_info, pair_id)
 

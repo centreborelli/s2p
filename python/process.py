@@ -224,17 +224,18 @@ def finalize_tile(tile_info, height_maps):
 
     z = cfg['subsampling_factor']
     newcol, newrow, difftw, diffth = np.array(dicoPos[pos]) / z
-    tile_info[0] = tile_info[0] / z + newcol
-    tile_info[1] = tile_info[1] / z + newrow
-    tile_info[2] = tile_info[2] / z + difftw
-    tile_info[3] = tile_info[3] / z + diffth
+    tile_info['coordinates'][0] = tile_info['coordinates'][0] / z + newcol
+    tile_info['coordinates'][1] = tile_info['coordinates'][1] / z + newrow
+    tile_info['coordinates'][2] = tile_info['coordinates'][2] / z + difftw
+    tile_info['coordinates'][3] = tile_info['coordinates'][3] / z + diffth
 
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have
     # already been zoomed. So don't zoom again to crop these images.
     common.cropImage(local_merged_height_map, local_merged_height_map_crop,
-                     newcol, newrow, tile_info[2], tile_info[3])
-    common.cropImage(crop_ref, crop_ref_crop, newcol,
-                     newrow, tile_info[2], tile_info[3])
+                     newcol, newrow, tile_info['coordinates'][2],
+                     tile_info['coordinates'][3])
+    common.cropImage(crop_ref, crop_ref_crop, newcol, newrow,
+                     tile_info['coordinates'][2], tile_info['coordinates'][3])
 
     # by pair
     for i in range(1, nb_pairs + 1):
@@ -243,9 +244,11 @@ def finalize_tile(tile_info, height_maps):
         single_rpc_err = os.path.join(tile_dir, 'pair_%d/rpc_err.tif' % i)
         single_rpc_err_crop = os.path.join(tile_dir, 'pair_%d/rpc_err_crop.tif' % i)
         common.cropImage(single_height_map, single_height_map_crop, newcol,
-                         newrow, tile_info[2], tile_info[3])
+                         newrow, tile_info['coordinates'][2],
+                         tile_info['coordinates'][3])
         common.cropImage(single_rpc_err, single_rpc_err_crop, newcol, newrow,
-                         tile_info[2], tile_info[3])
+                         tile_info['coordinates'][2],
+                         tile_info['coordinates'][3])
 
     # colors
     color_crop_ref(tile_info, cfg['images'][0]['clr'])
