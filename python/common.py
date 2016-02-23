@@ -858,8 +858,8 @@ def image_pleiades_unsharpening_mtf():
     resampled with a factor 1.4x. But in theory it should be adapted depending
     on the RESAMPLING_SPACING stored in the RPC xml files.
     """
-    return '%s/idata_0009_MTF_89x89.tif'%(os.path.dirname(
-                                                os.path.abspath(__file__)))
+    s2p_dir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
+    return os.path.join(s2p_dir, 'data', 'idata_0009_MTF_89x89.tif')
 
 
 def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
@@ -914,7 +914,7 @@ def get_rectangle_coordinates(im):
     """
     points_file = tmpfile('.txt')
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    run('%s/viewGL.py %s > %s' % (current_dir, shellquote(im), points_file));
+    run('python viewGL.py %s > %s' % (shellquote(im), points_file))
     (x1, y1, x2, y2) = map(int, open(points_file).read().split())
     # viewGL.py returns the coordinates of two corners defining the rectangle.
     # We can's make any assumption on the ordering of these coordinates.
