@@ -101,7 +101,7 @@ def write_dsm(tiles_full_info, n=5):
     Args :
          tiles_full_info: a list of tile_info dictionaries
     """
-    clouds_dir = cfg['out_dir'] + '/clouds'
+    clouds_dir = os.path.join(cfg['out_dir'], 'clouds')
     if (os.path.exists(clouds_dir)):
         shutil.rmtree(clouds_dir)
     os.mkdir(clouds_dir)
@@ -110,11 +110,12 @@ def write_dsm(tiles_full_info, n=5):
         tile_dir = tile_info['directory']
         x, y, w, h = tile_info['coordinates']
         cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
-        cloud_link_name = clouds_dir + \
-            '/cloud_%d_%d_row_%d_col_%d.ply' % (w, h, x, y)
-        common.run('ln -s %s %s' % (cloud, cloud_link_name))
-
-    out_dsm_dir = '%s/dsm' % (cfg['out_dir'])
+        cloud_link_name = os.path.join(clouds_dir,
+                                       'cloud_%d_%d_row_%d_col_%d.ply' % (w, h,
+                                                                          x, y))
+        if (os.path.exists(cloud)):
+            common.run('ln -s %s %s' % (cloud, cloud_link_name))
+    out_dsm_dir = os.path.join(cfg['out_dir'], 'dsm')
     if (os.path.exists(out_dsm_dir)):
         shutil.rmtree(out_dsm_dir)
     os.mkdir(out_dsm_dir)
