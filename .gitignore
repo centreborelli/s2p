@@ -27,3 +27,7 @@ data/pleiades/*/*
 snapshots
 to_debug
 licence_examples
+
+
+test/
+*~
