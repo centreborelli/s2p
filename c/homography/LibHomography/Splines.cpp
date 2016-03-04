@@ -72,10 +72,12 @@ void prepareSpline(
 
       //! Copy data
       for (size_t j = 0; j < width; j++) {
-        iI0[j] = vecI[j][3];
-        iI1[j] = vecI[j][2];
-        iI2[j] = vecI[j][1];
-        iI3[j] = vecI[j][0];
+        float value[4];
+        _mm_storeu_ps(value, vecI[j]);
+        iI0[j] = value[3];
+        iI1[j] = value[2];
+        iI2[j] = value[1];
+        iI3[j] = value[0];
       }
     }
 
@@ -184,7 +186,9 @@ void interpolateSpline(
                           cy[1] * (iI4[xi + 2] * cx[1] + iI4[xi + 3] * cx[0]) +
                           cy[0] * (iI5[xi + 2] * cx[1] + iI5[xi + 3] * cx[0]);
 
-      o_im.getPtr(c, p_i)[p_j] = value + xVal[0] + xVal[1] + xVal[2] + xVal[3];
+      float tmp[4];
+      _mm_storeu_ps(tmp, xVal);
+      o_im.getPtr(c, p_i)[p_j] = value + tmp[0] + tmp[1] + tmp[2] + tmp[3];
     }
   }
   else {
