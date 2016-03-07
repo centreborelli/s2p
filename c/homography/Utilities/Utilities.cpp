@@ -26,27 +26,6 @@
 using namespace std;
 
 
-//! Compute an amount of time elapsed.
-void getTime(
-  struct timespec &io_start,
-  const char* p_name) {
-
-  //! Check the current time
-  struct timespec finish;
-  clock_gettime(CLOCK_MONOTONIC, &finish);
-
-  //! Compute the elapsed time
-  double elapsed = (finish.tv_sec - io_start.tv_sec) * 1000;
-  elapsed += (finish.tv_nsec - io_start.tv_nsec) / 1000000.0;
-
-  //! Print the result
-  cout << p_name << ": (ms) = " << elapsed << endl;
-
-  //! Start a new timer
-  clock_gettime(CLOCK_MONOTONIC, &io_start);
-}
-
-
 //! Return the optimal cut of the lines of an image according to the number of
 //! threads available.
 void initializeHeights(

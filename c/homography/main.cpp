@@ -12,6 +12,7 @@
 
 //! Local includes
 #include "LibImages/LibImages.h"
+#include "Utilities/Time.h"
 #include "Utilities/Utilities.h"
 #include "Utilities/Parameters.h"
 #include "LibHomography/Homography.h"
@@ -36,27 +37,26 @@ int main(
   }
 
   //! Initialization of time
-  struct timespec time;
-  clock_gettime(CLOCK_MONOTONIC, &time);
+  Time time;
 
   //! Read the input image
   Image imI;
   imI.read(params.inpName());
-  if (params.verbose()) getTime(time, "Read image                            ");
+  if (params.verbose()) time.getTime("Read image");
 
   //! Read the homography
   double mat[9];
   readHomography(params.inpHomo(), mat);
-  if (params.verbose()) getTime(time, "Read homography                       ");
+  if (params.verbose()) time.getTime("Read homography");
 
   //! Call the mapping function
   Image imO;
   runHomography(imI, mat, imO, params);
-  if (params.verbose()) getTime(time, "Apply the homography                  ");
+  if (params.verbose()) time.getTime("Apply the homography");
 
   //! Write the image
   imO.write(params.outName());
-  if (params.verbose()) getTime(time, "Write image                           ");
+  if (params.verbose()) time.getTime("Write image");
 
   //! Exit the main function
   return EXIT_SUCCESS;

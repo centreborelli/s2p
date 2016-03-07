@@ -7,6 +7,7 @@ CXXSRC	= main.cpp \
     ./LibImages/LibImages.cpp \
     ./Utilities/Memory.cpp \
     ./Utilities/Parameters.cpp \
+    ./Utilities/Time.cpp \
     ./Utilities/Utilities.cpp
 
 # all source code

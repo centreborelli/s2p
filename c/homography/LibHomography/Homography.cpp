@@ -17,7 +17,7 @@
 //! Local includes
 #include "Homography.h"
 #include "Splines.h"
-#include "../Utilities/Utilities.h"
+#include "../Utilities/Time.h"
 #include "../Utilities/Memory.h"
 
 
@@ -56,8 +56,7 @@ void mapImage(
   const bool p_useAntiAliasing) {
 
   //! Time test
-  struct timespec time;
-  clock_gettime(CLOCK_MONOTONIC, &time);
+  Time time;
 
   //! Check the zoomOut
   const float zoomOut = p_useAntiAliasing ? getMinZoomOut(i_mat, i_im.width(), i_im.height()) : 1.f;
@@ -66,7 +65,7 @@ void mapImage(
   int offsetI = 0, offsetJ = 0;
   if (p_adjustSize) {
     adjustImage(i_im, i_mat, o_im, offsetI, offsetJ);
-    if (p_verbose) getTime(time, " - adjustImage                        ");
+    if (p_verbose) time.getTime(" - adjustImage");
   }
 
   //! Temporary image if the zoom has to be applied
@@ -96,12 +95,12 @@ void mapImage(
 
     //! Call recursively the function
     mapImage(i_im, matZ, imTmp, false, false);
-    if (p_verbose) getTime(time, " - recursive call                     ");
+    if (p_verbose) time.getTime(" - recursive call");
 
     //! Apply a Gaussian convolution
     const float sigma = 0.8f * sqrt(zoomIn * zoomIn - 1.f);
     imTmp.convolveGaussian(sigma);
-    if (p_verbose) getTime(time, " - gaussianConvolution                ");
+    if (p_verbose) time.getTime(" - gaussianConvolution");
 
     //! Update the homography for the next part.
     matZ[0] = zoomOut; matZ[1] = 0.0    ; matZ[2] = 0.0;
@@ -116,7 +115,7 @@ void mapImage(
 
   //! Prepare the image for cardinal spline interpolation
   prepareSpline(imTmp);
-  if (p_verbose) getTime(time, " - prepareSpline                      ");
+  if (p_verbose) time.getTime(" - prepareSpline");
 
   //! Invert the input homography
   double matInv[9];
@@ -134,7 +133,7 @@ void mapImage(
       interpolateSpline(imTmp, o_im, x + 0.5, y + 0.5, i, j);
     }
   }
-  if (p_verbose) getTime(time, " - interpolateSpline                  ");
+  if (p_verbose) time.getTime(" - interpolateSpline");
 
   //! If a zoom has been used, put the NaN mask back
   if (useZ) {
@@ -164,7 +163,7 @@ void mapImage(
         }
       }
     }
-    if (p_verbose) getTime(time, " - put the mask back                  ");
+    if (p_verbose) time.getTime(" - put the mask back");
   }
 }
 

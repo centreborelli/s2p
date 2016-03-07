@@ -4,7 +4,6 @@
 
 //! Global includes
 #include <cstring>
-#include <ctime>
 #include <cmath>
 #include <sstream>
 #include <iostream>
@@ -16,20 +15,6 @@
 
 //! Local includes
 #include "../LibImages/LibImages.h"
-
-
-/**
- * @brief Compute an amount of time elapsed.
- *
- * @param io_start : when the clock started; Will be
- *        reinitialized just after;
- * @param p_name : name of the section to print.
- *
- * @return none.
- **/
-void getTime(
-  struct timespec &io_start,
-  const char* p_name);
 
 
 /**
