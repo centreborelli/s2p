@@ -186,15 +186,19 @@ def map_processing(config_file):
     Args:
         config_file: path to a json config file
     """
+    # initialization
+    initialization.init_dirs_srtm_roi(config_file)
+    tiles_full_info = initialization.init_tiles_full_info(config_file)
+    show_progress.total = len(tiles_full_info)
+
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
     if cfg['max_nb_threads']:
         nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
-    # initialization
-    initialization.init_dirs_srtm_roi(config_file)
-    tiles_full_info = initialization.init_tiles_full_info(config_file)
-    show_progress.total = len(tiles_full_info)
+    # omp_num_threads: should not exceed nb_workers when multiplied by the
+    # number of tiles
+    cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
 
     try:
         print '\npreprocessing tiles...'
