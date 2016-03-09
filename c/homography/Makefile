@@ -1,6 +1,7 @@
 # C source code
 
 # C++ source code
+CXX = g++
 CXXSRC	= main.cpp \
     ./LibHomography/Homography.cpp \
     ./LibHomography/Splines.cpp \
@@ -36,7 +37,7 @@ CFLAGS	= $(COPT) -Wall -Wextra \
 CXXFLAGS	= $(CXXOPT) -Wall -Wextra \
 	-Wno-write-strings -Wno-deprecated -ansi
 # link flags
-LDFLAGS	= -lpng -ltiff -lm -lrt -lpthread
+LDFLAGS	= -lpng -ltiff -lm -lpthread
 
 # use openMP with `make OMP=1`
 ifdef OMP
