@@ -20,7 +20,7 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse sift asift imscript mgm msmw2 sgbm piio
+default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw2 sgbm piio
 
 all: default msmw tvl1
 
@@ -65,8 +65,11 @@ asift:
 monasse:
 	mkdir -p $(BINDIR)/monasse_refactored_build
 	cd $(BINDIR)/monasse_refactored_build; cmake ../../c/monasse_refactored; make
-	cp $(BINDIR)/monasse_refactored_build/bin/homography $(BINDIR)
 	cp $(BINDIR)/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
+
+homography: $(BINDIR)
+	cd $(SRCDIR)/homography; make
+	mv $(SRCDIR)/homography/homography $(BINDIR)
 
 sift: $(BINDIR)
 	cd 3rdparty/sift_anatomy_20140911; make
@@ -204,8 +207,9 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 test:
 	python s2p.py test.json
 
-clean: clean_libtiff clean_geographiclib clean_monasse clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_mgm
+clean: clean_libtiff clean_geographiclib clean_monasse clean_homography\
+	clean_sift clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm\
+	clean_mgm
 
 clean_libtiff:
 	-rm $(TIFDIR)/lib/libtiff.a
@@ -218,6 +222,10 @@ clean_geographiclib:
 clean_monasse:
 	-rm -r $(BINDIR)/monasse_refactored_build
 	-rm $(BINDIR)/{homography,rectify_mindistortion}
+
+clean_homography:
+	cd $(SRCDIR)/homography; make clean
+	-rm $(BINDIR)/homography
 
 clean_sift:
 	cd 3rdparty/sift_anatomy_20140911; make clean

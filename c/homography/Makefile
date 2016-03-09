@@ -59,3 +59,8 @@ endif
 # link all the object code
 $(BIN): $(OBJ) $(LIBDEPS)
 	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
+
+clean:
+	-rm homography
+	-rm *.o
+	-rm */*.o

@@ -470,15 +470,16 @@ def image_apply_homography(out, im, H, w, h):
         w, h: dimensions (width and height) of the output image
 
     The output image is defined on the domain [0, w] x [0, h]. Its pixels
-    intensities are defined by out(x) = im(H^{-1}(x)). This function calls
-    Pascal Monasse homography binary, refactored by Gabriele.
+    intensities are defined by out(x) = im(H^{-1}(x)). 
+    
+    This function calls the homography binary, rewritten by Marc Lebrun based on
+    a code of Pascal Monasse refactored by Gabriele Facciolo.
     """
     # write the matrix to a file
     Hf = tmpfile('.txt')
     matrix_write(Hf, H)
     # apply the homography
-    out_png = tmpfile('.png')
-    run("homography %s %s %s %s 0 %d %d" % (im, Hf, out_png, out, w, h))
+    run("homography -i %s -t %s -o %s -a 0 -c %d -l %d" % (im, Hf, out, w, h))
     return
 
 
