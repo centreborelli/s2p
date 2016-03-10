@@ -476,15 +476,11 @@ def image_apply_homography(out, im, H, w, h):
     a code of Pascal Monasse refactored by Gabriele Facciolo.
     """
     # write the matrix to a file
-    Hf = tmpfile('.txt')
-    matrix_write(Hf, H)
-
-    # ensure that the input image is stored as float
-    im_float = tmpfile('.tif')
-    run("iion %s %s" % (im, im_float))
+    hom_file = tmpfile('.txt')
+    np.savetxt(hom_file, H)
 
     # apply the homography
-    run("homography -i %s -t %s -o %s -a 0 -c %d -l %d" % (im_float, Hf, out, w, h))
+    run("homography -i %s -t %s -o %s -c %d -l %d" % (im, hom_file, out, w, h))
     return
 
 

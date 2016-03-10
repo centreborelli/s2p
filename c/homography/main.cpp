@@ -24,8 +24,6 @@ using namespace std;
 
 /**
  * @brief Main function.
- *
- * @author Marc Lebrun <marc.lebrun.ik@gmail.com>
  **/
 int main(
   int argc,

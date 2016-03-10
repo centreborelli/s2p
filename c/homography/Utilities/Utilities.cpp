@@ -3,7 +3,8 @@
  *
  * @brief Miscellaneous functions.
  *
- * @author Marc Lebrun <marc.lebrun.ik@gmail.com>
+ * @author Marc Lebrun <marc.lebrun.ik@gmail.com> (original version)
+ * @author Carlo de Franchis <carlodef@gmail.com> (modified version)
  **/
 
 
@@ -68,7 +69,7 @@ void initializeHeights(
 }
 
 
-//! Read an homography.
+//! Read 3x3 matrix from a text file, assuming 3 lines with 3 values on each
 void readHomography(
   const char* i_fileName,
   double o_mat[9]) {
@@ -91,30 +92,9 @@ void readHomography(
 
     //! Get the values
     istringstream iss(line);
-
-    //! First line begins with '[' character.
-    if (l == 0) {
-      char c;
-      iss >> c >> o_mat[3 * l] >> o_mat[3 * l + 1] >> o_mat[3 * l + 2];
-    }
-    else {
-      iss >> o_mat[3 * l] >> o_mat[3 * l + 1] >> o_mat[3 * l + 2];
-    }
+    iss >> o_mat[3 * l] >> o_mat[3 * l + 1] >> o_mat[3 * l + 2];
   }
 
   //! Close the file
   file.close();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

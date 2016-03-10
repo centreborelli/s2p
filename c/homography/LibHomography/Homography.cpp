@@ -301,8 +301,3 @@ void invert(
   o_mat[7] = det * (i_mat[1] * i_mat[6] - i_mat[0] * i_mat[7]);
   o_mat[8] = det * (i_mat[0] * i_mat[4] - i_mat[1] * i_mat[3]);
 }
-
-
-
-
-
