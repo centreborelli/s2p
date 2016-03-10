@@ -63,6 +63,7 @@ $(BIN): $(OBJ) $(LIBDEPS)
 test: homography
 	./homography -i test_data/input_uint16.tif -t test_data/identity.txt -o test_data/output_id.tif
 	./homography -i test_data/input_uint16.tif -t test_data/homography.txt -o test_data/output_hom.tif
+	./homography -i test_data/input_uint16_tiled.tif -t test_data/homography.txt -o test_data/output_hom.tif
 
 clean:
 	-rm homography

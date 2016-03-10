@@ -243,16 +243,43 @@ void Image::readTiff(
   new (this) Image(w, h, 1, i_border);
 
   //! Read the values
-  uint16_t* buf = (uint16_t*) malloc(TIFFScanlineSize(tif));
-  for (size_t i = 0; i < m_height; i++) {
-    if (TIFFReadScanline(tif, buf, i, 0) < 0) {
-      cout << "readTiff: error reading row " << i << endl;
-      exit(EXIT_FAILURE);
-    }
-    //! Cast the uint16 samples to float
-    float* oI = this->getPtr(0, i);
-    for (size_t i = 0; i < m_width; i++)
-        oI[i] = (float) buf[i];
+
+  // use a particular reader for tiled tiff
+  if (TIFFIsTiled(tif)) {
+      uint16_t* buf = (uint16_t*) malloc(TIFFTileSize(tif));
+      uint32_t tilewidth, tilelength;
+      TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tilewidth);
+      TIFFGetField(tif, TIFFTAG_TILELENGTH, &tilelength);
+      for (uint32_t tx = 0; tx < m_width; tx += tilewidth)
+      for (uint32_t ty = 0; ty < m_height; ty += tilelength) {
+          if (TIFFReadTile(tif, buf, tx, ty, 0, 0) < 0) {
+              cout << "readTiff: error reading tile " << tx << ty << endl;
+              exit(EXIT_FAILURE);
+          }
+          for (uint32_t j = 0; j < tilelength; j++)
+          for (uint32_t i = 0; i < tilewidth; i++) {
+              uint32_t ii = i + tx;
+              uint32_t jj = j + ty;
+              if (ii < m_width && jj < m_height) {
+                  float* oI = this->getPtr(0, jj);
+                  oI[ii] = (float) buf[j*tilewidth + i];
+              }
+          }
+      }
+      free(buf);
+  } else {
+      uint16_t* buf = (uint16_t*) malloc(TIFFScanlineSize(tif));
+      for (size_t i = 0; i < m_height; i++) {
+          if (TIFFReadScanline(tif, buf, i, 0) < 0) {
+              cout << "readTiff: error reading row " << i << endl;
+              exit(EXIT_FAILURE);
+          }
+          //! Cast the uint16 samples to float
+          float* oI = this->getPtr(0, i);
+          for (size_t i = 0; i < m_width; i++)
+              oI[i] = (float) buf[i];
+      }
+      free(buf);
   }
 
   //! Close the file
