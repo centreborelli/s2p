@@ -1,10 +1,11 @@
 /**
- * @brief Class to deal with images, and do conversion from/to cv::Mat.
+ * @brief Class to deal with images.
  *
  * @author Marc Lebrun <marc.lebrun.ik@gmail.com>
  **/
 
 //! Global includes
+#include <limits.h>
 #include <complex.h> // Must be included BEFORE fftw
 #include <fftw3.h>
 #include <tiffio.h>
@@ -37,7 +38,7 @@ Image::Image() :
   m_border  (0),
   m_size    (0),
 
-  //! Miscalleneous
+//! Miscalleneous
 #ifdef _OPENMP
   m_nbThreads(omp_get_max_threads()),
 #else
@@ -321,7 +322,7 @@ void Image::readPng(
 }
 
 
-//! Read a tiff-only image.
+//! Read a mono-channel uint16 tiff image.
 void Image::readTiff(
   const char* p_name,
   const size_t i_border) {
@@ -346,10 +347,17 @@ void Image::readTiff(
   TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps);
   TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &fmt);
 
-  //! Check the metadata
-  if (spp != 1 || bps != (uint16) sizeof(float) * 8 ||
-      fmt != SAMPLEFORMAT_IEEEFP) {
-    cout << "readTiff: metadata non-conform. Abort." << endl;
+  //! Check that the data type is 1 uint16 sample per pixel
+  if (spp != 1) {
+    cout << "readTiff: only 1 sample per pixel is supported. Abort." << endl;
+    exit(EXIT_FAILURE);
+  }
+  if (fmt != SAMPLEFORMAT_UINT) {
+    cout << "readTiff: only uint samples are supported. Abort." << endl;
+    exit(EXIT_FAILURE);
+  }
+  if (bps != (uint16) sizeof(uint16_t) * CHAR_BIT) {
+    cout << "readTiff: only 16 bits samples are supported. Abort." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -357,12 +365,16 @@ void Image::readTiff(
   new (this) Image(w, h, 1, i_border);
 
   //! Read the values
+  uint16_t* buf = (uint16_t*) malloc(TIFFScanlineSize(tif));
   for (size_t i = 0; i < m_height; i++) {
-    float* oI = this->getPtr(0, i);
-    if (TIFFReadScanline(tif, oI, i, 0) < 0) {
+    if (TIFFReadScanline(tif, buf, i, 0) < 0) {
       cout << "readTiff: error reading row " << i << endl;
       exit(EXIT_FAILURE);
     }
+    //! Cast the uint16 samples to float
+    float* oI = this->getPtr(0, i);
+    for (size_t i = 0; i < m_width; i++)
+        oI[i] = (float) buf[i];
   }
 
   //! Close the file
@@ -913,15 +925,3 @@ void Image::releaseMemory() {
     m_heights = NULL;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
