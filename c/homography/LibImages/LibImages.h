@@ -4,7 +4,6 @@
 //! Global includes
 #include <stdlib.h>
 #include <string>
-#include <png.h>
 #include <vector>
 #include <xmmintrin.h>
 #include <x86intrin.h>
@@ -168,21 +167,6 @@ class Image {
 
 
     /**
-     * @brief Read an image via the Libpng library. Will exit the main program
-     *        in case of problem.
-     *
-     * @param i_name : path to the image which will be filled into p_ptr;
-     * @param i_border : size of the border to add around the image (will be
-     *                   initialized full of zeros.
-     *
-     * @return none.
-     **/
-    void readPng(
-      const char* p_name,
-      const size_t i_border = 0);
-
-
-    /**
      * @brief Read an image via the Libtiff library. Will exit the main program
      *        in case of problem.
      *
@@ -195,18 +179,6 @@ class Image {
     void readTiff(
       const char* p_name,
       const size_t i_border = 0);
-
-
-    /**
-     * @brief Write an image via the Libpng library. Will exit the main problem
-     *        in case of problem.
-     *
-     * @param i_name: path to the image to save;
-     * @param p_quad: if true, apply a zoom-in by duplication of 1 pixel into 4.
-     **/
-    void writePng(
-      const std::string &p_name,
-      const bool p_quad = false) const;
 
 
     /**
