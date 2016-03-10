@@ -35,7 +35,7 @@ CFLAGS	= $(COPT) -Wall -Wextra \
 	-Wno-write-strings -ansi
 # C++ compilation flags
 CXXFLAGS	= $(CXXOPT) -Wall -Wextra \
-	-Wno-write-strings -Wno-deprecated -ansi
+	-Wno-write-strings -Wno-deprecated -Wno-unused-parameter -ansi
 # link flags
 LDFLAGS	= -lpng -ltiff -lm -lpthread
 

@@ -1,9 +1,10 @@
 /**
  * @file main.cpp
  *
- * @brief Main function for Landscape Evolution Modelling.
+ * @brief Main function to resample an image according to a homography.
  *
- * @author Marc Lebrun <marc.lebrun.ik@gmail.com>
+ * @author Marc Lebrun <marc.lebrun.ik@gmail.com> (original version)
+ * @author Carlo de Franchis <carlodef@gmail.com> (modified version)
  **/
 
 //! Global includes

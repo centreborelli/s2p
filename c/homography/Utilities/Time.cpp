@@ -88,18 +88,8 @@ void Time::getTime(
 }
 
 
-
 //! Release memory.
 void Time::releaseMemory() {
 
   //! Release memory
 }
-
-
-
-
-
-
-
-
-
