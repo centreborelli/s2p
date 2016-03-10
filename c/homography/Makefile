@@ -60,6 +60,10 @@ endif
 $(BIN): $(OBJ) $(LIBDEPS)
 	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
 
+test:
+	./homography -i test_data/input_uint16.tif -t test_data/identity.txt -o test_data/output_id.tif
+	./homography -i test_data/input_uint16.tif -t test_data/homography.txt -o test_data/output_hom.tif
+
 clean:
 	-rm homography
 	-rm *.o
