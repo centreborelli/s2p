@@ -39,6 +39,12 @@ CXXFLAGS	= $(CXXOPT) -Wall -Wextra \
 # link flags
 LDFLAGS	= -lpng -ltiff -lm -lpthread
 
+# OS detection hacks
+UNAME := $(shell uname)
+ifeq ($(UNAME), Linux)
+	LDFLAGS += -lrt
+endif
+
 # use openMP with `make OMP=1`
 ifdef OMP
 CFLAGS	+= -fopenmp

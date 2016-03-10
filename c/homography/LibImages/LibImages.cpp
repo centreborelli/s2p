@@ -7,6 +7,7 @@
 
 //! Global includes
 #include <limits.h>
+#include <inttypes.h>
 #include <complex.h> // Must be included BEFORE fftw
 #include <fftw3.h>
 #include <tiffio.h>
