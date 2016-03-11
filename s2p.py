@@ -23,6 +23,7 @@ import sys
 import time
 import shutil
 import os.path
+import datetime
 import numpy as np
 import multiprocessing
 
@@ -238,17 +239,18 @@ def main(config_file):
     # do the job
     print '\npreprocessing tiles...'
     launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
+    print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
     print '\ncomputing global values...'
     global_values(tiles_full_info)
+    print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
     print '\nprocessing tiles...'
     launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
+    print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
     print '\nglobal finalization...'
     global_finalization(tiles_full_info)
-
-    # measure total runtime
     print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
 
     # cleanup
