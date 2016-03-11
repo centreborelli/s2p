@@ -205,9 +205,9 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
             sys.exit(1)
 
 
-def map_processing(config_file):
+def main(config_file):
     """
-    Run the entire s2p pipeline.
+    Launch the entire s2p pipeline with the parameters given by a json file.
 
     It is a succession of five steps:
         initialization
@@ -217,8 +217,10 @@ def map_processing(config_file):
         global_finalization
 
     Args:
-        config_file: path to a json config file
+        config_file: path to a json configuration file
     """
+    t0 = time.time()
+
     # initialization
     initialization.init_dirs_srtm_roi(config_file)
     tiles_full_info = initialization.init_tiles_full_info(config_file)
@@ -245,19 +247,6 @@ def map_processing(config_file):
 
     print '\nglobal finalization...'
     global_finalization(tiles_full_info)
-
-
-def main(config_file):
-    """
-    Launch s2p with the parameters given by a json file.
-
-    Args:
-        config_file: path to the config json file
-    """
-    t0 = time.time()
-
-    # run the pipeline
-    map_processing(config_file)
 
     # measure total runtime
     t = int(time.time() - t0)
