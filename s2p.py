@@ -249,11 +249,7 @@ def main(config_file):
     global_finalization(tiles_full_info)
 
     # measure total runtime
-    t = int(time.time() - t0)
-    h = t / 3600
-    m = (t / 60) % 60
-    s = t % 60
-    print "Total runtime: %dh:%dm:%ds" % (h, m, s)
+    print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
 
     # cleanup
     common.garbage_cleanup()
