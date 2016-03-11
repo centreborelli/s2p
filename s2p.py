@@ -95,7 +95,9 @@ def process_tile_pair(tile_info, pair_id):
 
     print 'processing tile %d %d...' % (col, row)
     # rectification
-    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif')):
+    if (cfg['skip_existing'] and
+        os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and
+        os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif'))):
         print '\trectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
         print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
@@ -104,7 +106,8 @@ def process_tile_pair(tile_info, pair_id):
                         roi_msk)
 
     # disparity estimation
-    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif')):
+    if (cfg['skip_existing'] and
+        os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif'))):
         print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
         print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
@@ -112,8 +115,8 @@ def process_tile_pair(tile_info, pair_id):
                           tw, th, None, cld_msk, roi_msk)
 
     # triangulation
-    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
-                                                            'height_map.tif')):
+    if (cfg['skip_existing'] and
+        os.path.isfile(os.path.join(out_dir, 'height_map.tif'))):
         print '\ttriangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
         print '\ttriangulating tile %d %d (pair %d)...' % (col, row, pair_id)
@@ -172,6 +175,36 @@ def global_finalization(tiles_full_info):
         shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
+def launch_parallel_calls(fun, list_of_args, nb_workers):
+    """
+    Run a function several times in parallel with different given inputs.
+
+    Args:
+        fun: function to be called several times in parallel. It must have a
+            unique input argument.
+        list_of_args: list of arguments passed to fun, one per call
+        nb_workers: number of calls run simultaneously
+    """
+    results = []
+    show_progress.counter = 0
+    pool = multiprocessing.Pool(nb_workers)
+    for x in list_of_args:
+        p = pool.apply_async(fun, args=(x,), callback=show_progress)
+        results.append(p)
+
+    for r in results:
+        try:
+            r.get(3600)  # wait at most one hour per call
+        except multiprocessing.TimeoutError:
+            print "Timeout while running %s" % str(r)
+        except common.RunFailure as e:
+            print "FAILED call: ", e.args[0]["command"]
+            print "\toutput: ", e.args[0]["output"]
+        except KeyboardInterrupt:
+            pool.terminate()
+            sys.exit(1)
+
+
 def map_processing(config_file):
     """
     Run the entire s2p pipeline.
@@ -200,49 +233,18 @@ def map_processing(config_file):
     # number of tiles
     cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
 
-    try:
-        print '\npreprocessing tiles...'
-        results = []
-        show_progress.counter = 0
-        pool = multiprocessing.Pool(nb_workers)
-        for tile_info in tiles_full_info:
-            p = pool.apply_async(preprocess_tile, args=(tile_info,),
-                                 callback=show_progress)
-            results.append(p)
+    # do the job
+    print '\npreprocessing tiles...'
+    launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
 
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while preprocessing tile %s" % str(r)
+    print '\ncomputing global values...'
+    global_values(tiles_full_info)
 
-        print '\ncomputing global values...'
-        global_values(tiles_full_info)
+    print '\nprocessing tiles...'
+    launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
 
-        print '\nprocessing tiles...'
-        results = []
-        show_progress.counter = 0
-        for tile_info in tiles_full_info:
-            p = pool.apply_async(process_tile, args=(tile_info,),
-                                 callback=show_progress)
-            results.append(p)
-
-        for r in results:
-            try:
-                r.get(3600)  # wait at most one hour per tile
-            except multiprocessing.TimeoutError:
-                print "Timeout while processing tile %s" % str(r)
-
-        print '\nglobal finalization...'
-        global_finalization(tiles_full_info)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
+    print '\nglobal finalization...'
+    global_finalization(tiles_full_info)
 
 
 def main(config_file):
