@@ -1,42 +1,29 @@
-# C source code
-
-# C++ source code
+# source code
 CXX = g++
-CXXSRC	= main.cpp \
-    ./LibHomography/Homography.cpp \
-    ./LibHomography/Splines.cpp \
-    ./LibImages/LibImages.cpp \
-    ./Utilities/Memory.cpp \
-    ./Utilities/Parameters.cpp \
-    ./Utilities/Time.cpp \
-    ./Utilities/Utilities.cpp
+CXXSRC = main.cpp \
+    LibHomography/Homography.cpp \
+    LibHomography/Splines.cpp \
+    LibImages/LibImages.cpp \
+    Utilities/Memory.cpp \
+    Utilities/Parameters.cpp \
+    Utilities/Time.cpp \
+    Utilities/Utilities.cpp
 
-# all source code
-SRC	= $(CSRC) $(CXXSRC)
-
-# C objects
-COBJ	= $(CSRC:.c=.o)
-# C++ objects
-CXXOBJ	= $(CXXSRC:.cpp=.o)
-# all objects
+# objects
+COBJ = $(CSRC:.c=.o)
+CXXOBJ = $(CXXSRC:.cpp=.o)
 OBJ	= $(COBJ) $(CXXOBJ)
+
 # binary target
 BIN	= homography
 
-# C optimization flags
-#COPT	= -O3 -ftree-vectorize -funroll-loops -g -msse2 -mavx
-COPT	= -O3 -ftree-vectorize -funroll-loops -g -msse2
+# optimization flags
+COPT = -O3 -ftree-vectorize -funroll-loops -g -msse2 #-mavx
+CXXOPT = $(COPT)
 
-# C++ optimization flags
-CXXOPT	= $(COPT)
-
-# C compilation flags
-CFLAGS	= $(COPT) -Wall -Wextra \
-	-Wno-write-strings -ansi
-# C++ compilation flags
-CXXFLAGS	= $(CXXOPT) -Wall -Wextra \
-	-Wno-write-strings -Wno-deprecated -Wno-unused-parameter -ansi
-# link flags
+# compiler and linker flags
+CFLAGS = $(COPT) -Wall -Wextra -Wno-write-strings -ansi
+CXXFLAGS = $(CXXOPT) -Wall -Wextra -Wno-write-strings -Wno-deprecated -Wno-unused-parameter -ansi
 LDFLAGS	= -lpng -ltiff -lm -lpthread
 
 # OS detection hacks
@@ -47,23 +34,22 @@ endif
 
 # use openMP with `make OMP=1`
 ifdef OMP
-CFLAGS	+= -fopenmp
-CXXFLAGS	+= -fopenmp
+CFLAGS += -fopenmp
+CXXFLAGS += -fopenmp
 LDFLAGS += -lgomp
 else
-CFLAGS	+= -Wno-unknown-pragmas
-CXXFLAGS  += -Wno-unknown-pragmas
+CFLAGS += -Wno-unknown-pragmas
+CXXFLAGS += -Wno-unknown-pragmas
 endif
 
-# partial compilation of C source code
+# partial compilation
 %.o: %.c %.h
 	$(CC) -c -o $@  $< $(CFLAGS)
-# partial compilation of C++ source code
 %.o: %.cpp %.h
 	$(CXX) -c -o $@  $< $(CXXFLAGS)
 
 # link all the object code
-$(BIN): $(OBJ) $(LIBDEPS)
+$(BIN): $(OBJ)
 	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
 
 test: homography
