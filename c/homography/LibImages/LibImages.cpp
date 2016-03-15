@@ -561,14 +561,14 @@ void Image::convolveGaussian(
         //! Unroll the loops
         int k = 0;
         while (k + 4 < kSize) {
-          value += kernel[k + 0] * _mm_loadu_ps(line + j + k + 0) +
-                   kernel[k + 1] * _mm_loadu_ps(line + j + k + 1) +
-                   kernel[k + 2] * _mm_loadu_ps(line + j + k + 2) +
-                   kernel[k + 3] * _mm_loadu_ps(line + j + k + 3);
+          value += _mm_set1_ps(kernel[k + 0]) * _mm_loadu_ps(line + j + k + 0) +
+                   _mm_set1_ps(kernel[k + 1]) * _mm_loadu_ps(line + j + k + 1) +
+                   _mm_set1_ps(kernel[k + 2]) * _mm_loadu_ps(line + j + k + 2) +
+                   _mm_set1_ps(kernel[k + 3]) * _mm_loadu_ps(line + j + k + 3);
           k += 4;
         }
         for (; k < kSize; k++) {
-          value += kernel[k] * _mm_loadu_ps(line + j + k);
+          value += _mm_set1_ps(kernel[k]) * _mm_loadu_ps(line + j + k);
         }
         _mm_storeu_ps(iI + j, value);
       }
@@ -612,12 +612,14 @@ void Image::convolveGaussian(
         //! Unroll the loop
         int k = 0;
         while (k + 4 < kSize) {
-          value += kernel[k] * xCol[i + k] + kernel[k + 1] * xCol[i + k + 1] +
-            kernel[k + 2] * xCol[i + k + 2] + kernel[k + 3] * xCol[i + k + 3];
+          value += _mm_set1_ps(kernel[k + 0]) * xCol[i + k + 0] +
+                   _mm_set1_ps(kernel[k + 1]) * xCol[i + k + 1] +
+                   _mm_set1_ps(kernel[k + 2]) * xCol[i + k + 2] +
+                   _mm_set1_ps(kernel[k + 3]) * xCol[i + k + 3];
           k += 4;
         }
         for (; k < kSize; k++) {
-          value += kernel[k] * xCol[i + k];
+          value += _mm_set1_ps(kernel[k]) * xCol[i + k];
         }
 
         xCol[i] = value;
@@ -655,8 +657,10 @@ void Image::convolveGaussian(
         //! Unroll the loop
         int k = 0;
         while (k + 4 < kSize) {
-          value += kernel[k] * col[i + k] + kernel[k + 1] * col[i + k + 1] +
-            kernel[k + 2] * col[i + k + 2] + kernel[k + 3] * col[i + k + 3];
+          value += kernel[k + 0] * col[i + k + 0] +
+                   kernel[k + 1] * col[i + k + 1] +
+                   kernel[k + 2] * col[i + k + 2] +
+                   kernel[k + 3] * col[i + k + 3];
           k += 4;
         }
         for (; k < kSize; k++) {

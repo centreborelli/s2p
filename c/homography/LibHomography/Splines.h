@@ -34,92 +34,70 @@ void interpolateSpline(
 
 /**
  * @brief Init the forward recursion for spline application.
- *        Template is for both normal and SSE version.
+ *        normal version.
  **/
-template <typename T>
-T initForward(
-  const T* i_vec,
+float initForward(
+  const float* i_vec,
   const size_t p_step,
   const size_t p_size,
-  const double p_z) {
+  const double p_z);
 
-  //! Initialization
-  double zk  = p_z;
-  double iz  = 1.0 / p_z;
-  double z2k = pow(p_z, double(p_size - 1));
-  T sum      = i_vec[0] + float(z2k) * i_vec[p_step * (p_size - 1)];
-  z2k = z2k * z2k * iz;
 
-  //! Loop over the pixels
-  for (size_t k = 1; k < p_size - 1; k++) {
-    sum += float(zk + z2k) * i_vec[p_step * k];
-    zk  *= p_z;
-    z2k *= iz;
-  }
-
-  //! Get the result
-  return sum / float(1.0 - zk * zk);
-}
+/**
+ * @brief Init the forward recursion for spline application.
+ *        SSE version.
+ **/
+__m128 initForward(
+  const __m128* i_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double p_z);
 
 
 /**
  * @brief Init the backward recursion for spline application.
- *        Template is for both normal and SSE version.
+ *        normal version.
  **/
-template <typename T>
-inline T initBackward(
-  const T* i_vec,
+inline float initBackward(
+  const float* i_vec,
   const size_t p_step,
   const size_t p_size,
-  const double p_z) {
+  const double p_z);
 
-  return float(p_z / (p_z * p_z - 1.0)) * (float(p_z) *
-    i_vec[p_step * (p_size - 2)] + i_vec[p_step * (p_size - 1)]);
-}
+
+/**
+ * @brief Init the backward recursion for spline application.
+ *        SSE version.
+ **/
+inline __m128 initBackward(
+  const __m128* i_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double p_z);
 
 
 /**
  * @brief Apply the 1D spline interpolation.
- *        Template is for both normal and SSE version.
+ *        normal version.
  **/
-template <typename T>
 void applySpline(
-  T* io_vec,
+  float* io_vec,
   const size_t p_step,
   const size_t p_size,
   const double* z,
-  const size_t p_nPoles) {
+  const size_t p_nPoles);
 
-  //! Normalization
-  const float lambda = 1.430575  * (1.0 + 1.0 / 0.430575 ) *
-                       1.0430963 * (1.0 + 1.0 / 0.0430963);
 
-  //! Initialization
-  for (size_t k = 0; k < p_size; k++) {
-    io_vec[k * p_step] *= lambda;
-  }
-
-  //! Loop on poles
-  for (size_t n = 0; n < p_nPoles; n++) {
-    const float zn = z[n];
-
-    //! Forward recursion
-    io_vec[0] = initForward(io_vec, p_step, p_size, zn);
-    T sum = io_vec[0];
-    for (size_t k = 1; k < p_size; k++) {
-      sum = zn * sum + io_vec[k * p_step];
-      io_vec[k * p_step] = sum;
-    }
-
-    //! Backward recursion
-    io_vec[(p_size - 1) * p_step] = initBackward(io_vec, p_step, p_size, zn);
-    sum = io_vec[(p_size - 1) * p_step];
-    for (int k = int(p_size) - 2; k >= 0; k--) {
-      sum = zn * (sum - io_vec[k * p_step]);
-      io_vec[k * p_step] = sum;
-    }
-  }
-}
+/**
+ * @brief Apply the 1D spline interpolation.
+ *        SSE version.
+ **/
+void applySpline(
+  __m128* io_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double* z,
+  const size_t p_nPoles);
 
 
 /**
