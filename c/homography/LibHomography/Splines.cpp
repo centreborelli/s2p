@@ -172,12 +172,12 @@ void interpolateSpline(
       const float* iI4 = i_im.getPtr(c, yi + 2);
       const float* iI5 = i_im.getPtr(c, yi + 3);
 
-      const __m128 xVal = xx * (cy[5] * _mm_loadu_ps(iI0 + xi - 2) +
-                                cy[4] * _mm_loadu_ps(iI1 + xi - 2) +
-                                cy[3] * _mm_loadu_ps(iI2 + xi - 2) +
-                                cy[2] * _mm_loadu_ps(iI3 + xi - 2) +
-                                cy[1] * _mm_loadu_ps(iI4 + xi - 2) +
-                                cy[0] * _mm_loadu_ps(iI5 + xi - 2));
+      const __m128 xVal = xx * (_mm_set1_ps(cy[5]) * _mm_loadu_ps(iI0 + xi - 2) +
+                                _mm_set1_ps(cy[4]) * _mm_loadu_ps(iI1 + xi - 2) +
+                                _mm_set1_ps(cy[3]) * _mm_loadu_ps(iI2 + xi - 2) +
+                                _mm_set1_ps(cy[2]) * _mm_loadu_ps(iI3 + xi - 2) +
+                                _mm_set1_ps(cy[1]) * _mm_loadu_ps(iI4 + xi - 2) +
+                                _mm_set1_ps(cy[0]) * _mm_loadu_ps(iI5 + xi - 2));
 
       const float value = cy[5] * (iI0[xi + 2] * cx[1] + iI0[xi + 3] * cx[0]) +
                           cy[4] * (iI1[xi + 2] * cx[1] + iI1[xi + 3] * cx[0]) +
@@ -226,3 +226,174 @@ void initSpline(
   io_w[5] = pow5(p_val) * ak[5] + pow5(p_val + 1) * ak[4] + pow5(p_val + 2) * ak[3] + pow5(p_val + 3) * ak[2] + pow5(p_val + 4) * ak[1] + pow5(p_val + 5) * ak[0];
 }
 
+
+/**
+ * @brief Apply the 1D spline interpolation.
+ *        normal version.
+ **/
+void applySpline(
+  float* io_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double* z,
+  const size_t p_nPoles) {
+
+  //! Normalization
+  const float lambda = 1.430575  * (1.0 + 1.0 / 0.430575 ) *
+                       1.0430963 * (1.0 + 1.0 / 0.0430963);
+
+  //! Initialization
+  for (size_t k = 0; k < p_size; k++) {
+    io_vec[k * p_step] *= lambda;
+  }
+
+  //! Loop on poles
+  for (size_t n = 0; n < p_nPoles; n++) {
+    const float zn = z[n];
+
+    //! Forward recursion
+    io_vec[0] = initForward(io_vec, p_step, p_size, zn);
+    float sum = io_vec[0];
+    for (size_t k = 1; k < p_size; k++) {
+      sum = zn * sum + io_vec[k * p_step];
+      io_vec[k * p_step] = sum;
+    }
+
+    //! Backward recursion
+    io_vec[(p_size - 1) * p_step] = initBackward(io_vec, p_step, p_size, zn);
+    sum = io_vec[(p_size - 1) * p_step];
+    for (int k = int(p_size) - 2; k >= 0; k--) {
+      sum = zn * (sum - io_vec[k * p_step]);
+      io_vec[k * p_step] = sum;
+    }
+  }
+}
+
+
+/**
+ * @brief Apply the 1D spline interpolation.
+ *        SSE version.
+ **/
+void applySpline(
+  __m128* io_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double* z,
+  const size_t p_nPoles) {
+
+  //! Normalization
+  const __m128 lambda = _mm_set1_ps(1.430575  * (1.0 + 1.0 / 0.430575 ) *
+                       1.0430963 * (1.0 + 1.0 / 0.0430963));
+
+  //! Initialization
+  for (size_t k = 0; k < p_size; k++) {
+    io_vec[k * p_step] *= lambda;
+  }
+
+  //! Loop on poles
+  for (size_t n = 0; n < p_nPoles; n++) {
+    const __m128 zn = _mm_set1_ps((float) z[n]);
+
+    //! Forward recursion
+    io_vec[0] = initForward(io_vec, p_step, p_size, z[n]);
+    __m128 sum = io_vec[0];
+    for (size_t k = 1; k < p_size; k++) {
+      sum = zn * sum + io_vec[k * p_step];
+      io_vec[k * p_step] = sum;
+    }
+
+    //! Backward recursion
+    io_vec[(p_size - 1) * p_step] = initBackward(io_vec, p_step, p_size, z[n]);
+    sum = io_vec[(p_size - 1) * p_step];
+    for (int k = int(p_size) - 2; k >= 0; k--) {
+      sum = zn * (sum - io_vec[k * p_step]);
+      io_vec[k * p_step] = sum;
+    }
+  }
+}
+
+
+/**
+ * @brief Init the forward recursion for spline application.
+ *        normal version.
+ **/
+float initForward(
+  const float* i_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double p_z) {
+
+  //! Initialization
+  double zk  = p_z;
+  double iz  = 1.0 / p_z;
+  double z2k = pow(p_z, double(p_size - 1));
+  float sum      = i_vec[0] + float(z2k) * i_vec[p_step * (p_size - 1)];
+  z2k = z2k * z2k * iz;
+
+  //! Loop over the pixels
+  for (size_t k = 1; k < p_size - 1; k++) {
+    sum += float(zk + z2k) * i_vec[p_step * k];
+    zk  *= p_z;
+    z2k *= iz;
+  }
+
+  //! Get the result
+  return sum / float(1.0 - zk * zk);
+}
+
+
+/**
+ * @brief Init the forward recursion for spline application.
+ *        and SSE version.
+ **/
+__m128 initForward(
+  const __m128* i_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double p_z) {
+
+  //! Initialization
+  double zk  = p_z;
+  double iz  = 1.0 / p_z;
+  double z2k = pow(p_z, double(p_size - 1));
+  __m128 sum      = i_vec[0] + _mm_set1_ps((float) z2k) * i_vec[p_step * (p_size - 1)];
+  z2k = z2k * z2k * iz;
+
+  //! Loop over the pixels
+  for (size_t k = 1; k < p_size - 1; k++) {
+    sum += _mm_set1_ps(float(zk + z2k)) * i_vec[p_step * k];
+    zk  *= p_z;
+    z2k *= iz;
+  }
+
+  //! Get the result
+  return sum / _mm_set1_ps(float(1.0 - zk * zk));
+}
+
+
+/**
+ * @brief Init the backward recursion for spline application.
+ *        normal version.
+ **/
+inline float initBackward(
+  const float* i_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double p_z) {
+
+  return float(p_z / (p_z * p_z - 1.0)) * (float(p_z) *
+    i_vec[p_step * (p_size - 2)] + i_vec[p_step * (p_size - 1)]);
+}
+/**
+ * @brief Init the backward recursion for spline application.
+ *        SSE version.
+ **/
+inline __m128 initBackward(
+  const __m128* i_vec,
+  const size_t p_step,
+  const size_t p_size,
+  const double p_z) {
+
+  return _mm_set1_ps(float(p_z / (p_z * p_z - 1.0))) * (_mm_set1_ps(float(p_z)) *
+    i_vec[p_step * (p_size - 2)] + i_vec[p_step * (p_size - 1)]);
+}
