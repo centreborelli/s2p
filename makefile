@@ -72,9 +72,8 @@ homography: $(BINDIR)
 	mv $(SRCDIR)/homography/homography $(BINDIR)
 
 sift: $(BINDIR)
-	cd 3rdparty/sift_anatomy_20140911; make
-	cp 3rdparty/sift_anatomy_20140911/bin/sift_cli $(BINDIR)
-	cp 3rdparty/sift_anatomy_20140911/bin/match_cli $(BINDIR)
+	cd $(SRCDIR)/sift; make
+	cp $(SRCDIR)/sift/{sift_roi,match_cli} $(BINDIR)
 
 mgm:
 	cd 3rdparty/mgm; make
@@ -228,8 +227,8 @@ clean_homography:
 	-rm $(BINDIR)/homography
 
 clean_sift:
-	cd 3rdparty/sift_anatomy_20140911; make clean
-	-rm $(BINDIR)/{sift,match}_cli
+	cd $(SRCDIR)/sift; make clean
+	-rm $(BINDIR)/{sift_roi,match_cli}
 
 clean_asift:
 	-rm -r $(BINDIR)/asift_build
