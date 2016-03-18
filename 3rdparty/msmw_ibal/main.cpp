@@ -26,17 +26,7 @@ using namespace std;
 // ./MSMW -il /home/ibal/Images/input/stereo/a.png -ir /home/ibal/Images/input/stereo/b.png -dl /home/ibal/Images/output/S2P/pixell.tif -kl maskl.tif -dr pixelr.tif -kr maskr.tif -n 4 -W 5 -x 9 -y 9 -m -8.759999999999999432e+01 -M 6.359999999999999432e+01
 
 int main(int argc, char **argv) {
-/*
-  Image im;
-  im.read("/home/ibal/Images/input/stereo/a.png");
-  Image sub;
-  im.subSample(sub);
-  sub.subSample(im);
-  im.subSample(sub);
-  sub.subSample(im);
-  im.subSample(sub);
-  return EXIT_SUCCESS;
-*/
+
   //! Retrieve the arguments
   Parameters params;
   if (params.checkArgs(argc, argv) != EXIT_SUCCESS) {
