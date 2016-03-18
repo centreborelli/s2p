@@ -9,7 +9,7 @@ int main(int c, char *v[])
     // process input arguments
     if (c != 2 && c != 6) {
     	fprintf(stderr, "usage:\n\t%s file.tif [x y w h]\n", *v);
-    	//                          0 1          2 3 4 5
+        //                          0 1         2 3 4 5
     	return 1;
     }
 
@@ -40,6 +40,13 @@ int main(int c, char *v[])
     // compute sift keypoints
     int n;
     struct sift_keypoint_std *k = sift_compute_features(roi, w, h, &n);
+
+    // add (x, y) offset to keypoints coordinates
+    if (x != 0 || y != 0)
+        for (int i = 0; i < n; i++) {
+            k[i].x += x; // TODO: check that there is no x/y swap with Ives convention...
+            k[i].y += y;
+        }
 
     // write to standard output
     sift_write_to_file("/dev/stdout", k, n);
