@@ -711,10 +711,8 @@ def image_sift_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
         path to the file containing the list of descriptors
     """
     keyfile = tmpfile('.txt')
-
-    # the awk call is used to swap the first two columns of the output
-    # to print the keypoint coordinates in that order: x, y
-    run("sift_roi %s %d %d %d %d %s | awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (im, x, y, w, h, extra_params, keyfile))
+    run("sift_roi %s %d %d %d %d %s > %s" % (im, x, y, w, h, extra_params,
+                                             keyfile))
 
     # keep only the first max_nb points
     if max_nb is not None:
