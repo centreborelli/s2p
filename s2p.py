@@ -24,6 +24,7 @@ import time
 import shutil
 import os.path
 import datetime
+import traceback
 import numpy as np
 import multiprocessing
 
@@ -56,8 +57,32 @@ def preprocess_tile(tile_info):
         tile_info: list containing all the informations needed to process a
             tile.
     """
-    preprocess.pointing_correction(tile_info)
-    preprocess.minmax_color_on_tile(tile_info)
+    # create output directory for the tile
+    tile_dir = tile_info['directory']
+    if not os.path.exists(tile_dir):
+        os.makedirs(tile_dir)
+
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        fout = open(os.path.join(tile_dir, 'stdout.log'), 'w', 0)
+        # the last arg '0' is for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
+
+    try:
+        preprocess.pointing_correction(tile_info)
+        preprocess.minmax_color_on_tile(tile_info)
+    except Exception:
+        print("Exception in preprocessing tile:")
+        traceback.print_exc()
+        raise
+
+    # close logs
+    common.garbage_cleanup()
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
 
 
 def global_values(tiles_full_info):
@@ -135,20 +160,39 @@ def process_tile(tile_info):
     """
     tile_dir = tile_info['directory']
 
-    # check that the tile is not masked
-    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-        print 'tile %s already masked, skip' % tile_dir
-        return
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % tile_dir, 'a', 0)  # '0' for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
 
-    # process each pair to get a height map
-    nb_pairs = tile_info['number_of_pairs']
-    for pair_id in range(1, nb_pairs + 1):
-        process_tile_pair(tile_info, pair_id)
+    try:
+        # check that the tile is not masked
+        if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
+            print 'tile %s already masked, skip' % tile_dir
+            return
 
-    # finalization
-    height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i
-                   in range(1, nb_pairs + 1)]
-    process.finalize_tile(tile_info, height_maps)
+        # process each pair to get a height map
+        nb_pairs = tile_info['number_of_pairs']
+        for pair_id in range(1, nb_pairs + 1):
+            process_tile_pair(tile_info, pair_id)
+
+        # finalization
+        height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i in range(1, nb_pairs + 1)]
+        process.finalize_tile(tile_info, height_maps)
+
+    except Exception:
+        print("Exception in processing tile:")
+        traceback.print_exc()
+        raise
+
+    # close logs
+    common.garbage_cleanup()
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
+
 
 
 def global_finalization(tiles_full_info):

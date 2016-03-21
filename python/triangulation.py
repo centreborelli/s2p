@@ -104,22 +104,9 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     """
     out_dir = os.path.dirname(out)
 
-    # redirect stdout and stderr to log file, in append mode
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'a', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
     tmp = common.tmpfile('.tif')
     compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
-
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
 
 
 def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
@@ -135,13 +122,6 @@ def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
         img: path to the png image containing the colors
         A (optional): pointing correction matrix for im2
     """
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        log_file = '%s/stdout.log' % os.path.dirname(out)
-        fout = open(log_file, 'a', 0)  # 'a' for append, 0 for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
     # apply correction matrix
     if A is not None:
         HH2 = '%s/H_sec_corrected.txt' % os.path.dirname(out)
@@ -152,13 +132,6 @@ def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
     # do the job
     common.run("disp2ply %s %s %s %s %s %s %s %s" % (out, disp,  mask, H1, HH2,
                                                      rpc1, rpc2, img))
-    # close logs
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
-
-    return
 
 
 def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):

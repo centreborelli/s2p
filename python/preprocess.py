@@ -65,40 +65,22 @@ def pointing_correction(tile_info):
         if not os.path.exists(paired_tile_dir):
             os.makedirs(paired_tile_dir)
 
-        # redirect stdout and stderr to log file
-        if not cfg['debug']:
-            # the last arg '0' is for no buffering
-            fout = open(os.path.join(paired_tile_dir, 'stdout.log'), 'w', 0)
-            sys.stdout = fout
-            sys.stderr = fout
-
-        # debug print
-        print 'tile %d %d running on process %s' % (x, y, multiprocessing.current_process())
-
         # output files
         cwid_msk = '%s/cloud_water_image_domain_mask.png' % (paired_tile_dir)
         pointing = '%s/pointing.txt' % paired_tile_dir
         center = '%s/center_keypts_sec.txt' % paired_tile_dir
         sift_matches = '%s/sift_matches.txt' % paired_tile_dir
-        sift_matches_plot = '%s/sift_matches_plot.png' % paired_tile_dir
 
         # check if the tile is already done
         if os.path.isfile('%s/pointing.txt' % paired_tile_dir) and cfg['skip_existing']:
             print "pointing correction on tile %d %d (pair %d) already done, skip" % (x, y, i)
         else:
-
-            # check if the ROI is completely masked (water, or outside the
-            # image domain)
+            # check if the ROI is masked by water or out of image domain
             H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
             if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk, cld_msk):
                 print "Tile masked by water or outside definition domain, skip"
                 open("%s/this_tile_is_masked.txt" % paired_tile_dir, 'a').close()
-                sys.stdout = sys.__stdout__
-                sys.stderr = sys.__stderr__
-                if not cfg['debug']:
-                    fout.close()
             else:
-
                 # correct pointing error
                 # A is the correction matrix and m is the list of sift matches
                 A, m = pointing_accuracy.compute_correction(img1, rpc1, img2,
@@ -109,15 +91,7 @@ def pointing_correction(tile_info):
                     np.savetxt(sift_matches, m)
                     np.savetxt(center, np.mean(m[:, 2:4], 0))
                     if cfg['debug']:
+                        png = '%s/sift_matches_plot.png' % paired_tile_dir
                         visualisation.plot_matches_pleiades(img1, img2, rpc1,
                                                             rpc2, m, x, y, w, h,
-                                                            sift_matches_plot)
-
-        # close logs
-        common.garbage_cleanup()
-        if not cfg['debug']:
-            sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
-            fout.close()
-
-    return
+                                                            png)

@@ -284,7 +284,6 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
     Returns:
         nothing
     """
-
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
     rect2 = '%s/rectified_sec.tif' % (out_dir)
@@ -300,16 +299,6 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
     H_sec = '%s/H_sec.txt' % out_dir
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
-
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
-    # debug print
-    print 'tile %d %d running on process %s' % (x, y,
-                                                multiprocessing.current_process())
 
     A, m = None, None
 
@@ -330,15 +319,6 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
     np.savetxt(H_ref, H1)
     np.savetxt(H_sec, H2)
     np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
-
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
-
-    return
 
 
 def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
@@ -366,7 +346,6 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     Returns:
         nothing
     """
-
     # output files
     rect1 = '%s/rectified_ref.tif' % (out_dir)
     rect2 = '%s/rectified_sec.tif' % (out_dir)
@@ -383,18 +362,7 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp_min_max = '%s/disp_min_max.txt' % out_dir
     config = '%s/config.json' % out_dir
 
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
-    # debug print
-    print 'tile %d %d running on process %s' % (x, y,
-                                                multiprocessing.current_process())
-
     # disparity (block-matching)
-
     disp_min, disp_max = np.loadtxt(disp_min_max)
 
     if cfg['disp_min'] is not None:
@@ -416,15 +384,6 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         masking.erosion(mask, mask, cfg['msk_erosion'])
     except OSError:
         print "file %s not produced" % mask
-
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
-
-    return
 
 
 def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
@@ -453,7 +412,6 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     Returns:
         nothing
     """
-
     # output files
     disp = '%s/rectified_disp.tif' % (out_dir)
     mask = '%s/rectified_mask.png' % (out_dir)
@@ -462,27 +420,8 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     rpc_err = '%s/rpc_err.tif' % out_dir
     height_map = '%s/height_map.tif' % out_dir
 
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'w', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
-    # debug print
-    print 'tile %d %d running on process %s' % (x, y,
-                                                multiprocessing.current_process())
-
     # triangulation
     z = cfg['subsampling_factor']
     triangulation.compute_dem(height_map, x, y, w, h, z,
                               rpc1, rpc2, H_ref, H_sec, disp, mask,
                               rpc_err, A)
-
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
-
-    return
