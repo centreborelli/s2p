@@ -718,10 +718,6 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
     r1 = rpc_model.RPCModel(rpc1)
     r2 = rpc_model.RPCModel(rpc2)
 
-    # correct pointing error - no subsampling!
-    tmp = cfg['subsampling_factor_registration']
-    cfg['subsampling_factor_registration'] = 1
-
     try:
         if w*h < 2e6:
             m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h,
@@ -735,8 +731,6 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
         print e
         print "WARNING: pointing_accuracy.compute_correction: no sift matches."
         m = None
-
-    cfg['subsampling_factor_registration'] = tmp
 
     # A = optimize_pair(img1, img2, r1, r2, None, m)
     if m is not None:
