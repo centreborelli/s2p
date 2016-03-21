@@ -244,19 +244,18 @@ void sift_find_ori_and_fill_descriptors(const float *x, int w, int h,
 
 void fprintf_keypoint_std(FILE* f, const struct sift_keypoint_std* k, int n)
 {
-    for (int i=0; i<n; i++) {
-        fprintf(f, "%f %f %f %f ", k[i].x, k[i].y, k[i].scale, k[i].orientation);
-        for (int j=0; j<128; j++)
+    for (int i = 0; i < n; i++)
+        fprintf(f, "%f %f %f %f ", k[i].y, k[i].x, k[i].scale, k[i].orientation);
+        for (int j = 0; j < 128; j++)
             fprintf(f, "%u ", k[i].descriptor[j]);
         fprintf(f, "\n");
-    }
 }
 
 
 void sift_write_to_file(const char *filename,
         const struct sift_keypoint_std *k, int n)
 {
-    FILE* file = fopen(filename,"w");
+    FILE* file = fopen(filename, "w");
     fprintf_keypoint_std(file, k, n);
     fclose(file);
 }
