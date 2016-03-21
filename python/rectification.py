@@ -46,95 +46,16 @@ def center_2d_points(pts):
     return np.vstack([new_x, new_y]).T, T
 
 
-def matches_from_sift(im1, im2, asift_only=False):
-    """
-    Computes a list of sift matches between two images.
-
-    This function uses the parameter subsampling_factor_registration from the
-    config module. If factor > 1 then the registration is performed over
-    subsampled images, but the resulting keypoints are then scaled back to
-    cancel the subsampling.
-
-    Two implementations of sift are used: first the one by Pascal Monasse, and
-    if we get less than 10 matches we use the one from ipol, which usually
-    detects more keypoints.
-
-    Args:
-        im1, im2: paths to the two images
-        asift_only: set to true to use ASIFT on the first try. If False, SIFT
-            will be used first, and ASIFT will be used only if not enough
-            matches are found
-
-    Returns:
-        matches: 2D numpy array containing a list of matches. Each line
-            contains one pair of points, ordered as x1 y1 x2 y2.
-    """
-    # convert to gray
-    if common.image_pix_dim(im1) == 4:
-        im1 = common.pansharpened_to_panchro(im1)
-    if common.image_pix_dim(im2) == 4:
-        im2 = common.pansharpened_to_panchro(im2)
-
-    # zoom out
-    zoom = cfg['subsampling_factor_registration']
-    if zoom != 1:
-        im1 = common.image_safe_zoom_fft(im1, zoom)
-        im2 = common.image_safe_zoom_fft(im2, zoom)
-
-    # rescale on 8 bits
-    im1_8b = common.image_qauto(im1)
-    im2_8b = common.image_qauto(im2)
-
-    if not asift_only:
-        p1 = common.image_sift_keypoints(im1_8b, max_nb=2000)
-        p2 = common.image_sift_keypoints(im2_8b, max_nb=2000)
-        matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                              cfg['sift_match_thresh'])
-
-    if asift_only or matches.shape[0] < 10:
-        ver = common.tmpfile('.png')
-        hor = common.tmpfile('.png')
-        match_f = common.tmpfile('.txt')
-        common.run('demo_ASIFT %s %s %s %s %s /dev/null /dev/null' % (im1_8b,
-                                                                      im2_8b,
-                                                                      ver, hor,
-                                                                      match_f))
-        matches = np.loadtxt(match_f, skiprows=1)
-
-    # Below is an alternative to ASIFT: lower the thresh_dog for the sift calls.
-    # Default value for thresh_dog is 0.0133
-    if False:
-        thresh_dog = 0.0133
-        nb_sift_tries = 1
-        while (matches.shape[0] < 10 and nb_sift_tries < 6):
-            nb_sift_tries += 1
-            thresh_dog /= 2.0
-            p1 = common.image_sift_keypoints(im1_8b, None, None,
-                                             '-thresh_dog %f' % thresh_dog)
-            p2 = common.image_sift_keypoints(im2_8b, None, None,
-                                             '-thresh_dog %f' % thresh_dog)
-            matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                                  cfg['sift_match_thresh'])
-
-    # compensate coordinates for the zoom
-    return matches * zoom
-
-
-def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h, asift_only=False):
+def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     """
     Computes a list of sift matches between two Pleiades images.
 
     Args:
-        im1, im2: paths to the two Pleiades images (usually jp2 or tif)
+        im1, im2: paths to two large tif images
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
         x, y, w, h: four integers defining the rectangular ROI in the first
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-
-        This function uses the parameter subsampling_factor_registration
-        from the config module. If factor > 1 then the registration
-        is performed over subsampled images, but the resulting keypoints
-        are then scaled back to conceal the subsampling
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -144,14 +65,24 @@ def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h, asift_only=False
     x1, y1, w1, h1 = x, y, w, h
     x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x, y, w, h)
 
-    # do crops, to apply sift on reasonably sized images
-    crop1 = common.image_crop_LARGE(im1, x1, y1, w1, h1)
-    crop2 = common.image_crop_LARGE(im2, x2, y2, w2, h2)
-    T1 = common.matrix_translation(x1, y1)
-    T2 = common.matrix_translation(x2, y2)
+    p1 = common.image_sift_keypoints(im1, x1, y1, w1, h1, max_nb=2000)
+    p2 = common.image_sift_keypoints(im2, x2, y2, w2, h2, max_nb=2000)
+    matches = common.sift_keypoints_match(p1, p2, 'relative',
+                                          cfg['sift_match_thresh'])
 
-    # compute sift matches for the images
-    matches = matches_from_sift(crop1, crop2, asift_only)
+    # Below is an alternative to ASIFT: lower the thresh_dog for the sift calls.
+    # Default value for thresh_dog is 0.0133
+    thresh_dog = 0.0133
+    nb_sift_tries = 1
+    while (matches.shape[0] < 10 and nb_sift_tries < 6):
+        nb_sift_tries += 1
+        thresh_dog /= 2.0
+        p1 = common.image_sift_keypoints(im1, x1, y1, w1, h1, None, '-thresh_dog %f' % thresh_dog)
+        p2 = common.image_sift_keypoints(im2, x2, y2, w2, h2, None, '-thresh_dog %f' % thresh_dog)
+        matches = common.sift_keypoints_match(p1, p2, 'relative',
+                                              cfg['sift_match_thresh'])
+
+    return matches
 
     if matches.size:
         # compensate coordinates for the crop and the zoom
@@ -531,7 +462,7 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     # in brief: use ransac to estimate F from a set of sift matches, then use
     # loop-zhang to estimate rectifying homographies.
 
-    matches = matches_from_sift(im1, im2, rpc1, rpc2, x, y, w, h)
+    matches = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
 

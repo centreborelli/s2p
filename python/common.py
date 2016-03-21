@@ -696,29 +696,25 @@ def rgbi_to_rgb_gdal(im):
     return out
 
 
-def image_sift_keypoints(im, keyfile=None, max_nb=None, extra_params=''):
+def image_sift_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     """
     Runs sift (the keypoints detection and description only, no matching).
 
     Args:
         im: path to the input image
-        keyfile (optional): path to the file where to write the list of sift
-            descriptors
         max_nb (optional): maximal number of keypoints. If more keypoints are
             detected, those at smallest scales are discarded
         extra_params (optional, default is ''): extra parameters to be passed
-            to the sift binary (ipol implementation)
+            to the sift binary
 
     Returns:
         path to the file containing the list of descriptors
     """
-    if keyfile is None:
-        keyfile = tmpfile('.txt')
+    keyfile = tmpfile('.txt')
 
     # the awk call is used to swap the first two columns of the output
     # to print the keypoint coordinates in that order: x, y
-    run("sift_cli %s %s | awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (
-        im, extra_params, keyfile))
+    run("sift_roi %s %d %d %d %d %s | awk '{ t = $1; $1 = $2; $2 = t; print; }' > %s" % (im, x, y, w, h, extra_params, keyfile))
 
     # keep only the first max_nb points
     if max_nb is not None:
