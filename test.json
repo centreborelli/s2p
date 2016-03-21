@@ -15,7 +15,6 @@
   "full_img" : false,
   "matching_algorithm" : "mgm",
   "subsampling_factor" : 1,
-  "subsampling_factor_registration" : 1,
   "sift_match_thresh" : 0.6,
   "disp_range_extra_margin" : 0.2,
   "n_gcp_per_axis" : 5,
