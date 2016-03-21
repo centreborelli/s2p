@@ -1,17 +1,31 @@
 #include <stdlib.h>
+#include <limits.h>
 
+#include "../pickopt.c"
 #include "fancy_image.h"
 #include "sift_anatomy_20141201/lib_sift.h"
 #include "iio.h"
 
+int min(int a, int b)
+{
+    return b < a ? b : a;
+}
+
+
 int main(int c, char *v[])
 {
     // process input arguments
-    if (c != 2 && c != 6) {
-    	fprintf(stderr, "usage:\n\t%s file.tif [x y w h]\n", *v);
-        //                          0 1         2 3 4 5
+    if (c != 2 && c != 4 && c != 6 && c != 8) {
+        fprintf(stderr, "usage:\n\t%s file.tif [--max-nb-pts n] [x y w h]\n", *v);
+        //                          0 1                          2 3 4 5
     	return 1;
     }
+
+    // optional arguments
+    char s[100];
+    sprintf(s, "%d", INT_MAX);
+    char *opt = pick_option(&c, &v, "-max-nb-pts", s);
+    int max_nb_pts = atoi(opt);
 
     // open the image
     struct fancy_image *fimg = fancy_image_open(v[1], "");
@@ -44,12 +58,12 @@ int main(int c, char *v[])
     // add (x, y) offset to keypoints coordinates
     if (x != 0 || y != 0)
         for (int i = 0; i < n; i++) {
-            k[i].x += x; // TODO: check that there is no x/y swap with Ives convention...
-            k[i].y += y;
+            k[i].x += y;  // in Ives' conventions, x is the row number, not col
+            k[i].y += x;
         }
 
     // write to standard output
-    sift_write_to_file("/dev/stdout", k, n);
+    sift_write_to_file("/dev/stdout", k, min(n, max_nb_pts));
 
     // cleanup
     free(k);

@@ -711,14 +711,16 @@ def image_sift_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
         path to the file containing the list of descriptors
     """
     keyfile = tmpfile('.txt')
-    run("sift_roi %s %d %d %d %d %s > %s" % (im, x, y, w, h, extra_params,
-                                             keyfile))
+    if max_nb:
+        cmd = "sift_roi %s %d %d %d %d --max-nb-pts %d %s > %s" % (im, x, y, w,
+                                                                   h, max_nb,
+                                                                   extra_params,
+                                                                   keyfile)
+    else:
+        cmd = "sift_roi %s %d %d %d %d %s > %s" % (im, x, y, w, h, extra_params,
+                                                   keyfile)
 
-    # keep only the first max_nb points
-    if max_nb is not None:
-        tmp = tmpfile('.txt')
-        run("head -n %d %s > %s" % (max_nb, keyfile, tmp))
-        run("cp %s %s" % (tmp, keyfile))
+    run(cmd)
     return keyfile
 
 
