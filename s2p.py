@@ -194,7 +194,6 @@ def process_tile(tile_info):
         fout.close()
 
 
-
 def global_finalization(tiles_full_info):
     """
     Produce a single height map, DSM and point cloud for the whole ROI.

@@ -692,7 +692,7 @@ def rgbi_to_rgb_gdal(im):
         output rgb image
     """
     out = tmpfile('.tif')
-    run('gdal_translate -co profile=baseline -b 1 -b 2 -b 3 %s %s' %(im, out))
+    run('gdal_translate -b 1 -b 2 -b 3 %s %s' %(im, out))
     return out
 
 
@@ -825,9 +825,9 @@ def image_crop_TIFF(im, x, y, w, h, out=None):
     try:
         with open(im, 'r'):
             # do the crop with gdal_translate, with option to remove any GDAL or GeoTIFF tag
-            run(('gdal_translate -co profile=baseline -co TILED=YES '
-                 '-co BIGTIFF=IF_NEEDED -srcwin %d %d %d %d %s %s') % (x, y, w,
-                     h, shellquote(im), shellquote(out)))
+            run(('gdal_translate -co TILED=YES -co BIGTIFF=IF_NEEDED '
+                 '-srcwin %d %d %d %d %s %s') % (x, y, w, h, shellquote(im),
+                                                 shellquote(out)))
 
     except IOError:
         print """image_crop_TIFF: input image %s not found! Verify your paths to
