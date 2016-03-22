@@ -4,18 +4,19 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 
-import numpy as np
-from config import cfg
 import os
 import shutil
+import numpy as np
+import multiprocessing
 
 from python import tile_composer
 from python import common
+from config import cfg
 
 
 def write_vrt_files(tiles_full_info):
     """
-    Merges pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc 
+    Merges pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc
 
     Args:
          tiles_full_info: a list of tile_info dictionaries
@@ -121,3 +122,21 @@ def write_dsm(tiles_full_info, n=5):
                                              cfg['dsm_resolution'], out_dsm))
     #common.run("gdalbuildvrt %s %s" %
     #           (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm*'))
+
+
+def lidar_preprocessor(output, input_plys):
+    """
+    Compute a multi-scale representation of a large point cloud.
+
+    The output file can be viewed with LidarPreprocessor. This is useful for
+    huge point clouds. The input is a list of ply files.
+
+    Args:
+        output: path to the output folder
+        input_plys: list of paths to ply files
+    """
+    tmp = cfg['temporary_dir']
+    nthreads = multiprocessing.cpu_count()
+    plys = ' '.join(input_plys)
+    common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (
+        tmp, tmp, nthreads, plys, output))

@@ -197,11 +197,13 @@ def process_tile(tile_info):
 
 def global_finalization(tiles_full_info):
     """
-    Produce single height map and DSM for the whole region of interest.
+    Produce a single height map, DSM and point cloud for the whole ROI.
 
     The height maps associated to each pair, as well as the height map obtained
     by merging all the pairs, are stored as VRT files. The final DSM is obtained
-    by projecting the 3D points from the ply files obtained on each tile.
+    by projecting the 3D points from the ply files obtained on each tile. The
+    final point cloud is obtained as the union of all the locally merged point
+    clouds, in the LidarViewer format.
 
     Args:
         tiles_full_info: dictionary providing all the information about the
@@ -209,6 +211,15 @@ def global_finalization(tiles_full_info):
     """
     globalfinalization.write_vrt_files(tiles_full_info)
     globalfinalization.write_dsm(tiles_full_info)
+
+    # whole point cloud (LidarViewer format)
+    if common.which('LidarPreprocessor'):
+        out = os.path.join(cfg['out_dir'], 'cloud.lidar_viewer')
+        plys = []
+        for tile_info in tiles_full_info:
+            plys.append(os.path.join(os.path.abspath(tile_info['directory']),
+                                     'cloud.ply'))
+        globalfinalization.lidar_preprocessor(out, plys)
 
     # crop area corresponding to the ROI in the secondary images
     if not cfg['full_img']:

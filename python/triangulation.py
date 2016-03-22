@@ -225,13 +225,3 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     if off_y:
         command += " --offset_y %d" % off_y
     common.run(command)
-
-    # if LidarViewer is installed, convert the point cloud to its format
-    # this is useful for huge point clouds
-    if crop_colorized and common.which('LidarPreprocessor'):
-        tmp = cfg['temporary_dir']
-        nthreads = multiprocessing.cpu_count()
-        cloud_lidar_viewer = "%s.lidar_viewer" % os.path.splitext(cloud)[0]
-        common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (
-            tmp, tmp, nthreads, cloud, cloud_lidar_viewer))
-    return
