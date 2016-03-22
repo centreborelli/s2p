@@ -115,12 +115,9 @@ def write_dsm(tiles_full_info, n=5):
                                                                           x, y))
         if (os.path.exists(cloud)):
             common.run('ln -s %s %s' % (cloud, cloud_link_name))
-    out_dsm_dir = os.path.join(cfg['out_dir'], 'dsm')
-    if (os.path.exists(out_dsm_dir)):
-        shutil.rmtree(out_dsm_dir)
-    os.mkdir(out_dsm_dir)
+    out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
 
-    common.run("ls %s | plyflatten %f %i %s" %
-               (clouds_dir + '/cloud*', cfg['dsm_resolution'], n, out_dsm_dir))
-    common.run("gdalbuildvrt %s %s" %
-               (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm*'))
+    common.run("ls %s | plyflatten %f %s" % (os.path.join(clouds_dir, 'cloud*'),
+                                             cfg['dsm_resolution'], out_dsm))
+    #common.run("gdalbuildvrt %s %s" %
+    #           (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm*'))
