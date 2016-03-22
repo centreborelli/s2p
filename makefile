@@ -73,7 +73,7 @@ homography: $(BINDIR)
 
 sift: $(BINDIR)
 	cd $(SRCDIR)/sift; make
-	cp $(SRCDIR)/sift/{sift_roi,match_cli} $(BINDIR)
+	mv $(SRCDIR)/sift/{sift_roi,match_cli} $(BINDIR)
 
 mgm:
 	cd 3rdparty/mgm; make
