@@ -261,7 +261,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
             sys.exit(1)
 
 
-def main(config_file):
+def main(config_file, step=None):
     """
     Launch the entire s2p pipeline with the parameters given by a json file.
 
@@ -274,10 +274,15 @@ def main(config_file):
 
     Args:
         config_file: path to a json configuration file
+        step: integer between 1 and 5 specifying which step to run. Default
+        value is None. In that case all the steps are run.
     """
     t0 = time.time()
 
-    # initialization
+    # determine which steps to run
+    steps = [step] if step else [1, 2, 3, 4, 5]
+
+    # initialization (has to be done whatever the queried steps)
     initialization.init_dirs_srtm_roi(config_file)
     tiles_full_info = initialization.init_tiles_full_info(config_file)
     show_progress.total = len(tiles_full_info)
@@ -292,21 +297,25 @@ def main(config_file):
     cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
 
     # do the job
-    print '\npreprocessing tiles...'
-    launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
-    print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+    if 2 in steps:
+        print '\npreprocessing tiles...'
+        launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
+        print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
-    print '\ncomputing global values...'
-    global_values(tiles_full_info)
-    print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+    if 3 in steps:
+        print '\ncomputing global values...'
+        global_values(tiles_full_info)
+        print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
-    print '\nprocessing tiles...'
-    launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
-    print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+    if 4 in steps:
+        print '\nprocessing tiles...'
+        launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
+        print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
-    print '\nglobal finalization...'
-    global_finalization(tiles_full_info)
-    print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
+    if 5 in steps:
+        print '\nglobal finalization...'
+        global_finalization(tiles_full_info)
+        print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
 
     # cleanup
     common.garbage_cleanup()
@@ -316,10 +325,17 @@ if __name__ == '__main__':
 
     if len(sys.argv) == 2:
         main(sys.argv[1])
+    elif len(sys.argv) == 3 and int(sys.argv[2]) in [1, 2, 3, 4, 5]:
+        main(sys.argv[1], int(sys.argv[2]))
     else:
         print """
         Incorrect syntax, use:
-          > %s config.json
+          > %s config.json [step (integer between 1 and 5)]
+            1: initialization
+            2: preprocessing (tilewise sift, local pointing correction)
+            3: global-pointing
+            4: processing (tilewise rectification, matching and triangulation)
+            5: finalization
 
           Launches the s2p pipeline. All the parameters, paths to input and
           output files, are defined in the json configuration file.
