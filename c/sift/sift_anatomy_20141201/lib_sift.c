@@ -17,7 +17,7 @@ An IPOL demo is available at
 */
 
 /**
- * @file lib_sift.c 
+ * @file lib_sift.c
  * @brief A simplified interface to the anatomy with standard parameters.
  *
  *
@@ -33,7 +33,7 @@ An IPOL demo is available at
 
 
 static struct sift_keypoints* sift_translate_standard_into_anatomy(
-        const struct sift_keypoint_std* k, 
+        const struct sift_keypoint_std* k,
         int n)
 {
     // load the default parameters are required
@@ -267,6 +267,7 @@ void fprintf_keypoint_std(FILE* f, const struct sift_keypoint_std* k, int n)
         fprintf(f, "%f %f %f %f ", k[i].y, k[i].x, k[i].scale, k[i].orientation);
         for (int j = 0; j < 128; j++)
             fprintf(f, "%u ", k[i].descriptor[j]);
+        fprintf(f, "\n");
     }
 }
 
@@ -325,7 +326,7 @@ struct sift_keypoint_std *sift_read_keyslocation_from_file(char *filename,
     // read keypoints locations from a file and
     // save them into a sift_keypoints structure
     struct sift_keypoints* keys = sift_malloc_keypoints();
-    int flag = 0; // read coordinates 
+    int flag = 0; // read coordinates
     sift_read_keypoints(keys, filename, n_hist, n_ori, n_bins, flag);
 
     // translate the sift_keypoints structure into a flat list
