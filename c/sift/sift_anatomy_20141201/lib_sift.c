@@ -23,7 +23,6 @@ An IPOL demo is available at
  *
  * @author Ives Rey-Otero <ives.rey-otero@cmla.ens-cachan.fr>
  */
-#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -242,22 +241,45 @@ void sift_find_ori_and_fill_descriptors(const float *x, int w, int h,
     }
 }
 
+void raw_dump_keypoint_std(FILE* f, const struct sift_keypoint_std* k, int n)
+{
+    char buf[4 * sizeof(float) + 128 * sizeof(uint8_t)];
+    float *keypoint = (float *) buf;
+    uint8_t *descriptor = (uint8_t *) (buf + 4 * sizeof(float)) ;
+    for (int i = 0; i < n; i++) {
+
+        // copy the data to a buffer
+        keypoint[0] = k[i].y;
+        keypoint[1] = k[i].x;
+        keypoint[2] = k[i].scale;
+        keypoint[3] = k[i].orientation;
+        for (int j = 0; j < 128; j++)
+            descriptor[j] = k[i].descriptor[j];
+
+        // write the buffer to the output file
+        fwrite(buf, sizeof(char), 4 * sizeof(float) + 128, f);
+    }
+}
+
 void fprintf_keypoint_std(FILE* f, const struct sift_keypoint_std* k, int n)
 {
     for (int i = 0; i < n; i++) {
         fprintf(f, "%f %f %f %f ", k[i].y, k[i].x, k[i].scale, k[i].orientation);
         for (int j = 0; j < 128; j++)
             fprintf(f, "%u ", k[i].descriptor[j]);
-        fprintf(f, "\n");
     }
 }
 
 
+
 void sift_write_to_file(const char *filename,
-        const struct sift_keypoint_std *k, int n)
+        const struct sift_keypoint_std *k, int n, bool binary)
 {
     FILE* file = fopen(filename, "w");
-    fprintf_keypoint_std(file, k, n);
+    if (binary)
+        raw_dump_keypoint_std(file, k, n);
+    else
+        fprintf_keypoint_std(file, k, n);
     fclose(file);
 }
 

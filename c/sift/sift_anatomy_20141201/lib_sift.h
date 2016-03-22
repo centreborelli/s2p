@@ -8,6 +8,7 @@
 #ifndef _LIB_SIFT_H_
 #define _LIB_SIFT_H_
 #include <stdio.h>
+#include <stdbool.h>
 
 
 
@@ -65,6 +66,6 @@ struct sift_keypoint_std *sift_read_from_file(const char *filename, int *n);
 // Read SIFT keypoints location (x, y, sigma) from a file
 struct sift_keypoint_std *sift_read_keyslocation_from_file(char *filename, int *n);
 
-void sift_write_to_file(const char *filename, const struct sift_keypoint_std *k, int n);
+void sift_write_to_file(const char *filename, const struct sift_keypoint_std *k, int n, bool binary);
 void fprintf_keypoint_std(FILE* f, const struct sift_keypoint_std* k, int n);
 #endif

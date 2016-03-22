@@ -11,13 +11,20 @@ int min(int a, int b)
     return b < a ? b : a;
 }
 
+void print_help(char *v[])
+{
+    fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [--max-nb-pts n] [-b]\n",
+    //                          0 1         2 3 4 5
+            *v);
+}
+
+
 
 int main(int c, char *v[])
 {
     // process input arguments
-    if (c != 2 && c != 4 && c != 6 && c != 8) {
-        fprintf(stderr, "usage:\n\t%s file.tif [--max-nb-pts n] [x y w h]\n", *v);
-        //                          0 1                          2 3 4 5
+    if (c < 2 || c > 9) {
+        print_help(v);
     	return 1;
     }
 
@@ -26,6 +33,7 @@ int main(int c, char *v[])
     sprintf(s, "%d", INT_MAX);
     char *opt = pick_option(&c, &v, "-max-nb-pts", s);
     int max_nb_pts = atoi(opt);
+    bool binary = pick_option(&c, &v, "b", NULL);
 
     // open the image
     struct fancy_image *fimg = fancy_image_open(v[1], "");
@@ -37,11 +45,14 @@ int main(int c, char *v[])
         y = 0;
         w = fimg->w;
         h = fimg->h;
-    } else {
+    } else if (c == 6) {
         x = atoi(v[2]);
         y = atoi(v[3]);
         w = atoi(v[4]);
         h = atoi(v[5]);
+    } else {
+        print_help(v);
+        return 1;
     }
 
     // read the roi in the input image
@@ -63,7 +74,7 @@ int main(int c, char *v[])
         }
 
     // write to standard output
-    sift_write_to_file("/dev/stdout", k, min(n, max_nb_pts));
+    sift_write_to_file("/dev/stdout", k, min(n, max_nb_pts), binary);
 
     // cleanup
     free(k);
