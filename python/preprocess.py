@@ -24,7 +24,7 @@ def minmax_color_on_tile(tile_info):
             the tile
     """
     # read info
-    img1 = cfg['images'][0]['img']
+    img = cfg['images'][0]['img']
     coords = tile_info['coordinates']
     tile_dir = tile_info['directory']
     z = cfg['subsampling_factor']
@@ -34,7 +34,7 @@ def minmax_color_on_tile(tile_info):
     local_minmax = os.path.join(tile_dir, 'local_minmax.txt')
 
     # do the job
-    common.cropImage(img1, crop_ref, *coords, zoom=z)
+    common.cropImage(img, crop_ref, *coords, zoom=z)
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
         print 'tile %s is masked, skip' % tile_dir
     elif os.path.isfile(os.path.join(tile_dir, 'local_minmax.txt')) and cfg['skip_existing']:
@@ -45,7 +45,9 @@ def minmax_color_on_tile(tile_info):
 
 def pointing_correction(tile_info):
     """
-    Computes pointing corrections
+    Compute the translations that correct the pointing errors on a tile.
+
+    There is one correction per pair of images.
 
     Args:
         tile_info: dictionary containing all the information needed to process
