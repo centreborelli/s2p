@@ -410,11 +410,11 @@ def cropImage(inp, out, x, y, w, h, zoom=1):
     """
     
     if zoom == 1:
-        image_crop_TIFF(inp, x, y, w, h, out)
+        image_crop_tif(inp, x, y, w, h, out)
     else:
         # gdal is used for the zoom because it handles BigTIFF files, and
         # before the zoom out the image may be that big
-        tmp = image_crop_TIFF(inp, x, y, w, h)
+        tmp = image_crop_tif(inp, x, y, w, h)
         image_zoom_gdal(tmp, zoom, out, w, h)
     
     
@@ -430,18 +430,16 @@ def crop_corresponding_areas(out_dir, images, roi, zoom=1):
     """
     rpc_ref = images[0]['rpc']
     for i, image in enumerate(images[1:]):
-        x, y, w, h = corresponding_roi(rpc_ref, image['rpc'],
-                                                 roi['x'], roi['y'], roi['w'],
-                                                 roi['h'])
+        x, y, w, h = corresponding_roi(rpc_ref, image['rpc'], roi['x'],
+                                       roi['y'], roi['w'], roi['h'])
         if zoom == 1:
-            image_crop_TIFF(image['img'], x, y, w, h,
-                                   '%s/roi_sec_%d.tif' % (out_dir, i))
+            image_crop_tif(image['img'], x, y, w, h,
+                            '%s/roi_sec_%d.tif' % (out_dir, i))
         else:
             # gdal is used for the zoom because it handles BigTIFF files, and
             # before the zoom out the image may be that big
-            tmp = image_crop_TIFF(image['img'], x, y, w, h)
-            image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir,
-                                                                     i), w, h)    
+            tmp = image_crop_tif(image['img'], x, y, w, h)
+            image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir, i), w, h)
     
 
 def image_zoom_out_morpho(im, f):
@@ -803,7 +801,7 @@ def bounding_box2D(pts):
     return x, y, w, h
 
 
-def image_crop_TIFF(im, x, y, w, h, out=None):
+def image_crop_tif(im, x, y, w, h, out=None):
     """
     Crops tif images.
 
@@ -821,7 +819,7 @@ def image_crop_TIFF(im, x, y, w, h, out=None):
     tried to use tiffcrop but it fails.
     """
     if (int(x) != x or int(y) != y):
-        print 'Warning: image_crop_TIFF will round the coordinates of your crop'
+        print 'Warning: image_crop_tif will round the coordinates of your crop'
 
     if out is None:
         out = tmpfile('.tif')
@@ -834,7 +832,7 @@ def image_crop_TIFF(im, x, y, w, h, out=None):
                                                  shellquote(out)))
 
     except IOError:
-        print """image_crop_TIFF: input image %s not found! Verify your paths to
+        print """image_crop_tif: input image %s not found! Verify your paths to
                  Pleiades full images"""%shellquote(im)
         sys.exit()
 
@@ -845,7 +843,7 @@ def image_crop_LARGE(im, x, y, w, h):
     if (int(x) != x or int(y) != y):
         print 'Warning: image_crop_LARGE will round the coordinates of your crop'
     if im.lower().endswith(('tif', 'tiff', 'til')):
-       return image_crop_TIFF(im, x, y, w, h)
+       return image_crop_tif(im, x, y, w, h)
     else:
        print "image_crop_LARGE: the input image must be tif, tiff or til"
        return image_crop(im, x, y, w, h)

@@ -159,7 +159,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
     yy = np.floor(y / 4.0)
     ww = np.ceil((x + w * zoom) / 4.0) - xx 
     hh = np.ceil((y + h * zoom) / 4.0) - yy
-    crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
+    crop_ms = common.image_crop_tif(im_color, xx, yy, ww, hh)
     crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
     # crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
 
@@ -167,7 +167,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
     # followed by zoom
     x0 = max(0,x - 4*xx)
     y0 = max(0,y - 4*yy)
-    crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
+    crop_ms = common.image_crop_tif(crop_ms, x0, y0, w, h)
     assert(common.image_size_tiffinfo(crop_panchro) ==
            common.image_size_tiffinfo(crop_ms))
 
