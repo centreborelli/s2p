@@ -7,7 +7,7 @@ Version 20140911 (September 11th, 2014)
 
 == Patent Warning and License =================================================
 
-The SIFT method is patented 
+The SIFT method is patented
 
     [3] "Method and apparatus for identifying scale invariant features
       in an image."
@@ -16,7 +16,7 @@ The SIFT method is patented
         Filing date: Mar 6, 2000
         Issue date: Mar 23, 2004
         Application number: 09/519,89
-  
+
  These source codes are made available for the exclusive aim of serving as
  scientific tool to verify the soundness and completeness of the algorithm
  description. Compilation, execution and redistribution of this file may
@@ -137,13 +137,10 @@ void matching(struct sift_keypoints *k1,
 void print_pairs(const struct sift_keypoints *k1,
                  const struct sift_keypoints *k2)
 {
-    if (k1->size > 0){
-        int n = k1->size;
-        for(int i = 0; i < n ;i++){
-            fprintf_one_keypoint(stdout, k1->list[i], 0, 0, 0);
-            fprintf_one_keypoint(stdout, k2->list[i], 0, 0, 0);
-            fprintf(stdout, "\n");
-        }
+    for (int i = 0; i < k1->size; i++) {
+        fprintf_one_keypoint(stdout, k1->list[i], 0, 0, -1);
+        fprintf_one_keypoint(stdout, k2->list[i], 0, 0, -1);
+        fprintf(stdout, "\n");
     }
 }
 
@@ -153,7 +150,7 @@ void save_pairs_extra(const char* name,
                       const struct sift_keypoints *k2B)
 {
     FILE* f = fopen(name,"w");
-    
+
     if (k1->size > 0){
 
         int n_hist = k1->list[0]->n_hist;

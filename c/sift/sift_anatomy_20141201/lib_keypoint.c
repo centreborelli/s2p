@@ -184,24 +184,21 @@ void sift_free_keypoints(struct sift_keypoints* keys)
 void fprintf_one_keypoint(FILE* f, const struct keypoint* k, int n_descr, int n_bins, int flag)
 {
     // coordinates
-    fprintf(f,"%f %f %f %f ", k->x
-                            , k->y
-                            , k->sigma
-                            , k->theta);
+    fprintf(f,"%f %f ", k->x, k->y);
 
-    if (flag>0){
-        // descriptor
-        for(int n = 0; n < n_descr; n++){
-            fprintf(f,"%i ", (int)k->descr[n]);
-        }
-    }
-    if (flag>1){
-        // orientation histogram
-        for(int n = 0; n < n_bins; n++){
+    // scale and orientation
+    if (flag > -1)
+        fprintf(f,"%f %f ", k->sigma, k->theta);
+
+    // descriptor
+    if (flag > 0)
+        for (int n = 0; n < n_descr; n++)
+            fprintf(f,"%i ", (int) k->descr[n]);
+
+    // orientation histogram
+    if (flag > 1)
+        for (int n = 0; n < n_bins; n++)
             fprintf(f,"%f ", k->orihist[n]);
-        }
-
-    }
 }
 
 
