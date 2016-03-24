@@ -12,7 +12,7 @@ sift_roi: main.c  $(OBJa)
 	$(CC) $^ -o $@ $(CFLAGS) -lpng -ltiff -ljpeg
 
 match_cli: $(SIFT_DIR)/match_cli.c $(OBJb)
-	$(CC) $^ -o $@ $(CFLAGS)
+	$(CC) $^ -o $@ $(CFLAGS) -lm
 
 ../iio.o: ../iio.c ../iio.h
 	$(CC) -c -o $@ $< $(CFLAGS) -Wno-unused-function -Wno-deprecated-declarations

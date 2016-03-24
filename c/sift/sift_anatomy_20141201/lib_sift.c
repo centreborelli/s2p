@@ -25,6 +25,7 @@ An IPOL demo is available at
  */
 #include <stdlib.h>
 #include <math.h>
+#include <stdint.h>
 
 #include "lib_sift.h"
 #include "lib_sift_anatomy.h"
