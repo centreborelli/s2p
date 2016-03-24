@@ -18,7 +18,7 @@ void print_help(char *v[])
 int main(int c, char *v[])
 {
     // process input arguments
-    if (c < 2 || c > 9) {
+    if (c < 2 || c > 11) {
         print_help(v);
     	return 1;
     }
@@ -32,7 +32,7 @@ int main(int c, char *v[])
     char *tmp2 = pick_option(&c, &v, "-thresh-dog", "0.0133");
     float thresh_dog = atoi(tmp2);
 
-    bool binary = pick_option(&c, &v, "b", NULL);
+    bool binary = (bool) pick_option(&c, &v, "b", NULL);
 
     // open the image
     struct fancy_image *fimg = fancy_image_open(v[1], "");
@@ -64,8 +64,8 @@ int main(int c, char *v[])
 
     // compute sift keypoints
     struct sift_scalespace **ss = malloc(2 * sizeof(struct sift_scalespace*));
-    struct sift_keypoints **kk = malloc(5 * sizeof(struct sift_keypoints*));
-    for (int i = 0; i < 5; i++)
+    struct sift_keypoints **kk = malloc(6 * sizeof(struct sift_keypoints*));
+    for (int i = 0; i < 6; i++)
         kk[i] = sift_malloc_keypoints();
     struct sift_keypoints* kpts = sift_anatomy(roi, w, h, p, ss, kk);
 
