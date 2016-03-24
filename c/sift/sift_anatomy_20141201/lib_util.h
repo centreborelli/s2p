@@ -16,6 +16,9 @@
     #define M_LN2 0.693147180559945309417
 #endif
 
+// Find the minimum among two int
+int min(int a, int b);
+
 // Allocate memory or abord on failure
 void* xmalloc(size_t size);
 

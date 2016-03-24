@@ -21,7 +21,7 @@ match_cli: $(SIFT_DIR)/match_cli.c $(OBJb)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 test: sift_roi
-	./sift_roi test_data/img_tiled.tif 100 120 200 178 | head
+	./sift_roi test_data/img_tiled.tif 100 120 200 178
 
 clean:
 	-rm sift_roi match_cli $(OBJa) $(OBJb)

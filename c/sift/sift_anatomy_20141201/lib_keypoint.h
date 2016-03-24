@@ -65,6 +65,9 @@ this program. If not, see
 #ifndef _LIB_KEYPOINT_H_
 #define _LIB_KEYPOINT_H_
 
+#include <stdio.h>
+#include <stdbool.h>
+
 
 /** @brief keypoint structure, related to a keypoint
  *
@@ -134,6 +137,9 @@ void sift_save_keypoints(const struct sift_keypoints* keys, const char* name, in
  */
 void sift_print_keypoints(const struct sift_keypoints* keys, int flag);
 
+
+void fprintf_keypoints(FILE* f, const struct sift_keypoints* keys, int nb,
+                       bool binary, int flag);
 
 /** @brief Read list of keys from a txt file  */
 void sift_read_keypoints(struct sift_keypoints* keys,

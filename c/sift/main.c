@@ -3,21 +3,16 @@
 
 #include "../pickopt.c"
 #include "fancy_image.h"
-#include "sift_anatomy_20141201/lib_sift.h"
+#include "sift_anatomy_20141201/lib_sift_anatomy.h"
 #include "iio.h"
 
-int min(int a, int b)
-{
-    return b < a ? b : a;
-}
 
 void print_help(char *v[])
 {
-    fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [--max-nb-pts n] [-b]\n",
+    fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [--max-nb-pts n] [-b]"
     //                          0 1         2 3 4 5
-            *v);
+            " [--thresh-dog t]\n", *v);
 }
-
 
 
 int main(int c, char *v[])
@@ -31,8 +26,12 @@ int main(int c, char *v[])
     // optional arguments
     char s[100];
     sprintf(s, "%d", INT_MAX);
-    char *opt = pick_option(&c, &v, "-max-nb-pts", s);
-    int max_nb_pts = atoi(opt);
+    char *tmp1 = pick_option(&c, &v, "-max-nb-pts", s);
+    int max_nb_pts = atoi(tmp1);
+
+    char *tmp2 = pick_option(&c, &v, "-thresh-dog", "0.0133");
+    float thresh_dog = atoi(tmp2);
+
     bool binary = pick_option(&c, &v, "b", NULL);
 
     // open the image
@@ -59,25 +58,32 @@ int main(int c, char *v[])
     float *roi = (float*) malloc(w * h * sizeof(float));
     fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
 
-    // write roi (debug)
-    //iio_save_image_float("/tmp/roi.tif", roi, w, h);
+    // prepare sift parameters
+    struct sift_parameters* p = sift_assign_default_parameters();
+    p->C_DoG = thresh_dog;
 
     // compute sift keypoints
-    int n;
-    struct sift_keypoint_std *k = sift_compute_features(roi, w, h, &n);
+    struct sift_scalespace **ss = malloc(2 * sizeof(struct sift_scalespace*));
+    struct sift_keypoints **kk = malloc(5 * sizeof(struct sift_keypoints*));
+    for (int i = 0; i < 5; i++)
+        kk[i] = sift_malloc_keypoints();
+    struct sift_keypoints* kpts = sift_anatomy(roi, w, h, p, ss, kk);
 
     // add (x, y) offset to keypoints coordinates
     if (x != 0 || y != 0)
-        for (int i = 0; i < n; i++) {
-            k[i].x += y;  // in Ives' conventions, x is the row number, not col
-            k[i].y += x;
+        for (int i = 0; i < kpts->size; i++) {
+            (kpts->list[i])->x += y;  // in Ives' conventions, x is the row number, not col
+            (kpts->list[i])->y += x;
         }
 
     // write to standard output
-    sift_write_to_file("/dev/stdout", k, min(n, max_nb_pts), binary);
+    fprintf_keypoints(stdout, kpts, max_nb_pts, binary, 1);
+
+    // debug
+    iio_save_image_float("/tmp/roi.tif", roi, w, h);
 
     // cleanup
-    free(k);
+    free(kpts);
     free(roi);
     fancy_image_close(fimg);
     return 0;

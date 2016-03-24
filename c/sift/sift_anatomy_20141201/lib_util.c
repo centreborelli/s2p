@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <math.h>
 
+// Find the minimum among two int
+int min(int a, int b) {return b < a ? b : a;}
+
 // Allocate memory or abord on failure
 void* xmalloc(size_t size)
 {

@@ -69,9 +69,6 @@ this program. If not, see
 
 
 
-
-
-
 struct keypoint* sift_malloc_keypoint(int n_ori, int n_hist, int n_bins)
 {
     struct keypoint* key =  xmalloc(sizeof(struct keypoint));
@@ -202,19 +199,43 @@ void fprintf_one_keypoint(FILE* f, const struct keypoint* k, int n_descr, int n_
 }
 
 
-void fprintf_keypoints(FILE* f, const struct sift_keypoints* keys, int flag)
+// dump coordinates, scale, orientation and descriptor to a binary file
+void raw_dump_keypoint(FILE* f, const struct keypoint* k, int n_descr)
 {
-    if (keys->size > 0){
+    char buf[4 * sizeof(float) + n_descr * sizeof(uint8_t)];
+    float *keypoint = (float *) buf;
+    uint8_t *descriptor = (uint8_t *) (buf + 4 * sizeof(float)) ;
 
+    // copy the data to a buffer
+    keypoint[0] = k->y;
+    keypoint[1] = k->x;
+    keypoint[2] = k->sigma;
+    keypoint[3] = k->theta;
+    for (int j = 0; j < n_descr; j++)
+        descriptor[j] = (k->descr)[j];
+
+    // write the buffer to the output file
+    fwrite(buf, sizeof(char), 4 * sizeof(float) + n_descr, f);
+}
+
+
+void fprintf_keypoints(FILE* f, const struct sift_keypoints* keys, int nb,
+                       bool binary, int flag)
+{
+    // use at most nb keypoints unless nb is zero
+    int n = nb ? min(keys->size, nb) : keys->size;
+    if (n > 0) {
         int n_hist = keys->list[0]->n_hist;
         int n_ori  = keys->list[0]->n_ori;
-        int n_descr = n_hist*n_hist*n_ori;
+        int n_descr = n_hist * n_hist * n_ori;
         int n_bins = keys->list[0]->n_bins;
-
-        for(int k=0;k<keys->size;k++){
-            struct keypoint* key = keys->list[k];
-            fprintf_one_keypoint(f, key, n_descr, n_bins, flag);
-            fprintf(f,"\n");
+        for (int i = 0; i < n; i++) {
+            if (binary)
+                raw_dump_keypoint(f, keys->list[i], n_descr);
+            else {
+                fprintf_one_keypoint(f, keys->list[i], n_descr, n_bins, flag);
+                fprintf(f,"\n");
+            }
         }
     }
 }
@@ -226,14 +247,14 @@ void sift_save_keypoints(const struct sift_keypoints* keys, const char* name, in
     if (!f){
         fatal_error("Failed to open %s for writing\n", name);
     }
-    fprintf_keypoints(f, keys, flag);
+    fprintf_keypoints(f, keys, 0, false, flag);
     fclose(f);
 }
 
 
 void sift_print_keypoints(const struct sift_keypoints* keys, int flag)
 {
-    fprintf_keypoints(stdout, keys, flag);
+    fprintf_keypoints(stdout, keys, 0, false, flag);
 }
 
 
