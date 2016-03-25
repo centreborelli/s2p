@@ -18,48 +18,90 @@
 #include "Utilities/Parameters.h"
 #include "LibHomography/Homography.h"
 
+extern "C" {
+    #include "pickopt.h"
+    #include "fancy_image.h"
+}
 
-using namespace std;
+
+static double *alloc_parse_doubles(int nmax, const char *ss, int *n)
+{
+    // add a space to s, so that gabriele's expression works as intended
+    int ns = strlen(ss);
+    char t[2+ns], *s = t;
+    s[0] = ' ';
+    for (int i = 0; i <= ns; i++)
+        s[i+1] = ss[i];
+
+    double *r = (double *) malloc(nmax * sizeof*r);
+    int i = 0, w;
+    while (i < nmax && 1 == sscanf(s, "%*[][ \n\t,:;]%lf%n", r + i, &w)) {
+        i += 1;
+        s += w;
+    }
+    *n = i;
+    return r;
+}
 
 
-/**
- * @brief Main function.
- **/
-int main(
-  int argc,
-  char** argv) {
+static void print_help(char *s)
+{
+    fprintf(stderr, "\t usage: %s input.tif [-h \"h1 ... h9\"] output.tif width"
+            " height [--verbose]\n", s);
+}
 
-  //! Retrieve the arguments
-  Parameters params;
-  if (params.checkArgs(argc, argv) != EXIT_SUCCESS) {
-    return EXIT_FAILURE;
-  }
 
-  //! Initialization of time
-  Time time;
+int main(int c, char* v[])
+{
+    // read the homography. Default value is identity
+    char *hom_string = pick_option(&c, &v, "h", "1 0 0 0 1 0 0 0 1");
+    int n_hom;
+    double *hom = alloc_parse_doubles(9, hom_string, &n_hom);
+    if (n_hom != 9) {
+        fprintf(stderr, "can not read 3x3 matrix from \"%s\"", hom_string);
+        return EXIT_FAILURE;
+    }
 
-  //! Read the input image
-//  int w = 256;
-//  int h = 256;
-//  Image imI(roi, w, h, 1);
-  Image imI;
-  imI.read(params.inpName());
-  if (params.verbose()) time.getTime("Read image");
+    // verbosity
+    bool verbose = pick_option(&c, &v, "-verbose", NULL);
 
-  //! Read the homography
-  double mat[9];
-  readHomography(params.inpHomo(), mat);
-  if (params.verbose()) time.getTime("Read homography");
+    // parse the remaining arguments
+    if (c != 5) {
+        print_help(*v);
+        return EXIT_FAILURE;
+    }
 
-  //! Call the mapping function
-  Image imO;
-  runHomography(imI, mat, imO, params);
-  if (params.verbose()) time.getTime("Apply the homography");
+    char *fname_input = v[1];
+    char *fname_output = v[2];
+    int out_w = atoi(v[3]);
+    int out_h = atoi(v[4]);
 
-  //! Write the image
-  imO.write(params.outName());
-  if (params.verbose()) time.getTime("Write image");
+    // initialization of time
+    Time time;
 
-  //! Exit the main function
-  return EXIT_SUCCESS;
+    // compute coordinates of the needed ROI
+    int x, y, w, h;
+    x = 0;
+    y = 0;
+    w = 256;
+    h = 256;
+
+    // read the needed ROI in the input image
+    struct fancy_image *fimg = fancy_image_open(fname_input, (char *) "");
+    float *roi = (float*) malloc(w*h*sizeof(float));
+    fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
+    Image imI(roi, (const size_t) w, (const size_t) h, 1);  // TODO: avoid this useless copy
+    if (verbose) time.getTime("Read image");
+
+    // call the mapping function
+    Image imO;
+    Parameters params(0, (const size_t) w, (const size_t) h, true);
+    runHomography(imI, hom, imO, params);
+    if (verbose) time.getTime("Apply the homography");
+
+    // write the output image
+    imO.write(fname_output);
+    if (verbose) time.getTime("Write image");
+
+    return EXIT_SUCCESS;
 }

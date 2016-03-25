@@ -24,6 +24,20 @@ class Parameters {
     Parameters();
 
     /**
+     * @brief Surcharged constructor.
+     **/
+    Parameters(
+            const bool adjustSize,
+            const size_t oWidth,
+            const size_t oHeight,
+            const bool verbose) {
+        m_adjustSize = adjustSize;
+        m_oWidth = oWidth;
+        m_oHeight = oHeight;
+        m_verbose = verbose;
+    }
+
+    /**
      * @brief Default destructor.
      **/
     ~ Parameters();
