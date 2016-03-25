@@ -73,7 +73,7 @@ Image::Image(
   m_nbThreads(omp_get_max_threads()),
 #else
   m_nbThreads(1),
-#endif // _OPENM
+#endif // _OPENMP
 
   //! Pointers
   m_ptr     ((float*) memalloc(16, m_size * sizeof(float))),
@@ -105,6 +105,55 @@ Image::Image(
   initializeHeights(m_height, m_heights, m_nbThreads);
 }
 
+
+//! Surcharged constructor with a specific size and pointer to data.
+Image::Image(
+    const float* i_ptr,
+    const size_t i_width,
+    const size_t i_height,
+    const size_t i_channels):
+
+    //! Size
+    m_width   (i_width),
+    m_height  (i_height),
+    m_channels(i_channels),
+    m_border  (0),
+    m_size    (i_channels * i_width * i_height),
+
+    //! Miscalleneous
+#ifdef _OPENMP
+    m_nbThreads(omp_get_max_threads()),
+#else
+    m_nbThreads(1),
+#endif // _OPENMP
+
+    //! Pointers
+    m_ptr     ((float*) memalloc(16, m_size * sizeof(float))),
+    m_heights ((size_t*) malloc((m_nbThreads + 1) * sizeof(size_t))) {
+
+    //! Copy the data
+    size_t k = 0;
+#ifdef USE_AVX
+    //! AVX version
+    for (; k < m_size - 8; k += 8) {
+        _mm256_storeu_ps(m_ptr + k, _mm256_loadu_ps(i_ptr + k));
+    }
+#else
+#ifdef USE_SSE
+    //! SSE version
+    for (; k < m_size - 4; k += 4) {
+        _mm_storeu_ps(m_ptr + k, _mm_loadu_ps(i_ptr + k));
+    }
+#endif // USE_SSE
+#endif // USE_AVX
+
+    //! Normal version
+    for (; k < m_size; k++)
+        m_ptr[k] = i_ptr[k];
+
+    //! Initialize the beginning and end for each slices of the image
+    initializeHeights(m_height, m_heights, m_nbThreads);
+}
 
 //! Copy constructor.
 Image::Image(

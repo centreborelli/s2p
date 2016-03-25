@@ -45,6 +45,8 @@ class Image {
       const Image& i_im);
 
 
+    Image(const float *i_ptr, const size_t i_width, const size_t i_height, const size_t i_channels);
+
     /**
      * @brief Operator overload.
      **/

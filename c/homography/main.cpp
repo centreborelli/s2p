@@ -39,6 +39,9 @@ int main(
   Time time;
 
   //! Read the input image
+//  int w = 256;
+//  int h = 256;
+//  Image imI(roi, w, h, 1);
   Image imI;
   imI.read(params.inpName());
   if (params.verbose()) time.getTime("Read image");
