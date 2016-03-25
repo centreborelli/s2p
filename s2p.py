@@ -54,7 +54,7 @@ def preprocess_tile(tile_info):
     Compute pointing corrections and extrema intensities for a single tile.
 
     Args:
-        tile_info: list containing all the informations needed to process a
+        tile_info: dictionary containing all the information needed to process a
             tile.
     """
     # create output directory for the tile
@@ -97,10 +97,10 @@ def process_tile_pair(tile_info, pair_id):
     """
     Process a pair of images on a given tile.
 
-    Processing includes rectification, disparity estimation and triangulation.
+    It includes rectification, disparity estimation and triangulation.
 
     Args:
-        tile_info: list containing all the informations needed to process a
+        tile_info: dictionary containing all the information needed to process a
             tile.
         pair_id: index of the pair to process
     """
@@ -262,7 +262,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
 
 def main(config_file, step=None):
     """
-    Launch the entire s2p pipeline with the parameters given by a json file.
+    Launch the entire s2p pipeline with the parameters given in a json file.
 
     It is a succession of five steps:
         initialization
