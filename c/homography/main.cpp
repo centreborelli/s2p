@@ -54,7 +54,7 @@ static void print_help(char *s)
 int main(int c, char* v[])
 {
     // read the homography. Default value is identity
-    char *hom_string = pick_option(&c, &v, "h", "1 0 0 0 1 0 0 0 1");
+    char *hom_string = pick_option(&c, &v, (char *) "h", (char *) "1 0 0 0 1 0 0 0 1");
     int n_hom;
     double *hom = alloc_parse_doubles(9, hom_string, &n_hom);
     if (n_hom != 9) {
@@ -63,7 +63,7 @@ int main(int c, char* v[])
     }
 
     // verbosity
-    bool verbose = pick_option(&c, &v, "-verbose", NULL);
+    bool verbose = pick_option(&c, &v, (char *) "-verbose", NULL);
 
     // parse the remaining arguments
     if (c != 5) {
