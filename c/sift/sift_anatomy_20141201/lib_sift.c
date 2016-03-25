@@ -24,6 +24,7 @@ An IPOL demo is available at
  * @author Ives Rey-Otero <ives.rey-otero@cmla.ens-cachan.fr>
  */
 #include <stdlib.h>
+#include <stdint.h>
 #include <math.h>
 
 #include "lib_sift.h"
