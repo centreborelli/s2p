@@ -234,9 +234,8 @@ def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h,
     r2 = rpc_model.RPCModel(rpc2)
 
     # compute sift matches
-    if matches_sift is None:
-        matches_sift = pointing_accuracy.filtered_sift_matches_roi(im1, im2,
-                r1, r2, x, y, w, h)
+    if not matches_sift:
+        matches_sift = sift.matches_on_rpc_roi(im1, im2, r1, r2, x, y, w, h)
 
     # compute rpc matches
     matches_rpc = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, 5)

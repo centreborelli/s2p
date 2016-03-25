@@ -698,68 +698,6 @@ def rgbi_to_rgb_gdal(im):
     return out
 
 
-def image_sift_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
-    """
-    Runs sift (the keypoints detection and description only, no matching).
-
-    Args:
-        im: path to the input image
-        max_nb (optional): maximal number of keypoints. If more keypoints are
-            detected, those at smallest scales are discarded
-        extra_params (optional, default is ''): extra parameters to be passed
-            to the sift binary
-
-    Returns:
-        path to the file containing the list of descriptors
-    """
-    keyfile = tmpfile('.txt')
-    if max_nb:
-        cmd = "sift_roi %s %d %d %d %d --max-nb-pts %d %s > %s" % (im, x, y, w,
-                                                                   h, max_nb,
-                                                                   extra_params,
-                                                                   keyfile)
-    else:
-        cmd = "sift_roi %s %d %d %d %d %s > %s" % (im, x, y, w, h, extra_params,
-                                                   keyfile)
-
-    run(cmd)
-    return keyfile
-
-
-def sift_keypoints_match(k1, k2, method='relative', thresh=0.6):
-    """
-    Find matches among two lists of sift keypoints.
-
-    Args:
-        k1, k2: paths to text files containing the lists of sift descriptors
-        method (optional, default is 'relative'): flag ('relative' or
-            'absolute') indicating wether to use absolute distance or relative
-            distance
-        thresh (optional, default is 0.6): threshold for distance between SIFT
-            descriptors. These descriptors are 128-vectors, whose coefficients
-            range from 0 to 255, thus with absolute distance a reasonable value
-            for this threshold is between 200 and 300. With relative distance
-            (ie ratio between distance to nearest and distance to second
-            nearest), the commonly used value for the threshold is 0.6.
-
-    Returns:
-        a numpy 2D array containing the list of matches
-
-    It uses Ives' matching binary, from the IPOL http://www.ipol.im/pub/pre/82/
-    """
-    matchfile = tmpfile('.txt')
-    run("match_cli %s %s -%s %f > %s" % (k1, k2, method, thresh, matchfile))
-    if os.stat(matchfile).st_size:  # test if file is empty
-        matches = np.loadtxt(matchfile, usecols=[0, 1, 4, 5])
-        if len(matches.shape) == 1:
-            # only one match. Discard scale and orientation, then return
-            return matches.reshape(1, 4)
-        # last case, 'matches' is already a 2D array
-        return matches
-    else:
-        return np.array([[]])
-
-
 def points_apply_homography(H, pts):
     """
     Applies an homography to a list of 2D points.

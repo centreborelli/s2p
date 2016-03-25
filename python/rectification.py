@@ -5,12 +5,14 @@
 
 import sys
 import numpy as np
+
 import homography_cropper
 import rpc_model
 import rpc_utils
 import estimation
 import evaluation
 import common
+import sift
 from config import cfg
 
 
@@ -44,53 +46,6 @@ def center_2d_points(pts):
     T[1, 2] = -cy     #              0     0     1
 
     return np.vstack([new_x, new_y]).T, T
-
-
-def matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
-    """
-    Computes a list of sift matches between two Pleiades images.
-
-    Args:
-        im1, im2: paths to two large tif images
-        rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers defining the rectangular ROI in the first
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle.
-
-    Returns:
-        matches: 2D numpy array containing a list of matches. Each line
-            contains one pair of points, ordered as x1 y1 x2 y2.
-            The coordinate system is that of the big images.
-    """
-    x1, y1, w1, h1 = x, y, w, h
-    x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x, y, w, h)
-
-    p1 = common.image_sift_keypoints(im1, x1, y1, w1, h1, max_nb=2000)
-    p2 = common.image_sift_keypoints(im2, x2, y2, w2, h2, max_nb=2000)
-    matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                          cfg['sift_match_thresh'])
-
-    # Below is an alternative to ASIFT: lower the thresh_dog for the sift calls.
-    # Default value for thresh_dog is 0.0133
-    thresh_dog = 0.0133
-    nb_sift_tries = 1
-    while (matches.shape[0] < 10 and nb_sift_tries < 6):
-        nb_sift_tries += 1
-        thresh_dog /= 2.0
-        p1 = common.image_sift_keypoints(im1, x1, y1, w1, h1, None, '-thresh_dog %f' % thresh_dog)
-        p2 = common.image_sift_keypoints(im2, x2, y2, w2, h2, None, '-thresh_dog %f' % thresh_dog)
-        matches = common.sift_keypoints_match(p1, p2, 'relative',
-                                              cfg['sift_match_thresh'])
-
-    return matches
-
-    if matches.size:
-        # compensate coordinates for the crop and the zoom
-        pts1 = common.points_apply_homography(T1, matches[:, 0:2])
-        pts2 = common.points_apply_homography(T2, matches[:, 2:4])
-        return np.hstack([pts1, pts2])
-    else:
-        return np.array([[]])
 
 
 def filter_matches_epipolar_constraint(F, matches, thresh):
@@ -462,7 +417,7 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     # in brief: use ransac to estimate F from a set of sift matches, then use
     # loop-zhang to estimate rectifying homographies.
 
-    matches = matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
 
@@ -502,49 +457,3 @@ def compute_rectification_homographies_sift(im1, im2, rpc1, rpc2, x, y, w, h):
     disp_m, disp_M = update_disp_range(matches, H1, H2, w, h)
 
     return H1, H2, disp_m, disp_M
-
-
-def main():
-
-    if len(sys.argv) > 12:
-        im1 = sys.argv[1]
-        im2 = sys.argv[2]
-        rpc1 = sys.argv[3]
-        rpc2 = sys.argv[4]
-        x = int(sys.argv[5])
-        y = int(sys.argv[6])
-        w = int(sys.argv[7])
-        h = int(sys.argv[8])
-        H1f = sys.argv[9]
-        H2f = sys.argv[10]
-        out1 = sys.argv[11]
-        out2 = sys.argv[12]
-    else:
-        print """
-        Incorrect syntax, use:
-          > %s im1 im2 rpc1 rpc2 x y w h H1 H2 out1 out2
-          Computes rectification homographies for two pleiades images, using
-          a region of interest ROI (x, y, w, h) defined over the first image.
-          The area in the second image corresponding to the ROI is determined
-          from the RPC metadata (height range), and, if available, from SRTM
-          data. The rectified crops are computed and saved in files out1 out2
-          Uses 8-points algorithm for F estimation, and Loop-Zhang for
-          rectification.
-          im1/2:        paths to the two Pleiades images (usually jp2 or tif)
-          rpc1/2:       RPCs xml files associated to the two images
-          x y w h:      ROI of first image used to compute the rectification
-          H1/H2:        output rectification homographies in the
-                        coordinate systems of the two BIG images
-          out1/2:       paths to output crops
-        """ % sys.argv[0]
-        sys.exit(1)
-
-    H1, H2, dm, dM = rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2)
-    np.savetxt(H1f, H1)
-    np.savetxt(H2f, H2)
-
-    return
-
-# main call
-if __name__ == '__main__':
-    main()
