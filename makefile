@@ -58,14 +58,14 @@ $(BINDIR)/GeoConvert: $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
 	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
 
 asift:
-	mkdir -p $(BINDIR)/asift_build
-	cd $(BINDIR)/asift_build; cmake ../../3rdparty/demo_ASIFT_src; make
-	cp $(BINDIR)/asift_build/demo_ASIFT $(BINDIR)
+	mkdir -p $(BINDIR)/build_asift
+	cd $(BINDIR)/build_asift; cmake ../../3rdparty/demo_ASIFT_src; make
+	cp $(BINDIR)/build_asift/demo_ASIFT $(BINDIR)
 
 monasse:
-	mkdir -p $(BINDIR)/monasse_refactored_build
-	cd $(BINDIR)/monasse_refactored_build; cmake ../../c/monasse_refactored; make
-	cp $(BINDIR)/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
+	mkdir -p $(BINDIR)/build_monasse_refactored
+	cd $(BINDIR)/build_monasse_refactored; cmake ../../c/monasse_refactored; make
+	cp $(BINDIR)/build_monasse_refactored/bin/rectify_mindistortion $(BINDIR)
 
 homography: $(BINDIR)
 	mkdir -p $(BINDIR)/build_homography
@@ -73,8 +73,9 @@ homography: $(BINDIR)
 	cp $(BINDIR)/build_homography/homography $(BINDIR)
 
 sift: $(BINDIR)
-	cd $(SRCDIR)/sift; make
-	mv $(SRCDIR)/sift/{sift_roi,match_cli} $(BINDIR)
+	mkdir -p $(BINDIR)/build_sift
+	cd $(BINDIR)/build_sift; cmake ../../c/sift; make
+	cp $(BINDIR)/build_sift/{sift_roi,match_cli} $(BINDIR)
 
 mgm:
 	cd 3rdparty/mgm; make
@@ -220,19 +221,19 @@ clean_geographiclib:
 	-rm $(BINDIR)/{Cart,Geo}Convert
 
 clean_monasse:
-	-rm -r $(BINDIR)/monasse_refactored_build
-	-rm $(BINDIR)/{homography,rectify_mindistortion}
+	-rm -r $(BINDIR)/build_monasse_refactored
+	-rm $(BINDIR)/{rectify_mindistortion}
 
 clean_homography:
-	cd $(SRCDIR)/homography; make clean
+	-rm -r $(BINDIR)/build_homography
 	-rm $(BINDIR)/homography
 
 clean_sift:
-	cd $(SRCDIR)/sift; make clean
+	-rm -r $(BINDIR)/build_sift
 	-rm $(BINDIR)/{sift_roi,match_cli}
 
 clean_asift:
-	-rm -r $(BINDIR)/asift_build
+	-rm -r $(BINDIR)/build_asift
 	-rm $(BINDIR)/demo_ASIFT
 
 clean_imscript:
