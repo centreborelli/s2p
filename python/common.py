@@ -32,7 +32,7 @@ def garbage_cleanup():
     """
     if cfg['clean_tmp']:
         while garbage:
-            run('rm %s' % garbage.pop())
+            run('rm -f %s' % garbage.pop())
 
 
 def tmpfile(ext=''):
@@ -70,7 +70,7 @@ def run(cmd, env=os.environ):
     Both stdout and stderr of the shell in which the command is run are those
     of the parent process.
     """
-    print cmd
+    #print("\nRUN: %s\n"%cmd)
     try:
         subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
                               stderr=subprocess.STDOUT, env=env)
@@ -754,8 +754,8 @@ def image_crop_TIFF(im, x, y, w, h, out=None):
                      h, shellquote(im), shellquote(out)))
 
     except IOError:
-        print """image_crop_TIFF: input image not found! Verify your paths to
-                 Pleiades full images"""
+        print """image_crop_TIFF: input image %s not found! Verify your paths to
+                 Pleiades full images"""%shellquote(im)
         sys.exit()
 
     return out

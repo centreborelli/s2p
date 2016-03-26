@@ -488,7 +488,8 @@ def process_triplet(out_dir, img1, rpc1, img2, rpc2, img3, rpc3, x=None, y=None,
 
     # merge the two height maps
     height_map = '%s/height_map.tif' % out_dir
-    fusion.merge(height_map_left, height_map_right, thresh, height_map)
+    fusion.merge(height_map_left, height_map_right, thresh, height_map,
+                 conservative=cfg['fusion_conservative'])
 
     common.garbage_cleanup()
     return height_map
@@ -764,6 +765,11 @@ def main(config_file):
                               cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h'],
                               cfg['fusion_thresh'], None, None, None, None,
                               cfg['images'][0]['cld'], cfg['images'][0]['roi'])
+
+    # also copy the RPC's
+    for i in range(len(cfg['images'])):
+        from shutil import copy2
+        copy2(cfg['images'][i]['rpc'], cfg['out_dir'])
 
     # point cloud
     generate_cloud(cfg['out_dir'], height_map, cfg['images'][0]['rpc'],
