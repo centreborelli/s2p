@@ -419,13 +419,11 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, m=None,
     # check that the first homography maps the ROI in the positive quadrant
     np.testing.assert_allclose(np.round([x0, y0]), 0, atol=.01)
 
-    # apply homographies and do the crops
-    homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0,
-                                                 cfg['subsampling_factor'],
-                                                 True)
-    homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0,
-                                                 cfg['subsampling_factor'],
-                                                 True)
+    # apply homographies and do the crops TODO XXX FIXME cleanup here
+    #homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, cfg['subsampling_factor'], True)
+    #homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, cfg['subsampling_factor'], True)
+    common.image_apply_homography(out1, im1, H1, w0, h0)
+    common.image_apply_homography(out2, im2, H2, w0, h0)
 
     #  If subsampling_factor'] the homographies are altered to reflect the zoom
     if cfg['subsampling_factor'] != 1:
