@@ -69,6 +69,49 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
     return
 
 
+def mosaic_gdal2(fout, tiles_full_info, filename, w,h,z=1):
+    """
+    Compose several tiles of differents sizes into a bigger image (using gdal vrt)
+
+    Args:
+        fout: path to the output image
+        fullInfo : all that you need to process a tile:
+            col,row,tw,th,ov,i,j,pos,images=tiles_full_info[tile_dir]
+
+    Returns:
+        nothing
+    """
+    vrtfilename = fout
+
+    vrtfile = open(vrtfilename, 'w')
+
+    vrtfile.write("<VRTDataset rasterXSize=\"%i\" rasterYSize=\"%i\">\n" % (w/z,
+                                                                            h/z))
+    vrtfile.write("\t<VRTRasterBand dataType=\"Float32\" band=\"1\">\n")
+    vrtfile.write("\t\t<ColorInterp>Gray</ColorInterp>\n")
+
+    for tile_dir in tiles_full_info:
+        
+        col,row,tw,th=tiles_full_info[tile_dir]
+        
+        height_map = tile_dir +'/' + filename
+        
+        vrtfile.write("\t\t<SimpleSource>\n")
+        vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n" % height_map)
+        vrtfile.write("\t\t\t<SourceBand>1</SourceBand>\n")
+        vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (0, 0, tw/z, th/z))
+        vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (col/z, row/z, tw/z, th/z))
+        vrtfile.write("\t\t</SimpleSource>\n")
+
+    vrtfile.write("\t</VRTRasterBand>\n")
+    vrtfile.write("</VRTDataset>\n")
+    vrtfile.close()
+
+    #common.run('gdal_translate %s %s' % (vrtfilename, fout))
+
+    return
+
+
 def mosaic(fout, w, h, list_tiles, tw, th, ov):
     """
     Compose several tiles of the same size into a bigger image.

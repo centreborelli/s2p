@@ -11,7 +11,7 @@ ADD_LIBRARY(Transform ${SRC})
 
 IF(UNIX)
     SET_TARGET_PROPERTIES(Transform PROPERTIES
-                          COMPILE_FLAGS "-Wall -Wextra -Werror")
+                          COMPILE_FLAGS "-Wall -Wextra")
 ENDIF(UNIX)
 
 INCLUDE_DIRECTORIES(..)

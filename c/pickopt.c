@@ -5,7 +5,7 @@
 // @v pointer to original argv
 // @o option name (after hyphen)
 // @d default value
-static char *pick_option(int *c, char ***v, char *o, char *d)
+char * pick_option(int *c, char ***v, char *o, char *d)
 {
 	int argc = *c;
 	char **argv = *v;

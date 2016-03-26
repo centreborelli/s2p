@@ -104,22 +104,9 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     """
     out_dir = os.path.dirname(out)
 
-    # redirect stdout and stderr to log file, in append mode
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % out_dir, 'a', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
     tmp = common.tmpfile('.tif')
     compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
-
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
 
 
 def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
@@ -135,13 +122,6 @@ def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
         img: path to the png image containing the colors
         A (optional): pointing correction matrix for im2
     """
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        log_file = '%s/stdout.log' % os.path.dirname(out)
-        fout = open(log_file, 'a', 0)  # 'a' for append, 0 for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
     # apply correction matrix
     if A is not None:
         HH2 = '%s/H_sec_corrected.txt' % os.path.dirname(out)
@@ -152,16 +132,9 @@ def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
     # do the job
     common.run("disp2ply %s %s %s %s %s %s %s %s" % (out, disp,  mask, H1, HH2,
                                                      rpc1, rpc2, img))
-    # close logs
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
-
-    return
 
 
-def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
+def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
     """
     Colorizes a Pleiades gray crop using low-resolution color information.
 
@@ -182,19 +155,19 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     #   translation (-1 - x/4, -y/4)
     #   zoom 4/z
     w, h = common.image_size_tiffinfo(crop_panchro)
-    xx = np.floor(x / 4.0) + 1
+    xx = np.floor(x / 4.0) 
     yy = np.floor(y / 4.0)
-    ww = np.ceil((x + w * zoom) / 4.0) - xx + 1
+    ww = np.ceil((x + w * zoom) / 4.0) - xx 
     hh = np.ceil((y + h * zoom) / 4.0) - yy
-    crop_ms = common.image_crop_TIFF(im_color, xx, yy, ww, hh)
+    crop_ms = common.image_crop_tif(im_color, xx, yy, ww, hh)
     crop_ms = common.image_zoom_gdal(crop_ms, zoom/4.0)
     # crop_ms = common.image_safe_zoom_fft(crop_ms, zoom/4.0)
 
     # crop the crop_ms image to remove the extra-pixels due to the integer crop
     # followed by zoom
-    x0 = x - 4*xx
-    y0 = y - 4*yy
-    crop_ms = common.image_crop_TIFF(crop_ms, x0, y0, w, h)
+    x0 = max(0,x - 4*xx)
+    y0 = max(0,y - 4*yy)
+    crop_ms = common.image_crop_tif(crop_ms, x0, y0, w, h)
     assert(common.image_size_tiffinfo(crop_panchro) ==
            common.image_size_tiffinfo(crop_ms))
 
@@ -214,7 +187,8 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized):
     if w * h > 25e6:  # image larger than 5000 x 5000 pixels
         common.image_qauto_otb(out_colorized, tmp)
     else:
-        common.image_qauto(tmp, out_colorized)
+        #common.image_qauto(tmp, out_colorized)
+        common.image_rescaleintensities(tmp, out_colorized, rmin, rmax)
     return
 
 
@@ -251,13 +225,3 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     if off_y:
         command += " --offset_y %d" % off_y
     common.run(command)
-
-    # if LidarViewer is installed, convert the point cloud to its format
-    # this is useful for huge point clouds
-    if crop_colorized and common.which('LidarPreprocessor'):
-        tmp = cfg['temporary_dir']
-        nthreads = multiprocessing.cpu_count()
-        cloud_lidar_viewer = "%s.lidar_viewer" % os.path.splitext(cloud)[0]
-        common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (
-            tmp, tmp, nthreads, cloud, cloud_lidar_viewer))
-    return

@@ -1,14 +1,17 @@
-CC = gcc -std=c99
-CFLAGS = -g -O3 -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN
-CXX = g++
+C99 = $(CC) -std=c99
+CFLAGS = -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN
 CPPFLAGS = -g -O3
 LDLIBS = -lstdc++
 IIOLIBS = $(TIFDIR)/lib/libtiff.a -lz -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
+ifeq ($(CC), gcc)
+	CFLAGS += -fopenmp
+endif
+
 OS := $(shell uname -s)
-ifeq ($(OS),Linux)
+ifeq ($(OS), Linux)
 	LDLIBS += -lrt
 endif
 
@@ -17,7 +20,7 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse sift asift imscript mgm msmw2 sgbm piio
+default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw2 sgbm piio
 
 all: default msmw tvl1
 
@@ -55,20 +58,24 @@ $(BINDIR)/GeoConvert: $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
 	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
 
 asift:
-	mkdir -p $(BINDIR)/asift_build
-	cd $(BINDIR)/asift_build; cmake ../../3rdparty/demo_ASIFT_src; make
-	cp $(BINDIR)/asift_build/demo_ASIFT $(BINDIR)
+	mkdir -p $(BINDIR)/build_asift
+	cd $(BINDIR)/build_asift; cmake ../../3rdparty/demo_ASIFT_src; make
+	cp $(BINDIR)/build_asift/demo_ASIFT $(BINDIR)
 
 monasse:
-	mkdir -p $(BINDIR)/monasse_refactored_build
-	cd $(BINDIR)/monasse_refactored_build; cmake ../../c/monasse_refactored; make
-	cp $(BINDIR)/monasse_refactored_build/bin/homography $(BINDIR)
-	cp $(BINDIR)/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
+	mkdir -p $(BINDIR)/build_monasse_refactored
+	cd $(BINDIR)/build_monasse_refactored; cmake ../../c/monasse_refactored; make
+	cp $(BINDIR)/build_monasse_refactored/bin/rectify_mindistortion $(BINDIR)
+
+homography: $(BINDIR)
+	mkdir -p $(BINDIR)/build_homography
+	cd $(BINDIR)/build_homography; cmake ../../c/homography; make
+	cp $(BINDIR)/build_homography/homography $(BINDIR)
 
 sift: $(BINDIR)
-	cd 3rdparty/sift_anatomy_20140911; make
-	cp 3rdparty/sift_anatomy_20140911/bin/sift_cli $(BINDIR)
-	cp 3rdparty/sift_anatomy_20140911/bin/match_cli $(BINDIR)
+	mkdir -p $(BINDIR)/build_sift
+	cd $(BINDIR)/build_sift; cmake ../../c/sift; make
+	cp $(BINDIR)/build_sift/{sift_roi,match_cli} $(BINDIR)
 
 mgm:
 	cd 3rdparty/mgm; make
@@ -105,7 +112,7 @@ tvl1:
 
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC)) plambda_without_fopenmp
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
-SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop morsi\
+SRCIIO = downsa backflow synflow imprintf iion qauto getminmax rescaleintensities qeasy crop morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective tiffu
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
@@ -114,57 +121,60 @@ SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
+	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS)
 
 $(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
+	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
 
 plambda_without_fopenmp:
-	$(CC) -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN c/plambda.c c/iio.o -o bin/plambda $(IIOLIBS)
+	$(C99) -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN c/plambda.c c/iio.o -o bin/plambda $(IIOLIBS)
 
 $(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
-	$(CC) $(CFLAGS) -c -DIIO_ABORT_ON_ERROR -Wno-deprecated-declarations $< -o $@
+	$(C99) $(CFLAGS) -c -DIIO_ABORT_ON_ERROR -Wno-deprecated-declarations $< -o $@
 
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(C99) $(CFLAGS) -c $< -o $@
+
+$(SRCDIR)/mt/mt.o: c/mt/mt.c c/mt/mt.h
+	$(C99) $(CFLAGS) -c $< -o $@
 
 $(BINDIR)/bin2asc: c/bin2asc.c
-	$(CC) $(CFLAGS) $^ -o $@
+	$(C99) $(CFLAGS) $^ -o $@
 
 $(BINDIR)/siftu: c/siftu.c c/siftie.c
-	$(CC) $(CFLAGS) $< -lm -o $@
+	$(C99) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/cmphomod.c\
-	c/ransac_cases.c c/parsenumbers.c
-	$(CC) $(CFLAGS) $< -lm -o $@
+	c/ransac_cases.c c/parsenumbers.c c/mt/mt.h c/mt/mt.o
+	$(C99) $(CFLAGS) $< $(SRCDIR)/mt/mt.o -lm -o $@
 
 $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -o $@
+	$(C99) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -o $@
+	$(C99) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o\
 	$(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
 	$(SRCDIR)/xmalloc.c $(SRCDIR)/pickopt.c $(SRCDIR)/rpc.c $(SRCDIR)/srtm4.c\
 	$(SRCDIR)/iio.h $(SRCDIR)/parsenumbers.c
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -o $@
+	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/iio.h c/rpc.h c/read_matrix.c
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
+	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
 
 $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
 	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -o $@
+	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
 	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c c/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(CC) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -o $@
+	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -o $@
 
 $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
+	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 
 # GEOGRAPHICLIB STUFF
@@ -196,10 +206,11 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
 
 test:
-	./s2p.py test.json
+	python s2p.py test.json
 
-clean: clean_libtiff clean_geographiclib clean_monasse clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_mgm
+clean: clean_libtiff clean_geographiclib clean_monasse clean_homography\
+	clean_sift clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm\
+	clean_mgm
 
 clean_libtiff:
 	-rm $(TIFDIR)/lib/libtiff.a
@@ -210,15 +221,19 @@ clean_geographiclib:
 	-rm $(BINDIR)/{Cart,Geo}Convert
 
 clean_monasse:
-	-rm -r $(BINDIR)/monasse_refactored_build
-	-rm $(BINDIR)/{homography,rectify_mindistortion}
+	-rm -r $(BINDIR)/build_monasse_refactored
+	-rm $(BINDIR)/{rectify_mindistortion}
+
+clean_homography:
+	-rm -r $(BINDIR)/build_homography
+	-rm $(BINDIR)/homography
 
 clean_sift:
-	cd 3rdparty/sift_anatomy_20140911; make clean
-	-rm $(BINDIR)/{sift,match}_cli
+	-rm -r $(BINDIR)/build_sift
+	-rm $(BINDIR)/{sift_roi,match_cli}
 
 clean_asift:
-	-rm -r $(BINDIR)/asift_build
+	-rm -r $(BINDIR)/build_asift
 	-rm $(BINDIR)/demo_ASIFT
 
 clean_imscript:

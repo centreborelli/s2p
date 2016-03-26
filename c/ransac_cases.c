@@ -255,7 +255,7 @@ int homography_from_four(float *hom, float *pairs, void *usr)
 static float fnorm(float *a, int n)
 {
 	if (n == 1)
-		return abs(*a);
+		return fabsf(*a);
 	if (n == 2)
 		return hypot(a[0], a[1]);
 	else
