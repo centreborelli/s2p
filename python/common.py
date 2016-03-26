@@ -476,16 +476,15 @@ def image_apply_homography(out, im, H, w, h):
     The output image is defined on the domain [0, w] x [0, h]. Its pixels
     intensities are defined by out(x) = im(H^{-1}(x)). 
     
-    This function calls the homography binary, rewritten by Marc Lebrun based on
-    a code of Pascal Monasse refactored by Gabriele Facciolo.
+    This function calls the homography binary, rewritten by Marc Lebrun and
+    Carlo de Franchis based on a code of Pascal Monasse refactored by Gabriele
+    Facciolo.
     """
-    # write the matrix to a file
-    hom_file = tmpfile('.txt')
-    np.savetxt(hom_file, H)
+    # write the matrix to a string
+    hij = " ".join([str(x) for x in H.flatten()])
 
     # apply the homography
-    run("homography -i %s -t %s -o %s -c %d -l %d" % (im, hom_file, out, w, h))
-    return
+    run("homography %s -h \"%s\" %s %d %d" % (im, hij, out, w, h))
 
 
 def median_filter(im, w, n):

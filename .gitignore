@@ -31,3 +31,4 @@ licence_examples
 
 test/
 *~
+.idea

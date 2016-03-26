@@ -68,8 +68,9 @@ monasse:
 	cp $(BINDIR)/monasse_refactored_build/bin/rectify_mindistortion $(BINDIR)
 
 homography: $(BINDIR)
-	cd $(SRCDIR)/homography; make
-	mv $(SRCDIR)/homography/homography $(BINDIR)
+	mkdir -p $(BINDIR)/build_homography
+	cd $(BINDIR)/build_homography; cmake ../../c/homography; make
+	cp $(BINDIR)/build_homography/homography $(BINDIR)
 
 sift: $(BINDIR)
 	cd $(SRCDIR)/sift; make
