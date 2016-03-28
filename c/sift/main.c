@@ -83,8 +83,15 @@ int main(int c, char *v[])
     iio_save_image_float("/tmp/roi.tif", roi, w, h);
 
     // cleanup
-    free(kpts);
     free(roi);
     fancy_image_close(fimg);
+    sift_free_keypoints(kpts);
+    for (int i = 0; i < 6; i++)
+        sift_free_keypoints(kk[i]);
+    free(kk);
+    for (int i = 0; i < 4; i++)
+        sift_free_scalespace(ss[i]);
+    free(ss);
+    free(p);
     return 0;
 }
