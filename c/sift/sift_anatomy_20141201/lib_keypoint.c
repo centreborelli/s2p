@@ -290,8 +290,8 @@ void sift_read_keypoints(struct sift_keypoints* keys,
         int read = 0;
         struct keypoint* key = sift_malloc_keypoint(n_ori, n_hist, n_bins);
         // read coordinates
-        sscanf(buffer+pos,"%f  %f  %f  %f %n", &key->x
-                                             , &key->y
+        sscanf(buffer+pos,"%f  %f  %f  %f %n", &key->y
+                                             , &key->x
                                              , &key->sigma
                                              , &key->theta
                                              , &read);
