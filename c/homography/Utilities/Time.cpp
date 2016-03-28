@@ -1,9 +1,10 @@
 /**
  * @file Time.cpp
  *
- * @brief Class to handle the elapsed time. For now, only works on linux system.
+ * @brief Class to handle the elapsed time.
  *
- * @author Marc Lebrun <marc.lebrun.ik@gmail.com>
+ * @author Marc Lebrun <marc.lebrun.ik@gmail.com> (original linux version)
+ * @author Carlo de Franchis <carlodef@gmail.com> (osx compatible version)
  **/
 
 
@@ -40,9 +41,9 @@ static void portable_gettime(struct timespec *ts)
 //! Default constructor
 Time::Time() :
 
-  m_time((struct timespec) {0, 0}) {
+        m_time((struct timespec) {0, 0}) {
 
-  //! Initialize the time
+    //! Initialize the time
     portable_gettime(&m_time);
 }
 
@@ -51,23 +52,23 @@ Time::Time() :
 
 //! Compute an amount of time elapsed.
 void Time::getTime(
-  const char* p_name,
-  const size_t p_nbChar) {
-  //! Check the current time
-  struct timespec finish;
+        const char* p_name,
+        const size_t p_nbChar) {
+    //! Check the current time
+    struct timespec finish;
     portable_gettime(&finish);
 
-  //! Compute the elapsed time
-  double elapsed = (finish.tv_sec - m_time.tv_sec) * 1000;
-  elapsed += (finish.tv_nsec - m_time.tv_nsec) / 1000000.0;
+    //! Compute the elapsed time
+    double elapsed = (finish.tv_sec - m_time.tv_sec) * 1000;
+    elapsed += (finish.tv_nsec - m_time.tv_nsec) / 1000000.0;
 
-  //! Determine the space to add at the end
-  string sentence = p_name;
-  sentence += string(max(0, int(p_nbChar) - int(sentence.size())), ' ');
+    //! Determine the space to add at the end
+    string sentence = p_name;
+    sentence += string(max(0, int(p_nbChar) - int(sentence.size())), ' ');
 
-  //! Print the result
-  cout << sentence << ": (ms) = " << elapsed << endl;
+    //! Print the result
+    cout << sentence << ": (ms) = " << elapsed << endl;
 
-  //! Start a new timer
+    //! Start a new timer
     portable_gettime(&m_time);
 }
