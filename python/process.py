@@ -121,7 +121,7 @@ def generate_cloud(tile_info, do_offset=False):
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
     trans = tile_dir + '/trans.txt'
-    np.savetxt(trans, A)
+    np.savetxt(trans, A, fmt='%9.3f')
 
     # compute coordinates (offsets) of the point we want to use as origin in
     # the local coordinate system of the computed cloud
@@ -315,10 +315,10 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
                                                             rect1, rect2, A, m)
 
     z = cfg['subsampling_factor']
-    np.savetxt(subsampling, np.array([z]))
-    np.savetxt(H_ref, H1)
-    np.savetxt(H_sec, H2)
-    np.savetxt(disp_min_max, np.array([disp_min, disp_max]))
+    np.savetxt(subsampling, np.array([z]), fmt='%.1f')
+    np.savetxt(H_ref, H1, fmt='%12.6f')
+    np.savetxt(H_sec, H2, fmt='%12.6f')
+    np.savetxt(disp_min_max, np.array([disp_min, disp_max]), fmt='%3.1f')
 
 
 def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,

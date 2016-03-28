@@ -88,10 +88,10 @@ def pointing_correction(tile_info):
                 A, m = pointing_accuracy.compute_correction(img1, rpc1, img2,
                                                             rpc2, x, y, w, h)
                 if A is not None:
-                    np.savetxt(pointing, A)
+                    np.savetxt(pointing, A, fmt='%6.3f')
                 if m is not None:
-                    np.savetxt(sift_matches, m)
-                    np.savetxt(center, np.mean(m[:, 2:4], 0))
+                    np.savetxt(sift_matches, m, fmt='%9.3f')
+                    np.savetxt(center, np.mean(m[:, 2:4], 0), fmt='%9.3f')
                     if cfg['debug']:
                         png = '%s/sift_matches_plot.png' % paired_tile_dir
                         visualisation.plot_matches_pleiades(img1, img2, rpc1,

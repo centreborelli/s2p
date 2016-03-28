@@ -23,7 +23,7 @@ def pointing_correction(tiles):
         list_of_tiles = [os.path.join(t['directory'], 'pair_%d' % i) for t in
                          tiles]
         np.savetxt(os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i),
-                   pointing_accuracy.global_from_local(list_of_tiles))
+                   pointing_accuracy.global_from_local(list_of_tiles), fmt='%12.6f')
 
 
 def minmax_intensities(tiles_full_info):
@@ -46,4 +46,5 @@ def minmax_intensities(tiles_full_info):
 
     global_minmax = [min(minlist), max(maxlist)]
 
-    np.savetxt(os.path.join(cfg['out_dir'], 'global_minmax.txt'), global_minmax)
+    np.savetxt(os.path.join(cfg['out_dir'], 'global_minmax.txt'), global_minmax,
+               fmt='%6.3f')
