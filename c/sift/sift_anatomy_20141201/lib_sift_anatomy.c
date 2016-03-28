@@ -243,8 +243,7 @@ static void keypoints_find_3d_discrete_extrema(struct sift_scalespace* d,
                                                int n_hist,
                                                int n_bins)
 {
-    for(int o = 0; o < d->nOct; o++){
-
+    for (int o = 0; o < d->nOct; o++) {
         int ns = d->octaves[o]->nSca; // dimension of the image stack in the current octave
         int w = d->octaves[o]->w;
         int h = d->octaves[o]->h;
@@ -266,47 +265,44 @@ static void keypoints_find_3d_discrete_extrema(struct sift_scalespace* d,
         }
 
         // Loop through the samples of the image stack (one octave)
-        for(int s = 1; s < ns-1; s++){
-            for(int i = 1; i < h-1; i++){
-                for(int j = 1; j < w-1; j++){
+        for (int s = 1; s < ns - 1; s++)
+        for (int i = 1; i < h - 1; i++)
+        for (int j = 1; j < w - 1; j++) {
+            const float* center = &imStack[s*w*h+i*w+j];
+            const float center_value = *center;
 
-                    const float* center = &imStack[s*w*h+i*w+j];
-                    const float center_value = *center;
-
-                    bool is_local_min = true;
-                    // An optimizing compiler will unroll this loop.
-                    for (int n = 0; n < 26; n++) {
-                        if (center[neighbor_offsets[n]] - EPSILON <= center_value) {
-                            is_local_min = false;
-                            break; // Can stop early if a smaller neighbor was found.
-                        }
-                    }
-                    bool is_local_max = true;
-                    // Can skip max check if center point was determined to be a local min.
-                    if (is_local_min) {
-                        is_local_max = false;
-                    } else {
-                        // An optimizing compiler will unroll this loop.
-                        for (int n = 0; n < 26; n++) {
-                            if (center[neighbor_offsets[n]] - EPSILON >= center_value) {
-                                is_local_max = false;
-                                break; // Can stop early if a larger neighbor was found.
-                            }
-                        }
-                    }
-                    if(is_local_max || is_local_min) { // if 3d discrete extrema, save a candidate keypoint
-                        struct keypoint* key = sift_malloc_keypoint(n_ori, n_hist, n_bins);
-                        key->i = i;
-                        key->j = j;
-                        key->s = s;
-                        key->o = o;
-                        key->x = delta*i;
-                        key->y = delta*j;
-                        key->sigma = d->octaves[o]->sigmas[s];
-                        key->val = imStack[s*w*h+i*w+j];
-                        sift_add_keypoint_to_list(key,keys);
-                    }
+            bool is_local_min = true;
+            // An optimizing compiler will unroll this loop.
+            for (int n = 0; n < 26; n++)
+                if (center[neighbor_offsets[n]] - EPSILON <= center_value) {
+                    is_local_min = false;
+                    break; // Can stop early if a smaller neighbor was found.
                 }
+
+            bool is_local_max = true;
+            // Can skip max check if center point was determined to be a local min.
+            if (is_local_min)
+                is_local_max = false;
+            else
+                // An optimizing compiler will unroll this loop.
+                for (int n = 0; n < 26; n++)
+                    if (center[neighbor_offsets[n]] - EPSILON >= center_value) {
+                        is_local_max = false;
+                        break; // Can stop early if a larger neighbor was found.
+                    }
+
+            // if 3d discrete extrema, save a candidate keypoint
+            if (is_local_max || is_local_min) {
+                struct keypoint* key = sift_malloc_keypoint(n_ori, n_hist, n_bins);
+                key->i = i;
+                key->j = j;
+                key->s = s;
+                key->o = o;
+                key->x = delta*i;
+                key->y = delta*j;
+                key->sigma = d->octaves[o]->sigmas[s];
+                key->val = imStack[s*w*h+i*w+j];
+                sift_add_keypoint_to_list(key,keys);
             }
         }
     }

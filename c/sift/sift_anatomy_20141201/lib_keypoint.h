@@ -107,9 +107,9 @@ struct keypoint* sift_malloc_keypoint_from_model_and_copy(const struct keypoint*
  *      "vector" of keypoint struct (list of variable size)
  */
 struct sift_keypoints{
-    int size;             /* number of elements in the list */
-    int capacity;            /* current max number os elements in th list (size<=capacity)*/
-    struct keypoint ** list;   /* array of pointers to keypoint structure */
+    int size;             // number of elements in the list
+    int capacity;         // current max number of elements in the list (size<=capacity)
+    struct keypoint** list;  // array of pointers to keypoint structure
 };
 
 /** @brief allocate list of keypoints */
