@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "../pickopt.c"
+#include "iio.h"
+#include "pickopt.h"
 #include "fancy_image.h"
 #include "sift_anatomy_20141201/lib_sift_anatomy.h"
-#include "iio.h"
 
 
 void print_help(char *v[])
@@ -63,7 +63,7 @@ int main(int c, char *v[])
     p->C_DoG = thresh_dog;
 
     // compute sift keypoints
-    struct sift_scalespace **ss = malloc(2 * sizeof(struct sift_scalespace*));
+    struct sift_scalespace **ss = malloc(4 * sizeof(struct sift_scalespace*));
     struct sift_keypoints **kk = malloc(6 * sizeof(struct sift_keypoints*));
     for (int i = 0; i < 6; i++)
         kk[i] = sift_malloc_keypoints();
