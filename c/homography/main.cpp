@@ -9,6 +9,7 @@
 
 //! Global includes
 #include <ctime>
+#include <stdio.h>
 
 
 //! Local includes
@@ -36,7 +37,7 @@ static void apply_homography(double y[2], double h[9], double x[2])
 }
 
 
-static double invert_homography(double o[9], double i[9])
+static void invert_homography(double o[9], double i[9])
 {
     double det = i[0]*i[4]*i[8] + i[2]*i[3]*i[7] + i[1]*i[5]*i[6]
                - i[2]*i[4]*i[6] - i[1]*i[3]*i[8] - i[0]*i[5]*i[7];
@@ -49,7 +50,6 @@ static double invert_homography(double o[9], double i[9])
     o[6] = (i[3]*i[7] - i[4]*i[6]) / det;
     o[7] = (i[1]*i[6] - i[0]*i[7]) / det;
     o[8] = (i[0]*i[4] - i[1]*i[3]) / det;
-    return det;
 }
 
 
@@ -121,7 +121,7 @@ static double *alloc_parse_doubles(int nmax, const char *ss, int *n)
 static void compute_needed_roi(int *out, double *hom, int w, int h)
 {
     double hom_inv[9];
-    double det = invert_homography(hom_inv, hom);
+    invert_homography(hom_inv, hom);
     double roi_after_hom[4][2] = {{(double) 0, (double) 0},
                                   {(double) w, (double) 0},
                                   {(double) w, (double) h},
@@ -182,16 +182,18 @@ int main(int c, char* v[])
     //fprintf(stderr, "roi %d %d %d %d\n", x, y, w, h);
 
     // compensate the homography for the translation due to the crop
-    double translation[9] = {1, 0, x, 0, 1, y, 0, 0, 1};
+    double translation[9] = {1, 0, (double) x, 0, 1, (double) y, 0, 0, 1};
     double hom_compensated[9];
     matrix_product_3x3(hom_compensated, hom, translation);
+    if (verbose) time.getTime("Compute needed ROI");
 
     // read the needed ROI in the input image
     struct fancy_image *fimg = fancy_image_open(fname_input, (char *) "");
     float *roi = (float*) malloc(w*h*sizeof(float));
     fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
-    Image imI(roi, (const size_t) w, (const size_t) h, 1);  // TODO: avoid this useless copy
-    if (verbose) time.getTime("Read image");
+    if (verbose) time.getTime("Read needed ROI");
+    Image imI(roi, (const size_t) w, (const size_t) h, 1);
+    if (verbose) time.getTime("Copy ROI to an Image instance");
 
     // call the mapping function
     Image imO;

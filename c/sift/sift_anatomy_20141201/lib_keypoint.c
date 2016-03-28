@@ -63,10 +63,11 @@ this program. If not, see
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <assert.h>
+
 #include "lib_keypoint.h"
 #include "lib_util.h"
-
 
 
 struct keypoint* sift_malloc_keypoint(int n_ori, int n_hist, int n_bins)

@@ -2,11 +2,7 @@
 #define TIME_H_INCLUDED
 
 
-//! Global includes
 #include <ctime>
-
-
-//! Local includes
 
 
 /**
@@ -16,7 +12,6 @@
 
 class Time {
 
-  //! Methods
   public:
     /**
      * @brief Default constructor.
@@ -25,28 +20,8 @@ class Time {
 
 
     /**
-     * @brief Copy constructor.
-     **/
-    Time(
-      const Time& i_time);
-
-
-    /**
-     * @brief Operator overload.
-     **/
-    Time& operator=(
-      const Time& i_time);
-
-
-    //! Default destructor
-    ~Time();
-
-
-    /**
      * @brief Compute an amount of time elapsed.
      *
-     * @param io_start : when the clock started; Will be
-     *        reinitialized just after;
      * @param p_name : name of the section to print;
      * @param p_nbChar: number of characters to print.
      *
@@ -59,19 +34,6 @@ class Time {
 
   private:
 
-
-    /**
-     * @brief Release the memory.
-     **/
-    void releaseMemory();
-
-
-  //! Data members
-  private:
-
     struct timespec m_time;
 };
-#else
-class Time;
-
 #endif // TIME_H_INCLUDED

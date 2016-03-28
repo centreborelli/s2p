@@ -71,3 +71,8 @@ set_property(SOURCE iio.c PROPERTY COMPILE_FLAGS "-Wno-unused-variable -Wno-unus
 
 add_executable(sift_roi ${SOURCE_FILES_SIFT_ROI})
 add_executable(match_cli ${SOURCE_FILES_MATCH_CLI})
+
+# Link -lm
+if (UNIX)
+    target_link_libraries (match_cli m)
+endif ()

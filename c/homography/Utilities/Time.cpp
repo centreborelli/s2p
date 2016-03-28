@@ -7,12 +7,8 @@
  **/
 
 
-//! Global includes
 #include <iostream>
-#include <cstring>
 
-
-//! Local includes
 #include "Time.h"
 
 
@@ -30,36 +26,6 @@ Time::Time() :
 #endif
 }
 
-
-//! Copy constructor.
-Time::Time(
-  const Time& i_time) :
-
-  //! Parameters
-  m_time(i_time.m_time) {
-
-}
-
-
-//! Operator overload.
-Time& Time::operator=(
-  const Time& i_time) {
-
-  if (&i_time == this) {
-    return *this;
-  }
-
-  releaseMemory();
-
-  new (this) Time(i_time);
-  return *this;
-}
-
-
-//! Default destructor
-Time::~Time() {
-  releaseMemory();
-}
 
 
 //! Compute an amount of time elapsed.
@@ -85,11 +51,4 @@ void Time::getTime(
   //! Start a new timer
   clock_gettime(CLOCK_MONOTONIC, &m_time);
 #endif
-}
-
-
-//! Release memory.
-void Time::releaseMemory() {
-
-  //! Release memory
 }
