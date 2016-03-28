@@ -72,8 +72,8 @@ int main(int c, char *v[])
     // add (x, y) offset to keypoints coordinates
     if (x != 0 || y != 0)
         for (int i = 0; i < kpts->size; i++) {
-            (kpts->list[i])->x += x;
-            (kpts->list[i])->y += y;
+            kpts->list[i]->x += y;  // in Ives' conventions x is the row index
+            kpts->list[i]->y += x;
         }
 
     // write to standard output

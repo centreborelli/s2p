@@ -182,7 +182,7 @@ void sift_free_keypoints(struct sift_keypoints* keys)
 void fprintf_one_keypoint(FILE* f, const struct keypoint* k, int n_descr, int n_bins, int flag)
 {
     // coordinates
-    fprintf(f,"%f %f ", k->x, k->y);
+    fprintf(f,"%f %f ", k->y, k->x);
 
     // scale and orientation
     if (flag > -1)
