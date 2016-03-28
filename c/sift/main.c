@@ -11,27 +11,22 @@ void print_help(char *v[])
 {
     fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [--max-nb-pts n] [-b]"
     //                          0 1         2 3 4 5
-            " [--thresh-dog t]\n", *v);
+            " [--thresh-dog t (0.0133)] [--scale-space-noct n (8)]\n", *v);
 }
 
 
 int main(int c, char *v[])
 {
     // process input arguments
-    if (c < 2 || c > 11) {
+    if (c < 2) {
         print_help(v);
     	return 1;
     }
 
     // optional arguments
-    char s[100];
-    sprintf(s, "%d", INT_MAX);
-    char *tmp1 = pick_option(&c, &v, "-max-nb-pts", s);
-    int max_nb_pts = atoi(tmp1);
-
-    char *tmp2 = pick_option(&c, &v, "-thresh-dog", "0.0133");
-    float thresh_dog = atoi(tmp2);
-
+    int max_nb_pts = atoi(pick_option(&c, &v, "-max-nb-pts", "INT_MAX"));
+    float thresh_dog = atof(pick_option(&c, &v, "-thresh-dog", "0.0133"));
+    int ss_noct = atoi(pick_option(&c, &v, "-scale-space-noct", "8"));
     bool binary = (bool) pick_option(&c, &v, "b", NULL);
 
     // open the image
@@ -61,6 +56,7 @@ int main(int c, char *v[])
     // prepare sift parameters
     struct sift_parameters* p = sift_assign_default_parameters();
     p->C_DoG = thresh_dog;
+    p->n_oct = ss_noct;
 
     // compute sift keypoints
     struct sift_scalespace **ss = malloc(4 * sizeof(struct sift_scalespace*));
@@ -80,7 +76,7 @@ int main(int c, char *v[])
     fprintf_keypoints(stdout, kpts, max_nb_pts, binary, 1);
 
     // debug
-    iio_save_image_float("/tmp/roi.tif", roi, w, h);
+    //iio_save_image_float("/tmp/roi.tif", roi, w, h);
 
     // cleanup
     free(roi);
