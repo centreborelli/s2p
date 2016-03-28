@@ -9,10 +9,32 @@
 
 #include <iostream>
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
+
 #include "Time.h"
 
 
 using namespace std;
+
+//! Portable way to get current time
+static void portable_gettime(struct timespec *ts)
+{
+#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    ts->tv_sec = mts.tv_sec;
+    ts->tv_nsec = mts.tv_nsec;
+#else
+    clock_gettime(CLOCK_REALTIME, ts);
+#endif
+}
 
 
 //! Default constructor
@@ -21,10 +43,9 @@ Time::Time() :
   m_time((struct timespec) {0, 0}) {
 
   //! Initialize the time
-#ifdef __linux__
-  clock_gettime(CLOCK_MONOTONIC, &m_time);
-#endif
+    portable_gettime(&m_time);
 }
+
 
 
 
@@ -32,10 +53,9 @@ Time::Time() :
 void Time::getTime(
   const char* p_name,
   const size_t p_nbChar) {
-#ifdef __linux__
   //! Check the current time
   struct timespec finish;
-  clock_gettime(CLOCK_MONOTONIC, &finish);
+    portable_gettime(&finish);
 
   //! Compute the elapsed time
   double elapsed = (finish.tv_sec - m_time.tv_sec) * 1000;
@@ -49,6 +69,5 @@ void Time::getTime(
   cout << sentence << ": (ms) = " << elapsed << endl;
 
   //! Start a new timer
-  clock_gettime(CLOCK_MONOTONIC, &m_time);
-#endif
+    portable_gettime(&m_time);
 }
