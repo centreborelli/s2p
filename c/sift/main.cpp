@@ -1,17 +1,20 @@
 #include <stdlib.h>
-#include <limits.h>
 
-#include "iio.h"
-#include "pickopt.h"
-#include "fancy_image.h"
-#include "sift_anatomy_20141201/lib_sift_anatomy.h"
+#include "Time.h"
+
+extern "C" {
+    #include "pickopt.h"
+    #include "fancy_image.h"
+    #include "sift_anatomy_20141201/lib_sift_anatomy.h"
+};
 
 
 void print_help(char *v[])
 {
-    fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [--max-nb-pts n] [-b]"
+    fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [-o file] [--max-nb-pts n]"
     //                          0 1         2 3 4 5
-            " [--thresh-dog t (0.0133)] [--scale-space-noct n (8)]\n", *v);
+            " [-b] [--verbose] [--thresh-dog t (0.0133)]"
+            " [--scale-space-noct n (8)] [--scale-space-nspo n (3)]\n", *v);
 }
 
 
@@ -24,10 +27,16 @@ int main(int c, char *v[])
     }
 
     // optional arguments
+    char *output_file = pick_option(&c, &v, "o", "stdout");
+    bool binary = (bool) pick_option(&c, &v, "b", NULL);
+    bool verbose = (bool) pick_option(&c, &v, "-verbose", NULL);
     int max_nb_pts = atoi(pick_option(&c, &v, "-max-nb-pts", "INT_MAX"));
     float thresh_dog = atof(pick_option(&c, &v, "-thresh-dog", "0.0133"));
     int ss_noct = atoi(pick_option(&c, &v, "-scale-space-noct", "8"));
-    bool binary = (bool) pick_option(&c, &v, "b", NULL);
+    int ss_nspo = atoi(pick_option(&c, &v, "-scale-space-nspo", "3"));
+
+    // initialise time
+    Time time;
 
     // open the image
     struct fancy_image *fimg = fancy_image_open(v[1], "");
@@ -52,31 +61,34 @@ int main(int c, char *v[])
     // read the roi in the input image
     float *roi = (float*) malloc(w * h * sizeof(float));
     fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
+    if (verbose) time.get_time("read ROI");
 
     // prepare sift parameters
     struct sift_parameters* p = sift_assign_default_parameters();
     p->C_DoG = thresh_dog;
     p->n_oct = ss_noct;
+    p->n_spo = ss_nspo;
 
     // compute sift keypoints
-    struct sift_scalespace **ss = malloc(4 * sizeof(struct sift_scalespace*));
-    struct sift_keypoints **kk = malloc(6 * sizeof(struct sift_keypoints*));
+    struct sift_scalespace **ss = (struct sift_scalespace**) malloc(4 * sizeof(struct sift_scalespace*));
+    struct sift_keypoints **kk = (struct sift_keypoints**) malloc(6 * sizeof(struct sift_keypoints*));
     for (int i = 0; i < 6; i++)
         kk[i] = sift_malloc_keypoints();
     struct sift_keypoints* kpts = sift_anatomy(roi, w, h, p, ss, kk);
+    if (verbose) time.get_time("run SIFT");
 
     // add (x, y) offset to keypoints coordinates
-    if (x != 0 || y != 0)
-        for (int i = 0; i < kpts->size; i++) {
-            kpts->list[i]->x += y;  // in Ives' conventions x is the row index
-            kpts->list[i]->y += x;
-        }
+    for (int i = 0; i < kpts->size; i++) {
+        kpts->list[i]->x += y;  // in Ives' conventions x is the row index
+        kpts->list[i]->y += x;
+    }
+    if (verbose) time.get_time("add offset");
 
     // write to standard output
-    fprintf_keypoints(stdout, kpts, max_nb_pts, binary, 1);
-
-    // debug
-    //iio_save_image_float("/tmp/roi.tif", roi, w, h);
+    FILE *f = fopen(output_file, "w");
+    fprintf_keypoints(f, kpts, max_nb_pts, binary, 1);
+    fclose(f);
+    if (verbose) time.get_time("write output");
 
     // cleanup
     free(roi);

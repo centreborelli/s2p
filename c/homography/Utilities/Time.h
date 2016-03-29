@@ -27,9 +27,9 @@ class Time {
      *
      * @return none.
      **/
-    void getTime(
-      const char* p_name,
-      const size_t p_nbChar = 35);
+    void get_time(
+            const char *p_name,
+            const size_t p_nbChar = 35);
 
 
   private:

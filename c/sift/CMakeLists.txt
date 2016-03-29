@@ -44,6 +44,8 @@ set(SOURCE_FILES_SIFT_ROI
     fancy_image.h
     iio.h
     iio.c
+    Time.h
+    Time.cpp
     sift_anatomy_20141201/lib_description.c
     sift_anatomy_20141201/lib_description.h
     sift_anatomy_20141201/lib_discrete.c
@@ -58,7 +60,7 @@ set(SOURCE_FILES_SIFT_ROI
     sift_anatomy_20141201/lib_sift_anatomy.h
     sift_anatomy_20141201/lib_util.c
     sift_anatomy_20141201/lib_util.h
-    main.c)
+    main.cpp)
 
 set(SOURCE_FILES_MATCH_CLI
     sift_anatomy_20141201/lib_util.c

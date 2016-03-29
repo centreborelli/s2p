@@ -51,8 +51,8 @@ Time::Time() :
 
 
 //! Compute an amount of time elapsed.
-void Time::getTime(
-        const char* p_name,
+void Time::get_time(
+        const char *p_name,
         const size_t p_nbChar) {
     //! Check the current time
     struct timespec finish;
