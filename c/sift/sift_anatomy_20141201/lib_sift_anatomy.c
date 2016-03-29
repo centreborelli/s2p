@@ -917,22 +917,19 @@ struct sift_keypoints* sift_anatomy_without_description(const float* x, int w, i
 }
 
 
-
-
-void sift_anatomy_only_description(const float* x, int w, int h, const struct sift_parameters* p,
-                                    struct sift_keypoints* k)
+void sift_anatomy_only_description(const float* x, int w, int h,
+                                   const struct sift_parameters* p,
+                                   struct sift_keypoints* k)
 {
-    // The number of octaves.
     int n_oct = number_of_octaves(w, h, p);
 
-    // MEMORY ALLOCATION
-    struct sift_scalespace* s   = sift_malloc_scalespace_lowe(n_oct,p->n_spo,w,h,p->delta_min,p->sigma_min);
+    struct sift_scalespace* s   = sift_malloc_scalespace_lowe(n_oct, p->n_spo, w, h, p->delta_min, p->sigma_min);
     struct sift_scalespace* sx  = sift_malloc_scalespace_from_model(s);
     struct sift_scalespace* sy  = sift_malloc_scalespace_from_model(s);
 
-    scalespace_compute(s, x, w, h, p->sigma_in);  /* Builds Lowe's scale-space */
-    scalespace_compute_gradient(s,sx,sy); /* Pre-computes gradient scale-space */
-    keypoints_attribute_descriptors(sx, sy, k, p->n_hist,p->n_ori,p->lambda_descr);
+    scalespace_compute(s, x, w, h, p->sigma_in); // build Lowe's scale-space
+    scalespace_compute_gradient(s, sx, sy); // pre-compute gradient scale-space
+    keypoints_attribute_descriptors(sx, sy, k, p->n_hist, p->n_ori, p->lambda_descr);
 
     sift_free_scalespace(s);
     sift_free_scalespace(sx);
@@ -940,25 +937,20 @@ void sift_anatomy_only_description(const float* x, int w, int h, const struct si
 }
 
 
-
-void sift_anatomy_orientation_and_description(const float* x,
-                                              int w,
-                                              int h,
+void sift_anatomy_orientation_and_description(const float* x, int w, int h,
                                               const struct sift_parameters* p,
                                               struct sift_keypoints* k)
 {
-    // The number of octaves.
     int n_oct = number_of_octaves(w, h, p);
 
-    // MEMORY ALLOCATION
-    struct sift_scalespace* s   = sift_malloc_scalespace_lowe(n_oct,p->n_spo,w,h,p->delta_min,p->sigma_min);
+    struct sift_scalespace* s   = sift_malloc_scalespace_lowe(n_oct, p->n_spo, w, h, p->delta_min, p->sigma_min);
     struct sift_scalespace* sx  = sift_malloc_scalespace_from_model(s);
     struct sift_scalespace* sy  = sift_malloc_scalespace_from_model(s);
-    scalespace_compute(s, x, w, h, p->sigma_in);  // Builds Lowe's scale-space
-    scalespace_compute_gradient(s,sx,sy); // Pre-computes gradient scale-space
 
+    scalespace_compute(s, x, w, h, p->sigma_in);  // build Lowe's scale-space
+    scalespace_compute_gradient(s, sx, sy); // pre-compute gradient scale-space
     keypoints_attribute_one_orientation(sx, sy, k, p->n_bins, p->lambda_ori);
-    keypoints_attribute_descriptors(sx, sy, k, p->n_hist,p->n_ori,p->lambda_descr);
+    keypoints_attribute_descriptors(sx, sy, k, p->n_hist, p->n_ori, p->lambda_descr);
 
     sift_free_scalespace(s);
     sift_free_scalespace(sx);
