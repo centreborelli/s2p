@@ -726,9 +726,8 @@ static void keypoints_attribute_descriptors(struct sift_scalespace *sx,
 {
     int n_descr = n_hist*n_hist*n_ori;
 
-    for(int k = 0; k < keys->size; k++){
-
-        /** Loading keypoint gradient scalespaces */
+    for (int k = 0; k < keys->size; k++) {
+        // Loading keypoint gradient scalespaces
         struct keypoint* key = keys->list[k];
         float x = key->x;
         float y = key->y;
@@ -749,13 +748,13 @@ static void keypoints_attribute_descriptors(struct sift_scalespace *sx,
         y /= delta;
         sigma /= delta;
 
-        /** Compute descriptor representation */
+        // Compute descriptor representation
         sift_extract_feature_vector(x, y, sigma, theta,
                                     dx, dy, w, h,
                                     n_hist, n_ori, lambda_descr,
                                     key->descr);
 
-        /** Threshold and quantization of the descriptor */
+        // Threshold and quantization of the descriptor
         sift_threshold_and_quantize_feature_vector(key->descr, n_descr, 0.2);
     }
 }
@@ -788,13 +787,12 @@ struct sift_parameters* sift_assign_default_parameters()
 // The number of octaves is limited by the size of the input image
 static int number_of_octaves(int w, int h, const struct sift_parameters* p)
 {
-    // The minimal size (width or height) of images in the last octave.
+    // minimal size (width or height) of images in the last octave
     int hmin = 12;
-    // The size (min of width and height) of images in the first octave.
-    int h0 = MIN(w,h)/p->delta_min;
-    // The number of octaves.
-    int n_oct = MIN(p->n_oct, (int)(log(h0/hmin)/M_LN2) + 1);
-    return n_oct;
+    // size (min of width and height) of images in the first octave
+    int h0 = MIN(w, h) / p->delta_min;
+    // number of octaves
+    return MIN(p->n_oct, (int) (log(h0 / hmin) / M_LN2) + 1);
 }
 
 
@@ -803,18 +801,15 @@ static int number_of_octaves(int w, int h, const struct sift_parameters* p)
 static float convert_threshold(const struct sift_parameters* p)
 {
     // converting the threshold to make it consistent
-    float k_nspo =  exp( M_LN2/( (float)(p->n_spo)));
-    float k_3 =  exp( M_LN2/( (float)3));
-    float thresh = (k_nspo - 1) / (k_3 - 1) * p->C_DoG ;
-    return thresh;
+    float k_nspo =  exp(M_LN2 / (float) p->n_spo);
+    float k_3 =  exp(M_LN2 / (float) 3);
+    return (k_nspo - 1) / (k_3 - 1) * p->C_DoG;
 }
-
 
 
 struct sift_keypoints* sift_anatomy(const float* x, int w, int h, const struct sift_parameters* p,
                                     struct sift_scalespace* ss[4],
                                     struct sift_keypoints* kk[6])
-
 {
     // WARNING
     //  ss[2]: pointers to two scalespace structures for lates use (The Gaussian
@@ -969,5 +964,3 @@ void sift_anatomy_orientation_and_description(const float* x,
     sift_free_scalespace(sx);
     sift_free_scalespace(sy);
 }
-
-
