@@ -60,23 +60,23 @@ set(SOURCE_FILES_SIFT_ROI
     sift_anatomy_20141201/lib_sift_anatomy.h
     sift_anatomy_20141201/lib_util.c
     sift_anatomy_20141201/lib_util.h
-    main.cpp)
+    sift_roi.cpp)
 
-set(SOURCE_FILES_MATCH_CLI
+set(SOURCE_FILES_MATCHING
     sift_anatomy_20141201/lib_util.c
     sift_anatomy_20141201/lib_util.h
     sift_anatomy_20141201/lib_keypoint.c
     sift_anatomy_20141201/lib_keypoint.h
     sift_anatomy_20141201/lib_matching.c
     sift_anatomy_20141201/lib_matching.h
-    sift_anatomy_20141201/match_cli.c)
+    matching.c)
 
 set_property(SOURCE iio.c PROPERTY COMPILE_FLAGS "-Wno-unused-variable -Wno-unused-parameter -Wno-pointer-sign -Wno-parentheses -Wno-deprecated-declarations -Wno-unused-function")
 
 add_executable(sift_roi ${SOURCE_FILES_SIFT_ROI})
-add_executable(match_cli ${SOURCE_FILES_MATCH_CLI})
+add_executable(matching ${SOURCE_FILES_MATCHING})
 
 # Link -lm
 if (UNIX)
-    target_link_libraries (match_cli m)
+    target_link_libraries (matching m)
 endif ()
