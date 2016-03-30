@@ -185,25 +185,25 @@ int main(int c, char* v[])
     double translation[9] = {1, 0, (double) x, 0, 1, (double) y, 0, 0, 1};
     double hom_compensated[9];
     matrix_product_3x3(hom_compensated, hom, translation);
-    if (verbose) time.getTime("Compute needed ROI");
+    if (verbose) time.get_time("Compute needed ROI");
 
     // read the needed ROI in the input image
     struct fancy_image *fimg = fancy_image_open(fname_input, (char *) "");
     float *roi = (float*) malloc(w*h*sizeof(float));
     fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
-    if (verbose) time.getTime("Read needed ROI");
+    if (verbose) time.get_time("Read needed ROI");
     Image imI(roi, (const size_t) w, (const size_t) h, 1);
-    if (verbose) time.getTime("Copy ROI to an Image instance");
+    if (verbose) time.get_time("Copy ROI to an Image instance");
 
     // call the mapping function
     Image imO;
     Parameters params(0, (const size_t) out_w, (const size_t) out_h, true);
     runHomography(imI, hom_compensated, imO, params);
-    if (verbose) time.getTime("Apply the homography");
+    if (verbose) time.get_time("Apply the homography");
 
     // write the output image
     imO.write(fname_output);
-    if (verbose) time.getTime("Write image");
+    if (verbose) time.get_time("Write image");
 
     return EXIT_SUCCESS;
 }
