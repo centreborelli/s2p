@@ -20,9 +20,9 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw2 sgbm piio
+default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw3 sgbm piio
 
-all: default msmw tvl1
+all: default tvl1
 
 
 $(BINDIR):
@@ -104,6 +104,11 @@ msmw2:
 	mkdir -p $(BINDIR)/msmw2_build
 	cd $(BINDIR)/msmw2_build; cmake ../../3rdparty/msmw2; make
 	cp $(BINDIR)/msmw2_build/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion $(BINDIR)
+
+msmw3:
+	mkdir -p $(BINDIR)/build_msmw3
+	cd $(BINDIR)/build_msmw3; cmake ../../c/msmw; make
+	cp $(BINDIR)/build_msmw3/msmw $(BINDIR)
 
 tvl1:
 	cd 3rdparty/tvl1flow_3; make
