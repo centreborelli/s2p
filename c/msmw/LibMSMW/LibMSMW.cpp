@@ -1220,24 +1220,3 @@ void MSMW::releaseMemory() {
     m_imStrobe22 = NULL;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

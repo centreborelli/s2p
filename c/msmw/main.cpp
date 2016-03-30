@@ -36,12 +36,12 @@ int main(int argc, char **argv) {
     Image imL, imR;
     imL.read(params.inpLeft());
     imR.read(params.inpRight());
-    time.getTime("Read images");
+    time.get_time("Read images");
 
     //! Set to 0 all NaNs and Inf in the input images
     imL.removeNaN();
     imR.removeNaN();
-    time.getTime("Remove NaN");
+    time.get_time("Remove NaN");
 
     //! Output images
     Image imDispL, imDispR, imDistL, imDistR, imMaskL, imMaskR;
@@ -49,11 +49,11 @@ int main(int argc, char **argv) {
     //! Initialize MSMW
     MSMW msmw;
     msmw.init(imL, imR, params);
-    time.getTime("Initialize msmw object");
+    time.get_time("Initialize msmw object");
 
     //! Launch the stereo multiscale chain
     msmw.run(imDispL, imDispR, imDistL, imDistR, imMaskL, imMaskR);
-    time.getTime("StereoMultiscaleChain");
+    time.get_time("StereoMultiscaleChain");
 
     //! Save images
     imDispL.write(params.outDispL());
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
         imDispR.write(params.outDispR());
     if (params.outMaskR() != NULL)
         imMaskR.write(params.outMaskR());
-    time.getTime("Write images");
+    time.get_time("Write images");
 
     return EXIT_SUCCESS;
 }
