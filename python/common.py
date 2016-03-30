@@ -13,7 +13,6 @@ import subprocess
 import numpy as np
 
 
-from python.rpc_utils import corresponding_roi
 from config import cfg
 
 
@@ -419,30 +418,6 @@ def cropImage(inp, out, x, y, w, h, zoom=1):
         image_zoom_gdal(tmp, zoom, out, w, h)
     
     
-def crop_corresponding_areas(out_dir, images, roi, zoom=1):
-    """
-    Crops areas corresponding to the reference ROI in the secondary images.
-
-    Args:
-        out_dir:
-        images: sequence of dicts containing the paths to input data
-        roi: dictionary containing the ROI definition
-        zoom: integer zoom out factor
-    """
-    rpc_ref = images[0]['rpc']
-    for i, image in enumerate(images[1:]):
-        x, y, w, h = corresponding_roi(rpc_ref, image['rpc'], roi['x'],
-                                       roi['y'], roi['w'], roi['h'])
-        if zoom == 1:
-            image_crop_tif(image['img'], x, y, w, h,
-                            '%s/roi_sec_%d.tif' % (out_dir, i))
-        else:
-            # gdal is used for the zoom because it handles BigTIFF files, and
-            # before the zoom out the image may be that big
-            tmp = image_crop_tif(image['img'], x, y, w, h)
-            image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir, i), w, h)
-    
-
 def image_zoom_out_morpho(im, f):
     """
     Image zoom out by morphological operation (median).

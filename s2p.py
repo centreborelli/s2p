@@ -30,6 +30,7 @@ import multiprocessing
 
 from python.config import cfg
 from python import common
+from python import rpc_utils
 from python import initialization
 from python import preprocess
 from python import globalvalues
@@ -222,8 +223,8 @@ def global_finalization(tiles_full_info):
 
     # crop area corresponding to the ROI in the secondary images
     if not cfg['full_img']:
-        common.crop_corresponding_areas(cfg['out_dir'], cfg['images'],
-                                        cfg['roi'])
+        rpc_utils.crop_corresponding_areas(cfg['out_dir'], cfg['images'],
+                                           cfg['roi'])
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
