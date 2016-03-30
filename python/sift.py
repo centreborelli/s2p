@@ -25,13 +25,13 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     """
     keyfile = common.tmpfile('.txt')
     if max_nb:
-        cmd = "sift_roi %s %d %d %d %d --max-nb-pts %d %s > %s" % (im, x, y, w,
-                                                                   h, max_nb,
-                                                                   extra_params,
-                                                                   keyfile)
+        cmd = "sift_roi %s %d %d %d %d --max-nb-pts %d %s -o %s" % (im, x, y, w,
+                                                                    h, max_nb,
+                                                                    extra_params,
+                                                                    keyfile)
     else:
-        cmd = "sift_roi %s %d %d %d %d %s > %s" % (im, x, y, w, h, extra_params,
-                                                   keyfile)
+        cmd = "sift_roi %s %d %d %d %d %s -o %s" % (im, x, y, w, h,
+                                                    extra_params, keyfile)
     common.run(cmd)
     return keyfile
 
