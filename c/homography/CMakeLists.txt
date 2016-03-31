@@ -42,6 +42,8 @@ set(SOURCE_FILES
     iio.c
     pickopt.c
     pickopt.h
+    linalg.c
+    linalg.h
     fancy_image.c
     fancy_image.h
     LibHomography/Homography.cpp
