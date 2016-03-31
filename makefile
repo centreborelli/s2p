@@ -75,7 +75,8 @@ homography: $(BINDIR)
 sift: $(BINDIR)
 	mkdir -p $(BINDIR)/build_sift
 	cd $(BINDIR)/build_sift; cmake ../../c/sift; make
-	cp $(BINDIR)/build_sift/{sift_roi,match_cli} $(BINDIR)
+	cp $(BINDIR)/build_sift/sift_roi $(BINDIR)
+	cp $(BINDIR)/build_sift/matching $(BINDIR)
 
 mgm:
 	cd 3rdparty/mgm; make
