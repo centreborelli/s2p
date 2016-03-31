@@ -37,6 +37,14 @@ find_package (PNG REQUIRED)
 include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS})
 link_libraries (${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES})
 
+# Link -lrt
+find_library (RT_LIBRARY rt)
+if (RT_LIBRARY)
+    link_libraries (${RT_LIBRARY})
+endif()
+
+set_property(SOURCE iio.c PROPERTY COMPILE_FLAGS "-Wno-unused-variable -Wno-unused-parameter -Wno-pointer-sign -Wno-parentheses -Wno-deprecated-declarations -Wno-unused-function")
+
 set(SOURCE_FILES_SIFT_ROI
     pickopt.c
     pickopt.h
@@ -77,18 +85,5 @@ set(SOURCE_FILES_MATCHING
     sift_anatomy_20141201/lib_matching.h
     matching.cpp)
 
-set_property(SOURCE iio.c PROPERTY COMPILE_FLAGS "-Wno-unused-variable -Wno-unused-parameter -Wno-pointer-sign -Wno-parentheses -Wno-deprecated-declarations -Wno-unused-function")
-
 add_executable(sift_roi ${SOURCE_FILES_SIFT_ROI})
 add_executable(matching ${SOURCE_FILES_MATCHING})
-
-# Link -lm
-if (UNIX)
-    target_link_libraries (matching m)
-endif ()
-
-# Link -lrt
-if (UNIX AND NOT APPLE)
-    target_link_libraries (sift_roi rt)
-    target_link_libraries (matching rt)
-endif ()
