@@ -94,23 +94,22 @@ The SIFT method is patented
  *
  */
 void scalespace_compute(struct sift_scalespace* ss,
-                               const float* image,
-                               int im_w,
-                               int im_h,
-                               float sigma_in)
+                        const float* image,
+                        int im_w,
+                        int im_h,
+                        float sigma_in)
 {
     // seed image
     float delta_min = ss->octaves[0]->delta;
     float sigma_min = ss->octaves[0]->sigmas[0];
-    int w_min = ss->octaves[0]->w;
-    int h_min = ss->octaves[0]->h;
+
     // check that the scalespace is correctly defined
-    assert(w_min == (int)(im_w/delta_min));
-    assert(h_min == (int)(im_h/delta_min));
+    assert(ss->octaves[0]->w == (int) (im_w / delta_min));
+    assert(ss->octaves[0]->h == (int) (im_h / delta_min));
 
     float sig_prev,sig_next,sigma_extra;
 
-    /* for dereferencing */
+    // for dereferencing
     struct octa* octave;
     struct octa* octave_prev;
     int w_prev, h_prev;

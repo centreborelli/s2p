@@ -30,13 +30,6 @@ find_package (OpenMP)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 
-# Link LibTIFF, LibJPEG, LibPNG
-find_package (TIFF REQUIRED)
-find_package (JPEG REQUIRED)
-find_package (PNG REQUIRED)
-include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS})
-link_libraries (${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES})
-
 # Link -lrt
 find_library (RT_LIBRARY rt)
 if (RT_LIBRARY)
@@ -87,3 +80,10 @@ set(SOURCE_FILES_MATCHING
 
 add_executable(sift_roi ${SOURCE_FILES_SIFT_ROI})
 add_executable(matching ${SOURCE_FILES_MATCHING})
+
+# Link LibTIFF, LibJPEG, LibPNG
+find_package (TIFF REQUIRED)
+find_package (JPEG REQUIRED)
+find_package (PNG REQUIRED)
+include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS})
+target_link_libraries (sift_roi ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES})

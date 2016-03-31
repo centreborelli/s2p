@@ -102,8 +102,7 @@ struct keypoint* sift_malloc_keypoint(int n_ori, int n_hist, int n_bins)
 static void copy_keypoint(const struct keypoint* kA, struct keypoint* kB)
 {
     int l = kB->n_hist * kB->n_hist * kB->n_ori; // length of the feature vector
-    int p = kA->n_hist * kA->n_hist * kA->n_ori;
-    assert(p==l);
+    assert(l == (kA->n_hist * kA->n_hist * kA->n_ori));
     // copy struct
     kB->i        = kA->i;
     kB->j        = kA->j;
