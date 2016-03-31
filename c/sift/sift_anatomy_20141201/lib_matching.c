@@ -134,14 +134,23 @@ void matching(struct sift_keypoints *k1,
     free(distB);
 }
 
+void fprintf_pairs(const char *filename, const struct sift_keypoints *k1,
+                   const struct sift_keypoints *k2)
+{
+    FILE *f = fopen(filename, "w");
+    for (int i = 0; i < k1->size; i++) {
+        fprintf_one_keypoint(f, k1->list[i], 0, 0, -1);
+        fprintf_one_keypoint(f, k2->list[i], 0, 0, -1);
+        fprintf(f, "\n");
+    }
+    fclose(f);
+}
+
+
 void print_pairs(const struct sift_keypoints *k1,
                  const struct sift_keypoints *k2)
 {
-    for (int i = 0; i < k1->size; i++) {
-        fprintf_one_keypoint(stdout, k1->list[i], 0, 0, -1);
-        fprintf_one_keypoint(stdout, k2->list[i], 0, 0, -1);
-        fprintf(stdout, "\n");
-    }
+    fprintf_pairs("stdout", k1, k2);
 }
 
 void save_pairs_extra(const char* name,

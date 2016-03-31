@@ -1,11 +1,10 @@
 #include <string.h>
-#include <stdbool.h>
 
 // @c pointer to original argc
 // @v pointer to original argv
 // @o option name (after hyphen)
 // @d default value
-char * pick_option(int *c, char ***v, const char *o, const char *d)
+const char * pick_option(int *c, char ***v, const char *o, const char *d)
 {
 	int argc = *c;
 	char **argv = *v;

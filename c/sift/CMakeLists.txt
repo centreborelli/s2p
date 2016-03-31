@@ -63,13 +63,17 @@ set(SOURCE_FILES_SIFT_ROI
     sift_roi.cpp)
 
 set(SOURCE_FILES_MATCHING
+    Time.cpp
+    Time.h
+    pickopt.c
+    pickopt.h
     sift_anatomy_20141201/lib_util.c
     sift_anatomy_20141201/lib_util.h
     sift_anatomy_20141201/lib_keypoint.c
     sift_anatomy_20141201/lib_keypoint.h
     sift_anatomy_20141201/lib_matching.c
     sift_anatomy_20141201/lib_matching.h
-    matching.c)
+    matching.cpp)
 
 set_property(SOURCE iio.c PROPERTY COMPILE_FLAGS "-Wno-unused-variable -Wno-unused-parameter -Wno-pointer-sign -Wno-parentheses -Wno-deprecated-declarations -Wno-unused-function")
 

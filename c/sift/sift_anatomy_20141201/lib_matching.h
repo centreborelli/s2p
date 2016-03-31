@@ -56,6 +56,10 @@ void matching(struct sift_keypoints *k1,
               float thresh,
               int flag);
 
+void fprintf_pairs(const char *filename,
+                   const struct sift_keypoints *k1,
+                   const struct sift_keypoints *k2);
+
 void print_pairs(const struct sift_keypoints *k1,
                  const struct sift_keypoints *k2);
 
