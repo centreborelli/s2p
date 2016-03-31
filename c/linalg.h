@@ -38,4 +38,9 @@ double max_n(double *x, int n);
 // ss: input string
 // *n: output number of doubles that have actually been read
 double *alloc_parse_doubles(int nmax, const char *ss, int *n);
+
+// Compute two rectifying similarities from an affine fundamental matrix
+void rectifying_similarities_from_affine_fundamental_matrix(double s1[9],
+                                                            double s2[9],
+                                                            double f[5]);
 #endif //LINALG_H

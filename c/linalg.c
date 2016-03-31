@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 // 3x3 matrices are represented by arrays of length 9.
 //                   a[0] a[1] a[2]
@@ -85,4 +86,55 @@ double *alloc_parse_doubles(int nmax, const char *ss, int *n)
     }
     *n = i;
     return r;
+}
+
+
+// An affine fundamental matrix is a 3x3 matrix with 5 non-zero coefficients.
+// It's represented here by an array of doubles of length 5.
+//                     0    0  f[0]      0  0  c
+// The ordering is:    0    0  f[1]   =  0  0  d
+//                   f[2] f[3] f[4]      a  b  e
+// with the notations from the reference book of Hartley and Zisserman (p. 345)
+void rectifying_similarities_from_affine_fundamental_matrix(double s1[9],
+                                                            double s2[9],
+                                                            double f[5])
+{
+    // notations
+    double c = f[0];
+    double d = f[1];
+    double a = f[2];
+    double b = f[3];
+    double e = f[4];
+
+    // rotations
+    double r = sqrt(a*a + b*b);
+    double s = sqrt(c*c + d*d);
+    double r1[4] = { b/r, -a/r,   a/r,  b/r};
+    double r2[4] = {-d/s,  c/s,  -c/s, -d/s};
+
+    // zoom and translation
+    double z = sqrt(r / s);
+    double t = 0.5 * e / sqrt(r * s);
+
+    // output similarities
+    s1[0] = z * r1[0];
+    s1[1] = z * r1[1];
+    s1[2] = 0;
+    s1[3] = z * r1[2];
+    s1[4] = z * r1[3];
+    s1[5] = t;
+    s1[6] = 0;
+    s1[7] = 0;
+    s1[8] = 1;
+
+    double zz = 1 / z;
+    s2[0] = zz * r2[0];
+    s2[1] = zz * r2[1];
+    s2[2] = 0;
+    s2[3] = zz * r2[2];
+    s2[4] = zz * r2[3];
+    s2[5] = -t;
+    s2[6] = 0;
+    s2[7] = 0;
+    s2[8] = 1;
 }
