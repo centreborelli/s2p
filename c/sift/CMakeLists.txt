@@ -79,4 +79,5 @@ add_executable(matching ${SOURCE_FILES_MATCHING})
 # Link -lm
 if (UNIX)
     target_link_libraries (matching m)
+    target_link_libraries (sift_roi rt)
 endif ()
