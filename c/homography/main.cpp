@@ -30,10 +30,10 @@ static void int_bounding_box(int output[4], double input[4][2])
 {
     double x[4] = {input[0][0], input[1][0], input[2][0], input[3][0]};
     double y[4] = {input[0][1], input[1][1], input[2][1], input[3][1]};
-    output[0] = (int) floor(min(x, 4));
-    output[1] = (int) floor(min(y, 4));
-    output[2] = (int) ceil(max(x, 4) - output[0]);
-    output[3] = (int) ceil(max(y, 4) - output[1]);
+    output[0] = (int) floor(min_n(x, 4));
+    output[1] = (int) floor(min_n(y, 4));
+    output[2] = (int) ceil(max_n(x, 4) - output[0]);
+    output[3] = (int) ceil(max_n(y, 4) - output[1]);
 }
 
 

@@ -1,5 +1,5 @@
 #ifndef _LIB_UTIL_H_
-#define _LIB_UTIL_H_ 
+#define _LIB_UTIL_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +17,7 @@
 #endif
 
 // Find the minimum among two int
-int min(int a, int b);
+int min_2(int a, int b);
 
 // Allocate memory or abord on failure
 void* xmalloc(size_t size);

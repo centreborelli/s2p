@@ -15,6 +15,7 @@
 
 #include "Time.h"
 extern "C" {
+    #include "linalg.h"
     #include "pickopt.h"
     #include "sift_anatomy_20141201/lib_keypoint.h"
     #include "sift_anatomy_20141201/lib_matching.h"
@@ -51,11 +52,11 @@ int main(int c, char *v[])
     strcpy(label, "extra");
 
     // Parsing command line
-    char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
+    const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
     bool verbose = pick_option(&c, &v, "-verbose", NULL);
 
     // read the fundamental matrix
-    char *fund_mat_string = pick_option(&c, &v, "f", "");
+    const char *fund_mat_string = pick_option(&c, &v, "f", "");
     int n_fund;
     double *fund_mat = alloc_parse_doubles(9, fund_mat_string, &n_fund);
     if (n_fund != 9) {

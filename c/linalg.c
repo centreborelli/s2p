@@ -47,7 +47,7 @@ void matrix_33_product(double ab[9], double a[9], double b[9])
 }
 
 
-double min(double *x, int n)
+double min_n(double *x, int n)
 {
     double out = *x;
     for (int i = 1; i < n; i++)
@@ -57,7 +57,7 @@ double min(double *x, int n)
 }
 
 
-double max(double *x, int n)
+double max_n(double *x, int n)
 {
     double out = *x;
     for (int i = 1; i < n; i++)

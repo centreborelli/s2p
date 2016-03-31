@@ -67,6 +67,8 @@ set(SOURCE_FILES_MATCHING
     Time.h
     pickopt.c
     pickopt.h
+    linalg.c
+    linalg.h
     sift_anatomy_20141201/lib_util.c
     sift_anatomy_20141201/lib_util.h
     sift_anatomy_20141201/lib_keypoint.c
@@ -83,5 +85,9 @@ add_executable(matching ${SOURCE_FILES_MATCHING})
 # Link -lm
 if (UNIX)
     target_link_libraries (matching m)
+endif ()
+
+# Link -lrt
+if (LINUX)
     target_link_libraries (sift_roi rt)
 endif ()

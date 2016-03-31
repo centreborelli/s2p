@@ -29,8 +29,8 @@ void matrix_33_product(double ab[9], double a[9], double b[9]);
 // Compute the minimum and maximum of on array of doubles
 // x: pointer to the first element of the array
 // n: length of the array
-double min(double *x, int n);
-double max(double *x, int n);
+double min_n(double *x, int n);
+double max_n(double *x, int n);
 
 
 // Parse a string for doubles

@@ -27,7 +27,7 @@ int main(int c, char *v[])
     }
 
     // optional arguments
-    char *output_file = pick_option(&c, &v, "o", "stdout");
+    const char *output_file = pick_option(&c, &v, "o", "stdout");
     bool binary = (bool) pick_option(&c, &v, "b", NULL);
     bool verbose = (bool) pick_option(&c, &v, "-verbose", NULL);
     int max_nb_pts = atoi(pick_option(&c, &v, "-max-nb-pts", "INT_MAX"));

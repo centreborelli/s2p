@@ -5,7 +5,7 @@
 #include <math.h>
 
 // Find the minimum among two int
-int min(int a, int b) {return b < a ? b : a;}
+int min_2(int a, int b) {return b < a ? b : a;}
 
 // Allocate memory or abord on failure
 void* xmalloc(size_t size)
