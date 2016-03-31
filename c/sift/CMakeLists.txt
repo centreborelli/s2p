@@ -88,6 +88,7 @@ if (UNIX)
 endif ()
 
 # Link -lrt
-if (LINUX)
+if (UNIX AND NOT APPLE)
     target_link_libraries (sift_roi rt)
+    target_link_libraries (matching rt)
 endif ()
