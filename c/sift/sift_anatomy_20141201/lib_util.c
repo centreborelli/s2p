@@ -137,22 +137,20 @@ void find_array_two_min(const float* array, int length, float* minA, float* minB
 }
 
 // Compute the SQUARE Euclidean distance.
-float euclidean_distance_square(const float* a1, const float* a2, int length)
+float euclidean_distance_square(const float* x, const float* y, int length)
 {
     float d = 0.0;
-    for(int i = 0; i < length; i++){
-        float t = (a1[i] - a2[i]);
+    for (int i = 0; i < length; i++) {
+        float t = (x[i] - y[i]);
         d += t*t;
     }
     return d;
 }
 
 // Compute the Euclidean distance.
-float euclidean_distance(const float* a1, const float* a2, int length)
+float euclidean_distance(const float* x, const float* y, int length)
 {
-    float d = euclidean_distance_square(a1,a2,length);
-    d = sqrt(d);
-    return d;
+    return sqrt(euclidean_distance_square(x, y, length));
 }
 
 // L2 norm of a vector

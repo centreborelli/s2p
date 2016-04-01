@@ -135,8 +135,8 @@ struct keypoint* sift_malloc_keypoint_from_model_and_copy(const struct keypoint*
 
 struct sift_keypoints* sift_malloc_keypoints()
 {
-    struct sift_keypoints * keys = xmalloc(1*sizeof(struct sift_keypoints));
-    keys->list = xmalloc(100*sizeof(struct keypoint*));
+    struct sift_keypoints *keys = xmalloc(sizeof(struct sift_keypoints));
+    keys->list = xmalloc(100 * sizeof(struct keypoint*));
     keys->capacity = 100;
     keys->size = 0;
     return keys;
@@ -145,17 +145,16 @@ struct sift_keypoints* sift_malloc_keypoints()
 
 static void realloc_sift_keypoints(struct sift_keypoints* keys)
 {
-    keys->list = (struct keypoint**)xrealloc(keys->list, 2*keys->capacity*sizeof(struct keypoint*));
-    keys->capacity = 2*keys->capacity;
+    keys->list = (struct keypoint **) xrealloc(keys->list,
+                                               2 * keys->capacity * sizeof(struct keypoint*));
+    keys->capacity *= 2;
 }
 
 void sift_add_keypoint_to_list(struct keypoint* key,
                                struct sift_keypoints* keys)
 {
-    if(keys->size > keys->capacity - 1) // checks the memory limit
-    {
+    if (keys->size > keys->capacity - 1) // checks the memory limit
         realloc_sift_keypoints(keys);
-    }
     keys->list[keys->size] = key;
     keys->size += 1;
 }
@@ -171,9 +170,8 @@ void sift_free_keypoint(struct keypoint* key)
 
 void sift_free_keypoints(struct sift_keypoints* keys)
 {
-    for(int k = 0; k < keys->size; k++){
+    for (int k = 0; k < keys->size; k++)
         sift_free_keypoint(keys->list[k]);
-    }
     xfree(keys->list);
     xfree(keys);
 }
