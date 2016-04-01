@@ -3,6 +3,7 @@ import numpy as np
 
 import common
 import rpc_utils
+import estimation
 from config import cfg
 
 
@@ -36,7 +37,8 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     return keyfile
 
 
-def keypoints_match(k1, k2, method='relative', thresh=0.6, model=None):
+def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
+                    model=None):
     """
     Find matches among two lists of sift keypoints.
 
@@ -45,12 +47,13 @@ def keypoints_match(k1, k2, method='relative', thresh=0.6, model=None):
         method (optional, default is 'relative'): flag ('relative' or
             'absolute') indicating wether to use absolute distance or relative
             distance
-        thresh (optional, default is 0.6): threshold for distance between SIFT
+        sift_thresh (optional, default is 0.6): threshold for distance between SIFT
             descriptors. These descriptors are 128-vectors, whose coefficients
             range from 0 to 255, thus with absolute distance a reasonable value
             for this threshold is between 200 and 300. With relative distance
             (ie ratio between distance to nearest and distance to second
             nearest), the commonly used value for the threshold is 0.6.
+        F (optional): affine fundamental matrix
         model (optional, default is None): model imposed by RANSAC when
             searching the set of inliers. If None all matches are considered as
             inliers.
@@ -60,7 +63,12 @@ def keypoints_match(k1, k2, method='relative', thresh=0.6, model=None):
     """
     # compute matches
     mfile = common.tmpfile('.txt')
-    common.run("match_cli %s %s -%s %f > %s" % (k1, k2, method, thresh, mfile))
+    cmd = "matching %s %s -%s %f -o %s" % (k1, k2, method, sift_thresh, mfile)
+    if F is not None:
+        fij = ' '.join(str(x) for x in [F[0, 2], F[1, 2], F[2, 0],
+                                        F[2, 1], F[2, 2]])
+        cmd = "%s -f \"%s\"" % (cmd, fij)
+    common.run(cmd)
 
     # filter outliers with ransac
     if model == 'fundamental':
@@ -79,7 +87,7 @@ def keypoints_match(k1, k2, method='relative', thresh=0.6, model=None):
 
 def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     """
-    Compute a list of SIFT matches between two images on a given roi.  
+    Compute a list of SIFT matches between two images on a given roi.
 
     The corresponding roi in the second image is determined using the rpc
     functions.
@@ -98,15 +106,18 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     """
     x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x, y, w, h)
 
+    # estimate an approximate affine fundamental matrix from the rpcs
+    rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
+    # TODO FIXME: do we need to center the points as we do in the rectification module?
+    F = estimation.affine_fundamental_matrix(rpc_matches)
+
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
-    for i in range(6): 
-        p1 = image_keypoints(im1, x, y, w, h, max_nb=2000,
-                             extra_params='--thresh-dog %f' % thresh_dog)
-        p2 = image_keypoints(im2, x2, y2, w2, h2, max_nb=2000,
-                             extra_params='--thresh-dog %f' % thresh_dog)
+    for i in range(6):
+        p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
+        p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
         matches = keypoints_match(p1, p2, 'relative', cfg['sift_match_thresh'],
-                                  model='fundamental')
+                                  F, model='fundamental')
         if matches.shape[0] > 10:
             break
         else:

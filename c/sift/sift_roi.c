@@ -34,7 +34,7 @@ int main(int c, char *v[])
     int ss_nspo = atoi(pick_option(&c, &v, "-scale-space-nspo", "3"));
 
     // initialise time
-    struct timespec *ts; portable_gettime(ts);
+    struct timespec ts; portable_gettime(&ts);
 
     // open the image
     struct fancy_image *fimg = fancy_image_open(v[1], "");
@@ -59,7 +59,7 @@ int main(int c, char *v[])
     // read the roi in the input image
     float *roi = (float*) malloc(w * h * sizeof(float));
     fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
-    if (verbose) print_elapsed_time(ts, "read ROI", 35);
+    if (verbose) print_elapsed_time(&ts, "read ROI", 35);
 
     // prepare sift parameters
     struct sift_parameters* p = sift_assign_default_parameters();
@@ -73,20 +73,20 @@ int main(int c, char *v[])
     for (int i = 0; i < 6; i++)
         kk[i] = sift_malloc_keypoints();
     struct sift_keypoints* kpts = sift_anatomy(roi, w, h, p, ss, kk);
-    if (verbose) print_elapsed_time(ts, "run SIFT", 35);
+    if (verbose) print_elapsed_time(&ts, "run SIFT", 35);
 
     // add (x, y) offset to keypoints coordinates
     for (int i = 0; i < kpts->size; i++) {
         kpts->list[i]->x += y;  // in Ives' conventions x is the row index
         kpts->list[i]->y += x;
     }
-    if (verbose) print_elapsed_time(ts, "add offset", 35);
+    if (verbose) print_elapsed_time(&ts, "add offset", 35);
 
     // write to standard output
     FILE *f = fopen(output_file, "w");
     fprintf_keypoints(f, kpts, max_nb_pts, binary, 1);
     fclose(f);
-    if (verbose) print_elapsed_time(ts, "write output", 35);
+    if (verbose) print_elapsed_time(&ts, "write output", 35);
 
     // cleanup
     free(roi);
