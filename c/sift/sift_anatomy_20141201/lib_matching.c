@@ -49,7 +49,8 @@ this program. If not, see
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
+
+#include "../timing.h"
 #include "lib_keypoint.h"
 #include "lib_matching.h"
 #include "lib_util.h"
@@ -60,17 +61,13 @@ static void compute_keypoints_distance(float* dist,
 {
     int n_hist = k1->list[0]->n_hist;
     int n_ori  = k1->list[0]->n_ori;
-    int dim = n_hist*n_hist*n_ori;
     int n1 = k1->size;
     int n2 = k2->size;
-    for(int i = 0; i < n1; i++){
-        const float * v1 =  k1->list[i]->descr;
-        for(int j = 0; j < n2; j++){
-            const float * v2 =  k2->list[j]->descr;
-            float d = euclidean_distance(v1, v2, dim);
-            dist[i*n2+j] = d;
-        }
-    }
+    for (int i = 0; i < n1; i++)
+    for (int j = 0; j < n2; j++)
+        dist[i*n2+j] = euclidean_distance(k1->list[i]->descr,
+                                          k2->list[j]->descr,
+                                          n_hist * n_hist * n_ori);
 }
 
 
@@ -89,43 +86,38 @@ static void find_the_two_nearest_keys(const float* dist, int n1, int n2,
     }
 }
 
+
 void matching(struct sift_keypoints *k1,
               struct sift_keypoints *k2,
               struct sift_keypoints *out_k1,
-              struct sift_keypoints *out_k2A,
-              struct sift_keypoints *out_k2B,
+              struct sift_keypoints *out_k2,
               float thresh,
               int flag)
 {
     int n1 = k1->size;
     int n2 = k2->size;
 
-    float* dist  = (float*)xmalloc(n1*n2*sizeof(float));
-    float* distA = (float*)xmalloc(n1*sizeof(float));
-    float* distB = (float*)xmalloc(n1*sizeof(float));
-    int* indexA  = (int*)xmalloc(n1*sizeof(int));
-    int* indexB  = (int*)xmalloc(n1*sizeof(int));
+    float *distA = (float *) xmalloc(n1 * sizeof(float));
+    float *distB = (float *) xmalloc(n1 * sizeof(float));
+    int *indexA  = (int *) xmalloc(n1 * sizeof(int));
+    int *indexB  = (int *) xmalloc(n1 * sizeof(int));
 
+    struct timespec ts; portable_gettime(&ts);
+    float *dist  = (float *) xmalloc(n1 * n2 * sizeof(float));
     compute_keypoints_distance(dist, k1, k2);
-    find_the_two_nearest_keys(dist, n1, n2, indexA, indexB, distA, distB);
+    print_elapsed_time(&ts, " - compute distances");
 
-    int j = 0;
-    for(int i = 0; i < n1; i++){
-        float val;
-        val = (flag == 1 ? distA[i]/distB[i] : distA[i]);
-        if (val < thresh){
-            int iA = indexA[i];
-            int iB = indexB[i];
-            struct keypoint* k;
-            k = sift_malloc_keypoint_from_model_and_copy(k1->list[i]);
-            sift_add_keypoint_to_list(k, out_k1);
-            k = sift_malloc_keypoint_from_model_and_copy(k2->list[iA]);
-            sift_add_keypoint_to_list(k, out_k2A);
-            k = sift_malloc_keypoint_from_model_and_copy(k2->list[iB]);
-            sift_add_keypoint_to_list(k, out_k2B);
-            j++;
+    find_the_two_nearest_keys(dist, n1, n2, indexA, indexB, distA, distB);
+    print_elapsed_time(&ts, " - find two nearest");
+
+    for (int i = 0; i < n1; i++) {
+        float val = (flag == 1 ? distA[i] / distB[i] : distA[i]);
+        if (val < thresh) {
+            sift_add_keypoint_to_list(k1->list[i], out_k1);
+            sift_add_keypoint_to_list(k2->list[indexA[i]], out_k2);
         }
     }
+    print_elapsed_time(&ts, " - select matches");
 
     free(dist);
     free(indexA);

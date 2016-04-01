@@ -1,5 +1,5 @@
 /**
- * @file matching.cpp
+ * @file matching.c
  * @brief [[MAIN]] Matching of keypoints
  *
  * @li Method 1 : threshold on the ratio of distances to the two nearest keypoints
@@ -13,13 +13,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Time.h"
-extern "C" {
-    #include "linalg.h"
-    #include "pickopt.h"
-    #include "sift_anatomy_20141201/lib_keypoint.h"
-    #include "sift_anatomy_20141201/lib_matching.h"
-}
+#include "timing.h"
+#include "linalg.h"
+#include "pickopt.h"
+#include "sift_anatomy_20141201/lib_keypoint.h"
+#include "sift_anatomy_20141201/lib_matching.h"
 
 
 void print_usage(char *v[])
@@ -51,58 +49,77 @@ int main(int c, char *v[])
     char label[256];
     strcpy(label, "extra");
 
-    // Parsing command line
+    // parse arguments
     const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
     bool verbose = pick_option(&c, &v, "-verbose", NULL);
 
-    // read the fundamental matrix
-    const char *fund_mat_string = pick_option(&c, &v, "f", "");
-    int n_fund;
-    double *fund_mat = alloc_parse_doubles(9, fund_mat_string, &n_fund);
-    if (n_fund != 9) {
-        fprintf(stderr, "can not read 3x3 matrix from \"%s\"", fund_mat_string);
-        return EXIT_FAILURE;
+    // read the (optional) fundamental matrix
+    const char *fund_mat_str = pick_option(&c, &v, "f", "");
+    double *fund_mat = NULL;
+    if (strcmp(fund_mat_str, "")) {
+        // the string is not empty
+        int n_fund;
+        fund_mat = alloc_parse_doubles(5, fund_mat_str, &n_fund);
+        if (n_fund != 5) {
+            fprintf(stderr, "can't read affine fundamental matrix from \"%s\"\n", fund_mat_str);
+            return EXIT_FAILURE;
+        }
     }
 
     // initialise time counter
-    Time time;
+    struct timespec ts; portable_gettime(&ts);
 
     // Memory allocation
     struct sift_keypoints* k1 = sift_malloc_keypoints();
     struct sift_keypoints* k2 = sift_malloc_keypoints();
     struct sift_keypoints* out_k1 = sift_malloc_keypoints();
-    struct sift_keypoints* out_k2A = sift_malloc_keypoints();
+    struct sift_keypoints* out_k2 = sift_malloc_keypoints();
     struct sift_keypoints* out_k2B = sift_malloc_keypoints();
 
     // Read input keypoint ASCII files
     int readflag = verb_flag + 1;
     sift_read_keypoints(k1, v[1], n_hist, n_ori, n_bins, readflag);
     sift_read_keypoints(k2, v[2], n_hist, n_ori, n_bins, readflag);
-    time.get_time("read input keypoints");
+    print_elapsed_time(&ts, "read input keypoints");
 
-    // Matching
-    matching(k1, k2, out_k1, out_k2A, out_k2B, thresh, meth_flag);
-    time.get_time("compute matches");
-
-    // Print
-    fprintf_pairs(output_file, out_k1, out_k2A);
-    time.get_time("print output");
-    fprintf(stderr, "%d matches\n", out_k1->size);
-    char name[FILENAME_MAX];
-    if(verb_flag == 1){
-        save_pairs_extra("OUTmatches.txt", out_k1, out_k2A, out_k2B);
-        sprintf(name, "%s_im0.txt", label);
-        sift_save_keypoints(out_k1, name, 1);
-        sprintf(name, "%s_im1.txt", label);
-        sift_save_keypoints(out_k2A, name, 1);
+    // rectify keypoints coordinates
+    if (fund_mat) {
+        double s1[9] = {0};
+        double s2[9] = {0};
+        rectifying_similarities_from_affine_fundamental_matrix(s1, s2, fund_mat);
+        //fprintf(stderr, "  : %f %f %f\n", s1[0], s1[1], s1[2]);
+        //fprintf(stderr, "s1: %f %f %f\n", s1[3], s1[4], s1[5]);
+        //fprintf(stderr, "  : %f %f %f\n", s1[6], s1[7], s1[8]);
+        //fprintf(stderr, "  : %f %f %f\n", s2[0], s2[1], s2[2]);
+        //fprintf(stderr, "s2: %f %f %f\n", s2[3], s2[4], s2[5]);
+        //fprintf(stderr, "  : %f %f %f\n", s2[6], s2[7], s2[8]);
+        //apply_homography_to_keypoints(k1, h1);
+        //apply_homography_to_keypoints(k2, h1);
     }
 
-    // Free memory
+    // Matching
+    matching(k1, k2, out_k1, out_k2, thresh, meth_flag);
+    print_elapsed_time(&ts, "compute matches");
+
+    // Print
+    fprintf_pairs(output_file, out_k1, out_k2);
+    print_elapsed_time(&ts, "print output");
+    fprintf(stderr, "%d matches\n", out_k1->size);
+
+//    char name[FILENAME_MAX];
+//    if(verb_flag == 1){
+//        save_pairs_extra("OUTmatches.txt", out_k1, out_k2A, out_k2B);
+//        sprintf(name, "%s_im0.txt", label);
+//        sift_save_keypoints(out_k1, name, 1);
+//        sprintf(name, "%s_im1.txt", label);
+//        sift_save_keypoints(out_k2A, name, 1);
+//    }
+//
+//    // Free memory
     sift_free_keypoints(k1);
     sift_free_keypoints(k2);
-    sift_free_keypoints(out_k1);
-    sift_free_keypoints(out_k2A);
-    sift_free_keypoints(out_k2B);
+    free(out_k1);
+    free(out_k2);
 
     return EXIT_SUCCESS;
 }

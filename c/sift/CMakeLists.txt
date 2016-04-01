@@ -41,12 +41,12 @@ set_property(SOURCE iio.c PROPERTY COMPILE_FLAGS "-Wno-unused-variable -Wno-unus
 set(SOURCE_FILES_SIFT_ROI
     pickopt.c
     pickopt.h
+    timing.c
+    timing.h
     fancy_image.c
     fancy_image.h
     iio.h
     iio.c
-    Time.h
-    Time.cpp
     sift_anatomy_20141201/lib_description.c
     sift_anatomy_20141201/lib_description.h
     sift_anatomy_20141201/lib_discrete.c
@@ -61,13 +61,13 @@ set(SOURCE_FILES_SIFT_ROI
     sift_anatomy_20141201/lib_sift_anatomy.h
     sift_anatomy_20141201/lib_util.c
     sift_anatomy_20141201/lib_util.h
-    sift_roi.cpp)
+    sift_roi.c)
 
 set(SOURCE_FILES_MATCHING
-    Time.cpp
-    Time.h
     pickopt.c
     pickopt.h
+    timing.c
+    timing.h
     linalg.c
     linalg.h
     sift_anatomy_20141201/lib_util.c
@@ -76,7 +76,7 @@ set(SOURCE_FILES_MATCHING
     sift_anatomy_20141201/lib_keypoint.h
     sift_anatomy_20141201/lib_matching.c
     sift_anatomy_20141201/lib_matching.h
-    matching.cpp)
+    matching.c)
 
 add_executable(sift_roi ${SOURCE_FILES_SIFT_ROI})
 add_executable(matching ${SOURCE_FILES_MATCHING})

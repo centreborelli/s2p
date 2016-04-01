@@ -1,12 +1,10 @@
 #include <stdlib.h>
 
-#include "Time.h"
+#include "timing.h"
+#include "pickopt.h"
+#include "fancy_image.h"
+#include "sift_anatomy_20141201/lib_sift_anatomy.h"
 
-extern "C" {
-    #include "pickopt.h"
-    #include "fancy_image.h"
-    #include "sift_anatomy_20141201/lib_sift_anatomy.h"
-};
 
 
 void print_help(char *v[])
@@ -36,7 +34,7 @@ int main(int c, char *v[])
     int ss_nspo = atoi(pick_option(&c, &v, "-scale-space-nspo", "3"));
 
     // initialise time
-    Time time;
+    struct timespec *ts; portable_gettime(ts);
 
     // open the image
     struct fancy_image *fimg = fancy_image_open(v[1], "");
@@ -61,7 +59,7 @@ int main(int c, char *v[])
     // read the roi in the input image
     float *roi = (float*) malloc(w * h * sizeof(float));
     fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
-    if (verbose) time.get_time("read ROI");
+    if (verbose) print_elapsed_time(ts, "read ROI");
 
     // prepare sift parameters
     struct sift_parameters* p = sift_assign_default_parameters();
@@ -75,20 +73,20 @@ int main(int c, char *v[])
     for (int i = 0; i < 6; i++)
         kk[i] = sift_malloc_keypoints();
     struct sift_keypoints* kpts = sift_anatomy(roi, w, h, p, ss, kk);
-    if (verbose) time.get_time("run SIFT");
+    if (verbose) print_elapsed_time(ts, "run SIFT");
 
     // add (x, y) offset to keypoints coordinates
     for (int i = 0; i < kpts->size; i++) {
         kpts->list[i]->x += y;  // in Ives' conventions x is the row index
         kpts->list[i]->y += x;
     }
-    if (verbose) time.get_time("add offset");
+    if (verbose) print_elapsed_time(ts, "add offset");
 
     // write to standard output
     FILE *f = fopen(output_file, "w");
     fprintf_keypoints(f, kpts, max_nb_pts, binary, 1);
     fclose(f);
-    if (verbose) time.get_time("write output");
+    if (verbose) print_elapsed_time(ts, "write output");
 
     // cleanup
     free(roi);

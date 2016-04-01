@@ -51,8 +51,7 @@ this program. If not, see
 void matching(struct sift_keypoints *k1,
               struct sift_keypoints *k2,
               struct sift_keypoints *out_k1,
-              struct sift_keypoints *out_k2A,
-              struct sift_keypoints *out_k2B,
+              struct sift_keypoints *out_k2,
               float thresh,
               int flag);
 
