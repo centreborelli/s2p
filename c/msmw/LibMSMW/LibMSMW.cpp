@@ -1,7 +1,8 @@
 /**
  * @brief Launch the MSMW algorithm.
  *
- * @author Marc Lebrun <marc.lebrun.ik@gmail.com>
+ * @author Original: Toni Buades, Gabriele Facciolo, Enric Meinhardt-Llopis
+ * @author Modified: Marc Lebrun <marc.lebrun.ik@gmail.com>
  **/
 
 

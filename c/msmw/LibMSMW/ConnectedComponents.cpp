@@ -3,7 +3,7 @@
  *
  * @brief Small functions to deal with connected components.
  *
- * @author Original: Toni Buades;
+ * @author Original: Toni Buades, Gabriele Facciolo, Enric Meinhardt-Llopis
  * @author Modified: Marc Lebrun <marc.lebrun.ik@gmail.com>.
  **/
 
@@ -167,17 +167,3 @@ void removeRegions(
   //! Release memory
   free(ccIdx);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

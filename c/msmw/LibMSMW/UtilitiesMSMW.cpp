@@ -380,26 +380,3 @@ void fillDiagonal(
   //! Normalize the kernel
   o_window.normalizeL1();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
