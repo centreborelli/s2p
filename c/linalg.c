@@ -95,8 +95,18 @@ double *alloc_parse_doubles(int nmax, const char *ss, int *n)
 // The ordering is:    0    0  f[1]   =  0  0  d
 //                   f[2] f[3] f[4]      a  b  e
 // with the notations from the reference book of Hartley and Zisserman (p. 345)
-void rectifying_similarities_from_affine_fundamental_matrix(double s1[9],
-                                                            double s2[9],
+
+// A planar similarity is represented in homogeneous coordinates by a 3x3
+// matrix of the form
+//                     a  -b   p
+//                     b   a   q
+//                     0   0   1
+// The rectification algorithm implemented by this function produces,
+// by design, similarities with coefficient p equal to zero. Each
+// output similarity is completely described by (a, b, q), thus is represented
+// by an array of 3 floats with this convention: s[3] = {a, b, q}.
+void rectifying_similarities_from_affine_fundamental_matrix(float s1[3],
+                                                            float s2[3],
                                                             double f[5])
 {
     // notations
@@ -109,32 +119,20 @@ void rectifying_similarities_from_affine_fundamental_matrix(double s1[9],
     // rotations
     double r = sqrt(a*a + b*b);
     double s = sqrt(c*c + d*d);
-    double r1[4] = { b/r, -a/r,   a/r,  b/r};
-    double r2[4] = {-d/s,  c/s,  -c/s, -d/s};
+    //double r1[4] = { b/r, -a/r,   a/r,  b/r};
+    //double r2[4] = {-d/s,  c/s,  -c/s, -d/s};
 
     // zoom and translation
     double z = sqrt(r / s);
     double t = 0.5 * e / sqrt(r * s);
 
     // output similarities
-    s1[0] = z * r1[0];
-    s1[1] = z * r1[1];
-    s1[2] = 0;
-    s1[3] = z * r1[2];
-    s1[4] = z * r1[3];
-    s1[5] = t;
-    s1[6] = 0;
-    s1[7] = 0;
-    s1[8] = 1;
+    s1[0] = (float) (z * b / r);
+    s1[1] = (float) (z * a / r);
+    s1[2] = (float) t;
 
     double zz = 1 / z;
-    s2[0] = zz * r2[0];
-    s2[1] = zz * r2[1];
-    s2[2] = 0;
-    s2[3] = zz * r2[2];
-    s2[4] = zz * r2[3];
-    s2[5] = -t;
-    s2[6] = 0;
-    s2[7] = 0;
-    s2[8] = 1;
+    s2[0] = (float) (zz * -d / s);
+    s2[1] = (float) (zz * -c / s);
+    s2[2] = -t;
 }

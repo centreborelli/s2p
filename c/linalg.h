@@ -40,7 +40,7 @@ double max_n(double *x, int n);
 double *alloc_parse_doubles(int nmax, const char *ss, int *n);
 
 // Compute two rectifying similarities from an affine fundamental matrix
-void rectifying_similarities_from_affine_fundamental_matrix(double s1[9],
-                                                            double s2[9],
+void rectifying_similarities_from_affine_fundamental_matrix(float s1[3],
+                                                            float s2[3],
                                                             double f[5]);
 #endif //LINALG_H

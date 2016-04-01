@@ -24,7 +24,7 @@ void portable_gettime(struct timespec *ts)
 
 
 // print an amount of time elapsed and start a new timer
-void print_elapsed_time(struct timespec *ts, char *title)
+void print_elapsed_time(struct timespec *ts, char *title, int title_width)
 {
     // get the current time
     struct timespec finish;
@@ -35,7 +35,7 @@ void print_elapsed_time(struct timespec *ts, char *title)
     elapsed += (finish.tv_nsec - ts->tv_nsec) / 1000000.0;
 
     // print the result
-    printf("%s: (ms) = %f\n", title, elapsed);
+    printf("%-*s %7.3f (ms)\n", title_width, title, elapsed); // see K&R p154
 
     // start a new timer
     portable_gettime(ts);
