@@ -80,15 +80,16 @@ int main(int c, char *v[])
     int readflag = verb_flag + 1;
     sift_read_keypoints(k1, v[1], n_hist, n_ori, n_bins, readflag);
     sift_read_keypoints(k2, v[2], n_hist, n_ori, n_bins, readflag);
-    print_elapsed_time(&ts, "read input keypoints:", 35);
+    if (verbose) print_elapsed_time(&ts, "read input keypoints:", 35);
 
     // matching
-    matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat, epi_thresh);
-    print_elapsed_time(&ts, "compute matches:", 35);
+    matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat,
+             epi_thresh, verbose);
+    if (verbose) print_elapsed_time(&ts, "compute matches:", 35);
 
     // print
     fprintf_pairs(output_file, out_k1, out_k2);
-    print_elapsed_time(&ts, "print output:", 35);
+    if (verbose) print_elapsed_time(&ts, "print output:", 35);
     fprintf(stderr, "%d matches\n", out_k1->size);
 
     // cleanup
