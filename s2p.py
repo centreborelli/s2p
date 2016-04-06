@@ -20,7 +20,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import time
 import shutil
 import os.path
 import datetime
@@ -48,6 +47,15 @@ def show_progress(a):
     """
     show_progress.counter += 1
     print 'done %d / %d tiles' % (show_progress.counter, show_progress.total)
+
+
+def print_elapsed_time():
+    """
+    Print the elapsed time since last call.
+    """
+    t1 = datetime.datetime.now()
+    print "Elapsed time:", t1 - print_elapsed_time.t0
+    print_elapsed_time.t0 = t1
 
 
 def preprocess_tile(tile_info):
@@ -277,8 +285,6 @@ def main(config_file, step=None):
         step: integer between 1 and 5 specifying which step to run. Default
         value is None. In that case all the steps are run.
     """
-    t0 = time.time()
-
     # determine which steps to run
     steps = [step] if step else [1, 2, 3, 4, 5]
 
@@ -286,6 +292,7 @@ def main(config_file, step=None):
     initialization.init_dirs_srtm_roi(config_file)
     tiles_full_info = initialization.init_tiles_full_info(config_file)
     show_progress.total = len(tiles_full_info)
+    print_elapsed_time.t0 = datetime.datetime.now()
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -300,22 +307,22 @@ def main(config_file, step=None):
     if 2 in steps:
         print '\npreprocessing tiles...'
         launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
-        print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+        print_elapsed_time()
 
     if 3 in steps:
         print '\ncomputing global values...'
         global_values(tiles_full_info)
-        print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+        print_elapsed_time()
 
     if 4 in steps:
         print '\nprocessing tiles...'
         launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
-        print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+        print_elapsed_time()
 
     if 5 in steps:
         print '\nglobal finalization...'
         global_finalization(tiles_full_info)
-        print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
+        print_elapsed_time()
 
     # cleanup
     common.garbage_cleanup()
