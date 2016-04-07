@@ -24,7 +24,8 @@ __m128 computePatchDistance4(
   const int ipy,
   const int iqx,
   const int iqy,
-  const Image& i_kernel) {
+  const Image& i_kernel,
+  const bool p_normalize) {
 
   //! Initialization
   __m128 dist = _mm_setzero_ps();
@@ -33,15 +34,33 @@ __m128 computePatchDistance4(
 
   //! Compute the distance over all channels
   for (size_t c = 0; c < i_im1.channels(); c++) {
+
+    //! Compute the mean of the current patch
+    __m128 m1 = _mm_setzero_ps(), m2 = _mm_setzero_ps();
+    if (p_normalize) {
+      for (int i = 0; i < kh; i++) {
+        const float* iI1 = i_im1.getPtr(c, ipy + i) + ipx;
+        const float* iI2 = i_im2.getPtr(c, iqy + i) + iqx * 4;
+        const float* iK  = i_kernel.getPtr(0, i);
+
+        for (int j = 0; j < kw; j++) {
+          m1 += _mm_set1_ps(iI1[j] * iK[j]);
+          m2 += _mm_loadu_ps(iI2 + 4 * j) * _mm_set1_ps(iK[j]);
+        }
+      }
+    }
+
+    //! Loop over the patch
     for (int i = 0; i < kh; i++) {
       const float* iI1 = i_im1.getPtr(c, ipy + i) + ipx;
       const float* iI2 = i_im2.getPtr(c, iqy + i) + iqx * 4;
       const float* iK  = i_kernel.getPtr(0, i);
 
       for (int j = 0; j < kw; j++) {
-        // Here using _mm256_broadcast_ss should be faster than using
+        // Here using _mm_broadcast_ss should be faster than using
         // _mm256_set1_ps because the pointer is already available.
-        const __m128 xVal = _mm_broadcast_ss(iI1 + j) - _mm_loadu_ps(iI2 + 4 * j);
+        const __m128 xVal = _mm_broadcast_ss(iI1 + j) - m1
+                          - _mm_loadu_ps(iI2 + 4 * j) + m2;
         dist += _mm_set1_ps(iK[j]) * xVal * xVal;
       }
     }
@@ -61,7 +80,8 @@ __m256 computePatchDistance8(
   const int ipy,
   const int iqx,
   const int iqy,
-  const Image& i_kernel) {
+  const Image& i_kernel,
+  const bool p_normalize) {
 
   //! Initialization
   __m256 dist = _mm256_setzero_ps();
@@ -70,6 +90,23 @@ __m256 computePatchDistance8(
 
   //! Compute the distance over all channels
   for (size_t c = 0; c < i_im1.channels(); c++) {
+
+    //! Compute the mean of the current patch
+    __m256 m1 = _mm256_setzero_ps(), m2 = _mm256_setzero_ps();
+    if (p_normalize) {
+      for (int i = 0; i < kh; i++) {
+        const float* iI1 = i_im1.getPtr(c, ipy + i) + ipx;
+        const float* iI2 = i_im2.getPtr(c, iqy + i) + iqx * 4;
+        const float* iK  = i_kernel.getPtr(0, i);
+
+        for (int j = 0; j < kw; j++) {
+          m1 += _mm256_broadcast_ss(iI1 + j) * _mm256_set1_ps(iK[j]);
+          m2 += _mm256_loadu_ps(iI2 + 4 * j) * _mm256_set1_ps(iK[j]);
+        }
+      }
+    }
+
+    //! Compute the distance over the patch
     for (int i = 0; i < kh; i++) {
       const float* iI1 = i_im1.getPtr(c, ipy + i) + ipx;
       const float* iI2 = i_im2.getPtr(c, iqy + i) + iqx * 4;
@@ -78,7 +115,8 @@ __m256 computePatchDistance8(
       for (int j = 0; j < kw; j++) {
         // Here using _mm256_broadcast_ss should be faster than using
         // _mm256_set1_ps because the pointer is already available.
-        const __m256 xVal = _mm256_broadcast_ss(iI1 + j) - _mm256_loadu_ps(iI2 + 4 * j);
+        const __m256 xVal = _mm256_broadcast_ss(iI1 + j) - m1
+                          - _mm256_loadu_ps(iI2 + 4 * j) + m2;
         dist += _mm256_set1_ps(iK[j]) * xVal * xVal;
       }
     }

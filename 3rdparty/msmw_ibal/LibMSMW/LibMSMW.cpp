@@ -418,6 +418,7 @@ void MSMW::runPixelChain1D(
   //! Parameters
   const float inPrecisions           = 4.f;
   const size_t cubicRefinementFactor = 32;
+  const bool normalize               = m_params->dist();
 
   //! Variable: the correlation window must be normalized
   // is it necessary ? Yep. Strange.
@@ -483,7 +484,7 @@ void MSMW::runPixelChain1D(
           //! Compute the distance over all channels for the 4 translated images
           const __m256 xDist = computePatchDistance8(p_isFirst ? *m_im1 : *m_im2
             , p_isFirst ? *m_imTrans1 : *m_imTrans2, j - wc, i - hc, k - wc,
-            i - hc, window);
+            i - hc, window, normalize);
 
           //! Keep the best one
           const __m256 xDelta = _mm256_set1_ps(k - j) + xPos256;
@@ -502,7 +503,7 @@ void MSMW::runPixelChain1D(
           //! Compute the distance over all channels for the 4 translated images
           const __m128 xDist = computePatchDistance4(p_isFirst ? *m_im1 : *m_im2
             , p_isFirst ? *m_imTrans1 : *m_imTrans2, j - wc, i - hc, k - wc,
-            i - hc, window);
+            i - hc, window, normalize);
 
           //! Keep the best one
           const __m128 xDelta = _mm_set1_ps(k - j) + xPos128;
@@ -544,7 +545,7 @@ void MSMW::runPixelChain1D(
           //! Compute the distance of two pixels for all 4 precision at once
           const __m256 xDist = computePatchDistance8(p_isFirst ? *m_im1 : *m_im2
             , p_isFirst ? *m_imTrans2 : *m_imTrans1, j - wc, i - hc, k - wc,
-            i - hc, window);
+            i - hc, window, normalize);
 
           //! Store the distances
           _mm256_storeu_ps(distance + 4 * (k - imin), xDist);
@@ -566,7 +567,7 @@ void MSMW::runPixelChain1D(
           //! Compute the distance for all 4 precision at once
           const __m128 xDist = computePatchDistance4(p_isFirst ? *m_im1 : *m_im2
             , p_isFirst ? *m_imTrans2 : *m_imTrans1, j - wc, i - hc, k - wc,
-            i - hc, window);
+            i - hc, window, normalize);
 
           //! Store the distances
           _mm_storeu_ps(distance + 4 * (k - imin), xDist);
