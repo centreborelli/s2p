@@ -284,8 +284,8 @@ def loop_zhang(F, w, h):
     common.run('rectify_mindistortion %s %d %d %s %s > /dev/null' % (Ffile, w,
                                                                      h, Haf,
                                                                      Hbf))
-    Ha = common.matrix_read(Haf, 3, 3)
-    Hb = common.matrix_read(Hbf, 3, 3)
+    Ha = common.matrix_read(Haf, size=(3, 3))
+    Hb = common.matrix_read(Hbf, size=(3, 3))
 
     # check if both the images are rotated
     a = does_this_homography_change_the_vertical_direction(Ha)

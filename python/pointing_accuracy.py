@@ -7,6 +7,7 @@
 import os
 import numpy as np
 
+import sift
 import rectification
 import rpc_utils
 import rpc_model
@@ -36,8 +37,8 @@ def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         the mean pointing error, in the direction orthogonal to the epipolar
         lines. This error is measured in pixels.
     """
-    if matches is None:
-        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    if not matches:
+        matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
     print '%d sift matches' % len(matches)
@@ -82,8 +83,8 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         lines. This error is measured in pixels, and computed from an
         approximated fundamental matrix.
     """
-    if matches is None:
-        matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h)
+    if not matches:
+        matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
     print '%d sift matches' % len(matches)
@@ -106,57 +107,6 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         d = evaluation.distance_point_to_line(xx, ll)
         d_sum += d
     return d_sum/len(p1)
-
-
-def filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y, w, h,
-        model='fundamental'):
-    """
-    Args:
-        im1, im2: paths to the two Pleiades images (usually jp2 or tif)
-        rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        x, y, w, h: four integers defining the rectangular ROI in the first
-            image.  (x, y) is the top-left corner, and (w, h) are the dimensions of
-            the rectangle.
-        model (optional, default is 'fundamental'): model imposed by RANSAC
-            when searching the set of inliers
-
-    Returns:
-        matches: 2D numpy array containing a list of matches. Each line
-            contains one pair of points, ordered as x1 y1 x2 y2.
-            The coordinate system is that of the big images.
-            If no sift matches are found, then an exception is raised.
-
-    The returned matches are the inliers of an epipolar model found with ransac.
-    """
-    # get sift matches
-    matches = rectification.matches_from_sift_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
-
-    # filter outliers with ransac
-    # the binary is from Enric's imscript
-    # update: changed the ransac error tolerance used to determine whether or
-    # not a point is compatible with a model, from 1 pix to .3 pix
-    if len(matches) < 7:
-        raise Exception("less than 7 matches")
-    matches_file = common.tmpfile('.txt')
-    np.savetxt(matches_file, matches)
-
-    inliers_file = common.tmpfile('.txt')
-    if model is 'fundamental':
-        common.run("ransac fmn 1000 .3 7 %s < %s" % (inliers_file, matches_file))
-    elif model is 'homography':
-        common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (inliers_file,
-            matches_file))
-    elif model is 'hom_fund':
-        common.run("ransac hom 1000 2 4 /dev/null /dev/null %s < %s" % (inliers_file,
-            matches_file))
-        common.run("ransac fmn 1000 .2 7 %s < %s" % (inliers_file, inliers_file))
-    else:
-        print "filtered_sift_matches_roi: bad value for argument 'model'"
-    inliers = np.loadtxt(inliers_file)
-    if not inliers.size:
-        raise Exception("no inliers")
-
-    return inliers
 
 
 def euclidean_transform_matrix(v):
@@ -350,8 +300,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((w-a)/2) + x
         y0 = round((h-a)/2) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
-                    a, a, model)
+            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the central zone"
@@ -361,8 +310,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((1*w - 2*a)/4) + x
         y0 = round((1*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
-                    a, a, model)
+            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 1"
@@ -371,8 +319,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((3*w - 2*a)/4) + x
         y0 = round((1*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
-                    a, a, model)
+            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 2"
@@ -381,8 +328,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((1*w - 2*a)/4) + x
         y0 = round((3*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
-                    a, a, model)
+            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 3"
@@ -391,8 +337,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         x0 = round((3*w - 2*a)/4) + x
         y0 = round((3*h - 2*a)/4) + y
         try:
-            matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x0, y0,
-                    a, a, model)
+            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
             out = np.vstack((out, matches))
         except Exception as e:
             print "no matches in the corner 4"
@@ -402,8 +347,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         for i in range(5):
             x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
             try:
-                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y,
-                        w, h, model)
+                matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
                 out = np.vstack((out, matches))
             except Exception as e:
                 print "no matches in the selected roi"
@@ -416,8 +360,7 @@ def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
         for i in xrange(len(rois)):
             x, y, w, h = rois[i, :]
             try:
-                matches = filtered_sift_matches_roi(im1, im2, rpc1, rpc2, x, y,
-                        w, h, model)
+                matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
                 out = np.vstack((out, matches))
             except Exception as e:
                 print "no matches in the selected roi"
@@ -718,14 +661,9 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
     r1 = rpc_model.RPCModel(rpc1)
     r2 = rpc_model.RPCModel(rpc2)
 
-    # correct pointing error - no subsampling!
-    tmp = cfg['subsampling_factor_registration']
-    cfg['subsampling_factor_registration'] = 1
-
     try:
         if w*h < 2e6:
-            m = filtered_sift_matches_roi(img1, img2, r1, r2, x, y, w, h,
-                                          filter_matches)
+            m = sift.matches_on_rpc_roi(img1, img2, r1, r2, x, y, w, h)
         else:
             m = filtered_sift_matches_full_img(img1, img2, r1, r2,
                                                cfg['pointing_correction_rois_mode'],
@@ -735,8 +673,6 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
         print e
         print "WARNING: pointing_accuracy.compute_correction: no sift matches."
         m = None
-
-    cfg['subsampling_factor_registration'] = tmp
 
     # A = optimize_pair(img1, img2, r1, r2, None, m)
     if m is not None:

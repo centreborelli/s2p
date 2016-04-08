@@ -4,7 +4,9 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <math.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #ifndef m_pi
 #define m_pi 3.14159265358979323846264338328
@@ -180,7 +182,10 @@ int main(int c, char *v[])
     }
 
     // max memory
-    int nthreads = omp_get_max_threads();
+    int nthreads = 1;
+    #ifdef _OPENMP
+    nthreads = omp_get_max_threads();
+    #endif
     char *max_mem = pick_option(&c, &v, "-max-memory", "1024");
     uint64_t buf_size = 1024*1024*atoi(max_mem) / nthreads;
 
@@ -260,7 +265,10 @@ int main(int c, char *v[])
         if (!isnan(height[pix])) {
 
             // if the buffer is full, write to file and reset
-            int i = omp_get_thread_num();
+            int i = 0;
+            #ifdef _OPENMP
+            i = omp_get_thread_num();
+            #endif
             if (buf[i] + buf_size - ptr[i] < point_size) {
                 int nbytes = ptr[i] - buf[i];
                 # pragma omp critical

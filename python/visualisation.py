@@ -157,7 +157,7 @@ def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
     # y2 = np.min(matches[:, 3])
     # h2 = np.max(matches[:, 3]) - y2
 
-    # # add 20 pixels offset and round. The image_crop_TIFF function will round
+    # # add 20 pixels offset and round. The image_crop_tif function will round
     # # off the coordinates before it does the crops.
     # x1 -= 20; x1 = np.round(x1)
     # y1 -= 20; y1 = np.round(y1)
@@ -169,8 +169,8 @@ def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
     # h2 += 40; h2 = np.round(h2)
 
     # do the crops
-    crop1 = common.image_qauto(common.image_crop_TIFF(im1, x1, y1, w1, h1))
-    crop2 = common.image_qauto(common.image_crop_TIFF(im2, x2, y2, w2, h2))
+    crop1 = common.image_qauto(common.image_crop_tif(im1, x1, y1, w1, h1))
+    crop2 = common.image_qauto(common.image_crop_tif(im2, x2, y2, w2, h2))
 
     # compute matches coordinates in the cropped images
     pts1 = matches[:, 0:2] - [x1, y1]
@@ -234,9 +234,8 @@ def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h,
     r2 = rpc_model.RPCModel(rpc2)
 
     # compute sift matches
-    if matches_sift is None:
-        matches_sift = pointing_accuracy.filtered_sift_matches_roi(im1, im2,
-                r1, r2, x, y, w, h)
+    if not matches_sift:
+        matches_sift = sift.matches_on_rpc_roi(im1, im2, r1, r2, x, y, w, h)
 
     # compute rpc matches
     matches_rpc = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, 5)

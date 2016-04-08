@@ -100,7 +100,7 @@ def crop_and_apply_homography(im_out, im_in, H, w, h, subsampling_factor=1,
         # of the zoom factor
         tmpw, tmph = common.image_size(crop_fullres)
         tmpw, tmph = int(tmpw / subsampling_factor), int(tmph / subsampling_factor)
-        crop_fullres_safe = common.image_crop_TIFF(crop_fullres, 0, 0, tmpw *
+        crop_fullres_safe = common.image_crop_tif(crop_fullres, 0, 0, tmpw *
                 subsampling_factor, tmph * subsampling_factor)
         common.run('rm -f %s' % crop_fullres)
 

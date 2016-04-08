@@ -7,6 +7,7 @@
 #include "xfopen.c"
 
 #include "cmphomod.c"
+#include "mt/mt.h"
 
 // generic function
 // evaluate the error of a datapoint according to a model
@@ -74,7 +75,7 @@ int ransac_trial(
 // utility function: return a random number in the interval [a, b)
 static int random_index(int a, int b)
 {
-	int r = a + rand()%(b - a);
+	int r = a + mt_drand53()*(b - a);
 	assert(r >= a);
 	assert(r < b);
 	return r;
@@ -105,7 +106,10 @@ static int randombounds(int a, int b)
 		fail("the interval [%d, %d] is empty!", a, b);
 	if (b == a)
 		return b;
-	return a + rand()%(b - a + 1);
+	int r = a + mt_drand53()*(b - a + 1);
+	assert(r >= a);
+	assert(r <= b);
+	return r;
 }
 
 static void swap(void *a, void *b, size_t s)
@@ -220,6 +224,8 @@ int ransac(
 	fprintf(stderr, "a model must have more than %d inliers\n",
 			min_inliers);
 
+
+	mt_init((unsigned long int) 0);  // fix seed for the Mersenne Twister PRNG
 	int best_ninliers = 0;
 	float best_model[modeldim];
 	bool *best_mask = xmalloc(n * sizeof*best_mask);

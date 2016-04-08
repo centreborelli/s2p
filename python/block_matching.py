@@ -5,6 +5,7 @@
 
 import os
 import common
+from config import cfg
 
 
 # define paths of various bm binaries
@@ -72,7 +73,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
 
     if (algo == 'sgbm'):
         bm_binary = sgbm
-        out_cost = common.tmpfile('tif')
+        out_cost = common.tmpfile('.tif')
         common.run("%s %s %s %s %s %s %d %d %s" %(bm_binary, im1, im2, out_disp,
             out_cost, out_mask, disp_min, disp_max, extra_params))
 
@@ -93,6 +94,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
 
     if (algo == 'mgm'):
         env = os.environ.copy()
+        env['OMP_NUM_THREADS'] = str(cfg['omp_num_threads'])
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = '5'
         env['TSGM'] = '3'
@@ -114,7 +116,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         os.environ['PATH'] = os.environ['PATH'] + os.pathsep + micmac_bin
 
         # prepare micmac xml params file
-        micmac_params = os.path.join(s2p_dir, 'micmac_params.xml')
+        micmac_params = os.path.join(s2p_dir, 'data', 'micmac_params.xml')
         work_dir = os.path.dirname(os.path.abspath(im1))
         common.run('cp %s %s' % (micmac_params, work_dir))
 

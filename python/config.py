@@ -50,9 +50,6 @@ cfg['dsm_resolution'] = 4
 # zoom out applied to input images
 cfg['subsampling_factor'] = 1
 
-# zoom out applied to input images, only for sift points computation
-cfg['subsampling_factor_registration'] = 1
-
 # sift threshold on the first over second best match ratio
 cfg['sift_match_thresh'] = 0.6
 

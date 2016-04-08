@@ -69,14 +69,14 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
     return
 
 
-def mosaic_gdal2(fout, tilesFullInfo, filename, w,h,z=1):
+def mosaic_gdal2(fout, tiles_full_info, filename, w,h,z=1):
     """
     Compose several tiles of differents sizes into a bigger image (using gdal vrt)
 
     Args:
         fout: path to the output image
         fullInfo : all that you need to process a tile:
-            col,row,tw,th,ov,i,j,pos,images=tilesFullInfo[tile_dir]
+            col,row,tw,th,ov,i,j,pos,images=tiles_full_info[tile_dir]
 
     Returns:
         nothing
@@ -90,9 +90,9 @@ def mosaic_gdal2(fout, tilesFullInfo, filename, w,h,z=1):
     vrtfile.write("\t<VRTRasterBand dataType=\"Float32\" band=\"1\">\n")
     vrtfile.write("\t\t<ColorInterp>Gray</ColorInterp>\n")
 
-    for tile_dir in tilesFullInfo:
+    for tile_dir in tiles_full_info:
         
-        col,row,tw,th=tilesFullInfo[tile_dir]
+        col,row,tw,th=tiles_full_info[tile_dir]
         
         height_map = tile_dir +'/' + filename
         

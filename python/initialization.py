@@ -3,18 +3,15 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
-
-import numpy as np
-from config import cfg
-import sys
 import os
+import sys
 import json
-
+import numpy as np
 
 from python import common
 from python import srtm
 from python import tee
-
+from config import cfg
 
 
 def check_parameters(usr_cfg):
@@ -24,9 +21,6 @@ def check_parameters(usr_cfg):
 
     Args:
         usr_cfg: python dict read from the json input file
-
-    Returns:
-        nothing
     """
 
     # verify that i/o files are defined
@@ -36,12 +30,11 @@ def check_parameters(usr_cfg):
     if 'images' not in usr_cfg or len(usr_cfg['images']) < 2:
         print "missing input data paths: abort"
         sys.exit(1)
-    for i in range(0,len(usr_cfg['images'])):
+    for i in range(0, len(usr_cfg['images'])):
         if 'img' not in usr_cfg['images'][i] or 'rpc' not in usr_cfg['images'][i]:
             errMsg = 'missing input data paths for image ' + str(i) + ': abort'
             print errMsg
-            sys.exit(1)           
-	        
+            sys.exit(1)
 
     # verify that roi or path to preview file are defined
     if ('full_img' not in usr_cfg) or (not usr_cfg['full_img']):
@@ -70,9 +63,9 @@ def check_parameters(usr_cfg):
         if k not in cfg:
             print """parameter %s unknown: you should remove it from the input
             json file. It will be ignored.""" % k
-        
-        
-def prepare_config(config_file):
+
+
+def init_roi(config_file):
     """
     1) Loads configuration file
     2) Checks parameters
@@ -156,39 +149,40 @@ def init_dirs_srtm(config_file):
         - config_file : a json configuratio file
     """
 
-    prepare_config(config_file)
+    init_roi(config_file)
+
 
     # create tmp dir and output directory for the experiment, and store a json
     # dump of the config.cfg dictionary there, download srtm files...
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
 
-	if not os.path.exists(cfg['temporary_dir']):
-		os.makedirs(cfg['temporary_dir'])
-		
-	if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
-		os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
-	f = open('%s/config.json' % cfg['out_dir'], 'w')
-	json.dump(cfg, f, indent=2)
-	f.close()
+        if not os.path.exists(cfg['temporary_dir']):
+            os.makedirs(cfg['temporary_dir'])
 
-	# duplicate stdout and stderr to log file
-	tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
+        if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
+            os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
+        f = open('%s/config.json' % cfg['out_dir'], 'w')
+        json.dump(cfg, f, indent=2)
+        f.close()
 
-	# needed srtm tiles
-	srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
-										   *cfg['roi'].values())
-	for s in srtm_tiles:
-		srtm.get_srtm_tile(s, cfg['srtm_dir'])
-		
+        # duplicate stdout and stderr to log file
+        tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
+
+        # needed srtm tiles
+        srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                          *cfg['roi'].values())
+        for s in srtm_tiles:
+            srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
-def init_tilesFullInfo(config_file):
+def init_tiles_full_info(config_file):
     """
-    Prepares the entire process : 
-    1) Makes sure coordinates of the ROI are multiples of the zoom factor
-    2) Computes optimal size for tiles, get the number of pairs
-    3) Builds tilesFullInfo : a dictionary that provides all you need to process a tile for a given tile directory : col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk = tilesFullInfo[tile_dir]. USED EVERYWHERE IN THIS CODE.
+    Prepare the entire process.
+
+    1) Make sure coordinates of the ROI are multiples of the zoom factor
+    2) Compute optimal size for tiles, get the number of pairs
+    3) Build tiles_full_info: a list of dictionaries, one per tile, providing all you need to process a tile
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
        * ov : size of the overlapping
@@ -196,18 +190,17 @@ def init_tilesFullInfo(config_file):
        * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
        * x/y/w/h : information about the ROI
        * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
-       * NbPairs : number of pairs
+       * nb_pairs : number of pairs
        * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
-       
-    Args:
-         - config_file : a json configuratio file
-         - write : if False, initialize will just create the output dir and nothing else. 
-         
-    Returns:
-         - tilesFullInfo
-    """          
 
-    prepare_config(config_file)
+    Args:
+         config_file: path to a json configuration file
+
+    Returns:
+        tiles_full_info: list containing dictionaries
+    """
+
+    init_roi(config_file)
 
     #Get ROI
     x = cfg['roi']['x']    
@@ -216,10 +209,9 @@ def init_tilesFullInfo(config_file):
     h = cfg['roi']['h']    
     z = cfg['subsampling_factor']
 
-
     # Automatically compute optimal size for tiles
-    #tw, th : dimensions of the tiles
-    #ov : width of overlapping bands between tiles
+    # tw, th : dimensions of the tiles
+    # ov : width of overlapping bands between tiles
     ov = z * 100
     if w <= z * cfg['tile_size']:
         tw = w
@@ -229,59 +221,64 @@ def init_tilesFullInfo(config_file):
         th = h
     else:
         th = z * cfg['tile_size']
-            
+
     ntx = np.ceil(float(w - ov) / (tw - ov))
     nty = np.ceil(float(h - ov) / (th - ov))
     nt = ntx * nty
 
     print 'tiles size: (%d, %d)' % (tw, th)
     print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
-    NbPairs = len(cfg['images'])-1
-    print 'total number of pairs: %d ' % NbPairs
+    nb_pairs = len(cfg['images']) - 1
+    print 'total number of pairs: %d' % nb_pairs
 
+    # build tile_info dictionaries and store them in a list
+    tiles_full_info = list()
+    range_y = np.arange(y, y + h - ov, th - ov)
+    range_x = np.arange(x, x + w - ov, tw - ov)
+    rowmin, rowmax = range_y[0], range_y[-1]
+    colmin, colmax = range_x[0], range_x[-1]
 
-    # Build tiles dicos
-    tilesFullInfo={}
-    
-    rangey = np.arange(y, y + h - ov, th - ov)
-    rangex = np.arange(x, x + w - ov, tw - ov)
-    rowmin,rowmax = rangey[0],rangey[-1]
-    colmin,colmax = rangex[0],rangex[-1]
-    
+    for i, row in enumerate(range_y):
+        for j, col in enumerate(range_x):
+            # ensure that tile coordinates are multiples of the zoom factor
+            col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row,
+                                                                    tw, th)
+            tile_dir = os.path.join(cfg['out_dir'], 'tile_%d_%d_row_%d' % (tw,
+                                                                           th,
+                                                                           row),
+                                    'col_%d' % col)
 
-    for pair_id in range(1,len(cfg['images'])) :
-        for i, row in enumerate(rangey):
-            for j, col in enumerate(rangex):
-                # ensure that the coordinates of the ROI are multiples of the zoom factor
-                col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row, tw, th)
-                tile_dir = '%s/tile_%d_%d_row_%d/col_%d/' % (cfg['out_dir'], tw, th, row, col)
-                paired_tile_dir = '%s/tile_%d_%d_row_%d/col_%d/pair_%d' % (cfg['out_dir'], tw, th, row, col, pair_id)
-                
-                if row==rowmin and col==colmin:
-                    pos='UL'
-                elif row==rowmin and col==colmax:
-                    pos='UR'
-                elif row==rowmax and col==colmax:
-                    pos='BR'
-                elif row==rowmax and col==colmin:
-                    pos='BL'
-                elif row==rowmin and col>colmin:
-                    pos='U'
-                elif col==colmin and row>rowmin:
-                    pos='L'
-                elif row==rowmax and col>colmin:
-                    pos='B'
-                elif col==colmax and row>rowmin:
-                    pos='R'
-                else:
-                    pos='M'
-                
-                tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,pos,x,y,w,h,cfg['images'],NbPairs,cfg['images'][0]['cld'],cfg['images'][0]['roi']]
+            if row == rowmin and col == colmin:
+                pos = 'UL'
+            elif row == rowmin and col == colmax:
+                pos = 'UR'
+            elif row == rowmax and col == colmax:
+                pos = 'BR'
+            elif row == rowmax and col == colmin:
+                pos = 'BL'
+            elif row == rowmin and col > colmin:
+                pos = 'U'
+            elif col == colmin and row > rowmin:
+                pos = 'L'
+            elif row == rowmax and col > colmin:
+                pos = 'B'
+            elif col == colmax and row > rowmin:
+                pos = 'R'
+            else:
+                pos = 'M'
 
+            tile_info = {}
+            tile_info['directory'] = tile_dir
+            tile_info['coordinates'] = (col, row, tw, th)
+            tile_info['index_in_roi'] = (i, j)
+            tile_info['position_type'] = pos
+            tile_info['roi_coordinates'] = (x, y, w, h)
+            tile_info['overlap'] = ov
+            tile_info['number_of_pairs'] = nb_pairs
+            tile_info['images'] = cfg['images']
+            tiles_full_info.append(tile_info)
 
-    if len(tilesFullInfo) == 1 : #Only one tile : put position 'Single'
-        tile_dir,info=tilesFullInfo.items()[0]
-        col,row,tw,th,ov,i,j,pos,x,y,w,h,images,NbPairs,cld_msk,roi_msk=info
-        tilesFullInfo[tile_dir]=[col,row,tw,th,ov,i,j,'Single',x,y,w,h,images,NbPairs,cld_msk,roi_msk]
+    if len(tiles_full_info) == 1:
+        tiles_full_info[0]['position_type'] = 'Single'
 
-    return tilesFullInfo
+    return tiles_full_info
