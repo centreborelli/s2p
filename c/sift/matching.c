@@ -5,7 +5,8 @@
  * @li Method 1 : threshold on the ratio of distances to the two nearest keypoints
  * @li Method 2 : threshold on the distance to the nearest keypoint
  *
- * @author Ives Rey-Otero <ives.rey-otero@cmla.ens-cachan.fr>
+ * @author Ives Rey-Otero (original) <ives.rey-otero@cmla.ens-cachan.fr>
+ * @author Carlo de Franchis (modified) <carlodef@gmail.com>
  */
 
 
@@ -20,20 +21,12 @@
 #include "sift_anatomy_20141201/lib_matching.h"
 
 
-void print_usage(char *v[])
+void print_help(char *v[])
 {
-    fprintf(stderr, "Anatomy of the SIFT method (www.ipol.im/pub/pre/82/)  ver 20140911         \n");
-    fprintf(stderr, "Usage:  %s keys1 keys2 [options...]                                  \n", v[0]);
-    fprintf(stderr, "                                                                           \n");
-    fprintf(stderr, "    -ori_nbins    (36)  number of bins in the orientation histogram        \n");
-    fprintf(stderr, "                        (used only for keypoints input/output)             \n");
-    fprintf(stderr, "    -descr_nhist   (4)  number of histograms per dimension                 \n");
-    fprintf(stderr, "    -descr_nori    (8)  number of bins in each histogram                   \n");
-    fprintf(stderr, "                                                                           \n");
-    fprintf(stderr, "    -absolute thresh (250) threshold applied on the euclidean distance     \n");
-    fprintf(stderr, "    -relative thresh (0.6) threshold applied on the ratio of  distance     \n");
-    fprintf(stderr, "                                                                           \n");
-    fprintf(stderr, "    -verb         label  flag for output                                   \n");
+    fprintf(stderr, "usage:\n\t%s file1.txt file2.txt [-o file]"
+            //                          0 1         2 3 4 5
+            " [--verbose] [-f \"a b c d e\"]"
+            " [--epipolar-threshold t (10)]\n", *v);
 }
 
 
@@ -45,9 +38,6 @@ int main(int c, char *v[])
     int n_bins = 36;
     int meth_flag = 1;
     float sift_thresh = 0.6;
-    int verb_flag = 0;
-    char label[256];
-    strcpy(label, "extra");
 
     // parse arguments
     const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
@@ -67,29 +57,32 @@ int main(int c, char *v[])
         }
     }
 
+    // check remaining args
+    if (c < 3) {
+        print_help(v);
+        return EXIT_FAILURE;
+    }
+
     // initialise timer
     struct timespec ts; portable_gettime(&ts);
 
-    // memory allocation
+    // Read input keypoint ASCII files
     struct sift_keypoints* k1 = sift_malloc_keypoints();
     struct sift_keypoints* k2 = sift_malloc_keypoints();
-    struct sift_keypoints* out_k1 = sift_malloc_keypoints();
-    struct sift_keypoints* out_k2 = sift_malloc_keypoints();
-
-    // Read input keypoint ASCII files
-    int readflag = verb_flag + 1;
-    sift_read_keypoints(k1, v[1], n_hist, n_ori, n_bins, readflag);
-    sift_read_keypoints(k2, v[2], n_hist, n_ori, n_bins, readflag);
+    sift_read_keypoints(k1, v[1], n_hist, n_ori, n_bins, 1);
+    sift_read_keypoints(k2, v[2], n_hist, n_ori, n_bins, 1);
     print_elapsed_time(&ts, "read input keypoints:", 35);
 
     // matching
+    struct sift_keypoints* out_k1 = sift_malloc_keypoints();
+    struct sift_keypoints* out_k2 = sift_malloc_keypoints();
     matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat, epi_thresh);
     print_elapsed_time(&ts, "compute matches:", 35);
 
     // print
     fprintf_pairs(output_file, out_k1, out_k2);
     print_elapsed_time(&ts, "print output:", 35);
-    fprintf(stderr, "%d matches\n", out_k1->size);
+    fprintf(stdout, "%d matches\n", out_k1->size);
 
     // cleanup
     sift_free_keypoints(k1);
