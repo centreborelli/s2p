@@ -236,7 +236,8 @@ def finalize_tile(tile_info, height_maps):
     y = y / z + newrow
     w = w / z + difftw
     h = h / z + diffth
-
+    tile_info['coordinates'] = (x, y, w, h)
+    
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have
     # already been zoomed. So don't zoom again to crop these images.
     common.cropImage(local_merged_height_map, local_merged_height_map_crop,
