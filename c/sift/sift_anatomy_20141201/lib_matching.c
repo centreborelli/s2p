@@ -61,12 +61,13 @@ static void compute_keypoints_distance_epipolar(float* dist,
         float x2 = k2->list[j]->x;
         float y2 = k2->list[j]->y;
 
-        // rectified y coordinates
-        float yy1 = b * x1 + a * y1 + c; // scalar product of (b, a, c) and (x1, y1, 1)
-        float yy2 = e * x2 + d * y2 + f; // scalar product of (e, d, f) and (x2, y2, 1)
+	// /!\ in Ives' conventions x is the row index
+        // rectified x coordinates
+        float xx1 = b * y1 + a * x1 + c; // scalar product of (b, a, c) and (x1, y1, 1)
+        float xx2 = e * y2 + d * x2 + f; // scalar product of (e, d, f) and (x2, y2, 1)
 
-        // points satisfy the epipolar constraint when the rectified y are equal
-        if (fabs(yy1 - yy2) < epi_thresh)
+        // points satisfy the epipolar constraint when the rectified x are equal
+        if (fabs(xx1 - xx2) < epi_thresh)
             dist[i * n2 + j] = euclidean_distance(k1->list[i]->descr,
                                                   k2->list[j]->descr, n);
     }
