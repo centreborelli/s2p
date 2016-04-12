@@ -262,7 +262,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"ls files | %s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out.tif\n", s);
+			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out.tif cutting_info cloud_dir\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -274,13 +274,29 @@ int main(int c, char *v[])
 	char *bbminmax = pick_option(&c, &v, "bb", "");
 
 	// process input arguments
-	if (c != 3) {
+	if (c != 5) {
 		help(*v);
 		return 1;
 	}
 	float resolution = atof(v[1]);
 	char *filename_out = v[2];
-
+	
+	int tw,th,rowmin,rowmax,steprow,colmin,colmax,stepcol;
+	FILE* cutting_info = NULL;
+	cutting_info = fopen(v[3], "r");
+	if (cutting_info != NULL)
+	{
+	    // On peut lire et écrire dans le fichier
+	    fscanf(cutting_info,"%d %d %d %d %d %d %d %d",&tw,&th,&rowmin,&rowmax,&steprow,&colmin,&colmax,&stepcol);
+	    fclose(cutting_info);
+	}
+	else
+	{
+	    // On affiche un message d'erreur si on veut
+	    fprintf(stderr,"ERROR : can't read %s",v[3]);
+	    return 1;
+	}
+	
 	// initialize x, y extrema values
 	float xmin = INFINITY;
 	float xmax = -INFINITY;
@@ -289,14 +305,19 @@ int main(int c, char *v[])
 
 	// process each filename from stdin to determine x, y extremas and store the
 	// filenames in a list of strings, to be able to open the files again
-	char fname[FILENAME_MAX], utm[3];
+	
+	char utm[3];
 	struct list *l = NULL;
-	while (fgets(fname, FILENAME_MAX, stdin))
-	{
-		strtok(fname, "\n");
-		l = push(l, fname);
-		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, fname);
-	}
+	char filename[100];
+	for(int c=colmin; c<=colmax; c+=stepcol)
+	    for(int r=rowmin; r<=rowmax; r+=steprow)
+	    {
+		sprintf(filename,"%s/cloud_%d_%d_row_%d_col_%d.ply",v[4],tw,th,r,c);
+		strtok(filename, "\n");
+		l = push(l, filename);
+		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, filename);
+	    }
+	
 	if (0 != strcmp(bbminmax, "") ) {
 		sscanf(bbminmax, "%f %f %f %f", &xmin, &xmax, &ymin, &ymax);
 	}

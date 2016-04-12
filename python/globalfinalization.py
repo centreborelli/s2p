@@ -118,8 +118,10 @@ def write_dsm(tiles_full_info, n=5):
             common.run('ln -s %s %s' % (cloud, cloud_link_name))
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
 
-    common.run("ls %s | plyflatten %f %s" % (os.path.join(clouds_dir, 'cloud*'),
-                                             cfg['dsm_resolution'], out_dsm))
+    common.run("plyflatten %f %s %s %s" % (  cfg['dsm_resolution'], 
+                                             out_dsm, 
+                                             os.path.join(cfg['out_dir'],'cutting_info.txt'),
+                                             clouds_dir))
     #common.run("gdalbuildvrt %s %s" %
     #           (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm*'))
 
