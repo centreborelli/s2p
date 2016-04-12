@@ -143,8 +143,6 @@ static int rescale_float_to_int(double x, double min, double max, int w)
 }
 
 struct images {
-	float *min;
-	float *max;
 	float *cnt;
 	float *avg;
 	int w, h;
@@ -154,8 +152,6 @@ struct images {
 static void add_height_to_images(struct images *x, int i, int j, float v)
 {
 	uint64_t k = (uint64_t) x->w * j + i;
-	x->min[k] = fmin(x->min[k], v);
-	x->max[k] = fmax(x->max[k], v);
 	x->avg[k] = (v + x->cnt[k] * x->avg[k]) / (1 + x->cnt[k]);
 	x->cnt[k] += 1;
 }
@@ -331,14 +327,10 @@ int main(int c, char *v[])
 	struct images x;
 	x.w = w;
 	x.h = h;
-	x.min = xmalloc(w*h*sizeof(float));
-	x.max = xmalloc(w*h*sizeof(float));
 	x.cnt = xmalloc(w*h*sizeof(float));
 	x.avg = xmalloc(w*h*sizeof(float));
 	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
 	{
-		x.min[i] = INFINITY;
-		x.max[i] = -INFINITY;
 		x.cnt[i] = 0;
 		x.avg[i] = 0;
 	}
@@ -361,8 +353,6 @@ int main(int c, char *v[])
 	set_geotif_header(filename_out, utm, xmin, ymax, resolution);
 
 	// cleanup and exit
-	free(x.min);
-	free(x.max);
 	free(x.cnt);
 	free(x.avg);
 	return 0;
