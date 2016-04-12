@@ -61,12 +61,13 @@ static void compute_keypoints_distance_epipolar(float* dist,
         float x2 = k2->list[j]->x;
         float y2 = k2->list[j]->y;
 
-        // rectified y coordinates
-        float yy1 = b * x1 + a * y1 + c; // scalar product of (b, a, c) and (x1, y1, 1)
-        float yy2 = e * x2 + d * y2 + f; // scalar product of (e, d, f) and (x2, y2, 1)
+	// /!\ in Ives' conventions x is the row index
+        // rectified x coordinates
+        float xx1 = b * y1 + a * x1 + c; // scalar product of (b, a, c) and (x1, y1, 1)
+        float xx2 = e * y2 + d * x2 + f; // scalar product of (e, d, f) and (x2, y2, 1)
 
-        // points satisfy the epipolar constraint when the rectified y are equal
-        if (fabs(yy1 - yy2) < epi_thresh)
+        // points satisfy the epipolar constraint when the rectified x are equal
+        if (fabs(xx1 - xx2) < epi_thresh)
             dist[i * n2 + j] = euclidean_distance(k1->list[i]->descr,
                                                   k2->list[j]->descr, n);
     }
@@ -92,7 +93,7 @@ static void find_the_two_nearest_keys(const float* dist, int n1, int n2,
 void matching(struct sift_keypoints *k1, struct sift_keypoints *k2,
               struct sift_keypoints *out_k1, struct sift_keypoints *out_k2,
               float sift_thresh, int flag,
-              double fund_mat[5], float epi_thresh)
+              double fund_mat[5], float epi_thresh, bool verbose)
 {
     int n1 = k1->size;
     int n2 = k2->size;
@@ -111,14 +112,14 @@ void matching(struct sift_keypoints *k1, struct sift_keypoints *k2,
         //fprintf(stderr, "s2: %f %f %f\n", s2[0], s2[1], s2[2]);
         for (int i = 0; i < n1 * n2; i++)
             dist[i] = INFINITY;
-        print_elapsed_time(&ts, " - init distances:", 33);
+        if (verbose) print_elapsed_time(&ts, " - init distances:", 33);
         compute_keypoints_distance_epipolar(dist, k1, k2, s1, s2, epi_thresh);
     } else
         compute_keypoints_distance(dist, k1, k2);
-    print_elapsed_time(&ts, " - compute distances:", 33);
+    if (verbose) print_elapsed_time(&ts, " - compute distances:", 33);
 
     find_the_two_nearest_keys(dist, n1, n2, indexA, indexB, distA, distB);
-    print_elapsed_time(&ts, " - find two nearest:", 33);
+    if (verbose) print_elapsed_time(&ts, " - find two nearest:", 33);
 
     for (int i = 0; i < n1; i++) {
         float val = (flag == 1 ? distA[i] / distB[i] : distA[i]);
@@ -127,7 +128,7 @@ void matching(struct sift_keypoints *k1, struct sift_keypoints *k2,
             sift_add_keypoint_to_list(k2->list[indexA[i]], out_k2);
         }
     }
-    print_elapsed_time(&ts, " - select matches:", 33);
+    if (verbose) print_elapsed_time(&ts, " - select matches:", 33);
 
     free(dist);
     free(indexA);

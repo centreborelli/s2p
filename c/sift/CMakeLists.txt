@@ -20,7 +20,7 @@ endif ()
 
 # Enable C99
 if (CMAKE_VERSION VERSION_LESS "3.1")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 else ()
     set (CMAKE_C_STANDARD 99)
 endif ()
@@ -87,3 +87,9 @@ find_package (JPEG REQUIRED)
 find_package (PNG REQUIRED)
 include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS})
 target_link_libraries (sift_roi ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES})
+
+# Link -lm
+find_library (M_LIBRARY m)
+if (M_LIBRARY)
+    target_link_libraries (matching ${M_LIBRARY})
+endif()

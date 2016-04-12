@@ -71,18 +71,19 @@ int main(int c, char *v[])
     struct sift_keypoints* k2 = sift_malloc_keypoints();
     sift_read_keypoints(k1, v[1], n_hist, n_ori, n_bins, 1);
     sift_read_keypoints(k2, v[2], n_hist, n_ori, n_bins, 1);
-    print_elapsed_time(&ts, "read input keypoints:", 35);
+    if (verbose) print_elapsed_time(&ts, "read input keypoints:", 35);
 
     // matching
     struct sift_keypoints* out_k1 = sift_malloc_keypoints();
     struct sift_keypoints* out_k2 = sift_malloc_keypoints();
-    matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat, epi_thresh);
-    print_elapsed_time(&ts, "compute matches:", 35);
+    matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat,
+            epi_thresh, verbose);
+    if (verbose) print_elapsed_time(&ts, "compute matches:", 35);
 
     // print
     fprintf_pairs(output_file, out_k1, out_k2);
-    print_elapsed_time(&ts, "print output:", 35);
-    fprintf(stdout, "%d matches\n", out_k1->size);
+    if (verbose) print_elapsed_time(&ts, "print output:", 35);
+    fprintf(stderr, "%d matches\n", out_k1->size);
 
     // cleanup
     sift_free_keypoints(k1);
