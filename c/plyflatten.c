@@ -134,13 +134,15 @@ static void update_min_max(float *min, float *max, float x)
 }
 
 // re-scale a float between 0 and w
-static int rescale_float_to_int(double x, double min, double max, int w)
+static int rescale_float_to_int(double x, double min, double max, int w, bool *flag)
 {
+	*flag=1;
 	int r = w * (x - min)/(max - min);
-	if (r < 0) r = 0;
-	if (r >= w) r = w -1;
+	if (r < 0) *flag=0;
+	if (r >= w) *flag=0;
 	return r;
 }
+
 
 struct images {
 	float *cnt;
@@ -236,19 +238,22 @@ static void add_ply_points_to_images(struct images *x,
 
 	double data[n];
 	while ( n == get_record(f, isbin, t, n, data) ) {
-
-		int i = rescale_float_to_int(data[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(-data[1], -ymax, -ymin, x->h);
-		if (col_idx == 2) {
-			add_height_to_images(x, i, j, data[2]);
-			assert(isfinite(data[2]));
-		}
-		else
+		bool flag1,flag2;
+		int i = rescale_float_to_int(data[0], xmin, xmax, x->w, &flag1);
+		int j = rescale_float_to_int(-data[1], -ymax, -ymin, x->h, &flag2);
+		
+		if ( (flag1) && (flag2))
 		{
-			unsigned int rgb = data[col_idx];
-			add_height_to_images(x, i, j, rgb);
+		    if (col_idx == 2) {
+			    add_height_to_images(x, i, j, data[2]);
+			    assert(isfinite(data[2]));
+		    }
+		    else
+		    {
+			    unsigned int rgb = data[col_idx];
+			    add_height_to_images(x, i, j, rgb);
+		    }
 		}
-
 	}
 
 	fclose(f);
@@ -258,7 +263,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out.tif cutting_info cloud_dir\n", s);
+			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out_dir cutting_info cloud_dir number_of_tiles\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -270,12 +275,12 @@ int main(int c, char *v[])
 	char *bbminmax = pick_option(&c, &v, "bb", "");
 
 	// process input arguments
-	if (c != 5) {
+	if (c != 6) {
 		help(*v);
 		return 1;
 	}
 	float resolution = atof(v[1]);
-	char *filename_out = v[2];
+	char *out_dir = v[2];
 	
 	int tw,th,rowmin,rowmax,steprow,colmin,colmax,stepcol;
 	FILE* cutting_info = NULL;
@@ -296,6 +301,8 @@ int main(int c, char *v[])
 	// initialize x, y extrema values
 	float xmin = INFINITY;
 	float xmax = -INFINITY;
+	float yymin = INFINITY;
+	float yymax = -INFINITY;
 	float ymin = INFINITY;
 	float ymax = -INFINITY;
 
@@ -304,56 +311,73 @@ int main(int c, char *v[])
 	
 	char utm[3];
 	struct list *l = NULL;
-	char filename[100];
+	char filename[1000];
 	for(int c=colmin; c<=colmax; c+=stepcol)
 	    for(int r=rowmin; r<=rowmax; r+=steprow)
 	    {
 		sprintf(filename,"%s/cloud_%d_%d_row_%d_col_%d.ply",v[4],tw,th,r,c);
 		strtok(filename, "\n");
 		l = push(l, filename);
-		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, filename);
+		parse_ply_points_for_extrema(&xmin, &xmax, &yymin, &yymax, utm, filename);
 	    }
 	
 	if (0 != strcmp(bbminmax, "") ) {
-		sscanf(bbminmax, "%f %f %f %f", &xmin, &xmax, &ymin, &ymax);
+		sscanf(bbminmax, "%f %f %f %f", &xmin, &xmax, &yymin, &yymax);
 	}
-	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin, xmax, ymin, ymax);
+	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin, xmax, yymin, yymax);
 
-	// compute output image dimensions
-	int w = 1 + (xmax - xmin) / resolution;
-	int h = 1 + (ymax - ymin) / resolution;
-
-	// allocate and initialize output images
-	struct images x;
-	x.w = w;
-	x.h = h;
-	x.cnt = xmalloc(w*h*sizeof(float));
-	x.avg = xmalloc(w*h*sizeof(float));
-	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+	struct list *begin=l;
+	
+	int piece_index=0,n=atoi(v[5]);
+	while (yymin+(piece_index+1)*(yymax-yymin)/( (float) n) <= yymax)
 	{
-		x.cnt[i] = 0;
-		x.avg[i] = 0;
-	}
+	    ymin = yymin+piece_index*(yymax-yymin)/( (float) n);
+	    ymax = yymin+(piece_index+1)*(yymax-yymin)/( (float) n);
+	
+	    // compute output image dimensions
+	    int w = 1 + (xmax - xmin) / resolution;
+	    int h = 1 + (ymax - ymin) / resolution;
 
-	// process each filename to accumulate points in the dem
-	while (l != NULL)
-	{
-		// printf("FILENAME: \"%s\"\n", l->current);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx);
-		l = l->next;
-	}
+	    // allocate and initialize output images
+	    struct images x;
+	    x.w = w;
+	    x.h = h;
+	    x.cnt = xmalloc(w*h*sizeof(float));
+	    x.avg = xmalloc(w*h*sizeof(float));
+	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+	    {
+		    x.cnt[i] = 0;
+		    x.avg[i] = 0;
+	    }
 
-	// set unknown values to NAN
-	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-		if (!x.cnt[i])
-			x.avg[i] = NAN;
+	    char looputm[3];
+	    strcpy(looputm,utm);
 
-	// save output image
-	iio_save_image_float(filename_out, x.avg, w, h);
-	set_geotif_header(filename_out, utm, xmin, ymax, resolution);
+	    // process each filename to accumulate points in the dem
+	    l=begin;
+	    while (l != NULL)
+	    {
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, looputm, l->current, col_idx);
+		    l = l->next;
+	    }
 
-	// cleanup and exit
-	free(x.cnt);
-	free(x.avg);
+	    // set unknown values to NAN
+	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+		    if (!x.cnt[i])
+			    x.avg[i] = NAN;
+
+	    // save output image
+	    char out[1000];
+	    sprintf(out,"%s/dsm_%d.tif",out_dir,piece_index);
+	    iio_save_image_float(out, x.avg, w, h);
+	    set_geotif_header(out, looputm, xmin, ymax, resolution);
+
+	    // cleanup and exit
+	    free(x.cnt);
+	    free(x.avg);
+	    
+	    piece_index++; 
+	}    
 	return 0;
 }

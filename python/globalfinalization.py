@@ -116,14 +116,19 @@ def write_dsm(tiles_full_info, n=5):
                                                                           y, x))
         if (os.path.exists(cloud)):
             common.run('ln -s %s %s' % (cloud, cloud_link_name))
-    out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
+    
+    out_dsm_dir = os.path.join(cfg['out_dir'], 'dsm')
+    if (os.path.exists(out_dsm_dir)):
+        shutil.rmtree(out_dsm_dir)
+    os.mkdir(out_dsm_dir) 
 
-    common.run("plyflatten %f %s %s %s" % (  cfg['dsm_resolution'], 
-                                             out_dsm, 
+    common.run("plyflatten %f %s %s %s %d" % (  cfg['dsm_resolution'], 
+                                             out_dsm_dir, 
                                              os.path.join(cfg['out_dir'],'cutting_info.txt'),
-                                             clouds_dir))
-    #common.run("gdalbuildvrt %s %s" %
-    #           (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm*'))
+                                             clouds_dir,
+                                             n))
+    common.run("gdalbuildvrt %s %s" %
+               (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm_*'))
 
 
 def lidar_preprocessor(output, input_plys):
