@@ -268,33 +268,37 @@ def execute_job(config_file,tile_dir,step):
 
     Args: 
          - json config file
-         - job <==> [tile_dir,step]
+         - tile_dir
+         - step
     
     """
-    #tile_dir = job.split(' ')[0]
-    #command = job.split(' ')[1]
+    
+    tiles_full_info = initialization.init_tiles_full_info(config_file)
+    
+    if not tile_dir == 'all_tiles':
+        for tile in tiles_full_info:
+            if tile_dir == tile['directory']:
+                tile_to_process = tile
+                print tile_to_process
+                break
     
     try:
     
-        if step == 1: #init
-            initialization.init_dirs_srtm(config_file)
-            tiles_full_info = initialization.init_tiles_full_info(config_file)
-    
         if step == 2:#"preprocess_tiles":
-            print 'preprocess_tiles on %s ...' %tile_dir
-            preprocess_tile(tile_dir, tilesFullInfo)
+            print 'preprocess_tiles on %s ...' % tile_to_process
+            preprocess_tile(tile_to_process)
         
         if step == 3:#"global_values":
             print 'global values...'
-            global_values(tilesFullInfo)
+            global_values(tiles_full_info)
         
         if step == 4:#"process_tiles" :
-            print 'process_tiles on %s ...' %tile_dir
-            process_tile(tile_dir, tilesFullInfo)
+            print 'process_tiles on %s ...' % tile_to_process
+            process_tile(tile_to_process)
             
         if step == 5:#"global_finalization":    
             print 'global finalization...'     
-            global_finalization(tilesFullInfo)  
+            global_finalization(tiles_full_info)  
                 
     except KeyboardInterrupt:
         pool.terminate()
@@ -307,20 +311,24 @@ def execute_job(config_file,tile_dir,step):
         
 def list_jobs(config_file,step):
 
-    tilesFullInfo = initialization.init_tilesFullInfo(config_file)
-    filename = step[0] + ".jobs"
+    tilesFullInfo = initialization.init_tiles_full_info(config_file)
+    filename = str(step) + ".jobs"
     
-    if step[0] in ["preprocess_tiles","process_tiles"]:
+    if not (os.path.exists(cfg['out_dir'])):
+        os.mkdir(cfg['out_dir'])
+    
+    if step in [2,4]:
         f = open(os.path.join(cfg['out_dir'],filename),'w')
-        for tile_dir in tilesFullInfo:
-            f.write(tile_dir + ' ' + step[0] + '\n')
+        for tile in tilesFullInfo:
+            tile_dir = tile['directory']
+            f.write(tile_dir + ' ' + str(step) + '\n')
         f.close()
-    elif step[0] in ["global_values","global_finalization"]:
+    elif step in [3,5]:
         f = open(os.path.join(cfg['out_dir'],filename),'w')
-        f.write('all_tiles ' + step[0] + '\n')
+        f.write('all_tiles ' + str(step) + '\n')
         f.close()
     else:
-        print "Unkown step required: %s" %step[0]
+        print "Unkown step required: %s" % str(step)
 
 
 
@@ -341,13 +349,11 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         value is None. In that case all the steps are run.
     """
     t0 = time.time()
-    print "---"*3
-    print config_file, step, clusterMode, misc
-    print "---"*3
 
     if clusterMode=='list_jobs':
         list_jobs(config_file, step)
     elif clusterMode=='job':
+        cfg['omp_num_threads'] = 1
         execute_job(config_file,misc[0],int(misc[1]))
     else:
         # determine which steps to run
@@ -430,7 +436,7 @@ if __name__ == '__main__':
             if sys.argv[1] == 'job': 
                 if len(sys.argv) == 5 and int(sys.argv[4]) in steps:
                     #main(config_file, step=None, clusterMode=None, misc=None):
-                    main(sys.argv[2], int(sys.argv[4]),'job',sys.argv[3:])
+                    main(sys.argv[2], None, 'job', sys.argv[3:])
                 else:
                     error = True
                 
@@ -446,10 +452,10 @@ if __name__ == '__main__':
             5: finalization
             Launches the s2p pipeline.
 
-          > %s list_jobs config.json step (integer between 1 and 5)
+          > %s list_jobs config.json step (integer between 2 and 5)
             Return the list of jobs for a specific step.
 
-          > %s job config.json tile_dir step (integer between 1 and 5)
+          > %s job config.json tile_dir step (integer between 2 and 5)
             Run a specific job defined by a json string. This mode allows to run jobs returned
             by the list_jobs running mode.
 
