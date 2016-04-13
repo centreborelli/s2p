@@ -270,44 +270,41 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
             sys.exit(1)
 
 
-def execute_job(config_file,tile_dir,step):
+def execute_job(config_file, tile_dir, step):
     """
-    Execute a job
+    Execute a job.
 
-    Args: 
+    Args:
          - json config file
          - tile_dir
          - step
-    
     """
-    
     tiles_full_info = initialization.init_tiles_full_info(config_file)
-    
+
     if not tile_dir == 'all_tiles':
         for tile in tiles_full_info:
             if tile_dir == tile['directory']:
                 tile_to_process = tile
                 print tile_to_process
                 break
-    
+
     try:
-    
-        if step == 2:#"preprocess_tiles":
+        if step == 2:
             print 'preprocess_tiles on %s ...' % tile_to_process
             preprocess_tile(tile_to_process)
-        
-        if step == 3:#"global_values":
+
+        if step == 3:
             print 'global values...'
             global_values(tiles_full_info)
-        
-        if step == 4:#"process_tiles" :
+
+        if step == 4:
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
-            
-        if step == 5:#"global_finalization":    
-            print 'global finalization...'     
-            global_finalization(tiles_full_info)  
-                
+
+        if step == 5:
+            print 'global finalization...'
+            global_finalization(tiles_full_info)
+
     except KeyboardInterrupt:
         pool.terminate()
         sys.exit(1)
@@ -315,29 +312,29 @@ def execute_job(config_file,tile_dir,step):
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
-                
-        
-def list_jobs(config_file,step):
 
+
+def list_jobs(config_file, step):
+    """
+    """
     tilesFullInfo = initialization.init_tiles_full_info(config_file)
     filename = str(step) + ".jobs"
-    
+
     if not (os.path.exists(cfg['out_dir'])):
         os.mkdir(cfg['out_dir'])
-    
-    if step in [2,4]:
+
+    if step in [2, 4]:
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         for tile in tilesFullInfo:
             tile_dir = tile['directory']
             f.write(tile_dir + ' ' + str(step) + '\n')
         f.close()
-    elif step in [3,5]:
+    elif step in [3, 5]:
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         f.write('all_tiles ' + str(step) + '\n')
         f.close()
     else:
         print "Unkown step required: %s" % str(step)
-
 
 
 def main(config_file, step=None, clusterMode=None, misc=None):
@@ -366,7 +363,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         steps = [step] if step else [1, 2, 3, 4, 5]
 
         # initialization (has to be done whatever the queried steps)
-        initialization.init_dirs_srtm_roi(config_file)
+        initialization.init_dirs_srtm(config_file)
         tiles_full_info = initialization.init_tiles_full_info(config_file)
         show_progress.total = len(tiles_full_info)
         print_elapsed_time.t0 = datetime.datetime.now()
@@ -408,38 +405,31 @@ def main(config_file, step=None, clusterMode=None, misc=None):
 if __name__ == '__main__':
 
     error = False
-    steps=[1,2,3,4,5]
+    steps = [1, 2, 3, 4, 5]
 
     if len(sys.argv) < 2:
-        error=True
-
+        error = True
     elif sys.argv[1].endswith(".json") :
-
         if len(sys.argv) == 2:
             main(sys.argv[1])
         elif len(sys.argv) == 3 and int(sys.argv[2]) in steps:
             main(sys.argv[1], int(sys.argv[2]))
         else:
-            error=True
-    else: #cluster modes
+            error = True
+    else:  # cluster modes
         if sys.argv[1] not in ['list_jobs','job']:
             error = True
         else:
-			
-            if sys.argv[1] == 'list_jobs': 
+            if sys.argv[1] == 'list_jobs':
                 if len(sys.argv) == 4 and int(sys.argv[3]) in steps:
                     main(sys.argv[2], int(sys.argv[3]),'list_jobs')
                 else:
                     error = True
-
-            if sys.argv[1] == 'job': 
+            if sys.argv[1] == 'job':
                 if len(sys.argv) == 5 and int(sys.argv[4]) in steps:
-                    #main(config_file, step=None, clusterMode=None, misc=None):
                     main(sys.argv[2], None, 'job', sys.argv[3:])
                 else:
                     error = True
-                
-                  
     if error:
         print """
         Incorrect syntax, use:
@@ -449,18 +439,17 @@ if __name__ == '__main__':
             3: global-pointing
             4: processing (tilewise rectification, matching and triangulation)
             5: finalization
-            Launches the s2p pipeline.
+            Launch the s2p pipeline.
 
           > %s list_jobs config.json step (integer between 2 and 5)
             Return the list of jobs for a specific step.
 
           > %s job config.json tile_dir step (integer between 2 and 5)
-            Run a specific job defined by a json string. This mode allows to run jobs returned
-            by the list_jobs running mode.
+            Run a specific job defined by a json string. This mode allows to run
+            jobs returned by the list_jobs running mode.
 
 
-          All the parameters, paths to input and
-          output files, are defined in the json configuration file.
-          
-        """ % (sys.argv[0],sys.argv[0],sys.argv[0])
+          All the parameters, paths to input and output files, are defined in
+          the json configuration file.
+        """ % (sys.argv[0], sys.argv[0], sys.argv[0])
         sys.exit(1)
