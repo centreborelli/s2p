@@ -305,10 +305,6 @@ def execute_job(config_file, tile_dir, step):
             print 'global finalization...'
             global_finalization(tiles_full_info)
 
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
