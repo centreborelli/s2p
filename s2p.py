@@ -239,7 +239,6 @@ def global_finalization(tiles_full_info):
         shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
-
 def launch_parallel_calls(fun, list_of_args, nb_workers):
     """
     Run a function several times in parallel with different given inputs.
@@ -313,15 +312,15 @@ def execute_job(config_file, tile_dir, step):
 def list_jobs(config_file, step):
     """
     """
-    tilesFullInfo = initialization.init_tiles_full_info(config_file)
+    tiles_full_info = initialization.init_tiles_full_info(config_file)
     filename = str(step) + ".jobs"
 
     if not (os.path.exists(cfg['out_dir'])):
         os.mkdir(cfg['out_dir'])
 
     if step in [2, 4]:
-        f = open(os.path.join(cfg['out_dir'],filename),'w')
-        for tile in tilesFullInfo:
+        f = open(os.path.join(cfg['out_dir'], filename), 'w')
+        for tile in tiles_full_info:
             tile_dir = tile['directory']
             f.write(tile_dir + ' ' + str(step) + '\n')
         f.close()
@@ -405,7 +404,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) < 2:
         error = True
-    elif sys.argv[1].endswith(".json") :
+    elif sys.argv[1].endswith(".json"):
         if len(sys.argv) == 2:
             main(sys.argv[1])
         elif len(sys.argv) == 3 and int(sys.argv[2]) in steps:
@@ -413,12 +412,12 @@ if __name__ == '__main__':
         else:
             error = True
     else:  # cluster modes
-        if sys.argv[1] not in ['list_jobs','job']:
+        if sys.argv[1] not in ['list_jobs', 'job']:
             error = True
         else:
             if sys.argv[1] == 'list_jobs':
                 if len(sys.argv) == 4 and int(sys.argv[3]) in steps:
-                    main(sys.argv[2], int(sys.argv[3]),'list_jobs')
+                    main(sys.argv[2], int(sys.argv[3]), 'list_jobs')
                 else:
                     error = True
             if sys.argv[1] == 'job':
