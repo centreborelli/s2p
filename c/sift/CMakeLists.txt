@@ -85,8 +85,9 @@ add_executable(matching ${SOURCE_FILES_MATCHING})
 find_package (TIFF REQUIRED)
 find_package (JPEG REQUIRED)
 find_package (PNG REQUIRED)
-include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS})
-target_link_libraries (sift_roi ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES})
+find_package (GDAL REQUIRED)
+include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS} PUBLIC ${GDAL_INCLUDE_DIRS}) 
+target_link_libraries (sift_roi ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES} ${GDAL_LIBRARIES})
 
 # Link -lm
 find_library (M_LIBRARY m)
