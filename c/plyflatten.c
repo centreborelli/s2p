@@ -263,7 +263,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out_dir cutting_info cloud_dir number_of_tiles\n", s);
+			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out_dir list_of_tiles_txt number_of_dsm_tiles\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -275,29 +275,14 @@ int main(int c, char *v[])
 	char *bbminmax = pick_option(&c, &v, "bb", "");
 
 	// process input arguments
-	if (c != 6) {
+	if (c != 5) {
 		help(*v);
 		return 1;
 	}
 	float resolution = atof(v[1]);
 	char *out_dir = v[2];
 	
-	int tw,th,rowmin,rowmax,steprow,colmin,colmax,stepcol;
-	FILE* cutting_info = NULL;
-	cutting_info = fopen(v[3], "r");
-	if (cutting_info != NULL)
-	{
-	    // On peut lire et écrire dans le fichier
-	    fscanf(cutting_info,"%d %d %d %d %d %d %d %d",&tw,&th,&rowmin,&rowmax,&steprow,&colmin,&colmax,&stepcol);
-	    fclose(cutting_info);
-	}
-	else
-	{
-	    // On affiche un message d'erreur si on veut
-	    fprintf(stderr,"ERROR : can't read %s",v[3]);
-	    return 1;
-	}
-	
+
 	// initialize x, y extrema values
 	float xmin = INFINITY;
 	float xmax = -INFINITY;
@@ -308,27 +293,37 @@ int main(int c, char *v[])
 
 	// process each filename from stdin to determine x, y extremas and store the
 	// filenames in a list of strings, to be able to open the files again
-	
+	FILE* list_tiles = NULL;
+	list_tiles = fopen(v[3], "r");
+	char tile_dir[1000];
+	char ply_file[1000];
 	char utm[3];
 	struct list *l = NULL;
-	char filename[1000];
-	for(int c=colmin; c<=colmax; c+=stepcol)
-	    for(int r=rowmin; r<=rowmax; r+=steprow)
+	if (list_tiles != NULL)
+	{
+	    while (fgets(tile_dir, 1000, list_tiles) != NULL)
 	    {
-		sprintf(filename,"%s/cloud_%d_%d_row_%d_col_%d.ply",v[4],tw,th,r,c);
-		strtok(filename, "\n");
-		l = push(l, filename);
-		parse_ply_points_for_extrema(&xmin, &xmax, &yymin, &yymax, utm, filename);
+	       strtok(tile_dir, "\n");
+	       sprintf(ply_file,"%s/cloud.ply",tile_dir);
+	       l = push(l, ply_file);
+	       parse_ply_points_for_extrema(&xmin, &xmax, &yymin, &yymax, utm, ply_file);
 	    }
+	    fclose(list_tiles);
+	}
+	else
+	{
+	    fprintf(stderr,"ERROR : can't read %s",v[3]);
+	    return 1;
+	}
 	
 	if (0 != strcmp(bbminmax, "") ) {
 		sscanf(bbminmax, "%f %f %f %f", &xmin, &xmax, &yymin, &yymax);
 	}
 	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin, xmax, yymin, yymax);
 
+	// For each of the n tiles, produce a dsm
 	struct list *begin=l;
-	
-	int piece_index=0,n=atoi(v[5]);
+	int piece_index=0,n=atoi(v[4]);
 	while (yymin+(piece_index+1)*(yymax-yymin)/( (float) n) <= yymax)
 	{
 	    ymin = yymin+piece_index*(yymax-yymin)/( (float) n);

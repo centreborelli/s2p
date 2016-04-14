@@ -280,8 +280,9 @@ def init_tiles_full_info(config_file):
     if len(tiles_full_info) == 1:
         tiles_full_info[0]['position_type'] = 'Single'
 
-    cutting_info=open(os.path.join(cfg['out_dir'],'cutting_info.txt'),'w')
-    cutting_info.write( '%d %d %d %d %d %d %d %d' % (tw, th, rowmin, rowmax, th - ov, colmin, colmax, tw - ov))
+    cutting_info=open(os.path.join(cfg['out_dir'],'list_of_tiles.txt'),'w')
+    for tile_info in tiles_full_info:
+        cutting_info.write( '%s\n' % (tile_info['directory']))
     cutting_info.close()
     
     return tiles_full_info
