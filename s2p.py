@@ -231,7 +231,7 @@ def global_finalization(tiles_full_info):
         shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
-def compute_dsms(args):
+def compute_dsm(args):
     """
     Compute the DSMs
 
@@ -293,7 +293,7 @@ def execute_job(config_file,params):
     
     tiles_full_info = initialization.init_tiles_full_info(config_file)
     
-    if not (tile_dir == 'all_tiles' or tile_dir == 'dsm'):
+    if not (tile_dir == 'all_tiles' or 'dsm' in tile_dir ):
         for tile in tiles_full_info:
             if tile_dir == tile['directory']:
                 tile_to_process = tile
@@ -313,11 +313,11 @@ def execute_job(config_file,params):
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
         
-        if step == 5:#"compute_dsms" :
-            print 'compute_dsms ...'
+        if step == 5:#"compute_dsm" :
+            print 'compute_dsm ...'
             number_of_tiles = 5
-            current_tile=int(params[2])
-            compute_dsms([number_of_tiles,current_tile])
+            current_tile=int(tile_dir.split('_')[1]) #dsm_2 --> 2
+            compute_dsm([number_of_tiles,current_tile])
             
         if step == 6:#"global_finalization":    
             print 'global finalization...'     
@@ -354,7 +354,7 @@ def list_jobs(config_file,step):
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         number_of_tiles = 5
         for i in range(number_of_tiles):
-            f.write('dsm ' + str(step) + ' ' + str(i) + '\n')
+            f.write('dsm_'+ str(i) + ' ' + str(step) + '\n')
         f.close()
     else:
         print "Unkown step required: %s" % str(step)
@@ -420,12 +420,12 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
             
         if 5 in steps:
-            print '\ncompute dsms...'
+            print '\ncompute dsm...'
             number_of_tiles = 5
             args=[]
             for i in range(number_of_tiles):
                 args.append([number_of_tiles,i])
-            launch_parallel_calls(compute_dsms,args,nb_workers)
+            launch_parallel_calls(compute_dsm,args,nb_workers)
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
         if 6 in steps:
