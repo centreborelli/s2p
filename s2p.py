@@ -231,6 +231,24 @@ def global_finalization(tiles_full_info):
         shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
+def compute_dsms(args):
+    """
+    Compute the DSMs
+
+    Args: 
+         - args  ( <==> [number_of_tiles,current_tile])
+    """
+    out_dsm_dir = cfg['out_dir']
+    list_of_tiles_dir = os.path.join(cfg['out_dir'],'list_of_tiles.txt')
+   
+    number_of_tiles,current_tile = args
+    
+    common.run("plyflatten %f %s %s %d %d" % (  cfg['dsm_resolution'], 
+                                             out_dsm_dir, 
+                                             list_of_tiles_dir,
+                                             number_of_tiles,
+                                             current_tile))
+
 
 def launch_parallel_calls(fun, list_of_args, nb_workers):
     """
@@ -262,24 +280,23 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
             sys.exit(1)
 
 
-def execute_job(config_file,tile_dir,step):
+def execute_job(config_file,params):
     """
     Execute a job
 
     Args: 
          - json config file
-         - tile_dir
-         - step
-    
+         - params  ( <==> [tile_dir,step,...])
     """
+    tile_dir = params[0]
+    step = int(params[1])
     
     tiles_full_info = initialization.init_tiles_full_info(config_file)
     
-    if not tile_dir == 'all_tiles':
+    if not (tile_dir == 'all_tiles' or tile_dir == 'dsm'):
         for tile in tiles_full_info:
             if tile_dir == tile['directory']:
                 tile_to_process = tile
-                print tile_to_process
                 break
     
     try:
@@ -295,8 +312,14 @@ def execute_job(config_file,tile_dir,step):
         if step == 4:#"process_tiles" :
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
+        
+        if step == 5:#"compute_dsms" :
+            print 'compute_dsms ...'
+            number_of_tiles = 5
+            current_tile=int(params[2])
+            compute_dsms([number_of_tiles,current_tile])
             
-        if step == 5:#"global_finalization":    
+        if step == 6:#"global_finalization":    
             print 'global finalization...'     
             global_finalization(tiles_full_info)  
                 
@@ -323,9 +346,15 @@ def list_jobs(config_file,step):
             tile_dir = tile['directory']
             f.write(tile_dir + ' ' + str(step) + '\n')
         f.close()
-    elif step in [3,5]:
+    elif step in [3,6]:
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         f.write('all_tiles ' + str(step) + '\n')
+        f.close()
+    elif step ==5 :
+        f = open(os.path.join(cfg['out_dir'],filename),'w')
+        number_of_tiles = 5
+        for i in range(number_of_tiles):
+            f.write('dsm ' + str(step) + ' ' + str(i) + '\n')
         f.close()
     else:
         print "Unkown step required: %s" % str(step)
@@ -336,11 +365,12 @@ def main(config_file, step=None, clusterMode=None, misc=None):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
 
-    It is a succession of five steps:
+    It is a succession of six steps:
         initialization
         preprocessing
         global_values
         processing
+        compute dsms
         global_finalization
 
     Args:
@@ -354,10 +384,10 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         list_jobs(config_file, step)
     elif clusterMode=='job':
         cfg['omp_num_threads'] = 1
-        execute_job(config_file,misc[0],int(misc[1]))
+        execute_job(config_file,misc)
     else:
         # determine which steps to run
-        steps = [step] if step else [1, 2, 3, 4, 5]
+        steps = [step] if step else [1, 2, 3, 4, 5, 6]
 
         # initialization (has to be done whatever the queried steps)
         initialization.init_dirs_srtm(config_file)
@@ -388,8 +418,17 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             print '\nprocessing tiles...'
             launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
-
+            
         if 5 in steps:
+            print '\ncompute dsms...'
+            number_of_tiles = 5
+            args=[]
+            for i in range(number_of_tiles):
+                args.append([number_of_tiles,i])
+            launch_parallel_calls(compute_dsms,args,nb_workers)
+            print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+
+        if 6 in steps:
             print '\nglobal finalization...'
             global_finalization(tiles_full_info)
             print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
@@ -409,7 +448,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
 if __name__ == '__main__':
 
     error = False
-    steps=[1,2,3,4,5]
+    steps=[1,2,3,4,5,6]
 
     if len(sys.argv) < 2:
         error=True
@@ -434,8 +473,7 @@ if __name__ == '__main__':
                     error = True
 
             if sys.argv[1] == 'job': 
-                if len(sys.argv) == 5 and int(sys.argv[4]) in steps:
-                    #main(config_file, step=None, clusterMode=None, misc=None):
+                if len(sys.argv) >= 5 and int(sys.argv[4]) in steps:
                     main(sys.argv[2], None, 'job', sys.argv[3:])
                 else:
                     error = True
@@ -444,18 +482,19 @@ if __name__ == '__main__':
     if error:
         print """
         Incorrect syntax, use:
-          > %s config.json [step (integer between 1 and 5)]
+          > %s config.json [step (integer between 1 and 6)]
             1: initialization
             2: preprocessing (tilewise sift, local pointing correction)
             3: global-pointing
             4: processing (tilewise rectification, matching and triangulation)
-            5: finalization
+            5: compute dsm from ply files (one per tile)
+            6: finalization
             Launches the s2p pipeline.
 
-          > %s list_jobs config.json step (integer between 2 and 5)
+          > %s list_jobs config.json step (integer between 2 and 6)
             Return the list of jobs for a specific step.
 
-          > %s job config.json tile_dir step (integer between 2 and 5)
+          > %s job config.json tile_dir step (integer between 2 and 6)
             Run a specific job defined by a json string. This mode allows to run jobs returned
             by the list_jobs running mode.
 

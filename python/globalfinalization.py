@@ -95,23 +95,30 @@ def write_vrt_files(tiles_full_info):
             pair_id), pairSizesAndPositions, 'rpc_err_crop.tif', fw, fh, z)
 
 
-def write_dsm(tiles_full_info, n=5):
+def write_dsm(tiles_full_info):
     """
     Writes the DSM, from the ply files given by each tile.
 
     Args :
          tiles_full_info: a list of tile_info dictionaries
     """
-   
-    out_dsm_dir = os.path.join(cfg['out_dir'], 'dsm')
-    if (os.path.exists(out_dsm_dir)):
-        shutil.rmtree(out_dsm_dir)
-    os.mkdir(out_dsm_dir) 
+    
+    clouds_dir = os.path.join(cfg['out_dir'], 'clouds')
+    if (os.path.exists(clouds_dir)):
+        shutil.rmtree(clouds_dir)
+    os.mkdir(clouds_dir)
 
-    common.run("plyflatten %f %s %s %d" % (  cfg['dsm_resolution'], 
-                                             out_dsm_dir, 
-                                             os.path.join(cfg['out_dir'],'list_of_tiles.txt'),
-                                             n))
+    for tile_info in tiles_full_info:
+        tile_dir = tile_info['directory']
+        x, y, w, h = tile_info['coordinates']
+        cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
+        cloud_link_name = os.path.join(clouds_dir,
+                                       'cloud_%d_%d_row_%d_col_%d.ply' % (w, h,
+                                                                          y, x))
+        if (os.path.exists(cloud)):
+            common.run('ln -s %s %s' % (cloud, cloud_link_name))
+    
+    out_dsm_dir = cfg['out_dir']
     common.run("gdalbuildvrt %s %s" %
                (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm_*'))
 

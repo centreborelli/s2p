@@ -263,7 +263,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out_dir list_of_tiles_txt number_of_dsm_tiles\n", s);
+			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out_dir list_of_tiles_txt number_of_dsm_tiles current_index_tile\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -275,7 +275,7 @@ int main(int c, char *v[])
 	char *bbminmax = pick_option(&c, &v, "bb", "");
 
 	// process input arguments
-	if (c != 5) {
+	if (c != 6) {
 		help(*v);
 		return 1;
 	}
@@ -323,55 +323,57 @@ int main(int c, char *v[])
 
 	// For each of the n tiles, produce a dsm
 	struct list *begin=l;
-	int piece_index=0,n=atoi(v[4]);
+	int piece_index=0,n=atoi(v[4]),K=atoi(v[5]);
 	while (yymin+(piece_index+1)*(yymax-yymin)/( (float) n) <= yymax)
 	{
-	    ymin = yymin+piece_index*(yymax-yymin)/( (float) n);
-	    ymax = yymin+(piece_index+1)*(yymax-yymin)/( (float) n);
-	
-	    // compute output image dimensions
-	    int w = 1 + (xmax - xmin) / resolution;
-	    int h = 1 + (ymax - ymin) / resolution;
-
-	    // allocate and initialize output images
-	    struct images x;
-	    x.w = w;
-	    x.h = h;
-	    x.cnt = xmalloc(w*h*sizeof(float));
-	    x.avg = xmalloc(w*h*sizeof(float));
-	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+	    if(piece_index == K)
 	    {
-		    x.cnt[i] = 0;
-		    x.avg[i] = 0;
-	    }
-
-	    char looputm[3];
-	    strcpy(looputm,utm);
-
-	    // process each filename to accumulate points in the dem
-	    l=begin;
-	    while (l != NULL)
-	    {
-		    // printf("FILENAME: \"%s\"\n", l->current);
-		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, looputm, l->current, col_idx);
-		    l = l->next;
-	    }
-
-	    // set unknown values to NAN
-	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-		    if (!x.cnt[i])
-			    x.avg[i] = NAN;
-
-	    // save output image
-	    char out[1000];
-	    sprintf(out,"%s/dsm_%d.tif",out_dir,piece_index);
-	    iio_save_image_float(out, x.avg, w, h);
-	    set_geotif_header(out, looputm, xmin, ymax, resolution);
-
-	    // cleanup and exit
-	    free(x.cnt);
-	    free(x.avg);
+		ymin = yymin+piece_index*(yymax-yymin)/( (float) n);
+		ymax = yymin+(piece_index+1)*(yymax-yymin)/( (float) n);
 	    
+		// compute output image dimensions
+		int w = 1 + (xmax - xmin) / resolution;
+		int h = 1 + (ymax - ymin) / resolution;
+
+		// allocate and initialize output images
+		struct images x;
+		x.w = w;
+		x.h = h;
+		x.cnt = xmalloc(w*h*sizeof(float));
+		x.avg = xmalloc(w*h*sizeof(float));
+		for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+		{
+			x.cnt[i] = 0;
+			x.avg[i] = 0;
+		}
+
+		char looputm[3];
+		strcpy(looputm,utm);
+
+		// process each filename to accumulate points in the dem
+		l=begin;
+		while (l != NULL)
+		{
+			// printf("FILENAME: \"%s\"\n", l->current);
+			add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, looputm, l->current, col_idx);
+			l = l->next;
+		}
+
+		// set unknown values to NAN
+		for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+			if (!x.cnt[i])
+				x.avg[i] = NAN;
+
+		// save output image
+		char out[1000];
+		sprintf(out,"%s/dsm_%d.tif",out_dir,piece_index);
+		iio_save_image_float(out, x.avg, w, h);
+		set_geotif_header(out, looputm, xmin, ymax, resolution);
+
+		// cleanup and exit
+		free(x.cnt);
+		free(x.avg);
+	    }
 	    piece_index++; 
 	}    
 	return 0;
