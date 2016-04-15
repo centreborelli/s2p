@@ -4,13 +4,15 @@
 #include "pickopt.h"
 #include "fancy_image.h"
 #include "sift_anatomy_20141201/lib_sift_anatomy.h"
+#include "gdal.h"
+#include "cpl_conv.h"
 
 
 
 void print_help(char *v[])
 {
-    fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [-o file] [--max-nb-pts n]"
-    //                          0 1         2 3 4 5
+    fprintf(stderr, "usage:\n\t%s file.tif x y w h [-o file] [--max-nb-pts n]"
+    //                          0 1        2 3 4 5
             " [-b] [--verbose] [--thresh-dog t (0.0133)]"
             " [--scale-space-noct n (8)] [--scale-space-nspo n (3)]\n", *v);
 }
@@ -36,17 +38,9 @@ int main(int c, char *v[])
     // initialise time
     struct timespec ts; portable_gettime(&ts);
 
-    // open the image
-    struct fancy_image *fimg = fancy_image_open(v[1], "");
-
     // define the rectangular region of interest (roi)
     int x, y, w, h;
-    if (c == 2) {
-        x = 0;
-        y = 0;
-        w = fimg->w;
-        h = fimg->h;
-    } else if (c == 6) {
+    if (c == 6) {
         x = atoi(v[2]);
         y = atoi(v[3]);
         w = atoi(v[4]);
@@ -57,8 +51,16 @@ int main(int c, char *v[])
     }
 
     // read the roi in the input image
-    float *roi = (float*) malloc(w * h * sizeof(float));
-    fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
+    GDALAllRegister();
+    GDALDatasetH hDataset = GDALOpen(v[1], GA_ReadOnly);
+    if (hDataset == NULL)
+        fprintf(stderr, "ERROR : can't open %s\n", v[1]);
+
+    GDALRasterBandH hBand = GDALGetRasterBand(hDataset, 1);
+    float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
+    GDALRasterIO(hBand, GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
+    GDALClose(hBand);
+    GDALClose(hDataset);
     if (verbose) print_elapsed_time(&ts, "read ROI", 35);
 
     // prepare sift parameters
@@ -89,8 +91,7 @@ int main(int c, char *v[])
     if (verbose) print_elapsed_time(&ts, "write output", 35);
 
     // cleanup
-    free(roi);
-    fancy_image_close(fimg);
+    CPLFree(roi);
     sift_free_keypoints(kpts);
     for (int i = 0; i < 6; i++)
         sift_free_keypoints(kk[i]);
