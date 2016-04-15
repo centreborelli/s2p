@@ -181,6 +181,11 @@ def process_tile(tile_info):
         # finalization
         height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i in range(1, nb_pairs + 1)]
         process.finalize_tile(tile_info, height_maps)
+        
+        # ply extrema
+        out_extrema_dir = os.path.join(tile_dir,'plyextrema.txt')
+        common.run("plyextrema %s %s" % (  tile_dir,
+                                           out_extrema_dir))
 
     except Exception:
         print("Exception in processing tile:")
