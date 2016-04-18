@@ -66,6 +66,7 @@ class Parameters {
     float dmax1              () const {return m_dmax1              ;}
     float dmin2              () const {return m_dmin2              ;}
     float dmax2              () const {return m_dmax2              ;}
+    size_t dist              () const {return m_dist               ;}
 
     /**
      * @brief Read the input arguments. Detect the "-h" option, and print the
@@ -160,6 +161,7 @@ class Parameters {
     size_t m_nbScales;   // Number of scales                    -n  [%d]
     size_t m_x;          // Window x size                       -x  [%d]
     size_t m_y;          // Window y size                       -y  [%d]
+    size_t m_dist;       // Distance to use                     -p  [%d]
     bool   m_verbose;    // Activate the verbose mode           -v
 
     //! Hard-coded parameters

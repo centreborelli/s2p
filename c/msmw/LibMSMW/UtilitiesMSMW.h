@@ -80,7 +80,9 @@ inline __m256 cubicInterpolate256(
  * @param i_im2: contains four images stored columns aside;
  * @param p_px, p_py: pixel coordinates for the reference image;
  * @param p_qx, p_qy: pixel coordinates for the four second image;
- * @param i_kernel: weighting window for the distance computation.
+ * @param i_kernel: weighting window for the distance computation;
+ * @param p_normalize: if true substract the mean of the patches before distance
+ *                     computation.
  **/
 __m128 computePatchDistance4(
   const Image &i_im1,
@@ -89,7 +91,8 @@ __m128 computePatchDistance4(
   const int p_py,
   const int p_qx,
   const int p_qy,
-  const Image& i_kernel);
+  const Image& i_kernel,
+  const bool p_normalize);
 
 
 /**
@@ -100,7 +103,9 @@ __m128 computePatchDistance4(
  * @param i_im2: contains four images stored columns aside;
  * @param p_px, p_py: pixel coordinates for the reference image;
  * @param p_qx, p_qy: pixel coordinates for the four second image;
- * @param i_kernel: weighting window for the distance computation.
+ * @param i_kernel: weighting window for the distance computation;
+ * @param p_normalize: if true substract the mean of the patches before distance
+ *                     computation.
  **/
 __m256 computePatchDistance8(
   const Image &i_im1,
@@ -109,7 +114,8 @@ __m256 computePatchDistance8(
   const int p_py,
   const int p_qx,
   const int p_qy,
-  const Image& i_kernel);
+  const Image& i_kernel,
+  const bool p_normalize);
 
 
 /**

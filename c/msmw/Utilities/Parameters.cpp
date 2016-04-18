@@ -40,7 +40,8 @@ Parameters::Parameters(
   m_nbScales   (4),      // Number of scales                    -n  [%d]
   m_x          (9),      // Window x size                       -x  [%d]
   m_y          (9),      // Window y size                       -y  [%d]
-  m_verbose    (false),   // Activate verbose mode               -v
+  m_dist       (0),      // Distance to use                     -p  [%d]
+  m_verbose    (false),  // Activate verbose mode               -v
 
   //! Hard-coded parameters
   m_window(NULL),
@@ -99,6 +100,7 @@ Parameters::Parameters(
   m_nbScales   (i_params.nbScales()),
   m_x          (i_params.x()),
   m_y          (i_params.y()),
+  m_dist       (i_params.dist()),
   m_verbose    (i_params.verbose()),
 
   //! Hard-coded parameters
@@ -242,6 +244,13 @@ int Parameters::checkArgs(
       }
     }
 
+    //! Patches distance to use
+    if (sarg.find("-p") == 0) {
+      if (n + 1 < i_argc) {
+        m_dist = atoi(i_argv[n + 1]);
+      }
+    }
+
     //! Verbose option
     if (sarg.find("-v") == 0) {
       m_verbose = true;
@@ -331,6 +340,7 @@ void Parameters::printSynopsis(
   sentence += " [-n  number of scales]";
   sentence += " [-x  window X]";
   sentence += " [-y  window Y]";
+  sentence += " [-p  distance]";
   sentence += " [-v  verbose]";
 
   //! Print the synopsis
@@ -456,6 +466,11 @@ void Parameters::printOptional(
   //! Window Y size
   this->printWord("-y  (optional)", "9", s4);
   this->printLine("Window Y size.", s7);
+
+  //! Patch distance
+  this->printWord("-p  (optional)", "0", s4);
+  this->printLine("If 0, then the mean of the patches will be removed before\
+    applying the L2 distance, if 1 the classic L2 distance will be used.", s7);
 
   //! Verbose
   this->printWord("-v (optional)", "False", s4);
