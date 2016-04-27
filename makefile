@@ -20,7 +20,7 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw3 sgbm piio
+default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw sgbm piio
 
 all: default tvl1
 

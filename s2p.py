@@ -248,11 +248,31 @@ def compute_dsm(args):
    
     number_of_tiles,current_tile = args
     
-    common.run("plyflatten %f %s %s %d %d" % (  cfg['dsm_resolution'], 
-                                             out_dsm_dir, 
-                                             list_of_tiles_dir,
-                                             number_of_tiles,
-                                             current_tile))
+    extremaxy = np.loadtxt(os.path.join(cfg['out_dir'], 'global_extent.txt'))
+    
+    global_xmin = extremaxy[0]
+    global_xmax = extremaxy[1]
+    global_ymin = extremaxy[2]
+    global_ymax = extremaxy[3]
+    
+    global_y_diff = global_ymax-global_ymin
+    tile_y_size = (global_y_diff)/( number_of_tiles)
+    
+    ymin = global_ymin + current_tile*tile_y_size
+    ymax = ymin + tile_y_size
+    
+    if (ymax <= global_ymax):
+        common.run("plyflatten %f %s %s %d %d %f %f %f %f" % ( 
+                                                 cfg['dsm_resolution'], 
+                                                 out_dsm_dir, 
+                                                 list_of_tiles_dir,
+                                                 number_of_tiles,
+                                                 current_tile,
+                                                 global_xmin,
+                                                 global_xmax,
+                                                 ymin,
+                                                 ymax))
+                                                 
                                              
 def global_extent(tiles_full_info):
     """

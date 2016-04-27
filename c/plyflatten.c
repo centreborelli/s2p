@@ -263,7 +263,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"%s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out_dir list_of_tiles_txt number_of_dsm_tiles current_index_tile\n", s);
+			"%s [-c column] resolution out_dir list_of_tiles_txt number_of_dsm_tiles current_index_tile xmin xmax ymin ymax\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -272,43 +272,69 @@ void help(char *s)
 int main(int c, char *v[])
 {
 	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
+	fprintf(stderr, "C before = : %d\n", c);
 	char *bbminmax = pick_option(&c, &v, "bb", "");
+	fprintf(stderr, "C after = : %d\n", c);
 
 	// process input arguments
-	if (c != 6) {
+	if (c != 10) {
 		help(*v);
 		return 1;
 	}
 	float resolution = atof(v[1]);
 	char *out_dir = v[2];
 	
+	int K=atoi(v[5]);
+	
+	float xmin = atof(v[6]);
+	float xmax = atof(v[7]);
+	float ymin = atof(v[8]);
+	float ymax = atof(v[9]);
+	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin,xmax,ymin,ymax);
 
-	// initialize x, y extrema values
-	float xmin = INFINITY;
-	float xmax = -INFINITY;
-	float yymin = INFINITY;
-	float yymax = -INFINITY;
-	float ymin = INFINITY;
-	float ymax = -INFINITY;
-
-	// process each filename from stdin to determine x, y extremas and store the
+	// process each filename to determine x, y extremas and store the
 	// filenames in a list of strings, to be able to open the files again
-	FILE* list_tiles = NULL;
-	list_tiles = fopen(v[3], "r");
+	FILE* list_tiles_file = NULL;
+	FILE* ply_extrema_file = NULL;
+	list_tiles_file = fopen(v[3], "r");
 	char tile_dir[1000];
-	char ply_file[1000];
+	char ply[1000];
+	char ply_extrema[1000];
 	char utm[3];
+	float local_xmin,local_xmax,local_ymin,local_ymax;
+	
 	struct list *l = NULL;
-	if (list_tiles != NULL)
+	if (list_tiles_file != NULL)
 	{
-	    while (fgets(tile_dir, 1000, list_tiles) != NULL)
+	    while (fgets(tile_dir, 1000, list_tiles_file) != NULL)
 	    {
 	       strtok(tile_dir, "\n");
-	       sprintf(ply_file,"%s/cloud.ply",tile_dir);
-	       l = push(l, ply_file);
-	       parse_ply_points_for_extrema(&xmin, &xmax, &yymin, &yymax, utm, ply_file);
+	       sprintf(ply_extrema,"%s/plyextrema.txt",tile_dir);
+	       
+	       ply_extrema_file = fopen(ply_extrema, "r");
+	       if (ply_extrema_file != NULL)
+	       {
+		  fscanf(ply_extrema_file, "%f %f %f %f", &local_xmin, &local_xmax, &local_ymin, &local_ymax);
+		  fclose(ply_extrema_file);
+	       }
+	       else
+	       {
+		    fprintf(stderr,"ERROR : can't read %s",ply_extrema);
+		    return 1;
+	       }
+	       
+	       if ( (local_xmin < xmax) && (local_xmax > xmin) && (local_ymin < ymax) && (local_ymax > ymin) )
+	       {
+		   sprintf(ply,"%s/cloud.ply",tile_dir);
+		   l = push(l, ply);
+	       }
+	       else
+	       {
+		   sprintf(ply,"%s/cloud.ply",tile_dir);
+		   fprintf(stderr, " REJECTED : %s\n xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n lxmin: %20f, lxmax: %20f, lymin: %20f, lymax: %20f\n", ply,xmin,xmax,ymin,ymax,local_xmin,local_xmax,local_ymin,local_ymax);
+	       }
 	    }
-	    fclose(list_tiles);
+	    fclose(list_tiles_file);
 	}
 	else
 	{
@@ -316,62 +342,54 @@ int main(int c, char *v[])
 	    return 1;
 	}
 	
-	if (0 != strcmp(bbminmax, "") ) {
-		sscanf(bbminmax, "%f %f %f %f", &xmin, &xmax, &yymin, &yymax);
-	}
-	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin, xmax, yymin, yymax);
+
 
 	// For each of the n tiles, produce a dsm
 	struct list *begin=l;
-	int n=atoi(v[4]),K=atoi(v[5]);
-	if (yymin+(K+1)*(yymax-yymin)/( (float) n) <= yymax)
-	{
-	    ymin = yymin+K*(yymax-yymin)/( (float) n);
-	    ymax = yymin+(K+1)*(yymax-yymin)/( (float) n);
+	//if (yymin+(K+1)*(yymax-yymin)/( (float) n) <= yymax)
 	
-	    // compute output image dimensions
-	    int w = 1 + (xmax - xmin) / resolution;
-	    int h = 1 + (ymax - ymin) / resolution;
+	// compute output image dimensions
+	int w = 1 + (xmax - xmin) / resolution;
+	int h = 1 + (ymax - ymin) / resolution;
 
-	    // allocate and initialize output images
-	    struct images x;
-	    x.w = w;
-	    x.h = h;
-	    x.cnt = xmalloc(w*h*sizeof(float));
-	    x.avg = xmalloc(w*h*sizeof(float));
-	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-	    {
-		    x.cnt[i] = 0;
-		    x.avg[i] = 0;
-	    }
+	// allocate and initialize output images
+	struct images x;
+	x.w = w;
+	x.h = h;
+	x.cnt = xmalloc(w*h*sizeof(float));
+	x.avg = xmalloc(w*h*sizeof(float));
+	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+	{
+		x.cnt[i] = 0;
+		x.avg[i] = 0;
+	}
 
-	    char looputm[3];
-	    strcpy(looputm,utm);
+	char looputm[3];
+	strcpy(looputm,utm);
 
-	    // process each filename to accumulate points in the dem
-	    l=begin;
-	    while (l != NULL)
-	    {
-		    // printf("FILENAME: \"%s\"\n", l->current);
-		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, looputm, l->current, col_idx);
-		    l = l->next;
-	    }
+	// process each filename to accumulate points in the dem
+	l=begin;
+	while (l != NULL)
+	{
+		// printf("FILENAME: \"%s\"\n", l->current);
+		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, looputm, l->current, col_idx);
+		l = l->next;
+	}
 
-	    // set unknown values to NAN
-	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-		    if (!x.cnt[i])
-			    x.avg[i] = NAN;
+	// set unknown values to NAN
+	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+		if (!x.cnt[i])
+			x.avg[i] = NAN;
 
-	    // save output image
-	    char out[1000];
-	    sprintf(out,"%s/dsm_%d.tif",out_dir,K);
-	    iio_save_image_float(out, x.avg, w, h);
-	    set_geotif_header(out, looputm, xmin, ymax, resolution);
+	// save output image
+	char out[1000];
+	sprintf(out,"%s/dsm_%d.tif",out_dir,K);
+	iio_save_image_float(out, x.avg, w, h);
+	set_geotif_header(out, looputm, xmin, ymax, resolution);
 
-	    // cleanup and exit
-	    free(x.cnt);
-	    free(x.avg);
+	// cleanup and exit
+	free(x.cnt);
+	free(x.avg);
 	    
-	}    
 	return 0;
 }
