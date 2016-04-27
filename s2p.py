@@ -49,13 +49,22 @@ def show_progress(a):
     print 'done %d / %d tiles' % (show_progress.counter, show_progress.total)
 
 
-def print_elapsed_time():
+def print_elapsed_time(since_first_call=False):
     """
-    Print the elapsed time since last call.
+    Print the elapsed time since the last call or since the first call.
+
+    Args:
+        since_first_call:
     """
-    t1 = datetime.datetime.now()
-    print "Elapsed time:", t1 - print_elapsed_time.t0
-    print_elapsed_time.t0 = t1
+    t2 = datetime.datetime.now()
+    if since_first_call:
+        print "Total elapsed time:", t2 - print_elapsed_time.t0
+    else:
+        try:
+            print "Elapsed time:", t2 - print_elapsed_time.t1
+        except AttributeError:
+            print "Elapsed time:", t2 - print_elapsed_time.t0
+    print_elapsed_time.t1 = t2
 
 
 def preprocess_tile(tile_info):
@@ -394,6 +403,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             print_elapsed_time()
 
     # cleanup
+    print_elapsed_time(since_first_call=True)
     common.garbage_cleanup()
 
 
