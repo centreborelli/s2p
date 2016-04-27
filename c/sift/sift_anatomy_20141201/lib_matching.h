@@ -14,7 +14,7 @@
 void matching(struct sift_keypoints *k1, struct sift_keypoints *k2,
               struct sift_keypoints *out_k1, struct sift_keypoints *out_k2,
               float sift_thresh, int flag,
-              double fund_mat[5], float epi_thresh, bool verbose);
+              double fund_mat[5], float epi_thresh);
 
 void fprintf_pairs(const char *filename,
                    const struct sift_keypoints *k1,
