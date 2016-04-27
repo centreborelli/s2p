@@ -20,9 +20,9 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw3 sgbm piio
+default: $(BINDIR) libtiff geographiclib homography sift imscript mgm piio
 
-all: default tvl1
+all: default msmw3 sgbm tvl1
 
 
 $(BINDIR):
@@ -62,11 +62,6 @@ asift:
 	cd $(BINDIR)/build_asift; cmake ../../3rdparty/demo_ASIFT_src; $(MAKE)
 	cp $(BINDIR)/build_asift/demo_ASIFT $(BINDIR)
 
-monasse:
-	mkdir -p $(BINDIR)/build_monasse_refactored
-	cd $(BINDIR)/build_monasse_refactored; cmake ../../c/monasse_refactored; $(MAKE)
-	cp $(BINDIR)/build_monasse_refactored/bin/rectify_mindistortion $(BINDIR)
-
 homography: $(BINDIR)
 	mkdir -p $(BINDIR)/build_homography
 	cd $(BINDIR)/build_homography; cmake ../../c/homography; $(MAKE)
@@ -88,23 +83,23 @@ sgbm:
 	cp 3rdparty/sgbm/call_sgbm.sh $(BINDIR)
 
 sgbm_opencv:
-	mkdir -p bin/sgbm_build
-	cd bin/sgbm_build; cmake -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; $(MAKE)
-	cp bin/sgbm_build/sgbm2 $(BINDIR)
-	cp bin/sgbm_build/SGBM $(BINDIR)
+	mkdir -p bin/build_sgbm
+	cd bin/build_sgbm; cmake -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; $(MAKE)
+	cp bin/build_sgbm/sgbm2 $(BINDIR)
+	cp bin/build_sgbm/SGBM $(BINDIR)
 	cp 3rdparty/stereo_hirschmuller_2008/callSGBM.sh $(BINDIR)
 	cp 3rdparty/stereo_hirschmuller_2008/callSGBM_lap.sh $(BINDIR)
 	cp 3rdparty/stereo_hirschmuller_2008/callSGBM_cauchy.sh $(BINDIR)
 
 msmw:
-	mkdir -p $(BINDIR)/msmw_build
-	cd $(BINDIR)/msmw_build; cmake ../../3rdparty/msmw; $(MAKE)
-	cp $(BINDIR)/msmw_build/libstereo/iip_stereo_correlation_multi_win2 $(BINDIR)
+	mkdir -p $(BINDIR)/build_msmw
+	cd $(BINDIR)/build_msmw; cmake ../../3rdparty/msmw; $(MAKE)
+	cp $(BINDIR)/build_msmw/libstereo/iip_stereo_correlation_multi_win2 $(BINDIR)
 
 msmw2:
-	mkdir -p $(BINDIR)/msmw2_build
-	cd $(BINDIR)/msmw2_build; cmake ../../3rdparty/msmw2; $(MAKE)
-	cp $(BINDIR)/msmw2_build/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion $(BINDIR)
+	mkdir -p $(BINDIR)/build_msmw2
+	cd $(BINDIR)/build_msmw2; cmake ../../3rdparty/msmw2; $(MAKE)
+	cp $(BINDIR)/build_msmw2/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion $(BINDIR)
 
 msmw3:
 	mkdir -p $(BINDIR)/build_msmw3
@@ -214,8 +209,8 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 test:
 	python s2p.py test.json
 
-clean: clean_libtiff clean_geographiclib clean_monasse clean_homography\
-	clean_sift clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm\
+clean: clean_libtiff clean_geographiclib clean_homography clean_asift\
+	clean_sift clean_imscript clean_msmw clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm\
 	clean_mgm
 
 clean_libtiff:
@@ -226,17 +221,14 @@ clean_libtiff:
 clean_geographiclib:
 	-rm $(BINDIR)/{Cart,Geo}Convert
 
-clean_monasse:
-	-rm -r $(BINDIR)/build_monasse_refactored
-	-rm $(BINDIR)/{rectify_mindistortion}
-
 clean_homography:
 	-rm -r $(BINDIR)/build_homography
 	-rm $(BINDIR)/homography
 
 clean_sift:
 	-rm -r $(BINDIR)/build_sift
-	-rm $(BINDIR)/{sift_roi,match_cli}
+	-rm $(BINDIR)/sift_roi
+	-rm $(BINDIR)/matching
 
 clean_asift:
 	-rm -r $(BINDIR)/build_asift
@@ -246,15 +238,20 @@ clean_imscript:
 	-rm $(PROGRAMS)
 	-rm $(SRCDIR)/iio.o
 	-rm $(SRCDIR)/rpc.o
+	-rm $(BINDIR)/plambda
 	#rm -r $(addsuffix .dSYM, $(PROGRAMS))
 
 clean_msmw:
-	-rm -r $(BINDIR)/msmw_build
+	-rm -r $(BINDIR)/build_msmw
 	-rm $(BINDIR)/iip_stereo_correlation_multi_win2
 
 clean_msmw2:
-	-rm -r $(BINDIR)/msmw2_build
+	-rm -r $(BINDIR)/build_msmw2
 	-rm $(BINDIR)/iip_stereo_correlation_multi_win2_newversion
+
+clean_msmw3:
+	-rm -r $(BINDIR)/build_msmw3
+	-rm $(BINDIR)/msmw
 
 clean_tvl1:
 	cd 3rdparty/tvl1flow_3; $(MAKE) clean
@@ -269,6 +266,6 @@ clean_mgm:
 	cd 3rdparty/mgm; $(MAKE) clean
 	-rm $(BINDIR)/mgm
 
-.PHONY: default all geographiclib monasse sift sgbm sgbm_opencv msmw tvl1\
-	imscript clean clean_libtiff clean_geographiclib clean_monasse clean_sift\
+.PHONY: default all geographiclib sift sgbm sgbm_opencv msmw tvl1\
+	imscript clean clean_libtiff clean_geographiclib clean_sift\
 	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test
