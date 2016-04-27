@@ -115,7 +115,7 @@ def write_dsm(tiles_full_info, n=5):
                                        'cloud_%d_%d_row_%d_col_%d.ply' % (w, h,
                                                                           y, x))
         if (os.path.exists(cloud)):
-            common.run('ln -s %s %s' % (cloud, cloud_link_name))
+            os.symlink(cloud, cloud_link_name)
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
 
     common.run("ls %s | plyflatten %f %s" % (os.path.join(clouds_dir, 'cloud*'),
