@@ -77,7 +77,7 @@ int main(int c, char *v[])
     struct sift_keypoints* out_k1 = sift_malloc_keypoints();
     struct sift_keypoints* out_k2 = sift_malloc_keypoints();
     matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat,
-            epi_thresh, verbose);
+            epi_thresh);
     if (verbose) print_elapsed_time(&ts, "compute matches:", 35);
 
     // print
