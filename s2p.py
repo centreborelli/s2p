@@ -253,6 +253,30 @@ def compute_dsm(args):
                                              list_of_tiles_dir,
                                              number_of_tiles,
                                              current_tile))
+                                             
+def global_extent(tiles_full_info):
+    """
+    Compute the global extent from the extrema of each ply file
+    """
+    xmin = float('inf')
+    xmax = -float('inf')
+    ymin = float('inf')
+    ymax = -float('inf')
+    for tile in tiles_full_info:
+        extremaxy = np.loadtxt(os.path.join(tile['directory'],
+                                         'plyextrema.txt'))
+        if xmin > extremaxy[0]:
+            xmin = extremaxy[0]
+        if xmax < extremaxy[1]:
+            xmax = extremaxy[1]
+        if ymin > extremaxy[2]:
+            ymin = extremaxy[2]
+        if ymax < extremaxy[3]:
+            ymax = extremaxy[3]
+        
+    global_extent = [xmin,xmax,ymin,ymax]
+    np.savetxt(os.path.join(cfg['out_dir'], 'global_extent.txt'), global_extent,
+               fmt='%6.3f')        
 
 
 def launch_parallel_calls(fun, list_of_args, nb_workers):
@@ -311,20 +335,24 @@ def execute_job(config_file,params):
             preprocess_tile(tile_to_process)
         
         if step == 3:#"global_values":
-            print 'global values...'
+            print 'global values ...'
             global_values(tiles_full_info)
         
         if step == 4:#"process_tiles" :
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
         
-        if step == 5:#"compute_dsm" :
+        if step == 5:#"global extent" :
+            print 'global extent ...' 
+            global_extent(tiles_full_info)
+            
+        if step == 6:#"compute_dsm" :
             print 'compute_dsm ...'
-            number_of_tiles = 5
-            current_tile=int(tile_dir.split('_')[1]) #dsm_2 --> 2
+            number_of_tiles = 5 #todo --> option
+            current_tile=int(tile_dir.split('_')[1]) # for instance, dsm_2 becomes 2
             compute_dsm([number_of_tiles,current_tile])
             
-        if step == 6:#"global_finalization":    
+        if step == 7:#"global_finalization":    
             print 'global finalization...'     
             global_finalization(tiles_full_info)  
                 
@@ -345,17 +373,17 @@ def list_jobs(config_file,step):
     if not (os.path.exists(cfg['out_dir'])):
         os.mkdir(cfg['out_dir'])
     
-    if step in [2,4]:
+    if step in [2,4]:           #preprocessing, processing
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         for tile in tilesFullInfo:
             tile_dir = tile['directory']
             f.write(tile_dir + ' ' + str(step) + '\n')
         f.close()
-    elif step in [3,6]:
+    elif step in [3,5,7]:       # global values, global extent, finalization
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         f.write('all_tiles ' + str(step) + '\n')
         f.close()
-    elif step ==5 :
+    elif step ==6 :             # compute dsm
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         number_of_tiles = 5
         for i in range(number_of_tiles):
@@ -392,7 +420,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         execute_job(config_file,misc)
     else:
         # determine which steps to run
-        steps = [step] if step else [1, 2, 3, 4, 5, 6]
+        steps = [step] if step else [1, 2, 3, 4, 5, 6, 7]
 
         # initialization (has to be done whatever the queried steps)
         initialization.init_dirs_srtm(config_file)
@@ -423,8 +451,13 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             print '\nprocessing tiles...'
             launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
-            
+           
         if 5 in steps:
+            print '\ncomputing global extent...'
+            global_extent(tiles_full_info)
+            print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+           
+        if 6 in steps:
             print '\ncompute dsm...'
             number_of_tiles = 5
             args=[]
@@ -433,7 +466,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             launch_parallel_calls(compute_dsm,args,nb_workers)
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
-        if 6 in steps:
+        if 7 in steps:
             print '\nglobal finalization...'
             global_finalization(tiles_full_info)
             print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
@@ -453,7 +486,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
 if __name__ == '__main__':
 
     error = False
-    steps=[1,2,3,4,5,6]
+    steps=[1,2,3,4,5,6,7]
 
     if len(sys.argv) < 2:
         error=True
@@ -487,19 +520,20 @@ if __name__ == '__main__':
     if error:
         print """
         Incorrect syntax, use:
-          > %s config.json [step (integer between 1 and 6)]
+          > %s config.json [step (integer between 1 and 7)]
             1: initialization
             2: preprocessing (tilewise sift, local pointing correction)
             3: global-pointing
             4: processing (tilewise rectification, matching and triangulation)
-            5: compute dsm from ply files (one per tile)
-            6: finalization
+            5: global-extent
+            6: compute dsm from ply files (one per tile)
+            7: finalization
             Launches the s2p pipeline.
 
-          > %s list_jobs config.json step (integer between 2 and 6)
+          > %s list_jobs config.json step (integer between 2 and 7)
             Return the list of jobs for a specific step.
 
-          > %s job config.json tile_dir step (integer between 2 and 6)
+          > %s job config.json tile_dir step (integer between 2 and 7)
             Run a specific job defined by a json string. This mode allows to run jobs returned
             by the list_jobs running mode.
 
@@ -508,4 +542,5 @@ if __name__ == '__main__':
           output files, are defined in the json configuration file.
           
         """ % (sys.argv[0],sys.argv[0],sys.argv[0])
+        print "---->",sys.argv
         sys.exit(1)
