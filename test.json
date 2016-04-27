@@ -22,7 +22,7 @@
   "use_pleiades_unsharpening" : false,
   "debug" : false,
   "temporary_dir" : "/tmp",
-  "tile_size" : 800,
+  "tile_size" : 300,
   "clean_tmp" : true,
   "offset_ply" : false,
   "color_ply" : true,
