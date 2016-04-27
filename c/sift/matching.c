@@ -41,8 +41,8 @@ int main(int c, char *v[])
 
     // parse arguments
     const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
-    bool verbose = pick_option(&c, &v, "-verbose", NULL);
-    float epi_thresh = atof(pick_option(&c, &v, "-epipolar-threshold", "10"));
+    bool verbose = (bool) pick_option(&c, &v, "-verbose", NULL);
+    float epi_thresh = (float) atof(pick_option(&c, &v, "-epipolar-threshold", "10"));
 
     // read the (optional) fundamental matrix
     const char *fund_mat_str = pick_option(&c, &v, "f", "");
@@ -77,7 +77,7 @@ int main(int c, char *v[])
     struct sift_keypoints* out_k1 = sift_malloc_keypoints();
     struct sift_keypoints* out_k2 = sift_malloc_keypoints();
     matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat,
-            epi_thresh);
+             epi_thresh);
     if (verbose) print_elapsed_time(&ts, "compute matches:", 35);
 
     // print
