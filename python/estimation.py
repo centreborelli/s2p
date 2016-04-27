@@ -383,8 +383,8 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
 
 def affine_fundamental_matrix(matches):
     """
-    Estimates the affine fundamental matrix given a set of point
-    correspondences between two images.
+    Estimates the affine fundamental matrix given a set of point correspondences
+    between two images.
 
     Arguments:
         matches: 2D array of size Nx4 containing a list of pairs of matching
