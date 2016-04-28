@@ -20,7 +20,7 @@ SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
 TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw sgbm piio
+default: $(BINDIR) libtiff geographiclib monasse homography sift asift imscript mgm msmw3 sgbm piio
 
 all: default tvl1
 
@@ -122,7 +122,7 @@ SRCIIO = downsa backflow synflow imprintf iion qauto getminmax rescaleintensitie
 	morphoop cldmask disp_to_h_projective colormesh_projective tiffu
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
-	srtm4_which_tile plyflatten plyextrema
+	srtm4_which_tile plyflatten plyextrema plytodsm
 
 imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
 
@@ -183,6 +183,9 @@ $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 	
 $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
+	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
+
+$(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 

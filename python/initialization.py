@@ -157,6 +157,9 @@ def init_dirs_srtm(config_file):
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
 
+        if not os.path.exists( os.path.join(cfg['out_dir'],'dsm') ):
+            os.makedirs( os.path.join(cfg['out_dir'],'dsm') )
+
         if not os.path.exists(cfg['temporary_dir']):
             os.makedirs(cfg['temporary_dir'])
 

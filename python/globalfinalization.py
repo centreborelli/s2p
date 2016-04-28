@@ -118,9 +118,10 @@ def write_dsm(tiles_full_info):
         if (os.path.exists(cloud)):
             common.run('ln -s %s %s' % (cloud, cloud_link_name))
     
-    out_dsm_dir = cfg['out_dir']
+    dsm_pieces = os.path.join(cfg['out_dir'],'dsm/dsm_*')
+    final_dsm = os.path.join(cfg['out_dir'],'dsm.vrt')
     common.run("gdalbuildvrt %s %s" %
-               (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm_*'))
+               (final_dsm, dsm_pieces))
 
 
 def lidar_preprocessor(output, input_plys):

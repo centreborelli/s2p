@@ -200,6 +200,62 @@ def process_tile(tile_info):
         fout.close()
 
 
+def global_extent(tiles_full_info):
+    """
+    Compute the global extent from the extrema of each ply file
+    """
+    xmin,xmax,ymin,ymax = float('inf'),-float('inf'),float('inf'),-float('inf')
+    
+    for tile in tiles_full_info:
+        extremaxy = np.loadtxt(os.path.join(tile['directory'],
+                                         'plyextrema.txt'))
+            
+        xmin=min(xmin,extremaxy[0])
+        xmax=max(xmax,extremaxy[1])
+        ymin=min(ymin,extremaxy[2])
+        ymax=max(ymax,extremaxy[3])
+        
+    global_extent = [xmin,xmax,ymin,ymax]
+    np.savetxt(os.path.join(cfg['out_dir'], 'global_extent.txt'), global_extent,
+               fmt='%6.3f') 
+
+
+def compute_dsm(args):
+    """
+    Compute the DSMs
+
+    Args: 
+         - args  ( <==> [number_of_tiles,current_tile])
+    """
+    list_of_tiles_dir = os.path.join(cfg['out_dir'],'list_of_tiles.txt')
+   
+    number_of_tiles,current_tile = args
+    
+    dsm_dir = os.path.join(cfg['out_dir'],'dsm')
+    out_dsm = os.path.join(dsm_dir,'dsm_%d.tif' % (current_tile) )
+    
+    extremaxy = np.loadtxt(os.path.join(cfg['out_dir'], 'global_extent.txt'))
+    
+    global_xmin,global_xmax,global_ymin,global_ymax = extremaxy
+    
+    global_y_diff = global_ymax-global_ymin
+    tile_y_size = (global_y_diff)/(number_of_tiles)
+    
+    # horizontal cuts
+    ymin = global_ymin + current_tile*tile_y_size
+    ymax = ymin + tile_y_size
+    
+    if (ymax <= global_ymax):
+        common.run("plytodsm %f %s %s %f %f %f %f" % ( 
+                                                 cfg['dsm_resolution'], 
+                                                 out_dsm, 
+                                                 list_of_tiles_dir,
+                                                 global_xmin,
+                                                 global_xmax,
+                                                 ymin,
+                                                 ymax))
+                                                 
+                                             
 def global_finalization(tiles_full_info):
     """
     Produce a single height map, DSM and point cloud for the whole ROI.
@@ -233,70 +289,7 @@ def global_finalization(tiles_full_info):
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
-        shutil.copy2(img['rpc'], cfg['out_dir'])
-
-
-def compute_dsm(args):
-    """
-    Compute the DSMs
-
-    Args: 
-         - args  ( <==> [number_of_tiles,current_tile])
-    """
-    out_dsm_dir = cfg['out_dir']
-    list_of_tiles_dir = os.path.join(cfg['out_dir'],'list_of_tiles.txt')
-   
-    number_of_tiles,current_tile = args
-    
-    extremaxy = np.loadtxt(os.path.join(cfg['out_dir'], 'global_extent.txt'))
-    
-    global_xmin = extremaxy[0]
-    global_xmax = extremaxy[1]
-    global_ymin = extremaxy[2]
-    global_ymax = extremaxy[3]
-    
-    global_y_diff = global_ymax-global_ymin
-    tile_y_size = (global_y_diff)/( number_of_tiles)
-    
-    ymin = global_ymin + current_tile*tile_y_size
-    ymax = ymin + tile_y_size
-    
-    if (ymax <= global_ymax):
-        common.run("plyflatten %f %s %s %d %d %f %f %f %f" % ( 
-                                                 cfg['dsm_resolution'], 
-                                                 out_dsm_dir, 
-                                                 list_of_tiles_dir,
-                                                 number_of_tiles,
-                                                 current_tile,
-                                                 global_xmin,
-                                                 global_xmax,
-                                                 ymin,
-                                                 ymax))
-                                                 
-                                             
-def global_extent(tiles_full_info):
-    """
-    Compute the global extent from the extrema of each ply file
-    """
-    xmin = float('inf')
-    xmax = -float('inf')
-    ymin = float('inf')
-    ymax = -float('inf')
-    for tile in tiles_full_info:
-        extremaxy = np.loadtxt(os.path.join(tile['directory'],
-                                         'plyextrema.txt'))
-        if xmin > extremaxy[0]:
-            xmin = extremaxy[0]
-        if xmax < extremaxy[1]:
-            xmax = extremaxy[1]
-        if ymin > extremaxy[2]:
-            ymin = extremaxy[2]
-        if ymax < extremaxy[3]:
-            ymax = extremaxy[3]
-        
-    global_extent = [xmin,xmax,ymin,ymax]
-    np.savetxt(os.path.join(cfg['out_dir'], 'global_extent.txt'), global_extent,
-               fmt='%6.3f')        
+        shutil.copy2(img['rpc'], cfg['out_dir'])       
 
 
 def launch_parallel_calls(fun, list_of_args, nb_workers):
@@ -368,9 +361,8 @@ def execute_job(config_file,params):
             
         if step == 6:#"compute_dsm" :
             print 'compute_dsm ...'
-            number_of_tiles = 5 #todo --> option
             current_tile=int(tile_dir.split('_')[1]) # for instance, dsm_2 becomes 2
-            compute_dsm([number_of_tiles,current_tile])
+            compute_dsm([cfg['dsm_nb_tiles'],current_tile])
             
         if step == 7:#"global_finalization":    
             print 'global finalization...'     
@@ -405,8 +397,7 @@ def list_jobs(config_file,step):
         f.close()
     elif step ==6 :             # compute dsm
         f = open(os.path.join(cfg['out_dir'],filename),'w')
-        number_of_tiles = 5
-        for i in range(number_of_tiles):
+        for i in range(cfg['dsm_nb_tiles']):
             f.write('dsm_'+ str(i) + ' ' + str(step) + '\n')
         f.close()
     else:
@@ -445,7 +436,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         # initialization (has to be done whatever the queried steps)
         initialization.init_dirs_srtm(config_file)
         tiles_full_info = initialization.init_tiles_full_info(config_file)
-        show_progress.total = len(tiles_full_info)
+        
 
         # multiprocessing setup
         nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -459,6 +450,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         # do the job
         if 2 in steps:
             print '\npreprocessing tiles...'
+            show_progress.total = len(tiles_full_info)
             launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
@@ -469,6 +461,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
 
         if 4 in steps:
             print '\nprocessing tiles...'
+            show_progress.total = len(tiles_full_info)
             launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
            
@@ -479,10 +472,10 @@ def main(config_file, step=None, clusterMode=None, misc=None):
            
         if 6 in steps:
             print '\ncompute dsm...'
-            number_of_tiles = 5
             args=[]
-            for i in range(number_of_tiles):
-                args.append([number_of_tiles,i])
+            for i in range(cfg['dsm_nb_tiles']):
+                args.append([cfg['dsm_nb_tiles'],i])
+            show_progress.total = cfg['dsm_nb_tiles']
             launch_parallel_calls(compute_dsm,args,nb_workers)
             print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
 
@@ -562,5 +555,4 @@ if __name__ == '__main__':
           output files, are defined in the json configuration file.
           
         """ % (sys.argv[0],sys.argv[0],sys.argv[0])
-        print "---->",sys.argv
         sys.exit(1)
