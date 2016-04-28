@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import urllib2
+import datetime
 import tempfile
 import subprocess
 import numpy as np
@@ -74,9 +75,12 @@ def run(cmd, env=os.environ):
     of the parent process.
     """
     print("\nRUN: %s" % cmd)
+    t = datetime.datetime.now()
     try:
         subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
                               stderr=sys.stdout, env=env)
+        print (datetime.datetime.now() - t)
+
     except subprocess.CalledProcessError as e:
         # raise a custom exception because the CalledProcessError causes the
         # pool to crash

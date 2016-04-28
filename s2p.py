@@ -20,7 +20,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import time
 import shutil
 import os.path
 import datetime
@@ -48,6 +47,15 @@ def show_progress(a):
     """
     show_progress.counter += 1
     print 'done %d / %d tiles' % (show_progress.counter, show_progress.total)
+
+
+def print_elapsed_time():
+    """
+    Print the elapsed time since last call.
+    """
+    t1 = datetime.datetime.now()
+    print "Elapsed time:", t1 - print_elapsed_time.t0
+    print_elapsed_time.t0 = t1
 
 
 def preprocess_tile(tile_info):
@@ -291,7 +299,6 @@ def global_finalization(tiles_full_info):
     for img in cfg['images']:
         shutil.copy2(img['rpc'], cfg['out_dir'])       
 
-
 def launch_parallel_calls(fun, list_of_args, nb_workers):
     """
     Run a function several times in parallel with different given inputs.
@@ -322,11 +329,12 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
             sys.exit(1)
 
 
+
 def execute_job(config_file,params):
     """
-    Execute a job
+    Execute a job.
 
-    Args: 
+    Args:
          - json config file
          - params  ( <==> [tile_dir,step,...])
     """
@@ -340,9 +348,9 @@ def execute_job(config_file,params):
             if tile_dir == tile['directory']:
                 tile_to_process = tile
                 break
-    
+
     try:
-    
+        
         if step == 2:#"preprocess_tiles":
             print 'preprocess_tiles on %s ...' % tile_to_process
             preprocess_tile(tile_to_process)
@@ -350,7 +358,7 @@ def execute_job(config_file,params):
         if step == 3:#"global_values":
             print 'global values ...'
             global_values(tiles_full_info)
-        
+
         if step == 4:#"process_tiles" :
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
@@ -375,13 +383,13 @@ def execute_job(config_file,params):
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
         print "\toutput: ", e.args[0]["output"]
-                
-        
-def list_jobs(config_file,step):
 
-    tilesFullInfo = initialization.init_tiles_full_info(config_file)
+
+def list_jobs(config_file, step):
+
+    tiles_full_info = initialization.init_tiles_full_info(config_file)
     filename = str(step) + ".jobs"
-    
+
     if not (os.path.exists(cfg['out_dir'])):
         os.mkdir(cfg['out_dir'])
     
@@ -404,7 +412,6 @@ def list_jobs(config_file,step):
         print "Unkown step required: %s" % str(step)
 
 
-
 def main(config_file, step=None, clusterMode=None, misc=None):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
@@ -421,12 +428,11 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         config_file: path to a json configuration file
         step: integer between 1 and 5 specifying which step to run. Default
         value is None. In that case all the steps are run.
-    """
-    t0 = time.time()
+    """    
 
-    if clusterMode=='list_jobs':
+    if clusterMode == 'list_jobs':
         list_jobs(config_file, step)
-    elif clusterMode=='job':
+    elif clusterMode == 'job':
         cfg['omp_num_threads'] = 1
         execute_job(config_file,misc)
     else:
@@ -436,7 +442,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         # initialization (has to be done whatever the queried steps)
         initialization.init_dirs_srtm(config_file)
         tiles_full_info = initialization.init_tiles_full_info(config_file)
-        
+        print_elapsed_time.t0 = datetime.datetime.now()
 
         # multiprocessing setup
         nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -452,23 +458,23 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             print '\npreprocessing tiles...'
             show_progress.total = len(tiles_full_info)
             launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
-            print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+            print_elapsed_time()
 
         if 3 in steps:
             print '\ncomputing global values...'
             global_values(tiles_full_info)
-            print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+            print_elapsed_time()
 
         if 4 in steps:
             print '\nprocessing tiles...'
             show_progress.total = len(tiles_full_info)
             launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
-            print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+            print_elapsed_time()
            
         if 5 in steps:
             print '\ncomputing global extent...'
             global_extent(tiles_full_info)
-            print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+            print_elapsed_time()
            
         if 6 in steps:
             print '\ncompute dsm...'
@@ -477,21 +483,13 @@ def main(config_file, step=None, clusterMode=None, misc=None):
                 args.append([cfg['dsm_nb_tiles'],i])
             show_progress.total = cfg['dsm_nb_tiles']
             launch_parallel_calls(compute_dsm,args,nb_workers)
-            print "Elapsed time:", datetime.timedelta(seconds=int(time.time() - t0))
+            print_elapsed_time()
 
         if 7 in steps:
             print '\nglobal finalization...'
             global_finalization(tiles_full_info)
-            print "Total runtime:", datetime.timedelta(seconds=int(time.time() - t0))
-
-
-    # runtime
-    t = int(time.time() - t0)
-    h = t/3600
-    m = (t/60) % 60
-    s = t % 60
-    print "Total runtime: %dh:%dm:%ds" % (h, m, s)
-
+            print_elapsed_time()
+        
     # cleanup
     common.garbage_cleanup()
 
@@ -502,24 +500,22 @@ if __name__ == '__main__':
     steps=[1,2,3,4,5,6,7]
 
     if len(sys.argv) < 2:
-        error=True
-
-    elif sys.argv[1].endswith(".json") :
-
+        error = True
+        
+    elif sys.argv[1].endswith(".json"):
         if len(sys.argv) == 2:
             main(sys.argv[1])
         elif len(sys.argv) == 3 and int(sys.argv[2]) in steps:
             main(sys.argv[1], int(sys.argv[2]))
         else:
-            error=True
-    else: #cluster modes
-        if sys.argv[1] not in ['list_jobs','job']:
+            error = True
+    else:  # cluster modes
+        if sys.argv[1] not in ['list_jobs', 'job']:
             error = True
         else:
-			
-            if sys.argv[1] == 'list_jobs': 
+            if sys.argv[1] == 'list_jobs':
                 if len(sys.argv) == 4 and int(sys.argv[3]) in steps:
-                    main(sys.argv[2], int(sys.argv[3]),'list_jobs')
+                    main(sys.argv[2], int(sys.argv[3]), 'list_jobs')
                 else:
                     error = True
 
@@ -528,8 +524,6 @@ if __name__ == '__main__':
                     main(sys.argv[2], None, 'job', sys.argv[3:])
                 else:
                     error = True
-                
-                  
     if error:
         print """
         Incorrect syntax, use:
@@ -551,8 +545,8 @@ if __name__ == '__main__':
             by the list_jobs running mode.
 
 
-          All the parameters, paths to input and
-          output files, are defined in the json configuration file.
+          All the parameters, paths to input and output files, are defined in
+          the json configuration file.
           
-        """ % (sys.argv[0],sys.argv[0],sys.argv[0])
+        """ % (sys.argv[0], sys.argv[0], sys.argv[0])
         sys.exit(1)
