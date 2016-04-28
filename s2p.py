@@ -238,11 +238,6 @@ def global_finalization(tiles_full_info):
                                      'cloud.ply'))
         globalfinalization.lidar_preprocessor(out, plys)
 
-    # crop area corresponding to the ROI in the secondary images
-    if not cfg['full_img']:
-        rpc_utils.crop_corresponding_areas(cfg['out_dir'], cfg['images'],
-                                           cfg['roi'])
-
     # copy RPC xml files in the output directory
     for img in cfg['images']:
         shutil.copy2(img['rpc'], cfg['out_dir'])
