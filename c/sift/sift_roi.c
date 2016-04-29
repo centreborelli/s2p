@@ -2,11 +2,9 @@
 
 #include "timing.h"
 #include "pickopt.h"
-#include "fancy_image.h"
 #include "sift_anatomy_20141201/lib_sift_anatomy.h"
 #include "gdal.h"
 #include "cpl_conv.h"
-
 
 
 void print_help(char *v[])
@@ -18,12 +16,11 @@ void print_help(char *v[])
 }
 
 
-int main(int c, char *v[])
-{
+int main(int c, char *v[]) {
     // process input arguments
     if (c < 2) {
         print_help(v);
-    	return 1;
+        return 1;
     }
 
     // optional arguments
@@ -31,12 +28,13 @@ int main(int c, char *v[])
     bool binary = (bool) pick_option(&c, &v, "b", NULL);
     bool verbose = (bool) pick_option(&c, &v, "-verbose", NULL);
     int max_nb_pts = atoi(pick_option(&c, &v, "-max-nb-pts", "INT_MAX"));
-    float thresh_dog = atof(pick_option(&c, &v, "-thresh-dog", "0.0133"));
+    float thresh_dog = (float) atof(pick_option(&c, &v, "-thresh-dog", "0.0133"));
     int ss_noct = atoi(pick_option(&c, &v, "-scale-space-noct", "8"));
     int ss_nspo = atoi(pick_option(&c, &v, "-scale-space-nspo", "3"));
 
     // initialise time
-    struct timespec ts; portable_gettime(&ts);
+    struct timespec ts;
+    portable_gettime(&ts);
 
     // define the rectangular region of interest (roi)
     int x, y, w, h;
@@ -50,12 +48,35 @@ int main(int c, char *v[])
         return 1;
     }
 
-    // read the roi in the input image
+    // open the input image
     GDALAllRegister();
     GDALDatasetH hDataset = GDALOpen(v[1], GA_ReadOnly);
-    if (hDataset == NULL)
-        fprintf(stderr, "ERROR : can't open %s\n", v[1]);
+    if (hDataset == NULL) {
+        fprintf(stderr, "ERROR: can't open %s\n", v[1]);
+        return 1;
+    }
 
+    // clip roi to stay inside the image boundaries
+    if (x < 0) {
+        x = 0;
+        w += x;
+    }
+    if (y < 0) {
+        y = 0;
+        h += y;
+    }
+    int size_x = GDALGetRasterXSize(hDataset);
+    int size_y = GDALGetRasterYSize(hDataset);
+    if (x + w > size_x)
+        w = size_x - x;
+    if (y + h > size_y)
+        h = size_y - y;
+    if (w <= 0 || h <= 0) {
+        fprintf(stderr, "WARNING: empty roi\n");
+        return 0;
+    }
+
+    // read roi
     GDALRasterBandH hBand = GDALGetRasterBand(hDataset, 1);
     float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
     GDALRasterIO(hBand, GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
