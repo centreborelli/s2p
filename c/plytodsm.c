@@ -128,16 +128,81 @@ static int rescale_float_to_int(double x, double min, double max, int w, bool *f
 
 struct images {
 	float *cnt;
-	float *avg;
+	float *pixel_value;
+	float **heights;
 	int w, h;
 };
 
+// Help to sort tabs of float
+int compare (const void * a, const void * b)
+{
+  return ( *(float*)a - *(float*)b );
+}
+
 // update the output images with a new height
-static void add_height_to_images(struct images *x, int i, int j, float v)
+static void add_height_to_images(struct images *x, int i, int j, float v, unsigned int flag)
 {
 	uint64_t k = (uint64_t) x->w * j + i;
-	x->avg[k] = (v + x->cnt[k] * x->avg[k]) / (1 + x->cnt[k]);
-	x->cnt[k] += 1;
+	
+	switch (flag) // nominal case
+	{
+	    case 0:
+	    {
+		x->pixel_value[k] = (v + x->cnt[k] * x->pixel_value[k]) / (1 + x->cnt[k]);
+		x->cnt[k] += 1;
+	    }
+	    break;
+	    case -2: // just count the number of occurrences
+	    {
+		x->cnt[k] += 1;
+	    }
+	    break;
+	    case -1: // memory alloc and heights tab filling
+	    {
+		if (x->cnt[k])
+		{
+		    if (!x->heights[k])
+		    {
+			x->heights[k] = xmalloc(x->cnt[k]*sizeof(float));
+			x->cnt[k]=0;
+		    }
+		    
+		    x->heights[k][(int) x->cnt[k]] = v;
+		    x->cnt[k] += 1;
+		}
+	    }
+	    case 1: // average
+	    {
+		if (x->cnt[k])
+		{
+		    float sum=0.;
+		    for(int i=0;i<x->cnt[k];i++)
+		    {
+			sum += x->heights[k][i];
+		    }
+		    x->pixel_value[k] = sum / ( (float) x->cnt[k]);
+		}
+	    }
+	    break;
+	    case 2: // min
+	    {
+		if (x->cnt[k])
+		{
+		    qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
+		    x->pixel_value[k] = x->heights[k][0];
+		}
+	    }
+	    break;
+	    case 3: // max
+	    {
+		if (x->cnt[k])
+		{
+		    qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
+		    x->pixel_value[k] = x->heights[k][(int) x->cnt[k]-1];
+		}
+	    }
+	    break;
+	}
 }
 
 int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *data){
@@ -175,7 +240,7 @@ int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *dat
 // open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
 		float xmin, float xmax, float ymin, float ymax,
-		char utm_zone[3], char *fname, int col_idx)
+		char utm_zone[3], char *fname, int col_idx, unsigned int flag)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -204,13 +269,13 @@ static void add_ply_points_to_images(struct images *x,
 		if ( (flag1) && (flag2))
 		{
 		    if (col_idx == 2) {
-			    add_height_to_images(x, i, j, data[2]);
+			    add_height_to_images(x, i, j, data[2],flag);
 			    assert(isfinite(data[2]));
 		    }
 		    else
 		    {
 			    unsigned int rgb = data[col_idx];
-			    add_height_to_images(x, i, j, rgb);
+			    add_height_to_images(x, i, j, rgb,flag);
 		    }
 		}
 	}
@@ -222,7 +287,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"%s [-c column] resolution out_dsm list_of_tiles_txt xmin xmax ymin ymax\n", s);
+			"%s [-c column] [-flag] resolution out_dsm list_of_tiles_txt xmin xmax ymin ymax\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -231,6 +296,9 @@ void help(char *s)
 int main(int c, char *v[])
 {
 	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
+	int flag = atoi(pick_option(&c, &v, "flag", "0"));
+	flag = 3;
+	printf("----> flag = %d\n",flag);
 
 	// process input arguments
 	if (c != 8) {
@@ -319,33 +387,73 @@ int main(int c, char *v[])
 	x.w = w;
 	x.h = h;
 	x.cnt = xmalloc(w*h*sizeof(float));
-	x.avg = xmalloc(w*h*sizeof(float));
+	x.pixel_value = xmalloc(w*h*sizeof(float));
+	if (flag != 0)
+	    x.heights = xmalloc(w*h*sizeof(float *));
 	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
 	{
 		x.cnt[i] = 0;
-		x.avg[i] = 0;
+		x.pixel_value[i] = 0;
+		if (flag != 0)
+		    x.heights[i] = NULL;
 	}
 
 	// process each filename to accumulate points in the dem
-	while (l != NULL)
+	struct list *begin = l;
+	
+	if (flag==0)
 	{
-		// printf("FILENAME: \"%s\"\n", l->current);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx);
-		l = l->next;
+	    while (l != NULL)
+	    {
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,flag);
+		    l = l->next;
+	    }
+
+	    // set unknown values to NAN
+	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+		    if (!x.cnt[i])
+			    x.pixel_value[i] = NAN;
+	}
+	else
+	{
+	    l=begin;
+	    while (l != NULL)
+	    {
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-2);
+		    l = l->next;
+	    }
+	    // set unknown values to NAN
+	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+		    if (!x.cnt[i])
+			    x.pixel_value[i] = NAN;
+	    
+	    l=begin;
+	    while (l != NULL)
+	    {
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-1);
+		    l = l->next;
+	    }
+	    
+	    l=begin;
+	    while (l != NULL)
+	    {
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,flag);
+		    l = l->next;
+	    }
+
 	}
 
-	// set unknown values to NAN
-	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-		if (!x.cnt[i])
-			x.avg[i] = NAN;
-
 	// save output image
-	iio_save_image_float(out_dsm, x.avg, w, h);
+	iio_save_image_float(out_dsm, x.pixel_value, w, h);
 	set_geotif_header(out_dsm, utm, xmin, ymax, resolution);
 
 	// cleanup and exit
 	free(x.cnt);
-	free(x.avg);
+	free(x.pixel_value);
 	    
 	return 0;
 }
