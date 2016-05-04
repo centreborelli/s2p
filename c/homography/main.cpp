@@ -26,7 +26,6 @@
 extern "C" {
     #include "linalg.h"
     #include "pickopt.h"
-    #include "fancy_image.h"
 }
 
 
@@ -111,10 +110,6 @@ int main(int c, char* v[])
     if (verbose) time.get_time("Compute needed ROI");
 
     // read the needed ROI in the input image
-    struct fancy_image *fimg = fancy_image_open(fname_input, (char *) "");
-    float *roi = (float*) malloc(w*h*sizeof(float));
-    fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
-    
     GDALDataset  *poDataset;
     GDALAllRegister();
     poDataset = (GDALDataset *) GDALOpen( fname_input, GA_ReadOnly );
@@ -146,19 +141,14 @@ int main(int c, char* v[])
     
     //read roi
     GDALRasterBand *poBand = poDataset->GetRasterBand( 1 );
-    float *roi_gdal = (float *) CPLMalloc(sizeof(float)*w*h);
-    int errorRasterIO = poBand->RasterIO( GF_Read, x, y, w, h, roi_gdal, w, h, GDT_Float32, 0, 0);
+    float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
+    int errorRasterIO = poBand->RasterIO( GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
     if (errorRasterIO != CPLE_None)
        fprintf(stderr, "errorRasterIO = %d\n",errorRasterIO);
     GDALClose( (GDALDatasetH) poDataset );
-    int i;
-    for(i=0;i<w*h;i++)
-        fprintf(stderr, "diff fancy-gdal : %f %f %d\n", roi[i],roi_gdal[i],errorRasterIO);
-        if ( fabs(roi[i]-roi_gdal[i])> 0.1)
-            fprintf(stderr, "error diff fancy-gdal : %f %f\n", roi[i],roi_gdal[i]);
     
     if (verbose) time.get_time("Read needed ROI");
-    Image imI(roi_gdal, (const size_t) w, (const size_t) h, 1);
+    Image imI(roi, (const size_t) w, (const size_t) h, 1);
     if (verbose) time.get_time("Copy ROI to an Image instance");
 
     // call the mapping function
@@ -172,7 +162,7 @@ int main(int c, char* v[])
     if (verbose) time.get_time("Write image");
     
      // cleanup
-    CPLFree(roi_gdal);
+    CPLFree(roi);
 
     return EXIT_SUCCESS;
 }
