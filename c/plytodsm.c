@@ -261,6 +261,7 @@ int main(int c, char *v[])
 	struct list *l = NULL;
 	
 	// From the list of tiles, find each ply file
+	bool ply_extrema_found = true;
 	list_tiles_file = fopen(v[3], "r");
 	if (list_tiles_file != NULL)
 	{
@@ -279,27 +280,32 @@ int main(int c, char *v[])
 	       }
 	       else
 	       {
-		    fprintf(stderr,"ERROR : can't read %s",ply_extrema);
-		    return 1;
+		    fprintf(stderr,"WARNING : can't read %s",ply_extrema);
+		    ply_extrema_found = false;
 	       }
 	       
 	       // Only add ply files that intersect the extent specified by [xmin xmax ymin ymax]
 	       // The test below simply tells whether two rectancles overlap
-	       if ( (local_xmin < xmax) && (local_xmax > xmin) && (local_ymin < ymax) && (local_ymax > ymin) )
+	       
+	       if (ply_extrema_found)
 	       {
-		   sprintf(ply,"%s/cloud.ply",tile_dir);
-		   l = push(l, ply);
-		   
-		   // Record UTM zone
-		   FILE *ply_file = fopen(ply, "r");
-		    if (!ply_file) {
-			    fprintf(stderr, "WARNING: can not open file \"%s\"\n", ply);
-			    return 1;
-		    }
-		    int isbin=0;
-		    struct ply_property t[100];
-		    size_t n = header_get_record_length_and_utm_zone(ply_file, utm, &isbin, t);
-	       }
+		   if ( (local_xmin < xmax) && (local_xmax > xmin) && (local_ymin < ymax) && (local_ymax > ymin) )
+		   {
+		       sprintf(ply,"%s/cloud.ply",tile_dir);
+		       // Record UTM zone
+		       FILE *ply_file = fopen(ply, "r");
+			if (!ply_file) {
+				fprintf(stderr, "WARNING: can not open file \"%s\"\n", ply);
+			}
+			else
+			{
+			    l = push(l, ply);
+			    int isbin=0;
+			    struct ply_property t[100];
+			    size_t n = header_get_record_length_and_utm_zone(ply_file, utm, &isbin, t);
+			}
+		   }
+		}
 
 	    }
 	    fclose(list_tiles_file);
