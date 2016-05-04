@@ -108,7 +108,6 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # estimate an approximate affine fundamental matrix from the rpcs
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
-    # TODO FIXME: do we need to center the points as we do in the rectification module?
     F = estimation.affine_fundamental_matrix(rpc_matches)
 
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
