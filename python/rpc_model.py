@@ -180,33 +180,28 @@ class RPCModel:
             else:
                 print 'unknown sensor type'
 
-    def parse_coeff(self, element,type):
+    def parse_coeff(self, element, prefix, indices):
         tab = []
-        for i in range(1,21):
-            tag = type + "_" + str(i)
-            tab.append(float(element.find(tag).text))
+        for x in indices:
+            tab.append(float(element.find("%s_%s" % (prefix, str(x))).text))
         return tab
 
     def read_rpc_pleiades(self, tree):
         # direct model
         d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
-        self.directLonNum = self.parse_coeff(d,"SAMP_NUM_COEFF")
-        self.directLonDen = self.parse_coeff(d,"SAMP_DEN_COEFF")
-        self.directLatNum = self.parse_coeff(d,"LINE_NUM_COEFF")
-        self.directLatDen = self.parse_coeff(d,"LINE_DEN_COEFF")
-        self.directBias  = []
-        self.directBias.append(float(d.find("ERR_BIAS_X").text))
-        self.directBias.append(float(d.find("ERR_BIAS_Y").text))
+        self.directLonNum = self.parse_coeff(d, "SAMP_NUM_COEFF", xrange(1, 21))
+        self.directLonDen = self.parse_coeff(d, "SAMP_DEN_COEFF", xrange(1, 21))
+        self.directLatNum = self.parse_coeff(d, "LINE_NUM_COEFF", xrange(1, 21))
+        self.directLatDen = self.parse_coeff(d, "LINE_DEN_COEFF", xrange(1, 21))
+        self.directBias = self.parse_coeff(d, "ERR_BIAS", ['X', 'Y'])
         
         # inverse model
         i = tree.find('Rational_Function_Model/Global_RFM/Inverse_Model')
-        self.inverseColNum = self.parse_coeff(i,"SAMP_NUM_COEFF")
-        self.inverseColDen = self.parse_coeff(i,"SAMP_DEN_COEFF")
-        self.inverseLinNum = self.parse_coeff(i,"LINE_NUM_COEFF")
-        self.inverseLinDen = self.parse_coeff(i,"LINE_DEN_COEFF")
-        self.inverseBias  = []
-        self.inverseBias.append(float(i.find("ERR_BIAS_ROW").text))
-        self.inverseBias.append(float(i.find("ERR_BIAS_COL").text))
+        self.inverseColNum = self.parse_coeff(i, "SAMP_NUM_COEFF", xrange(1, 21))
+        self.inverseColDen = self.parse_coeff(i, "SAMP_DEN_COEFF", xrange(1, 21))
+        self.inverseLinNum = self.parse_coeff(i, "LINE_NUM_COEFF", xrange(1, 21))
+        self.inverseLinDen = self.parse_coeff(i, "LINE_DEN_COEFF", xrange(1, 21))
+        self.inverseBias = self.parse_coeff(i, "ERR_BIAS", ['ROW', 'COL'])
         
         # validity domains
         v = tree.find('Rational_Function_Model/Global_RFM/RFM_Validity')
