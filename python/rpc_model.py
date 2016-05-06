@@ -180,25 +180,29 @@ class RPCModel:
             else:
                 print 'unknown sensor type'
 
+    def parse_coeff(self, element, prefix, indices):
+        tab = []
+        for x in indices:
+            tab.append(float(element.find("%s_%s" % (prefix, str(x))).text))
+        return tab
+
     def read_rpc_pleiades(self, tree):
         # direct model
         d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
-        direct = [float(child.text) for child in d]
-        self.directLonNum = direct[:20]
-        self.directLonDen = direct[20:40]
-        self.directLatNum = direct[40:60]
-        self.directLatDen = direct[60:80]
-        self.directBias   = direct[80:]
-
+        self.directLonNum = self.parse_coeff(d, "SAMP_NUM_COEFF", xrange(1, 21))
+        self.directLonDen = self.parse_coeff(d, "SAMP_DEN_COEFF", xrange(1, 21))
+        self.directLatNum = self.parse_coeff(d, "LINE_NUM_COEFF", xrange(1, 21))
+        self.directLatDen = self.parse_coeff(d, "LINE_DEN_COEFF", xrange(1, 21))
+        self.directBias = self.parse_coeff(d, "ERR_BIAS", ['X', 'Y'])
+        
         # inverse model
         i = tree.find('Rational_Function_Model/Global_RFM/Inverse_Model')
-        inverse = [float(child.text) for child in i]
-        self.inverseColNum = inverse[:20]
-        self.inverseColDen = inverse[20:40]
-        self.inverseLinNum = inverse[40:60]
-        self.inverseLinDen = inverse[60:80]
-        self.inverseBias   = inverse[80:]
-
+        self.inverseColNum = self.parse_coeff(i, "SAMP_NUM_COEFF", xrange(1, 21))
+        self.inverseColDen = self.parse_coeff(i, "SAMP_DEN_COEFF", xrange(1, 21))
+        self.inverseLinNum = self.parse_coeff(i, "LINE_NUM_COEFF", xrange(1, 21))
+        self.inverseLinDen = self.parse_coeff(i, "LINE_DEN_COEFF", xrange(1, 21))
+        self.inverseBias = self.parse_coeff(i, "ERR_BIAS", ['ROW', 'COL'])
+        
         # validity domains
         v = tree.find('Rational_Function_Model/Global_RFM/RFM_Validity')
         vd = v.find('Direct_Model_Validity_Domain')
