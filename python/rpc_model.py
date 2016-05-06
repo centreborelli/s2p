@@ -180,25 +180,34 @@ class RPCModel:
             else:
                 print 'unknown sensor type'
 
+    def parse_coeff(self, element,type):
+        tab = []
+        for i in range(1,21):
+            tag = type + "_" + str(i)
+            tab.append(float(element.find(tag).text))
+        return tab
+
     def read_rpc_pleiades(self, tree):
         # direct model
         d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
-        direct = [float(child.text) for child in d]
-        self.directLonNum = direct[:20]
-        self.directLonDen = direct[20:40]
-        self.directLatNum = direct[40:60]
-        self.directLatDen = direct[60:80]
-        self.directBias   = direct[80:]
-
+        self.directLonNum = self.parse_coeff(d,"SAMP_NUM_COEFF")
+        self.directLonDen = self.parse_coeff(d,"SAMP_DEN_COEFF")
+        self.directLatNum = self.parse_coeff(d,"LINE_NUM_COEFF")
+        self.directLatDen = self.parse_coeff(d,"LINE_DEN_COEFF")
+        self.directBias  = []
+        self.directBias.append(float(d.find("ERR_BIAS_X").text))
+        self.directBias.append(float(d.find("ERR_BIAS_Y").text))
+        
         # inverse model
         i = tree.find('Rational_Function_Model/Global_RFM/Inverse_Model')
-        inverse = [float(child.text) for child in i]
-        self.inverseColNum = inverse[:20]
-        self.inverseColDen = inverse[20:40]
-        self.inverseLinNum = inverse[40:60]
-        self.inverseLinDen = inverse[60:80]
-        self.inverseBias   = inverse[80:]
-
+        self.inverseColNum = self.parse_coeff(i,"SAMP_NUM_COEFF")
+        self.inverseColDen = self.parse_coeff(i,"SAMP_DEN_COEFF")
+        self.inverseLinNum = self.parse_coeff(i,"LINE_NUM_COEFF")
+        self.inverseLinDen = self.parse_coeff(i,"LINE_DEN_COEFF")
+        self.inverseBias  = []
+        self.inverseBias.append(float(i.find("ERR_BIAS_ROW").text))
+        self.inverseBias.append(float(i.find("ERR_BIAS_COL").text))
+        
         # validity domains
         v = tree.find('Rational_Function_Model/Global_RFM/RFM_Validity')
         vd = v.find('Direct_Model_Validity_Domain')
