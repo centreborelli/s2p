@@ -134,10 +134,18 @@ def process_tile_pair(tile_info, pair_id):
 
     out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id)
 
+    
+    
     A_global = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_%d.txt' % pair_id)
 
     print 'processing tile %d %d...' % (col, row)
+
+    # check that the tile is not masked
+    if os.path.isfile(os.path.join(out_dir, 'this_tile_is_masked.txt')):
+        print 'tile %s already masked, skip' % out_dir
+        return
+    
     # rectification
     if (cfg['skip_existing'] and
         os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and
