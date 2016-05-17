@@ -94,14 +94,15 @@ def mosaic_gdal2(fout, tiles_full_info, filename, w,h,z=1):
         
         col,row,tw,th=tiles_full_info[tile_dir]
         
-        height_map = tile_dir +'/' + filename
-        
-        vrtfile.write("\t\t<SimpleSource>\n")
-        vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n" % height_map)
-        vrtfile.write("\t\t\t<SourceBand>1</SourceBand>\n")
-        vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (0, 0, tw/z, th/z))
-        vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (col/z, row/z, tw/z, th/z))
-        vrtfile.write("\t\t</SimpleSource>\n")
+        height_map = os.path.join(tile_dir,filename)
+
+        if os.path.isfile(os.path.join(cfg['out_dir'],height_map)):
+            vrtfile.write("\t\t<SimpleSource>\n")
+            vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n" % height_map)
+            vrtfile.write("\t\t\t<SourceBand>1</SourceBand>\n")
+            vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (0, 0, tw/z, th/z))
+            vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (col/z, row/z, tw/z, th/z))
+            vrtfile.write("\t\t</SimpleSource>\n")
 
     vrtfile.write("\t</VRTRasterBand>\n")
     vrtfile.write("</VRTDataset>\n")
