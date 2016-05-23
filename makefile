@@ -64,12 +64,12 @@ asift:
 
 homography: $(BINDIR)
 	mkdir -p $(BINDIR)/build_homography
-	cd $(BINDIR)/build_homography; cmake -D CMAKE_BUILD_TYPE=Release ../../c/homography; $(MAKE)
+	cd $(BINDIR)/build_homography; cmake -D CMAKE_C_FLAGS=-ltiff -D CMAKE_BUILD_TYPE=Release ../../c/homography; $(MAKE)
 	cp $(BINDIR)/build_homography/homography $(BINDIR)
 
 sift: $(BINDIR)
 	mkdir -p $(BINDIR)/build_sift
-	cd $(BINDIR)/build_sift; cmake -D CMAKE_BUILD_TYPE=Release ../../c/sift; $(MAKE)
+	cd $(BINDIR)/build_sift; cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_FLAGS=-lm ../../c/sift; $(MAKE)
 	cp $(BINDIR)/build_sift/sift_roi $(BINDIR)
 	cp $(BINDIR)/build_sift/matching $(BINDIR)
 
