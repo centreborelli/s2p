@@ -160,6 +160,9 @@ def merge_height_maps(height_maps, tile_dir, thresh, conservative, k=1, garbage=
     # output file
     local_merged_height_map = tile_dir + '/local_merged_height_map.tif'
 
+    if len(height_maps) == 0:
+        return
+
     if os.path.isfile(local_merged_height_map) and cfg['skip_existing']:
         print 'final height map %s already done, skip' % local_merged_height_map
     else:
@@ -208,6 +211,8 @@ def finalize_tile(tile_info, height_maps):
     if len(height_maps) > 1:
         merge_height_maps(height_maps, tile_dir, cfg['fusion_thresh'],
                           cfg['fusion_conservative'], 1, [])
+    elif len(height_maps) == 0:
+        return
     else:
         common.run('cp %s %s' % (height_maps[0], local_merged_height_map))
 
@@ -240,9 +245,11 @@ def finalize_tile(tile_info, height_maps):
     
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have
     # already been zoomed. So don't zoom again to crop these images.
-    common.cropImage(local_merged_height_map, local_merged_height_map_crop,
-                     newcol, newrow, w, h)
-    common.cropImage(crop_ref, crop_ref_crop, newcol, newrow, w, h)
+    if not (os.path.isfile(local_merged_height_map_crop) and cfg['skip_existing']):
+        common.cropImage(local_merged_height_map, local_merged_height_map_crop,
+                         newcol, newrow, w, h)
+    if not (os.path.isfile(crop_ref_crop) and cfg['skip_existing']):
+        common.cropImage(crop_ref, crop_ref_crop, newcol, newrow, w, h)
 
     # by pair
     for i in range(1, nb_pairs + 1):
@@ -250,9 +257,11 @@ def finalize_tile(tile_info, height_maps):
         single_height_map_crop = os.path.join(tile_dir, 'pair_%d/height_map_crop.tif' % i)
         single_rpc_err = os.path.join(tile_dir, 'pair_%d/rpc_err.tif' % i)
         single_rpc_err_crop = os.path.join(tile_dir, 'pair_%d/rpc_err_crop.tif' % i)
-        common.cropImage(single_height_map, single_height_map_crop, newcol,
-                         newrow, w, h)
-        common.cropImage(single_rpc_err, single_rpc_err_crop, newcol, newrow, w, h)
+        if not (os.path.isfile(single_height_map_crop) and cfg['skip_existing']):
+            common.cropImage(single_height_map, single_height_map_crop, newcol,
+                             newrow, w, h)
+        if not (os.path.isfile(single_rpc_err_crop) and cfg['skip_existing']):
+            common.cropImage(single_rpc_err, single_rpc_err_crop, newcol, newrow, w, h)
     # colors
     color_crop_ref(tile_info, cfg['images'][0]['clr'])
 

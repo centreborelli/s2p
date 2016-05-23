@@ -217,11 +217,12 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     hij = " ".join([str(x) for x in np.loadtxt(H).flatten()]) if H else ""
     asc = "--ascii" if ascii_ply else ""
     nrm = "--with-normals" if with_normals else ""
-    command = "colormesh %s %s %s %s -h \"%s\" %s %s" % (cloud, heights, rpc,
-                                                         crop_colorized, hij,
-                                                         asc, nrm)
-    if off_x:
-        command += " --offset_x %d" % off_x
-    if off_y:
-        command += " --offset_y %d" % off_y
-    common.run(command)
+    if not (os.path.isfile(cloud) and cfg['skip_existing']):
+        command = "colormesh %s %s %s %s -h \"%s\" %s %s" % (cloud, heights, rpc,
+                                                             crop_colorized, hij,
+                                                             asc, nrm)
+        if off_x:
+            command += " --offset_x %d" % off_x
+            if off_y:
+                command += " --offset_y %d" % off_y
+        common.run(command)
