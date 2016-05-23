@@ -265,8 +265,17 @@ def compute_dsm(args):
     ymin = global_ymin + current_tile*tile_y_size
     ymax = ymin + tile_y_size
     
+    flags={}
+    flags['average']=1
+    flags['variance']=2
+    flags['min']=3
+    flags['max']=4
+    flags['median']=5
+    flag = "-flag %d" % ( flags.get(cfg['dsm_option'],5) )
+    
     if (ymax <= global_ymax):
-        common.run("plytodsm %f %s %s %f %f %f %f" % ( 
+        common.run("plytodsm %s %f %s %s %f %f %f %f" % ( 
+                                                 '-flag 5',
                                                  cfg['dsm_resolution'], 
                                                  out_dsm, 
                                                  list_of_tiles_dir,

@@ -184,7 +184,24 @@ static void add_height_to_images(struct images *x, int i, int j, float v, unsign
 		}
 	    }
 	    break;
-	    case 2: // min
+	    case 2: // var
+	    {
+		if (x->cnt[k])
+		{
+		    double sum1=0.,sumC=0.;
+		    for(int i=0;i<x->cnt[k];i++)
+		    {
+			sum1 += (double) x->heights[k][i];
+			sumC += pow( (double) x->heights[k][i],2.0);
+		    }
+		    double m1 = sum1 / ( (double) x->cnt[k]);
+		    double mc = sumC / ( (double) x->cnt[k]);
+
+		    x->pixel_value[k] = mc-m1*m1;
+		}
+	    }
+	    break;
+	    case 3: // min
 	    {
 		if (x->cnt[k])
 		{
@@ -193,12 +210,21 @@ static void add_height_to_images(struct images *x, int i, int j, float v, unsign
 		}
 	    }
 	    break;
-	    case 3: // max
+	    case 4: // max
 	    {
 		if (x->cnt[k])
 		{
 		    qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
 		    x->pixel_value[k] = x->heights[k][(int) x->cnt[k]-1];
+		}
+	    }
+	    break;
+	    case 5: // median
+	    {
+		if (x->cnt[k])
+		{
+		    qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
+		    x->pixel_value[k] = x->heights[k][(int) x->cnt[k]/2];
 		}
 	    }
 	    break;
@@ -297,8 +323,6 @@ int main(int c, char *v[])
 {
 	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
 	int flag = atoi(pick_option(&c, &v, "flag", "0"));
-	flag = 3;
-	printf("----> flag = %d\n",flag);
 
 	// process input arguments
 	if (c != 8) {

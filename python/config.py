@@ -109,3 +109,6 @@ cfg['srtm_url'] = 'ftp://xftp.jrc.it/pub/srtmV4/tiff'
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 cfg['srtm_dir'] = os.path.join(parent_dir, '.srtm')
+
+# DSM options
+cfg['dsm_option'] = 'median'
