@@ -204,7 +204,11 @@ def process_tile(tile_info):
             process_tile_pair(tile_info, pair_id)
 
         # finalization
-        height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i in range(1, nb_pairs + 1)]
+        height_maps = []
+        
+        for i in range(1,nb_pairs+1):
+            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % i, 'this_tile_is_masked.txt')):
+                height_maps.append(os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif'))
         process.finalize_tile(tile_info, height_maps)
 
     except Exception:
@@ -276,9 +280,14 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
         except common.RunFailure as e:
             print "FAILED call: ", e.args[0]["command"]
             print "\toutput: ", e.args[0]["output"]
+        except ValueError as e:
+            print traceback.format_exc()
+            print str(r)
+            pass
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
+        
 
 
 def execute_job(config_file, tile_dir, step):
