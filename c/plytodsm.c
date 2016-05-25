@@ -261,7 +261,7 @@ int main(int c, char *v[])
 	struct list *l = NULL;
 	
 	// From the list of tiles, find each ply file
-	bool ply_extrema_found = true;
+	bool ply_extrema_found;
 	list_tiles_file = fopen(v[3], "r");
 	if (list_tiles_file != NULL)
 	{
@@ -277,6 +277,7 @@ int main(int c, char *v[])
 	       {
 		  fscanf(ply_extrema_file, "%f %f %f %f", &local_xmin, &local_xmax, &local_ymin, &local_ymax);
 		  fclose(ply_extrema_file);
+		  ply_extrema_found = true;
 	       }
 	       else
 	       {
