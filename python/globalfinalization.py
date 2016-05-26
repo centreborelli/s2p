@@ -108,15 +108,15 @@ def write_dsm(tiles_full_info):
         shutil.rmtree(clouds_dir)
     os.mkdir(clouds_dir)
 
-    for tile_info in tiles_full_info:
-        tile_dir = tile_info['directory']
-        x, y, w, h = tile_info['coordinates']
-        cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
-        cloud_link_name = os.path.join(clouds_dir,
-                                       'cloud_%d_%d_row_%d_col_%d.ply' % (w, h,
-                                                                          y, x))
-        if (os.path.exists(cloud)):
-            os.symlink(cloud, cloud_link_name)
+    #for tile_info in tiles_full_info:
+        #tile_dir = tile_info['directory']
+        #x, y, w, h = tile_info['coordinates']
+        #cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
+        #cloud_link_name = os.path.join(clouds_dir,
+                                       #'cloud_%d_%d_row_%d_col_%d.ply' % (w, h,
+                                                                          #y, x))
+        #if (os.path.exists(cloud)):
+            #os.symlink(cloud, cloud_link_name)
     
     dsm_pieces = os.path.join(cfg['out_dir'],'dsm/dsm_*')
     final_dsm = os.path.join(cfg['out_dir'],'dsm.vrt')
