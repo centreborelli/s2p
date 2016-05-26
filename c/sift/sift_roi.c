@@ -24,7 +24,7 @@ int main(int c, char *v[]) {
     }
 
     // optional arguments
-    const char *output_file = pick_option(&c, &v, "o", "stdout");
+    const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
     bool binary = (bool) pick_option(&c, &v, "b", NULL);
     bool verbose = (bool) pick_option(&c, &v, "-verbose", NULL);
     int max_nb_pts = atoi(pick_option(&c, &v, "-max-nb-pts", "INT_MAX"));
@@ -58,12 +58,12 @@ int main(int c, char *v[]) {
 
     // clip roi to stay inside the image boundaries
     if (x < 0) {
-        x = 0;
         w += x;
+        x = 0;
     }
     if (y < 0) {
-        y = 0;
         h += y;
+        y = 0;
     }
     int size_x = GDALGetRasterXSize(hDataset);
     int size_y = GDALGetRasterYSize(hDataset);
