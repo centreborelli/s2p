@@ -95,33 +95,34 @@ def write_vrt_files(tiles_full_info):
             pair_id), pairSizesAndPositions, 'rpc_err_crop.tif', fw, fh, z)
 
 
-def write_dsm(tiles_full_info, n=5):
+def write_dsm(tiles_full_info):
     """
     Writes the DSM, from the ply files given by each tile.
 
     Args :
          tiles_full_info: a list of tile_info dictionaries
     """
+    
     clouds_dir = os.path.join(cfg['out_dir'], 'clouds')
     if (os.path.exists(clouds_dir)):
         shutil.rmtree(clouds_dir)
     os.mkdir(clouds_dir)
 
-    for tile_info in tiles_full_info:
-        tile_dir = tile_info['directory']
-        x, y, w, h = tile_info['coordinates']
-        cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
-        cloud_link_name = os.path.join(clouds_dir,
-                                       'cloud_%d_%d_row_%d_col_%d.ply' % (w, h,
-                                                                          y, x))
-        if (os.path.exists(cloud)):
-            os.symlink(cloud, cloud_link_name)
-    out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
+    #for tile_info in tiles_full_info:
+        #tile_dir = tile_info['directory']
+        #x, y, w, h = tile_info['coordinates']
+        #cloud = os.path.join(os.path.abspath(tile_dir), 'cloud.ply')
+        #cloud_link_name = os.path.join(clouds_dir,
+                                       #'cloud_%d_%d_row_%d_col_%d.ply' % (w, h,
+                                                                          #y, x))
+        #if (os.path.exists(cloud)):
+            #os.symlink(cloud, cloud_link_name)
+    
+    dsm_pieces = os.path.join(cfg['out_dir'],'dsm/dsm_*')
+    final_dsm = os.path.join(cfg['out_dir'],'dsm.vrt')
+    common.run("gdalbuildvrt %s %s" %
+               (final_dsm, dsm_pieces))
 
-    common.run("ls %s | plyflatten %f %s" % (os.path.join(clouds_dir, 'cloud*'),
-                                             cfg['dsm_resolution'], out_dsm))
-    #common.run("gdalbuildvrt %s %s" %
-    #           (cfg['out_dir'] + '/dsm.vrt', out_dsm_dir + '/dsm*'))
 
 
 def lidar_preprocessor(output, input_plys):
