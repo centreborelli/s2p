@@ -19,10 +19,13 @@
 #include "Utilities/Parameters.h"
 #include "LibHomography/Homography.h"
 
+//! Gdal includes
+#include "gdal_priv.h"
+#include "cpl_conv.h"
+
 extern "C" {
     #include "linalg.h"
     #include "pickopt.h"
-    #include "fancy_image.h"
 }
 
 
@@ -107,9 +110,43 @@ int main(int c, char* v[])
     if (verbose) time.get_time("Compute needed ROI");
 
     // read the needed ROI in the input image
-    struct fancy_image *fimg = fancy_image_open(fname_input, (char *) "");
-    float *roi = (float*) malloc(w*h*sizeof(float));
-    fancy_image_fill_rectangle_float_split(roi, w, h, fimg, 0, x, y);
+    GDALDataset  *poDataset;
+    GDALAllRegister();
+    poDataset = (GDALDataset *) GDALOpen( fname_input, GA_ReadOnly );
+    if( poDataset == NULL )
+    {
+        fprintf(stderr, "ERROR: can't open %s\n", fname_input);
+        return 1;
+    }
+    
+    // clip roi to stay inside the image boundaries
+    if (x < 0) {
+        w += x;
+        x = 0;
+    }
+    if (y < 0) {
+        h += y;
+        y = 0;
+    }
+    int size_x = poDataset->GetRasterXSize();
+    int size_y = poDataset->GetRasterYSize();
+    if (x + w >= size_x)
+        w = size_x - x -1;
+    if (y + h >= size_y)
+        h = size_y - y -1;
+    if (w <= 0 || h <= 0) {
+        fprintf(stderr, "WARNING: empty roi\n");
+        return 1;
+    }
+    
+    //read roi
+    GDALRasterBand *poBand = poDataset->GetRasterBand( 1 );
+    float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
+    int errorRasterIO = poBand->RasterIO( GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
+    if (errorRasterIO != CPLE_None)
+       fprintf(stderr, "errorRasterIO = %d\n",errorRasterIO);
+    GDALClose( (GDALDatasetH) poDataset );
+    
     if (verbose) time.get_time("Read needed ROI");
     Image imI(roi, (const size_t) w, (const size_t) h, 1);
     if (verbose) time.get_time("Copy ROI to an Image instance");
@@ -123,6 +160,9 @@ int main(int c, char* v[])
     // write the output image
     imO.write(fname_output);
     if (verbose) time.get_time("Write image");
+    
+     // cleanup
+    CPLFree(roi);
 
     return EXIT_SUCCESS;
 }

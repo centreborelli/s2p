@@ -30,22 +30,16 @@ find_package (OpenMP)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 
-# Link LibTIFF
-find_package (TIFF REQUIRED)
-find_package (PNG REQUIRED)
-find_package (JPEG REQUIRED)
-include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR})
-link_libraries (${TIFF_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+# Link GDAL
+find_package (GDAL REQUIRED)
+include_directories (PUBLIC ${GDAL_INCLUDE_DIRS})
+link_libraries (${GDAL_LIBRARIES})
 
 set(SOURCE_FILES
-    iio.h
-    iio.c
     pickopt.c
     pickopt.h
     linalg.c
     linalg.h
-    fancy_image.c
-    fancy_image.h
     LibHomography/Homography.cpp
     LibHomography/Homography.h
     LibHomography/Splines.cpp
@@ -61,7 +55,5 @@ set(SOURCE_FILES
     Utilities/Utilities.cpp
     Utilities/Utilities.h
     main.cpp)
-
-set_property(SOURCE iio.c PROPERTY COMPILE_FLAGS "-Wno-unused-variable -Wno-unused-parameter -Wno-pointer-sign -Wno-parentheses -Wno-deprecated-declarations -Wno-unused-function")
 
 add_executable(homography ${SOURCE_FILES})
