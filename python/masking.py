@@ -27,6 +27,9 @@ def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None):
     Returns:
         True if the tile is completely masked, False otherwise.
     """
+    if (os.path.isfile(out) and cfg['skip_existing']):
+        print 'Mask %s already exists, skip.' % out
+
     # put the coefficients of the homography in a string
     hij = ' '.join(['%f' % x for x in H.flatten()])
 

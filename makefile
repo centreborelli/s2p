@@ -59,17 +59,17 @@ $(BINDIR)/GeoConvert: $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
 
 asift:
 	mkdir -p $(BINDIR)/build_asift
-	cd $(BINDIR)/build_asift; cmake ../../3rdparty/demo_ASIFT_src; $(MAKE)
+	cd $(BINDIR)/build_asift; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/demo_ASIFT_src; $(MAKE)
 	cp $(BINDIR)/build_asift/demo_ASIFT $(BINDIR)
 
 homography: $(BINDIR)
 	mkdir -p $(BINDIR)/build_homography
-	cd $(BINDIR)/build_homography; cmake ../../c/homography; $(MAKE)
+	cd $(BINDIR)/build_homography; cmake -D CMAKE_C_FLAGS=-ltiff -D CMAKE_BUILD_TYPE=Release ../../c/homography; $(MAKE)
 	cp $(BINDIR)/build_homography/homography $(BINDIR)
 
 sift: $(BINDIR)
 	mkdir -p $(BINDIR)/build_sift
-	cd $(BINDIR)/build_sift; cmake ../../c/sift; $(MAKE)
+	cd $(BINDIR)/build_sift; cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_FLAGS=-lm ../../c/sift; $(MAKE)
 	cp $(BINDIR)/build_sift/sift_roi $(BINDIR)
 	cp $(BINDIR)/build_sift/matching $(BINDIR)
 
@@ -84,7 +84,7 @@ sgbm:
 
 sgbm_opencv:
 	mkdir -p bin/build_sgbm
-	cd bin/build_sgbm; cmake -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; $(MAKE)
+	cd bin/build_sgbm; cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; $(MAKE)
 	cp bin/build_sgbm/sgbm2 $(BINDIR)
 	cp bin/build_sgbm/SGBM $(BINDIR)
 	cp 3rdparty/stereo_hirschmuller_2008/callSGBM.sh $(BINDIR)
@@ -93,17 +93,17 @@ sgbm_opencv:
 
 msmw:
 	mkdir -p $(BINDIR)/build_msmw
-	cd $(BINDIR)/build_msmw; cmake ../../3rdparty/msmw; $(MAKE)
+	cd $(BINDIR)/build_msmw; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/msmw; $(MAKE)
 	cp $(BINDIR)/build_msmw/libstereo/iip_stereo_correlation_multi_win2 $(BINDIR)
 
 msmw2:
 	mkdir -p $(BINDIR)/build_msmw2
-	cd $(BINDIR)/build_msmw2; cmake ../../3rdparty/msmw2; $(MAKE)
+	cd $(BINDIR)/build_msmw2; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/msmw2; $(MAKE)
 	cp $(BINDIR)/build_msmw2/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion $(BINDIR)
 
 msmw3:
 	mkdir -p $(BINDIR)/build_msmw3
-	cd $(BINDIR)/build_msmw3; cmake ../../c/msmw; $(MAKE)
+	cd $(BINDIR)/build_msmw3; cmake -D CMAKE_BUILD_TYPE=Release ../../c/msmw; $(MAKE)
 	cp $(BINDIR)/build_msmw3/msmw $(BINDIR)
 
 tvl1:
