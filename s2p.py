@@ -140,6 +140,7 @@ def process_tile_pair(tile_info, pair_id):
     print 'processing tile %d %d...' % (col, row)
     # rectification
     if (cfg['skip_existing'] and
+        os.path.isfile(os.path.join(out_dir, 'disp_min_max.txt')) and
         os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and
         os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif'))):
         print '\trectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
@@ -151,6 +152,7 @@ def process_tile_pair(tile_info, pair_id):
 
     # disparity estimation
     if (cfg['skip_existing'] and
+        os.path.isfile(os.path.join(out_dir, 'rectified_mask.png')) and
         os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif'))):
         print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
