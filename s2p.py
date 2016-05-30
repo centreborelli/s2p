@@ -275,7 +275,7 @@ def compute_dsm(args):
     
     if (ymax <= global_ymax):
         common.run("plytodsm %s %f %s %s %f %f %f %f" % ( 
-                                                 '-flag 5',
+                                                 flag,
                                                  cfg['dsm_resolution'], 
                                                  out_dsm, 
                                                  list_of_tiles_dir,
