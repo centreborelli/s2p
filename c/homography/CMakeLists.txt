@@ -30,10 +30,11 @@ find_package (OpenMP)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 
-# Link GDAL
+# Link GDAL and LibTIFF
 find_package (GDAL REQUIRED)
-include_directories (PUBLIC ${GDAL_INCLUDE_DIRS})
-link_libraries (${GDAL_LIBRARIES})
+find_package (TIFF REQUIRED)
+include_directories (PUBLIC ${GDAL_INCLUDE_DIRS} PUBLIC ${TIFF_INCLUDE_DIR})
+link_libraries (${GDAL_LIBRARIES} ${TIFF_LIBRARIES})
 
 set(SOURCE_FILES
     pickopt.c
