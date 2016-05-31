@@ -304,6 +304,7 @@ int main(int c, char *v[])
 			    int isbin=0;
 			    struct ply_property t[100];
 			    size_t n = header_get_record_length_and_utm_zone(ply_file, utm, &isbin, t);
+                fclose(ply_file);
 			}
 		   }
 		}
