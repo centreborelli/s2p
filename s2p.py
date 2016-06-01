@@ -271,7 +271,7 @@ def compute_dsm(args):
     flags['min']=3
     flags['max']=4
     flags['median']=5
-    flag = "-flag %d" % ( flags.get(cfg['dsm_option'],5) )
+    flag = "-flag %d" % ( flags.get(cfg['dsm_option'],0) )
     
     if (ymax <= global_ymax):
         common.run("plytodsm %s %f %s %s %f %f %f %f" % ( 
