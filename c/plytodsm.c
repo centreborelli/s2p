@@ -489,6 +489,10 @@ int main(int c, char *v[])
 	// cleanup and exit
 	free(x.cnt);
 	free(x.pixel_value);
+	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+	    if (flag != 0)
+		free(x.heights[i]);
+	free(x.heights);
 	    
 	return 0;
 }
