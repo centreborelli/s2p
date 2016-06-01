@@ -266,6 +266,7 @@ def compute_dsm(args):
     ymax = ymin + tile_y_size
     
     flags={}
+    flags['average-orig']=0
     flags['average']=1
     flags['variance']=2
     flags['min']=3
