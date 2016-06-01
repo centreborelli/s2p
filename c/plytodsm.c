@@ -22,7 +22,7 @@
 // WGS84 / UTM southern hemisphere: 327zz where zz is UTM zone number
 // http://www.remotesensing.org/geotiff/spec/geotiff6.html#6.3.3.1
 static int get_utm_zone_index_for_geotiff(char *utm_zone)
-{
+{	
 	int out = 32000;
 	if (utm_zone[2] == 'N')
 		out += 600;
@@ -270,7 +270,7 @@ static void add_ply_points_to_images(struct images *x,
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
-		fprintf(stderr, "WARNING: can not open file \"%s\"\n", fname);
+		fprintf(stderr, "WARNING (from add_ply_points_to_images) : can not open file \"%s\"\n", fname);
 		return;
 	}
 
@@ -348,6 +348,7 @@ int main(int c, char *v[])
 	char ply[1000];
 	char ply_extrema[1000];
 	char utm[3];
+	uint64_t nbply_pushed=0;
 	float local_xmin,local_xmax,local_ymin,local_ymax;
 	
 	struct list *l = NULL;
@@ -373,7 +374,7 @@ int main(int c, char *v[])
 	       }
 	       else
 	       {
-		    fprintf(stderr,"WARNING : can't read %s",ply_extrema);
+		    fprintf(stderr,"WARNING 1 : can not open file %s\n",ply_extrema);
 		    ply_extrema_found = false;
 	       }
 	       
@@ -387,11 +388,12 @@ int main(int c, char *v[])
 		       // Record UTM zone
 		       FILE *ply_file = fopen(ply, "r");
 			if (!ply_file) {
-				fprintf(stderr, "WARNING: can not open file \"%s\"\n", ply);
+				fprintf(stderr, "WARNING 2 : can not open file \"%s\"\n", ply);
 			}
 			else
 			{
 			    l = push(l, ply);
+			    nbply_pushed++;
 			    int isbin=0;
 			    struct ply_property t[100];
 			    size_t n = header_get_record_length_and_utm_zone(ply_file, utm, &isbin, t);
@@ -403,7 +405,7 @@ int main(int c, char *v[])
 	}
 	else
 	{
-	    fprintf(stderr,"ERROR : can't read %s",v[3]);
+	    fprintf(stderr,"ERROR : can not open file %s\n",v[3]);
 	    return 1;
 	}
 		
@@ -446,34 +448,38 @@ int main(int c, char *v[])
 	}
 	else
 	{
-	    l=begin;
-	    while (l != NULL)
+	    if (nbply_pushed>0)
 	    {
-		    // printf("FILENAME: \"%s\"\n", l->current);
-		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-2);
-		    l = l->next;
+		l=begin;
+		while (l != NULL)
+		{
+			// printf("FILENAME: \"%s\"\n", l->current);
+			add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-2);
+			l = l->next;
+		}
+		// set unknown values to NAN
+		for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+			if (!x.cnt[i])
+				x.pixel_value[i] = NAN;
+		
+		l=begin;
+		while (l != NULL)
+		{
+			// printf("FILENAME: \"%s\"\n", l->current);
+			add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-1);
+			l = l->next;
+		}
+		
+		l=begin;
+		while (l != NULL)
+		{
+			// printf("FILENAME: \"%s\"\n", l->current);
+			add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,flag);
+			l = l->next;
+		}
 	    }
-	    // set unknown values to NAN
-	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-		    if (!x.cnt[i])
-			    x.pixel_value[i] = NAN;
-	    
-	    l=begin;
-	    while (l != NULL)
-	    {
-		    // printf("FILENAME: \"%s\"\n", l->current);
-		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-1);
-		    l = l->next;
-	    }
-	    
-	    l=begin;
-	    while (l != NULL)
-	    {
-		    // printf("FILENAME: \"%s\"\n", l->current);
-		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,flag);
-		    l = l->next;
-	    }
-
+	    else
+		fprintf(stderr, "WARNING 3 : no ply file pushed.", ply);
 	}
 
 	// save output image
