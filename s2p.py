@@ -308,21 +308,24 @@ def global_finalization(tiles_full_info):
     for img in cfg['images']:
         shutil.copy2(img['rpc'], cfg['out_dir'])       
 
-def launch_parallel_calls(fun, list_of_args, nb_workers):
+def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     """
     Run a function several times in parallel with different given inputs.
 
     Args:
-        fun: function to be called several times in parallel. It must have a
-            unique input argument.
-        list_of_args: list of arguments passed to fun, one per call
+        fun: function to be called several times in parallel.
+        list_of_args: list of (first positional) arguments passed to fun, one
+            per call
         nb_workers: number of calls run simultaneously
+        extra_args (optional, default is None): tuple containing extra arguments
+            to be passed to fun (same value for all calls)
     """
     results = []
     show_progress.counter = 0
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
-        p = pool.apply_async(fun, args=(x,), callback=show_progress)
+        args = (x,) + extra_args if extra_args else (x,)
+        p = pool.apply_async(fun, args=args, callback=show_progress)
         results.append(p)
 
     for r in results:
