@@ -47,6 +47,9 @@ cfg['color_ply'] = True
 # resolution of the output digital surface model, in meters per pixel
 cfg['dsm_resolution'] = 4
 
+# number of tiles of the output digital surface model
+cfg['dsm_nb_tiles'] = 5
+
 # zoom out applied to input images
 cfg['subsampling_factor'] = 1
 

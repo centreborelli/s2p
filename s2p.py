@@ -171,7 +171,7 @@ def process_tile_pair(tile_info, pair_id):
                             np.loadtxt(A_global))
 
 
-def process_tile(tile_info):
+def process_tile(tile_info, utm_zone=None):
     """
     Process a tile by merging the height maps computed for each image pair.
 
@@ -199,7 +199,12 @@ def process_tile(tile_info):
 
         # finalization
         height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i in range(1, nb_pairs + 1)]
-        process.finalize_tile(tile_info, height_maps)
+        process.finalize_tile(tile_info, height_maps, utm_zone)
+        
+        # ply extrema
+        out_extrema_dir = os.path.join(tile_dir,'plyextrema.txt')
+        common.run("plyextrema %s %s" % (  tile_dir,
+                                           out_extrema_dir))
 
     except Exception:
         print("Exception in processing tile:")
@@ -214,6 +219,65 @@ def process_tile(tile_info):
         fout.close()
 
 
+def global_extent(tiles_full_info):
+    """
+    Compute the global extent from the extrema of each ply file
+    """
+    xmin,xmax,ymin,ymax = float('inf'),-float('inf'),float('inf'),-float('inf')
+    
+    for tile in tiles_full_info:
+        plyextrema_file = os.path.join(tile['directory'],
+                                         'plyextrema.txt')
+                                         
+        if (os.path.exists(plyextrema_file)):
+            extremaxy = np.loadtxt(plyextrema_file)
+                
+            xmin=min(xmin,extremaxy[0])
+            xmax=max(xmax,extremaxy[1])
+            ymin=min(ymin,extremaxy[2])
+            ymax=max(ymax,extremaxy[3])
+        
+    global_extent = [xmin,xmax,ymin,ymax]
+    np.savetxt(os.path.join(cfg['out_dir'], 'global_extent.txt'), global_extent,
+               fmt='%6.3f') 
+
+
+def compute_dsm(args):
+    """
+    Compute the DSMs
+
+    Args: 
+         - args  ( <==> [number_of_tiles,current_tile])
+    """
+    list_of_tiles_dir = os.path.join(cfg['out_dir'],'list_of_tiles.txt')
+   
+    number_of_tiles,current_tile = args
+    
+    dsm_dir = os.path.join(cfg['out_dir'],'dsm')
+    out_dsm = os.path.join(dsm_dir,'dsm_%d.tif' % (current_tile) )
+    
+    extremaxy = np.loadtxt(os.path.join(cfg['out_dir'], 'global_extent.txt'))
+    
+    global_xmin,global_xmax,global_ymin,global_ymax = extremaxy
+    
+    global_y_diff = global_ymax-global_ymin
+    tile_y_size = (global_y_diff)/(number_of_tiles)
+    
+    # horizontal cuts
+    ymin = global_ymin + current_tile*tile_y_size
+    ymax = ymin + tile_y_size
+    
+    if (ymax <= global_ymax):
+        common.run("plytodsm %f %s %s %f %f %f %f" % ( 
+                                                 cfg['dsm_resolution'], 
+                                                 out_dsm, 
+                                                 list_of_tiles_dir,
+                                                 global_xmin,
+                                                 global_xmax,
+                                                 ymin,
+                                                 ymax))
+                                                 
+                                             
 def global_finalization(tiles_full_info):
     """
     Produce a single height map, DSM and point cloud for the whole ROI.
@@ -242,24 +306,26 @@ def global_finalization(tiles_full_info):
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
-        shutil.copy2(img['rpc'], cfg['out_dir'])
+        shutil.copy2(img['rpc'], cfg['out_dir'])       
 
-
-def launch_parallel_calls(fun, list_of_args, nb_workers):
+def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     """
     Run a function several times in parallel with different given inputs.
 
     Args:
-        fun: function to be called several times in parallel. It must have a
-            unique input argument.
-        list_of_args: list of arguments passed to fun, one per call
+        fun: function to be called several times in parallel.
+        list_of_args: list of (first positional) arguments passed to fun, one
+            per call
         nb_workers: number of calls run simultaneously
+        extra_args (optional, default is None): tuple containing extra arguments
+            to be passed to fun (same value for all calls)
     """
     results = []
     show_progress.counter = 0
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
-        p = pool.apply_async(fun, args=(x,), callback=show_progress)
+        args = (x,) + extra_args if extra_args else (x,)
+        p = pool.apply_async(fun, args=args, callback=show_progress)
         results.append(p)
 
     for r in results:
@@ -275,40 +341,56 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
             sys.exit(1)
 
 
-def execute_job(config_file, tile_dir, step):
+
+def execute_job(config_file,params):
     """
     Execute a job.
 
     Args:
          - json config file
-         - tile_dir
-         - step
+         - params  ( <==> [tile_dir,step,...])
     """
+    tile_dir = params[0]
+    step = int(params[1])
+    
     tiles_full_info = initialization.init_tiles_full_info(config_file)
-
-    if not tile_dir == 'all_tiles':
+    
+    if not (tile_dir == 'all_tiles' or 'dsm' in tile_dir ):
         for tile in tiles_full_info:
             if tile_dir == tile['directory']:
                 tile_to_process = tile
-                print tile_to_process
                 break
 
     try:
-        if step == 2:
+        
+        if step == 2:#"preprocess_tiles":
             print 'preprocess_tiles on %s ...' % tile_to_process
             preprocess_tile(tile_to_process)
-
-        if step == 3:
-            print 'global values...'
+        
+        if step == 3:#"global_values":
+            print 'global values ...'
             global_values(tiles_full_info)
 
-        if step == 4:
+        if step == 4:#"process_tiles" :
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
-
-        if step == 5:
-            print 'global finalization...'
-            global_finalization(tiles_full_info)
+        
+        if step == 5:#"global extent" :
+            print 'global extent ...' 
+            global_extent(tiles_full_info)
+            
+        if step == 6:#"compute_dsm" :
+            print 'compute_dsm ...'
+            current_tile=int(tile_dir.split('_')[1]) # for instance, dsm_2 becomes 2
+            compute_dsm([cfg['dsm_nb_tiles'],current_tile])
+            
+        if step == 7:#"global_finalization":    
+            print 'global finalization...'     
+            global_finalization(tiles_full_info)  
+                
+    except KeyboardInterrupt:
+        pool.terminate()
+        sys.exit(1)
 
     except common.RunFailure as e:
         print "FAILED call: ", e.args[0]["command"]
@@ -316,23 +398,27 @@ def execute_job(config_file, tile_dir, step):
 
 
 def list_jobs(config_file, step):
-    """
-    """
+
     tiles_full_info = initialization.init_tiles_full_info(config_file)
     filename = str(step) + ".jobs"
 
     if not (os.path.exists(cfg['out_dir'])):
         os.mkdir(cfg['out_dir'])
-
-    if step in [2, 4]:
-        f = open(os.path.join(cfg['out_dir'], filename), 'w')
-        for tile in tiles_full_info:
+    
+    if step in [2,4]:           #preprocessing, processing
+        f = open(os.path.join(cfg['out_dir'],filename),'w')
+        for tile in tilesFullInfo:
             tile_dir = tile['directory']
             f.write(tile_dir + ' ' + str(step) + '\n')
         f.close()
-    elif step in [3, 5]:
+    elif step in [3,5,7]:       # global values, global extent, finalization
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         f.write('all_tiles ' + str(step) + '\n')
+        f.close()
+    elif step ==6 :             # compute dsm
+        f = open(os.path.join(cfg['out_dir'],filename),'w')
+        for i in range(cfg['dsm_nb_tiles']):
+            f.write('dsm_'+ str(i) + ' ' + str(step) + '\n')
         f.close()
     else:
         print "Unkown step required: %s" % str(step)
@@ -342,31 +428,32 @@ def main(config_file, step=None, clusterMode=None, misc=None):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
 
-    It is a succession of five steps:
+    It is a succession of six steps:
         initialization
         preprocessing
         global_values
         processing
+        compute dsms
         global_finalization
 
     Args:
         config_file: path to a json configuration file
         step: integer between 1 and 5 specifying which step to run. Default
         value is None. In that case all the steps are run.
-    """
+    """    
+
     if clusterMode == 'list_jobs':
         list_jobs(config_file, step)
     elif clusterMode == 'job':
         cfg['omp_num_threads'] = 1
-        execute_job(config_file, misc[0], int(misc[1]))
+        execute_job(config_file,misc)
     else:
         # determine which steps to run
-        steps = [step] if step else [1, 2, 3, 4, 5]
+        steps = [step] if step else [1, 2, 3, 4, 5, 6, 7]
 
         # initialization (has to be done whatever the queried steps)
         initialization.init_dirs_srtm(config_file)
         tiles_full_info = initialization.init_tiles_full_info(config_file)
-        show_progress.total = len(tiles_full_info)
         print_elapsed_time.t0 = datetime.datetime.now()
 
         # multiprocessing setup
@@ -381,6 +468,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         # do the job
         if 2 in steps:
             print '\npreprocessing tiles...'
+            show_progress.total = len(tiles_full_info)
             launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
             print_elapsed_time()
 
@@ -391,14 +479,34 @@ def main(config_file, step=None, clusterMode=None, misc=None):
 
         if 4 in steps:
             print '\nprocessing tiles...'
-            launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
+            show_progress.total = len(tiles_full_info)
+            utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpc'],
+                                          *[cfg['roi'][v] for v in ['x', 'y',
+                                                                    'w', 'h']])
+            print 'UTM ZONE: %s' % utm_zone
+            launch_parallel_calls(process_tile, tiles_full_info, nb_workers,
+                                  extra_args=(utm_zone,))
+            print_elapsed_time()
+           
+        if 5 in steps:
+            print '\ncomputing global extent...'
+            global_extent(tiles_full_info)
+            print_elapsed_time()
+           
+        if 6 in steps:
+            print '\ncompute dsm...'
+            args=[]
+            for i in range(cfg['dsm_nb_tiles']):
+                args.append([cfg['dsm_nb_tiles'],i])
+            show_progress.total = cfg['dsm_nb_tiles']
+            launch_parallel_calls(compute_dsm,args,nb_workers)
             print_elapsed_time()
 
-        if 5 in steps:
+        if 7 in steps:
             print '\nglobal finalization...'
             global_finalization(tiles_full_info)
             print_elapsed_time()
-
+        
     # cleanup
     print_elapsed_time(since_first_call=True)
     common.garbage_cleanup()
@@ -407,10 +515,11 @@ def main(config_file, step=None, clusterMode=None, misc=None):
 if __name__ == '__main__':
 
     error = False
-    steps = [1, 2, 3, 4, 5]
+    steps=[1,2,3,4,5,6,7]
 
     if len(sys.argv) < 2:
         error = True
+        
     elif sys.argv[1].endswith(".json"):
         if len(sys.argv) == 2:
             main(sys.argv[1])
@@ -427,31 +536,35 @@ if __name__ == '__main__':
                     main(sys.argv[2], int(sys.argv[3]), 'list_jobs')
                 else:
                     error = True
-            if sys.argv[1] == 'job':
-                if len(sys.argv) == 5 and int(sys.argv[4]) in steps:
+
+            if sys.argv[1] == 'job': 
+                if len(sys.argv) >= 5 and int(sys.argv[4]) in steps:
                     main(sys.argv[2], None, 'job', sys.argv[3:])
                 else:
                     error = True
     if error:
         print """
         Incorrect syntax, use:
-          > %s config.json [step (integer between 1 and 5)]
+          > %s config.json [step (integer between 1 and 7)]
             1: initialization
             2: preprocessing (tilewise sift, local pointing correction)
             3: global-pointing
             4: processing (tilewise rectification, matching and triangulation)
-            5: finalization
-            Launch the s2p pipeline.
+            5: global-extent
+            6: compute dsm from ply files (one per tile)
+            7: finalization
+            Launches the s2p pipeline.
 
-          > %s list_jobs config.json step (integer between 2 and 5)
+          > %s list_jobs config.json step (integer between 2 and 7)
             Return the list of jobs for a specific step.
 
-          > %s job config.json tile_dir step (integer between 2 and 5)
-            Run a specific job defined by a json string. This mode allows to run
-            jobs returned by the list_jobs running mode.
+          > %s job config.json tile_dir step (integer between 2 and 7)
+            Run a specific job defined by a json string. This mode allows to run jobs returned
+            by the list_jobs running mode.
 
 
           All the parameters, paths to input and output files, are defined in
           the json configuration file.
+          
         """ % (sys.argv[0], sys.argv[0], sys.argv[0])
         sys.exit(1)
