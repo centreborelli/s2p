@@ -348,15 +348,16 @@ int main(int c, char *v[])
 	char ply[1000];
 	char ply_extrema[1000];
 	char utm[3];
-	uint64_t nbply_pushed=0;
+	
 	float local_xmin,local_xmax,local_ymin,local_ymax;
 	
 	struct list *l = NULL;
 	
 	// From the list of tiles, find each ply file
-	bool ply_extrema_found;
+	uint64_t nbply_pushed=0,nb_trials=0;
+	unsigned int max_nb_trials=100;
 	list_tiles_file = fopen(v[3], "r");
-	if (list_tiles_file != NULL)
+	if (list_tiles_file)
 	{
 	    while (fgets(tile_dir, 1000, list_tiles_file) != NULL)
 	    {
@@ -366,31 +367,19 @@ int main(int c, char *v[])
 	       // Now, find the extent of a given ply file, 
 	       // specified by [local_xmin local_xmax local_ymin local_ymax]
 	       ply_extrema_file = fopen(ply_extrema, "r");
-	       if (ply_extrema_file != NULL)
+	       if (ply_extrema_file)
 	       {
 		  fscanf(ply_extrema_file, "%f %f %f %f", &local_xmin, &local_xmax, &local_ymin, &local_ymax);
 		  fclose(ply_extrema_file);
-		  ply_extrema_found = true;
-	       }
-	       else
-	       {
-		    fprintf(stderr,"WARNING 1 : can not open file %s\n",ply_extrema);
-		    ply_extrema_found = false;
-	       }
-	       
-	       // Only add ply files that intersect the extent specified by [xmin xmax ymin ymax]
-	       // The test below simply tells whether two rectancles overlap
-	       if (ply_extrema_found)
-	       {
-		   if ( (local_xmin <= xmax) && (local_xmax >= xmin) && (local_ymin <= ymax) && (local_ymax >= ymin) )
+		  
+		  // Only add ply files that intersect the extent specified by [xmin xmax ymin ymax]
+		  // The test below simply tells whether two rectancles overlap
+		  if ( (local_xmin <= xmax) && (local_xmax >= xmin) && (local_ymin <= ymax) && (local_ymax >= ymin) )
 		   {
 		       sprintf(ply,"%s/cloud.ply",tile_dir);
 		       // Record UTM zone
 		       FILE *ply_file = fopen(ply, "r");
-			if (!ply_file) {
-				fprintf(stderr, "WARNING 2 : can not open file \"%s\"\n", ply);
-			}
-			else
+			if (ply_file) 
 			{
 			    l = push(l, ply);
 			    nbply_pushed++;
@@ -398,15 +387,25 @@ int main(int c, char *v[])
 			    struct ply_property t[100];
 			    size_t n = header_get_record_length_and_utm_zone(ply_file, utm, &isbin, t);
 			}
+			else
+			    fprintf(stderr, "WARNING 2 : can not open file \"%s\"\n", ply);
 		   }
-		}
-	    }
+		  
+	       }
+	       else
+		    fprintf(stderr,"WARNING 1 : can not open file %s\n",ply_extrema);
+
+	    } //end while (fgets(tile_dir, 1000, list_tiles_file) != NULL)
 	    fclose(list_tiles_file);
 	}
 	else
-	{
 	    fprintf(stderr,"ERROR : can not open file %s\n",v[3]);
-	    return 1;
+		
+		
+	if (nbply_pushed == 0)
+	{
+		fprintf(stderr, "ERROR : no ply file pushed", ply);
+		return 1;
 	}
 		
 	// compute output image dimensions
@@ -448,38 +447,34 @@ int main(int c, char *v[])
 	}
 	else
 	{
-	    if (nbply_pushed>0)
+
+	    l=begin;
+	    while (l != NULL)
 	    {
-		l=begin;
-		while (l != NULL)
-		{
-			// printf("FILENAME: \"%s\"\n", l->current);
-			add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-2);
-			l = l->next;
-		}
-		// set unknown values to NAN
-		for (uint64_t i = 0; i < (uint64_t) w*h; i++)
-			if (!x.cnt[i])
-				x.pixel_value[i] = NAN;
-		
-		l=begin;
-		while (l != NULL)
-		{
-			// printf("FILENAME: \"%s\"\n", l->current);
-			add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-1);
-			l = l->next;
-		}
-		
-		l=begin;
-		while (l != NULL)
-		{
-			// printf("FILENAME: \"%s\"\n", l->current);
-			add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,flag);
-			l = l->next;
-		}
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-2);
+		    l = l->next;
 	    }
-	    else
-		fprintf(stderr, "WARNING 3 : no ply file pushed.", ply);
+	    // set unknown values to NAN
+	    for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+		    if (!x.cnt[i])
+			    x.pixel_value[i] = NAN;
+	    
+	    l=begin;
+	    while (l != NULL)
+	    {
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,-1);
+		    l = l->next;
+	    }
+	    
+	    l=begin;
+	    while (l != NULL)
+	    {
+		    // printf("FILENAME: \"%s\"\n", l->current);
+		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,flag);
+		    l = l->next;
+	    }
 	}
 
 	// save output image
