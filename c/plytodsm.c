@@ -326,8 +326,8 @@ int main(int c, char *v[])
 	struct images x;
 	x.w = w;
 	x.h = h;
-	x.cnt = xmalloc(w*h*sizeof(float));
-	x.avg = xmalloc(w*h*sizeof(float));
+	x.cnt = xmalloc((uint64_t) w*h*sizeof(float));
+	x.avg = xmalloc((uint64_t) w*h*sizeof(float));
 	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
 	{
 		x.cnt[i] = 0;
