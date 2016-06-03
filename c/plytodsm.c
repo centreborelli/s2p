@@ -290,7 +290,7 @@ int main(int c, char *v[])
 	       
 	       if (ply_extrema_found)
 	       {
-		   if ( (local_xmin < xmax) && (local_xmax > xmin) && (local_ymin < ymax) && (local_ymax > ymin) )
+		   if ( (local_xmin <= xmax) && (local_xmax => xmin) && (local_ymin <= ymax) && (local_ymax => ymin) )
 		   {
 		       sprintf(ply,"%s/cloud.ply",tile_dir);
 		       // Record UTM zone
