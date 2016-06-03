@@ -1,4 +1,4 @@
-#!/usr/bin/env python -u
+#!/usr/bin/env python
 
 # s2p - Satellite Stereo Pipeline
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@polytechnique.org>
