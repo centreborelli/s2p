@@ -142,93 +142,101 @@ int compare (const void * a, const void * b)
 // update the output images with a new height
 static void add_height_to_images(struct images *x, int i, int j, float v, unsigned int flag)
 {
-	uint64_t k = (uint64_t) x->w * j + i;
-	
-	switch (flag) // nominal case
+    uint64_t k = (uint64_t) x->w * j + i;
+    
+    switch (flag) 
+    {
+	case 0: // nominal case
 	{
-	    case 0:
-	    {
-		x->pixel_value[k] = (v + x->cnt[k] * x->pixel_value[k]) / (1 + x->cnt[k]);
-		x->cnt[k] += 1;
-	    }
-	    break;
-	    case -2: // just count the number of occurrences
-	    {
-		x->cnt[k] += 1;
-	    }
-	    break;
-	    case -1: // memory alloc and heights tab filling
-	    {
-		if (x->cnt[k])
-		{
-		    if (!x->heights[k])
-		    {
-			x->heights[k] = xmalloc(x->cnt[k]*sizeof(float));
-			x->cnt[k]=0;
-		    }
-		    
-		    x->heights[k][(int) x->cnt[k]] = v;
-		    x->cnt[k] += 1;
-		}
-	    }
-	    case 1: // average
-	    {
-		if (x->cnt[k])
-		{
-		    float sum=0.;
-		    for(int i=0;i<x->cnt[k];i++)
-		    {
-			sum += x->heights[k][i];
-		    }
-		    x->pixel_value[k] = sum / ( (float) x->cnt[k]);
-		}
-	    }
-	    break;
-	    case 2: // var
-	    {
-		if (x->cnt[k])
-		{
-		    double sum1=0.,sumC=0.;
-		    for(int i=0;i<x->cnt[k];i++)
-		    {
-			sum1 += (double) x->heights[k][i];
-			sumC += pow( (double) x->heights[k][i],2.0);
-		    }
-		    double m1 = sum1 / ( (double) x->cnt[k]);
-		    double mc = sumC / ( (double) x->cnt[k]);
-
-		    x->pixel_value[k] = mc-m1*m1;
-		}
-	    }
-	    break;
-	    case 3: // min
-	    {
-		if (x->cnt[k])
-		{
-		    qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
-		    x->pixel_value[k] = x->heights[k][0];
-		}
-	    }
-	    break;
-	    case 4: // max
-	    {
-		if (x->cnt[k])
-		{
-		    qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
-		    x->pixel_value[k] = x->heights[k][(int) x->cnt[k]-1];
-		}
-	    }
-	    break;
-	    case 5: // median
-	    {
-		if (x->cnt[k])
-		{
-		    qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
-		    x->pixel_value[k] = x->heights[k][(int) x->cnt[k]/2];
-		}
-	    }
-	    break;
+	    x->pixel_value[k] = (v + x->cnt[k] * x->pixel_value[k]) / (1 + x->cnt[k]);
+	    x->cnt[k] += 1;
 	}
+	break;
+	case -2: // just count the number of occurrences
+	{
+	    x->cnt[k] += 1;
+	}
+	break;
+	case -1: // memory alloc and heights tab filling
+	{
+	    if (x->cnt[k])
+	    {
+		if (!x->heights[k])
+		{
+		    x->heights[k] = xmalloc(x->cnt[k]*sizeof(float));
+		    x->cnt[k]=0;
+		}
+		
+		x->heights[k][(int) x->cnt[k]] = v;
+		x->cnt[k] += 1;
+	    }
+	}
+	break;
+    }
+}
+	    
+static void synth_heights(struct images *x, uint64_t k,unsigned int flag)
+{
+    switch (flag) 
+    {	    
+	case 1: // average
+	{
+	    if (x->cnt[k])
+	    {
+		float sum=0.;
+		for(int i=0;i<x->cnt[k];i++)
+		{
+		    sum += x->heights[k][i];
+		}
+		x->pixel_value[k] = sum / ( (float) x->cnt[k]);
+	    }
+	}
+	break;
+	case 2: // var
+	{
+	    if (x->cnt[k])
+	    {
+		double sum1=0.,sumC=0.;
+		for(int i=0;i<x->cnt[k];i++)
+		{
+		    sum1 += (double) x->heights[k][i];
+		    sumC += pow( (double) x->heights[k][i],2.0);
+		}
+		double m1 = sum1 / ( (double) x->cnt[k]);
+		double mc = sumC / ( (double) x->cnt[k]);
+
+		x->pixel_value[k] = mc-m1*m1;
+	    }
+	}
+	break;
+	case 3: // min
+	{
+	    if (x->cnt[k])
+	    {
+		qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
+		x->pixel_value[k] = x->heights[k][0];
+	    }
+	}
+	break;
+	case 4: // max
+	{
+	    if (x->cnt[k])
+	    {
+		qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
+		x->pixel_value[k] = x->heights[k][(int) x->cnt[k]-1];
+	    }
+	}
+	break;
+	case 5: // median
+	{
+	    if (x->cnt[k])
+	    {
+		qsort (x->heights[k], (int) x->cnt[k], sizeof(float), compare);
+		x->pixel_value[k] = x->heights[k][(int) x->cnt[k]/2];
+	    }
+	}
+	break;
+    }
 }
 
 int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *data){
@@ -404,7 +412,7 @@ int main(int c, char *v[])
 		
 	if (nbply_pushed == 0)
 	{
-		fprintf(stderr, "ERROR : no ply file pushed", ply);
+		fprintf(stderr, "ERROR : no ply file pushed\n", ply);
 		return 1;
 	}
 		
@@ -468,13 +476,10 @@ int main(int c, char *v[])
 		    l = l->next;
 	    }
 	    
-	    l=begin;
-	    while (l != NULL)
-	    {
-		    // printf("FILENAME: \"%s\"\n", l->current);
-		    add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx,flag);
-		    l = l->next;
-	    }
+	    // heights synthesis 
+	    for (uint64_t k = 0; k < (uint64_t) w*h; k++)
+		synth_heights(&x,k,flag);
+	    
 	}
 
 	// save output image
