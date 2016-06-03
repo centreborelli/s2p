@@ -194,7 +194,7 @@ def colorize(crop_panchro, im_color, x, y, zoom, out_colorized, rmin,rmax):
 
 def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
                         off_x=None, off_y=None, ascii_ply=False,
-                        with_normals=False):
+                        with_normals=False, utm_zone=None):
     """
     Computes a color point cloud from a height map.
 
@@ -213,16 +213,18 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
             use as origin in the local coordinate system of the computed cloud
         ascii_ply (optional, default false): boolean flag to tell if the output
             ply file should be encoded in plain text (ascii).
+        utm_zone (optional, default None):
     """
     hij = " ".join([str(x) for x in np.loadtxt(H).flatten()]) if H else ""
     asc = "--ascii" if ascii_ply else ""
     nrm = "--with-normals" if with_normals else ""
+    utm = "--utm-zone %s" % utm_zone if utm_zone else ""
     if not (os.path.isfile(cloud) and cfg['skip_existing']):
-        command = "colormesh %s %s %s %s -h \"%s\" %s %s" % (cloud, heights, rpc,
-                                                             crop_colorized, hij,
-                                                             asc, nrm)
+        command = "colormesh %s %s %s %s -h \"%s\" %s %s %s" % (cloud, heights, rpc,
+                                                                crop_colorized, hij,
+                                                                asc, nrm, utm)
         if off_x:
             command += " --offset_x %d" % off_x
-            if off_y:
-                command += " --offset_y %d" % off_y
+        if off_y:
+            command += " --offset_y %d" % off_y
         common.run(command)

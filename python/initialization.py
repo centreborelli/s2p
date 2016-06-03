@@ -157,6 +157,9 @@ def init_dirs_srtm(config_file):
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
 
+        if not os.path.exists( os.path.join(cfg['out_dir'],'dsm') ):
+            os.makedirs( os.path.join(cfg['out_dir'],'dsm') )
+
         if not os.path.exists(cfg['temporary_dir']):
             os.makedirs(cfg['temporary_dir'])
 
@@ -237,7 +240,6 @@ def init_tiles_full_info(config_file):
     range_x = np.arange(x, x + w - ov, tw - ov)
     rowmin, rowmax = range_y[0], range_y[-1]
     colmin, colmax = range_x[0], range_x[-1]
-
     for i, row in enumerate(range_y):
         for j, col in enumerate(range_x):
             # ensure that tile coordinates are multiples of the zoom factor
@@ -281,4 +283,9 @@ def init_tiles_full_info(config_file):
     if len(tiles_full_info) == 1:
         tiles_full_info[0]['position_type'] = 'Single'
 
+    cutting_info=open(os.path.join(cfg['out_dir'],'list_of_tiles.txt'),'w')
+    for tile_info in tiles_full_info:
+        cutting_info.write( '%s\n' % (tile_info['directory']))
+    cutting_info.close()
+    
     return tiles_full_info

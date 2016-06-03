@@ -117,7 +117,7 @@ SRCIIO = downsa backflow synflow imprintf iion qauto getminmax rescaleintensitie
 	morphoop cldmask disp_to_h_projective colormesh_projective tiffu
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
-	srtm4_which_tile plyflatten
+	srtm4_which_tile plyflatten plyextrema plytodsm
 
 imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
 
@@ -176,6 +176,12 @@ $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrap
 
 $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
+	
+$(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
+	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
+	
+$(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c $(SRCDIR)/iio.o
+	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 
 # GEOGRAPHICLIB STUFF
@@ -207,7 +213,7 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
 
 test:
-	python s2p.py test.json
+	python -u s2p.py test.json
 
 clean: clean_libtiff clean_geographiclib clean_homography clean_asift\
 	clean_sift clean_imscript clean_msmw clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm\

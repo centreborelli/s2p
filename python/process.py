@@ -87,7 +87,7 @@ def color_crop_ref(tile_info, clr=None):
                                                     applied_minmax_arr[1])
 
 
-def generate_cloud(tile_info, do_offset=False):
+def generate_cloud(tile_info, do_offset=False, utm_zone=None):
     """
     Args:
         tile_info: a dictionary that provides all you need to process a tile
@@ -137,7 +137,7 @@ def generate_cloud(tile_info, do_offset=False):
     cloud = tile_dir + '/cloud.ply'
 
     triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
-                                      off_x, off_y)
+                                      off_x, off_y, utm_zone)
 
     common.garbage_cleanup()
 
@@ -185,7 +185,7 @@ def merge_height_maps(height_maps, tile_dir, thresh, conservative, k=1, garbage=
                 common.run('rm -f %s' % imtemp)
 
 
-def finalize_tile(tile_info, height_maps):
+def finalize_tile(tile_info, height_maps, utm_zone=None):
     """
     Finalize the processing of a tile.
 
@@ -266,7 +266,7 @@ def finalize_tile(tile_info, height_maps):
     color_crop_ref(tile_info, cfg['images'][0]['clr'])
 
     # generate cloud
-    generate_cloud(tile_info, cfg['offset_ply'])
+    generate_cloud(tile_info, cfg['offset_ply'], utm_zone)
 
 
 def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,

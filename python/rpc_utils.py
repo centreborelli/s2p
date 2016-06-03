@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+import utm
 import datetime
 import numpy as np
 
@@ -308,6 +309,35 @@ def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
     h_M = np.round(h.max()) + margin_top
 
     return h_m, h_M
+
+
+def utm_zone(rpc, x, y, w, h):
+    """
+    Compute the UTM zone where the ROI probably falls (or close to its border).
+
+    Args:
+        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
+
+    Returns:
+        a string of the form '18N' or '18S' where 18 is the utm zone
+        identificator.
+    """
+    # read rpc file
+    if not isinstance(rpc, rpc_model.RPCModel):
+        rpc = rpc_model.RPCModel(rpc)
+
+    # determine lat lon of the center of the roi, assuming median altitude
+    lon, lat = rpc.direct_estimate(x + .5*w, y + .5*h, rpc.altOff)[:2]
+
+    # compute the utm zone number and add the hemisphere letter
+    zone = utm.conversion.latlon_to_zone_number(lat, lon)
+    if lat < 0:
+        return '%dS' % zone
+    else:
+        return '%dN' % zone
 
 
 def generate_point_mesh(col_range, row_range, alt_range):
