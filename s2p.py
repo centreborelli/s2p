@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -u
 
 # s2p - Satellite Stereo Pipeline
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@polytechnique.org>
@@ -46,7 +46,16 @@ def show_progress(a):
             apply_async, it has to take one argument.
     """
     show_progress.counter += 1
-    print 'done %d / %d tiles' % (show_progress.counter, show_progress.total)
+    status = "done {:{fill}{width}} / {} tiles".format(show_progress.counter,
+                                                       show_progress.total,
+                                                       fill='',
+                                                       width=len(str(show_progress.total)))
+    if show_progress.counter < show_progress.total:
+        status += chr(8) * len(status)
+    else:
+        status += '\n'
+    sys.stdout.write(status)
+    sys.stdout.flush()
 
 
 def print_elapsed_time(since_first_call=False):
@@ -63,7 +72,7 @@ def print_elapsed_time(since_first_call=False):
         try:
             print "Elapsed time:", t2 - print_elapsed_time.t1
         except AttributeError:
-            print "Elapsed time:", t2 - print_elapsed_time.t0
+            print t2 - print_elapsed_time.t0
     print_elapsed_time.t1 = t2
 
 
@@ -325,8 +334,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
         args = (x,) + extra_args if extra_args else (x,)
-        p = pool.apply_async(fun, args=args, callback=show_progress)
-        results.append(p)
+        results.append(pool.apply_async(fun, args=args, callback=show_progress))
 
     for r in results:
         try:
@@ -340,6 +348,8 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
             pool.terminate()
             sys.exit(1)
 
+    pool.close()
+    pool.join()
 
 
 def execute_job(config_file,params):
@@ -483,7 +493,6 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpc'],
                                           *[cfg['roi'][v] for v in ['x', 'y',
                                                                     'w', 'h']])
-            print 'UTM ZONE: %s' % utm_zone
             launch_parallel_calls(process_tile, tiles_full_info, nb_workers,
                                   extra_args=(utm_zone,))
             print_elapsed_time()
