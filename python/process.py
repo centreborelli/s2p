@@ -97,6 +97,7 @@ def generate_cloud(tile_info, do_offset=False, utm_zone=None):
             numbers)
     """
     print "\nComputing point cloud..."
+
     # get info
     tile_dir = tile_info['directory']
     x, y, w, h = tile_info['coordinates']
@@ -137,7 +138,7 @@ def generate_cloud(tile_info, do_offset=False, utm_zone=None):
     cloud = tile_dir + '/cloud.ply'
 
     triangulation.compute_point_cloud(cloud, height_map, rpc1, trans, crop_color,
-                                      off_x, off_y, utm_zone)
+                                      off_x, off_y, utm_zone=utm_zone)
 
     common.garbage_cleanup()
 
