@@ -100,13 +100,13 @@ int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *dat
 }
 
 // open a ply file, read utm zone in the header, and update the known extrema
-static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
+static bool parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 		float *ymax, char *utm, char *fname)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
 		fprintf(stderr, "WARNING: can not open file \"%s\"\n", fname);
-		return;
+		return false;
 	}
 
 	int isbin=0;
@@ -115,12 +115,18 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 	//fprintf(stderr, "%d\n", n);
 	//fprintf(stderr, "%s\n", utm);
 
-	double data[n];
-	while ( n == get_record(f, isbin, t, n, data) ) {
-		update_min_max(xmin, xmax, data[0]);
-		update_min_max(ymin, ymax, data[1]);
-	}
-	fclose(f);
+    if (n > 0) {
+	    double data[n];
+	    while ( n == get_record(f, isbin, t, n, data) ) {
+	    	update_min_max(xmin, xmax, data[0]);
+	    	update_min_max(ymin, ymax, data[1]);
+	    }
+	    fclose(f);
+        return true;
+    } else {
+	    fclose(f);
+        return false;
+    }
 }
 
 
@@ -159,9 +165,14 @@ int main(int c, char *v[])
 	sprintf(ply_file,"%s/cloud.ply",tile_dir);
 	sprintf(extrema_file,"%s/extrema.txt",tile_dir);
 	
-	parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, ply_file);
+	if (parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, ply_file))
+        fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n",
+                xmin, xmax, ymin, ymax);
+    else {
+	    fprintf(stderr, "plyextrema: empty input ply file\n");
+        return EXIT_FAILURE;
+    }
 
-	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin, xmax, ymin, ymax);
 
 	FILE* out_extrema = NULL;
 	out_extrema = fopen(v[2], "w");
