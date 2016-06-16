@@ -43,10 +43,6 @@ set(SOURCE_FILES_SIFT_ROI
     pickopt.h
     timing.c
     timing.h
-    fancy_image.c
-    fancy_image.h
-    iio.h
-    iio.c
     sift_anatomy_20141201/lib_description.c
     sift_anatomy_20141201/lib_description.h
     sift_anatomy_20141201/lib_discrete.c
@@ -81,13 +77,10 @@ set(SOURCE_FILES_MATCHING
 add_executable(sift_roi ${SOURCE_FILES_SIFT_ROI})
 add_executable(matching ${SOURCE_FILES_MATCHING})
 
-# Link LibTIFF, LibJPEG, LibPNG
-find_package (TIFF REQUIRED)
-find_package (JPEG REQUIRED)
-find_package (PNG REQUIRED)
+# Link GDAL
 find_package (GDAL REQUIRED)
-include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${JPEG_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS} PUBLIC ${GDAL_INCLUDE_DIRS}) 
-target_link_libraries (sift_roi ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES} ${GDAL_LIBRARIES})
+include_directories (PUBLIC ${GDAL_INCLUDE_DIRS})
+target_link_libraries (sift_roi ${GDAL_LIBRARIES})
 
 # Link -lm
 find_library (M_LIBRARY m)

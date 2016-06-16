@@ -362,8 +362,7 @@ int main(int c, char *v[])
 	struct list *l = NULL;
 	
 	// From the list of tiles, find each ply file
-	uint64_t nbply_pushed=0,nb_trials=0;
-	unsigned int max_nb_trials=100;
+	uint64_t nbply_pushed=0;
 	list_tiles_file = fopen(v[3], "r");
 	if (list_tiles_file)
 	{
@@ -398,7 +397,6 @@ int main(int c, char *v[])
 			else
 			    fprintf(stderr, "WARNING 2 : can not open file \"%s\"\n", ply);
 		   }
-		  
 	       }
 	       else
 		    fprintf(stderr,"WARNING 1 : can not open file %s\n",ply_extrema);
@@ -424,10 +422,11 @@ int main(int c, char *v[])
 	struct images x;
 	x.w = w;
 	x.h = h;
-	x.cnt = xmalloc(w*h*sizeof(float));
-	x.pixel_value = xmalloc(w*h*sizeof(float));
+	x.cnt = xmalloc((uint64_t) w*h*sizeof(float));
+	x.pixel_value = xmalloc((uint64_t) w*h*sizeof(float));
 	if (flag != 0)
 	    x.heights = xmalloc(w*h*sizeof(float *));
+
 	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
 	{
 		x.cnt[i] = 0;

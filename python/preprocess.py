@@ -34,7 +34,10 @@ def minmax_color_on_tile(tile_info):
     local_minmax = os.path.join(tile_dir, 'local_minmax.txt')
 
     # do the job
-    common.cropImage(img, crop_ref, *coords, zoom=z)
+    if not (os.path.isfile(crop_ref) and cfg['skip_existing']):
+        common.cropImage(img, crop_ref, *coords, zoom=z)
+    else:
+        print 'roi_ref.tif for tile %s already generated, skip' % tile_dir
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
         print 'tile %s is masked, skip' % tile_dir
     elif os.path.isfile(os.path.join(tile_dir, 'local_minmax.txt')) and cfg['skip_existing']:

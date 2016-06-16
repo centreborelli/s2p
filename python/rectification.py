@@ -135,6 +135,49 @@ def register_horizontally(matches, H1, H2, do_shear=False, flag='center'):
     return np.dot(common.matrix_translation(-t, 0), H2)
 
 
+def disparity_range_from_matches(matches, H1, H2, w, h):
+    """
+    Compute the disparity range of a ROI from a list of point matches.
+
+    The estimation is based on the extrapolation of the affine registration
+    estimated from the matches. The extrapolation is done on the whole region of
+    interest.
+
+    Args:
+        matches: Nx4 numpy array containing a list of matches, in the full
+            image coordinates frame, before rectification
+        w, h: width and height of the rectangular ROI in the first image.
+        H1, H2: two rectifying homographies, stored as numpy 3x3 matrices
+
+    Returns:
+        disp_min, disp_max: horizontal disparity range
+    """
+    # transform the matches according to the homographies
+    p1 = common.points_apply_homography(H1, matches[:, :2])
+    x1 = p1[:, 0]
+    p2 = common.points_apply_homography(H2, matches[:, 2:])
+    x2 = p2[:, 0]
+    y2 = p2[:, 1]
+
+    # estimate an affine transformation (tilt, shear and bias) mapping p1 on p2
+    t, s, b = np.linalg.lstsq(np.vstack((x2, y2, y2*0+1)).T, x1)[0][:3]
+
+    # compute the disparities for the affine model. The extrema are obtained at
+    # the ROI corners
+    xx = np.array([0, w, 0, w])
+    yy = np.array([0, 0, h, h])
+    disp_affine_model = (xx*t + yy*s + b) - xx
+
+    # compute the final disparity range
+    disp_min = np.floor(min(np.min(disp_affine_model), np.min(x2 - x1)))
+    disp_max = np.ceil(max(np.max(disp_affine_model), np.max(x2 - x1)))
+
+    # add a security margin to the disparity range
+    disp_min *= (1 - np.sign(disp_min) * cfg['disp_range_extra_margin'])
+    disp_max *= (1 + np.sign(disp_max) * cfg['disp_range_extra_margin'])
+    return disp_min, disp_max
+
+
 def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     """
     Compute the disparity range of a ROI from a list of point matches.
@@ -156,63 +199,31 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
             module.
 
     Returns:
-        disp_min, disp_max: horizontal disparity range
+        disp: 2-uple containing the horizontal disparity range
     """
-    # transform the matches according to the homographies
-    p1 = common.points_apply_homography(H1, matches[:, :2])
-    x1 = p1[:, 0]
-    p2 = common.points_apply_homography(H2, matches[:, 2:])
-    x2 = p2[:, 0]
-    y2 = p2[:, 1]
+    # srtm disparity range
+    if (cfg['disp_range_method'] in ['srtm', 'wider_sift_srtm']) or matches is None:
+        srtm_disp = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h,
+                                                         H1, H2, A,
+                                                         cfg['disp_range_srtm_high_margin'],
+                                                         cfg['disp_range_srtm_low_margin'])
+        print "SRTM disparity range: [%f, %f]" % (srtm_disp[0], srtm_disp[1])
 
-    # estimate an affine transformation (tilt, shear and bias)
-    # that maps p1 on p2
-    z = np.linalg.lstsq(np.vstack((x2, y2, y2*0+1)).T, x1)[0]
-    t, s, b = z[0:3]
+    if cfg['disp_range_method'] == 'srtm' or matches is None:
+        return srtm_disp
 
-    # corners of ROI
-    xx2 = np.array([0, w, 0, w])
-    yy2 = np.array([0, 0, h, h])
-
-    # compute the max and min disparity values according to the estimated
-    # model. The min/max disp values are necessarily obtained at the ROI
-    # corners
-    roi_disparities_by_the_affine_model = (xx2*t + yy2*s + b) - xx2
-    max_roi = np.max(roi_disparities_by_the_affine_model)
-    min_roi = np.min(roi_disparities_by_the_affine_model)
-
-    # min/max disparities according to the keypoints
-    max_kpt = np.max(x2 - x1)
-    min_kpt = np.min(x2 - x1)
-
-    # compute the range with the extracted min and max disparities
-    disp_m = np.floor(min(min_roi, min_kpt))
-    disp_M = np.ceil(max(max_roi, max_kpt))
-
-    # add a security margin to the disp range
-    disp_m *= (1 - np.sign(disp_m) * cfg['disp_range_extra_margin'])
-    disp_M *= (1 + np.sign(disp_M) * cfg['disp_range_extra_margin'])
-
-    print "SIFT disparity range: [%f, %f]" % (disp_m, disp_M)
+    # sift disparity range
+    if matches is not None:
+        sift_disp = disparity_range_from_matches(matches, H1, H2, w, h)
+        print "SIFT disparity range: [%f, %f]" % (sift_disp[0], sift_disp[1])
+        if cfg['disp_range_method'] == 'sift':
+            return sift_disp
 
     # expand disparity range with srtm according to cfg params
-    if (cfg['disp_range_method'] == "srtm") or (matches is None) or (len(matches) < 2):
-        disp_m, disp_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y,
-                                                              w, h, H1, H2, A,
-                                                              cfg['disp_range_srtm_high_margin'],
-                                                              cfg['disp_range_srtm_low_margin'])
-        print "SRTM disparity range: [%f, %f]" % (disp_m, disp_M)
-    if cfg['disp_range_method'] == "wider_sift_srtm" and (matches is not None) and (len(matches) >= 2):
-        d_m, d_M = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h,
-                                                        H1, H2, A,
-                                                        cfg['disp_range_srtm_high_margin'],
-                                                        cfg['disp_range_srtm_low_margin'])
-        print "SRTM disparity range: [%f, %f]" % (d_m, d_M)
-        disp_m = min(disp_m, d_m)
-        disp_M = max(disp_M, d_M)
-
-    print "Final disparity range: [%f, %f]" % (disp_m, disp_M)
-    return disp_m, disp_M
+    if cfg['disp_range_method'] == 'wider_sift_srtm' and (matches is not None):
+        disp = min(srtm_disp[0], sift_disp[0]), max(srtm_disp[1], sift_disp[1])
+        print "Final disparity range: [%f, %f]" % (disp[0], disp[1])
+        return disp
 
 
 def rectification_homographies(matches, x, y, w, h):

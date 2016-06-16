@@ -46,7 +46,16 @@ def show_progress(a):
             apply_async, it has to take one argument.
     """
     show_progress.counter += 1
-    print 'done %d / %d tiles' % (show_progress.counter, show_progress.total)
+    status = "done {:{fill}{width}} / {} tiles".format(show_progress.counter,
+                                                       show_progress.total,
+                                                       fill='',
+                                                       width=len(str(show_progress.total)))
+    if show_progress.counter < show_progress.total:
+        status += chr(8) * len(status)
+    else:
+        status += '\n'
+    sys.stdout.write(status)
+    sys.stdout.flush()
 
 
 def print_elapsed_time(since_first_call=False):
@@ -63,7 +72,7 @@ def print_elapsed_time(since_first_call=False):
         try:
             print "Elapsed time:", t2 - print_elapsed_time.t1
         except AttributeError:
-            print "Elapsed time:", t2 - print_elapsed_time.t0
+            print t2 - print_elapsed_time.t0
     print_elapsed_time.t1 = t2
 
 
@@ -134,12 +143,21 @@ def process_tile_pair(tile_info, pair_id):
 
     out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id)
 
+    
+    
     A_global = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_%d.txt' % pair_id)
 
     print 'processing tile %d %d...' % (col, row)
+
+    # check that the tile is not masked
+    if os.path.isfile(os.path.join(out_dir, 'this_tile_is_masked.txt')):
+        print 'tile %s already masked, skip' % out_dir
+        return
+    
     # rectification
     if (cfg['skip_existing'] and
+        os.path.isfile(os.path.join(out_dir, 'disp_min_max.txt')) and
         os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and
         os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif'))):
         print '\trectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
@@ -151,6 +169,7 @@ def process_tile_pair(tile_info, pair_id):
 
     # disparity estimation
     if (cfg['skip_existing'] and
+        os.path.isfile(os.path.join(out_dir, 'rectified_mask.png')) and
         os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif'))):
         print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
@@ -169,7 +188,7 @@ def process_tile_pair(tile_info, pair_id):
                             np.loadtxt(A_global))
 
 
-def process_tile(tile_info):
+def process_tile(tile_info, utm_zone=None):
     """
     Process a tile by merging the height maps computed for each image pair.
 
@@ -196,13 +215,14 @@ def process_tile(tile_info):
             process_tile_pair(tile_info, pair_id)
 
         # finalization
-        height_maps = [os.path.join(tile_dir, 'pair_%d' % i, 'height_map.tif') for i in range(1, nb_pairs + 1)]
-        process.finalize_tile(tile_info, height_maps)
+        height_maps = []
+        for i in xrange(nb_pairs):
+            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
+                height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
+        process.finalize_tile(tile_info, height_maps, utm_zone)
         
         # ply extrema
-        out_extrema_dir = os.path.join(tile_dir,'plyextrema.txt')
-        common.run("plyextrema %s %s" % (  tile_dir,
-                                           out_extrema_dir))
+        common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
 
     except Exception:
         print("Exception in processing tile:")
@@ -316,22 +336,24 @@ def global_finalization(tiles_full_info):
     for img in cfg['images']:
         shutil.copy2(img['rpc'], cfg['out_dir'])       
 
-def launch_parallel_calls(fun, list_of_args, nb_workers):
+def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     """
     Run a function several times in parallel with different given inputs.
 
     Args:
-        fun: function to be called several times in parallel. It must have a
-            unique input argument.
-        list_of_args: list of arguments passed to fun, one per call
+        fun: function to be called several times in parallel.
+        list_of_args: list of (first positional) arguments passed to fun, one
+            per call
         nb_workers: number of calls run simultaneously
+        extra_args (optional, default is None): tuple containing extra arguments
+            to be passed to fun (same value for all calls)
     """
     results = []
     show_progress.counter = 0
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
-        p = pool.apply_async(fun, args=(x,), callback=show_progress)
-        results.append(p)
+        args = (x,) + extra_args if extra_args else (x,)
+        results.append(pool.apply_async(fun, args=args, callback=show_progress))
 
     for r in results:
         try:
@@ -341,10 +363,17 @@ def launch_parallel_calls(fun, list_of_args, nb_workers):
         except common.RunFailure as e:
             print "FAILED call: ", e.args[0]["command"]
             print "\toutput: ", e.args[0]["output"]
+        except ValueError as e:
+            print traceback.format_exc()
+            print str(r)
+            pass
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
+        
 
+    pool.close()
+    pool.join()
 
 
 def execute_job(config_file,params):
@@ -412,7 +441,7 @@ def list_jobs(config_file, step):
     
     if step in [2,4]:           #preprocessing, processing
         f = open(os.path.join(cfg['out_dir'],filename),'w')
-        for tile in tilesFullInfo:
+        for tile in tiles_full_info:
             tile_dir = tile['directory']
             f.write(tile_dir + ' ' + str(step) + '\n')
         f.close()
@@ -446,6 +475,8 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         step: integer between 1 and 5 specifying which step to run. Default
         value is None. In that case all the steps are run.
     """    
+    
+    print_elapsed_time.t0 = datetime.datetime.now()
 
     if clusterMode == 'list_jobs':
         list_jobs(config_file, step)
@@ -485,7 +516,11 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         if 4 in steps:
             print '\nprocessing tiles...'
             show_progress.total = len(tiles_full_info)
-            launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
+            utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpc'],
+                                          *[cfg['roi'][v] for v in ['x', 'y',
+                                                                    'w', 'h']])
+            launch_parallel_calls(process_tile, tiles_full_info, nb_workers,
+                                  extra_args=(utm_zone,))
             print_elapsed_time()
            
         if 5 in steps:
