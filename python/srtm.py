@@ -60,6 +60,10 @@ def get_srtm_tile(srtm_tile, out_dir):
     # download the zip file
     srtm_tile_url = '%s/%s.zip' % (cfg['srtm_url'], srtm_tile)
     zip_path = os.path.join(out_dir, '%s.zip' % srtm_tile)
+
+    # add authorization header
+    srtm_tile_url = common.url_with_authorization_header(srtm_tile_url)
+
     common.download(zip_path, srtm_tile_url)
 
     # extract the tif file

@@ -103,7 +103,8 @@ cfg['mosaic_method'] = 'piio'
 
 # url of the srtm database mirror
 #cfg['srtm_url'] = 'http://138.231.80.250:443/srtm/tiff'
-cfg['srtm_url'] = 'ftp://xftp.jrc.it/pub/srtmV4/tiff'
+#cfg['srtm_url'] = 'ftp://xftp.jrc.it/pub/srtmV4/tiff'
+cfg['srtm_url'] = 'http://data_public:GDdci@data.cgiar-csi.org/srtm/tiles/GeoTIFF'
 
 # directory where to store the srtm tiles
 current_dir = os.path.dirname(os.path.abspath(__file__))

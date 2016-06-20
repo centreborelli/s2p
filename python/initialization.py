@@ -157,26 +157,27 @@ def init_dirs_srtm(config_file):
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
 
-        if not os.path.exists( os.path.join(cfg['out_dir'],'dsm') ):
-            os.makedirs( os.path.join(cfg['out_dir'],'dsm') )
+    if not os.path.exists( os.path.join(cfg['out_dir'],'dsm') ):
+        os.makedirs( os.path.join(cfg['out_dir'],'dsm') )
 
-        if not os.path.exists(cfg['temporary_dir']):
-            os.makedirs(cfg['temporary_dir'])
+    if not os.path.exists(cfg['temporary_dir']):
+        os.makedirs(cfg['temporary_dir'])
 
-        if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
-            os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
-        f = open('%s/config.json' % cfg['out_dir'], 'w')
-        json.dump(cfg, f, indent=2)
-        f.close()
+    if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
+        os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
 
-        # duplicate stdout and stderr to log file
-        tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
+    f = open('%s/config.json' % cfg['out_dir'], 'w')
+    json.dump(cfg, f, indent=2)
+    f.close()
 
-        # needed srtm tiles
-        srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
-                                          *cfg['roi'].values())
-        for s in srtm_tiles:
-            srtm.get_srtm_tile(s, cfg['srtm_dir'])
+    # duplicate stdout and stderr to log file
+    tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
+
+    # needed srtm tiles
+    srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                      *cfg['roi'].values())
+    for s in srtm_tiles:
+        srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
 def init_tiles_full_info(config_file):

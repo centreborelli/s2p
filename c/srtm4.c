@@ -15,13 +15,6 @@
 #define NO_DATA NAN
 #define SRTM4_ASC "%s/srtm_%02d_%02d.asc"
 #define SRTM4_TIF "%s/srtm_%02d_%02d.tif"
-//#define SRTM4_URL_TIF "http://138.231.80.250:443/srtm/tiff/srtm_%02d_%02d.zip"
-//#define SRTM4_URL_ASC "http://138.231.80.250:443/srtm/asc/srtm_%02d_%02d.zip"
-#define SRTM4_URL_ASC "ftp://xftp.jrc.it/pub/srtmV4/arcasci/srtm_%02d_%02d.zip"
-#define SRTM4_URL_TIF "ftp://xftp.jrc.it/pub/srtmV4/tiff/srtm_%02d_%02d.zip"
-// #define SRTM4_URL_ASC "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/ASCII/srtm_%02d_%02d.zip"
-// #define SRTM4_URL_TIF "--http-user=data_public --http-password=GDdci http://data.cgiar-csi.org/srtm/tiles/GeoTIFF/srtm_%02d_%02d.zip"
-
 
 // headers
 void geoid_height(double *out, double lat, double lon);
@@ -65,16 +58,6 @@ int16_t *read_tiff_int16_gray(const char *fname, int *nx, int *ny)
     data = readTIFF(tif, nx, ny);
     TIFFClose(tif);
     return data;
-}
-
-// download the contents of an url into a file
-static int download(const char *to_file, const char *from_url)
-{
-	int nbuf = 2*FILENAME_MAX;
-	char buf[nbuf];
-	snprintf(buf, nbuf, "wget %s -O %s", from_url, to_file);
-	int r = system(buf);
-	return r;
 }
 
 // return the name of the cache directory
@@ -142,30 +125,6 @@ static bool file_exists(const char *fname)
 		return true;
 	}
 	return false;
-}
-
-static void download_tile_file(int tlon, int tlat, bool tif)
-{
-	int n = FILENAME_MAX;
-	char url[n], zipname[n];
-
-    // use TIF or ASC url according to boolean param 'tif'
-    if (tif)
-	    snprintf(url, n, SRTM4_URL_TIF, tlon, tlat);
-    else
-	    snprintf(url, n, SRTM4_URL_ASC, tlon, tlat);
-
-	snprintf(zipname, n, "%s/tmp.zip", cachedir());
-	int rd = download(zipname, url);
-	if (0 == rd) {
-		char cmd[n];
-		snprintf(cmd, n, "unzip -qq -o %s -d %s", zipname, cachedir());
-		rd = system(cmd);
-		if (rd) {
-			fprintf(stderr,"failed unzipping file %s\n", zipname);
-		}
-		// TODO: do something if unzip fails
-	}
 }
 
 static char *get_tile_filename(int tlon, int tlat, bool tif)
@@ -309,8 +268,6 @@ static float *produce_tile(int tlon, int tlat, bool tif)
 	float *t = global_table_of_tiles[tlon][tlat];
 	if (!t) {
 		char *fname = get_tile_filename(tlon, tlat, tif);
-		if (!file_exists(fname))
-			download_tile_file(tlon, tlat, tif);
 		if (!file_exists(fname)) {
             fprintf(stderr, "WARNING: this srtm tile is not available\n");
             return NULL;

@@ -8,6 +8,8 @@ import os
 import re
 import sys
 import urllib2
+import base64
+import urlparse
 import datetime
 import tempfile
 import subprocess
@@ -921,6 +923,30 @@ def which(program):
 
     return None
 
+def url_with_authorization_header(from_url):
+    """
+    Add authorization header
+
+    Args:
+        from_url: url of the file to download
+    """
+    scheme, netloc, path, param, query = urlparse.urlsplit(from_url)
+    if "@" in netloc:
+        userinfo = netloc.rsplit("@",1)[0]
+        if ":" in userinfo:
+            username = userinfo.rsplit(":",1)[0]
+            password = userinfo.rsplit(":",1)[1]
+            netloc = netloc.rsplit("@",1)[1]
+
+            from_url = urlparse.urlunsplit((scheme, netloc, path, param, query))
+
+            if username != None and password != None:
+                request = urllib2.Request(from_url)
+                base64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
+                request.add_header("Authorization", "Basic %s" % base64string)
+                from_url = request
+
+    return from_url
 
 def download(to_file, from_url):
     """
