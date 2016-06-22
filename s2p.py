@@ -465,7 +465,6 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         step: integer between 1 and 5 specifying which step to run. Default
         value is None. In that case all the steps are run.
     """    
-
     print_elapsed_time.t0 = datetime.datetime.now()
 
     if clusterMode == 'list_jobs':
@@ -480,7 +479,6 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         # initialization (has to be done whatever the queried steps)
         initialization.init_dirs_srtm(config_file)
         tiles_full_info = initialization.init_tiles_full_info(config_file)
-        print_elapsed_time.t0 = datetime.datetime.now()
 
         # multiprocessing setup
         nb_workers = multiprocessing.cpu_count()  # nb of available cores
