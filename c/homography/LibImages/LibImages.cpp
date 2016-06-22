@@ -334,25 +334,20 @@ void Image::writeTiff(
   float* line = (float*) memalloc(16, (p_quad ? w : m_width) * sizeof(float));
 
   //! Write the file data
-  for (size_t c = 0, ok = 1; ok && c < m_channels; c++) {
+  for (size_t c = 0; c < m_channels; c++) {
     poBand = poDstDS->GetRasterBand(c+1);
-    for (size_t i = 0; ok && i < h; i++) {
+    for (size_t i = 0; i < h; i++) {
       const float* iI = this->getPtr(c, p_quad ? i / 2 : i);
 
       //! Copy the line
-      if (p_quad) {
-        for (size_t j = 0; j < m_width; j++) {
+      if (p_quad)
+        for (size_t j = 0; j < m_width; j++)
           line[2 * j + 0] = line[2 * j + 1] = iI[j];
-        }
-      }
-      else {
-        for (size_t j = 0; j < m_width; j++) {
+      else
+        for (size_t j = 0; j < m_width; j++)
           line[j] = iI[j];
-        }
-      }
 
-      poBand->RasterIO( GF_Write, 0, i, w, 1, 
-			line, w, 1, GDT_Float32, 0, 0 );
+      poBand->RasterIO(GF_Write, 0, i, w, 1, line, w, 1, GDT_Float32, 0, 0);
     }
   }
 
