@@ -64,7 +64,7 @@ asift:
 
 homography: $(BINDIR)
 	mkdir -p $(BINDIR)/build_homography
-	cd $(BINDIR)/build_homography; cmake -D CMAKE_C_FLAGS=-ltiff -D CMAKE_BUILD_TYPE=Release ../../c/homography; $(MAKE)
+	cd $(BINDIR)/build_homography; cmake -D CMAKE_BUILD_TYPE=Release ../../c/homography; $(MAKE)
 	cp $(BINDIR)/build_homography/homography $(BINDIR)
 
 sift: $(BINDIR)
@@ -176,10 +176,10 @@ $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrap
 
 $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
-	
+
 $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
-	
+
 $(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 

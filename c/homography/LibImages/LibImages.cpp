@@ -10,7 +10,7 @@
 #include <inttypes.h>
 #include <complex.h> // Must be included BEFORE fftw
 #include <fftw3.h>
-#include <tiffio.h>
+#include <gdal_priv.h>
 #include <iostream>
 #include <fstream>
 #include <omp.h>
@@ -255,85 +255,29 @@ void Image::readTiff(
   const char* p_name,
   const size_t i_border) {
 
-  //! Open the tiff file
-  TIFF *tif = TIFFOpen(p_name, "r");
+  GDALAllRegister();
+  GDALDataset *poDataset = (GDALDataset *) GDALOpen(p_name, GA_ReadOnly);
 
-  //! Check that the file has been open
-  if (!tif) {
-    cout << "Unable to read TIFF file " << p_name << ". Abort." << endl;
+  if (poDataset == NULL) {
+    fprintf(stderr, "ERROR: can't open %s\n", p_name);
     exit(EXIT_FAILURE);
   }
 
-  //! Initialization
-  uint32 w = 0, h = 0;
-  uint16 spp = 0, bps = 0, fmt = 0;
+  int w = poDataset->GetRasterXSize();
+  int h = poDataset->GetRasterYSize();
 
-  //! Get the metadata
-  TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w);
-  TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &h);
-  TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &spp);
-  TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps);
-  TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &fmt);
-
-  //! Check that the data type is 1 uint16 sample per pixel
-  if (spp != 1) {
-    cout << "readTiff: only 1 sample per pixel is supported. Abort." << endl;
-    exit(EXIT_FAILURE);
-  }
-  if (fmt != SAMPLEFORMAT_UINT) {
-    cout << "readTiff: only uint samples are supported. Abort." << endl;
-    exit(EXIT_FAILURE);
-  }
-  if (bps != (uint16) sizeof(uint16_t) * CHAR_BIT) {
-    cout << "readTiff: only 16 bits samples are supported. Abort." << endl;
-    exit(EXIT_FAILURE);
-  }
+  // read the needed ROI in the input image
+  GDALRasterBand *poBand = poDataset->GetRasterBand(1);
+  float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
+  int errorRasterIO = poBand->RasterIO(GF_Read, 0, 0, w, h, roi, w, h, GDT_Float32, 0, 0);
+  if (errorRasterIO != CPLE_None)
+    fprintf(stderr, "errorRasterIO = %d\n", errorRasterIO);
+  GDALClose((GDALDatasetH) poDataset);
 
   //! Allocate the image
-  new (this) Image(w, h, 1, i_border);
+  new (this) Image(roi, (const size_t) w, (const size_t) h, 1);
+  this->m_border = i_border;
 
-  //! Read the values
-
-  // use a particular reader for tiled tiff
-  if (TIFFIsTiled(tif)) {
-      uint16_t* buf = (uint16_t*) malloc(TIFFTileSize(tif));
-      uint32_t tilewidth, tilelength;
-      TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tilewidth);
-      TIFFGetField(tif, TIFFTAG_TILELENGTH, &tilelength);
-      for (uint32_t tx = 0; tx < m_width; tx += tilewidth)
-      for (uint32_t ty = 0; ty < m_height; ty += tilelength) {
-          if (TIFFReadTile(tif, buf, tx, ty, 0, 0) < 0) {
-              cout << "readTiff: error reading tile " << tx << ty << endl;
-              exit(EXIT_FAILURE);
-          }
-          for (uint32_t j = 0; j < tilelength; j++)
-          for (uint32_t i = 0; i < tilewidth; i++) {
-              uint32_t ii = i + tx;
-              uint32_t jj = j + ty;
-              if (ii < m_width && jj < m_height) {
-                  float* oI = this->getPtr(0, jj);
-                  oI[ii] = (float) buf[j*tilewidth + i];
-              }
-          }
-      }
-      free(buf);
-  } else {
-      uint16_t* buf = (uint16_t*) malloc(TIFFScanlineSize(tif));
-      for (size_t i = 0; i < m_height; i++) {
-          if (TIFFReadScanline(tif, buf, i, 0) < 0) {
-              cout << "readTiff: error reading row " << i << endl;
-              exit(EXIT_FAILURE);
-          }
-          //! Cast the uint16 samples to float
-          float* oI = this->getPtr(0, i);
-          for (size_t i = 0; i < m_width; i++)
-              oI[i] = (float) buf[i];
-      }
-      free(buf);
-  }
-
-  //! Close the file
-  TIFFClose(tif);
 }
 
 
@@ -369,68 +313,49 @@ void Image::write(
 }
 
 
-//! Write an image via the libtiff write function
+//! Write an image via the libgdal write function
 void Image::writeTiff(
-  const std::string &p_name,
+  const char *p_name,
   const bool p_quad) const {
-
-  //! Open the file
-  TIFF *tif = TIFFOpen(p_name.c_str(), "w");
-
-  //! Check that the file has been created
-  if (!tif) {
-    cout << "Unable to write TIFF file " << p_name << endl;
-    exit(EXIT_FAILURE);
-  }
 
   //! For convenience
   const size_t h = m_height * (p_quad ? 2 : 1);
   const size_t w = m_width  * (p_quad ? 2 : 1);
-  uint32 rowsperstrip;
+
+  const char *pszFormat = "GTiff";
+  GDALDriver *poDriver;
+  poDriver = GetGDALDriverManager()->GetDriverByName(pszFormat);
+
+  GDALDataset *poDstDS;
+  char **papszOptions = NULL;
+  poDstDS = poDriver->Create( p_name, w, h, m_channels, GDT_Float32, papszOptions );
+  GDALRasterBand *poBand;
+
   float* line = (float*) memalloc(16, (p_quad ? w : m_width) * sizeof(float));
 
-  //! Header of the tiff file
-  TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, (uint32) w);
-  TIFFSetField(tif, TIFFTAG_IMAGELENGTH, (uint32) h);
-  TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_SEPARATE);
-  TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, (uint16) m_channels);
-  TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, (uint16) sizeof(float) * 8);
-  TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP);
-  rowsperstrip = TIFFDefaultStripSize(tif, (uint32) h);
-  TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, rowsperstrip);
-  TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_NONE);
-  TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
-
   //! Write the file data
-  for (size_t c = 0, ok = 1; ok && c < m_channels; c++) {
-    for (size_t i = 0; ok && i < h; i++) {
+  for (size_t c = 0; c < m_channels; c++) {
+    poBand = poDstDS->GetRasterBand(c+1);
+    for (size_t i = 0; i < h; i++) {
       const float* iI = this->getPtr(c, p_quad ? i / 2 : i);
 
       //! Copy the line
-      if (p_quad) {
-        for (size_t j = 0; j < m_width; j++) {
+      if (p_quad)
+        for (size_t j = 0; j < m_width; j++)
           line[2 * j + 0] = line[2 * j + 1] = iI[j];
-        }
-      }
-      else {
-        for (size_t j = 0; j < m_width; j++) {
+      else
+        for (size_t j = 0; j < m_width; j++)
           line[j] = iI[j];
-        }
-      }
 
-      //! Write the line
-      if (TIFFWriteScanline(tif, line, (uint32) i, (tsample_t) c) < 0) {
-        cout << "WriteTIFF: error writing row " << i << endl;
-        ok = 0;
-      }
+      poBand->RasterIO(GF_Write, 0, i, w, 1, line, w, 1, GDT_Float32, 0, 0);
     }
   }
 
   //! Release memory
   memfree(line);
 
-  //! Close the file
-  TIFFClose(tif);
+  /* Once we're done, close properly the dataset */
+  GDALClose( (GDALDatasetH) poDstDS );
 }
 
 //! Add a border to the current image.
