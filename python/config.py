@@ -110,3 +110,6 @@ cfg['srtm_url'] = 'http://data_public:GDdci@data.cgiar-csi.org/srtm/tiles/GeoTIF
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 cfg['srtm_dir'] = os.path.join(parent_dir, '.srtm')
+
+# DSM options
+cfg['dsm_option'] = 'median'
