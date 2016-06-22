@@ -191,7 +191,7 @@ class Image {
      * @param p_quad: if true, apply a zoom-in by duplication of 1 pixel into 4.
      **/
     void writeTiff(
-      const std::string &p_name,
+      const char* p_name,
       const bool p_quad = false) const;
 
 
