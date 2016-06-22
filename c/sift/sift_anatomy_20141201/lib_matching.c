@@ -82,6 +82,11 @@ void matching(struct sift_keypoints *k1, struct sift_keypoints *k2,
         keypoints_distance_overloaded = keypoints_distance;
     }
 
+    if ((k1->size == 0)||(k2->size == 0))
+      {
+	return;
+      }
+
     int n_hist = k1->list[0]->n_hist;
     int n_ori = k1->list[0]->n_ori;
     int n = n_hist * n_hist * n_ori;
