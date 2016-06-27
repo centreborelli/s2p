@@ -170,7 +170,7 @@ class RPCModel:
         a = tree.find('Metadata_Identification/METADATA_PROFILE') # PHR_SENSOR
         b = tree.find('IMD/IMAGE/SATID') # WorldView
         if a is not None:
-            if a.text in ['PHR_SENSOR', 'S6_SENSOR']:
+            if a.text in ['PHR_SENSOR', 'S6_SENSOR', 'S7_SENSOR']:
                 self.read_rpc_pleiades(tree)
             else:
                 print 'unknown sensor type'
