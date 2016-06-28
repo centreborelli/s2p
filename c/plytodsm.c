@@ -412,7 +412,7 @@ int main(int c, char *v[])
 		
 	if (nbply_pushed == 0)
 	{
-		fprintf(stderr, "ERROR : no ply file pushed\n", ply);
+		fprintf(stderr, "ERROR : no ply file pushed\n");
 		return 1;
 	}
 		
