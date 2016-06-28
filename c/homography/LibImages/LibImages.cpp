@@ -240,8 +240,8 @@ void Image::read(
   ext = ext.substr(pos + 1, ext.size());
 
   //! Call the right function
-  if (ext == "tif" || ext == "tiff") {
-    this->readTiff(p_name, i_border);
+  if (ext == "tif" || ext == "tiff" || ext == "png") {
+    this->readGDAL(p_name, i_border);
   }
   else {
     cout << "Extension " << ext << " not known. Abort." << endl;
@@ -250,8 +250,8 @@ void Image::read(
 }
 
 
-//! Read a mono-channel uint16 tiff image.
-void Image::readTiff(
+//! Read a mono-channel uint16 tiff (or png) image.
+void Image::readGDAL(
   const char* p_name,
   const size_t i_border) {
 
@@ -303,8 +303,13 @@ void Image::write(
   ext = ext.substr(pos + 1, ext.size());
 
   //! Call the right function
-  if (ext == "tif" || ext == "tiff") {
-    this->writeTiff(p_name, p_quad);
+  if (ext == "tif" || ext == "tiff" || ext == "png") {
+    if (ext == "png") {
+      this->writeGDAL(p_name, p_quad, "PNG");
+    }
+    else {
+      this->writeGDAL(p_name, p_quad, "GTiff");
+    }
   }
   else {
     cout << "Extension " << ext << " not known. Abort." << endl;
@@ -314,21 +319,32 @@ void Image::write(
 
 
 //! Write an image via the libgdal write function
-void Image::writeTiff(
+void Image::writeGDAL(
   const char *p_name,
-  const bool p_quad) const {
+  const bool p_quad,
+  const char *pszFormat) const {
 
   //! For convenience
   const size_t h = m_height * (p_quad ? 2 : 1);
   const size_t w = m_width  * (p_quad ? 2 : 1);
 
-  const char *pszFormat = "GTiff";
   GDALDriver *poDriver;
-  poDriver = GetGDALDriverManager()->GetDriverByName(pszFormat);
-
   GDALDataset *poDstDS;
   char **papszOptions = NULL;
-  poDstDS = poDriver->Create( p_name, w, h, m_channels, GDT_Float32, papszOptions );
+
+  if (strcmp(pszFormat,"GTiff") == 0){
+      poDriver = GetGDALDriverManager()->GetDriverByName(pszFormat);
+      poDstDS = poDriver->Create( p_name, w, h, m_channels, GDT_Float32, papszOptions );
+    }
+  else if (strcmp(pszFormat,"PNG") == 0) {
+      poDriver = GetGDALDriverManager()->GetDriverByName("MEM");
+      poDstDS = poDriver->Create("", w, h, m_channels, GDT_Float32, papszOptions);
+    }
+  else {
+    cout << "Driver not know. Abort." << endl;
+    exit(EXIT_FAILURE);
+  }
+
   GDALRasterBand *poBand;
 
   float* line = (float*) memalloc(16, (p_quad ? w : m_width) * sizeof(float));
@@ -353,6 +369,15 @@ void Image::writeTiff(
 
   //! Release memory
   memfree(line);
+
+  // CreateCopy for PNG format
+  if (strcmp(pszFormat,"PNG") == 0) {
+    GDALDriver      *pDriver;
+    GDALDataset     *pDs;
+    pDriver = GetGDALDriverManager()->GetDriverByName(pszFormat);
+    pDs = pDriver->CreateCopy( p_name, poDstDS, FALSE, NULL, NULL, NULL);
+    GDALClose( (GDALDatasetH) pDs );
+  }
 
   /* Once we're done, close properly the dataset */
   GDALClose( (GDALDatasetH) poDstDS );

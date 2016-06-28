@@ -29,7 +29,7 @@ cfg['tile_size']  = 800
 
 # max number of tiles processed in parallel. None means the number of cores of
 # the cpu.
-cfg['max_nb_threads'] = None
+cfg['max_nb_threads'] = 1
 
 # debug mode: no parallelisation, and more verbose logs
 cfg['debug'] = False
