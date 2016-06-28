@@ -29,7 +29,6 @@ import multiprocessing
 
 from python.config import cfg
 from python import common
-from python import rpc_utils
 from python import initialization
 from python import preprocess
 from python import globalvalues
@@ -188,7 +187,7 @@ def process_tile_pair(tile_info, pair_id):
                             np.loadtxt(A_global))
 
 
-def process_tile(tile_info, utm_zone=None):
+def process_tile(tile_info):
     """
     Process a tile by merging the height maps computed for each image pair.
 
@@ -219,7 +218,7 @@ def process_tile(tile_info, utm_zone=None):
         for i in xrange(nb_pairs):
             if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
                 height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
-        process.finalize_tile(tile_info, height_maps, utm_zone)
+        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
         
         # ply extrema
         common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
@@ -514,11 +513,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         if 4 in steps:
             print '\nprocessing tiles...'
             show_progress.total = len(tiles_full_info)
-            utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpc'],
-                                          *[cfg['roi'][v] for v in ['x', 'y',
-                                                                    'w', 'h']])
-            launch_parallel_calls(process_tile, tiles_full_info, nb_workers,
-                                  extra_args=(utm_zone,))
+            launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
             print_elapsed_time()
            
         if 5 in steps:

@@ -11,6 +11,7 @@ import numpy as np
 from python import common
 from python import srtm
 from python import tee
+from python import rpc_utils
 from config import cfg
 
 
@@ -139,6 +140,11 @@ def init_roi(config_file):
     cfg['roi']['w'] = w
     cfg['roi']['h'] = h
 
+    # get utm zone
+    utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpc'],
+                                  *[cfg['roi'][v] for v in ['x', 'y',
+                                                            'w', 'h']])
+    cfg['utm_zone'] = utm_zone
 
 def init_dirs_srtm(config_file):
     """
