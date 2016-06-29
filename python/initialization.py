@@ -194,7 +194,7 @@ def cutting(config_file):
     """
     init_roi(config_file)
     
-    #Get ROI
+    # Get ROI
     x = cfg['roi']['x']    
     y = cfg['roi']['y']
     w = cfg['roi']['w']
@@ -223,7 +223,7 @@ def cutting(config_file):
     nb_pairs = len(cfg['images']) - 1
     print 'total number of pairs: %d' % nb_pairs
     
-    return (x,y,w,h,z,ov,tw,th,nb_pairs)
+    return x, y, w, h, z, ov, tw, th, nb_pairs
 
 
 def init_tiles_full_info(config_file):
@@ -248,7 +248,7 @@ def init_tiles_full_info(config_file):
         tiles_full_info: list containing dictionaries
     """
 
-    x,y,w,h,z,ov,tw,th,nb_pairs = cutting(config_file)
+    x, y, w, h, z, ov, tw, th, nb_pairs = cutting(config_file)
 
     # build tile_info dictionaries and store them in a list
     tiles_full_info = list()
