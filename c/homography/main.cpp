@@ -101,7 +101,7 @@ int main(int c, char* v[])
     int y = roi_coords[1];
     int w = roi_coords[2];
     int h = roi_coords[3];
-    fprintf(stderr, "roi %d %d %d %d\n", x, y, w, h);
+    //fprintf(stderr, "roi %d %d %d %d\n", x, y, w, h);
 
     // open the input image
     GDALAllRegister();
