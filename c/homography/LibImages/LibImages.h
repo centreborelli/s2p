@@ -169,7 +169,7 @@ class Image {
 
 
     /**
-     * @brief Read an image via the Libtiff library. Will exit the main program
+     * @brief Read an image via the LibGDAL library. Will exit the main program
      *        in case of problem.
      *
      * @param i_name : path to the image which will be filled into p_ptr;
@@ -178,21 +178,22 @@ class Image {
      *
      * @return none.
      **/
-    void readTiff(
+    void readGDAL(
       const char* p_name,
       const size_t i_border = 0);
 
 
     /**
-     * @brief Write an image via the Libtiff library. Will exit the main problem
+     * @brief Write an image via the LibGdal library. Will exit the main problem
      *        in case of problem.
      *
      * @param i_name: path to the image to save;
      * @param p_quad: if true, apply a zoom-in by duplication of 1 pixel into 4.
      **/
-    void writeTiff(
+    void writeGDAL(
       const char* p_name,
-      const bool p_quad = false) const;
+      const bool p_quad = false,
+      const char* pszFormat = "GTiff") const;
 
 
     /**

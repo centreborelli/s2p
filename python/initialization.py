@@ -94,6 +94,7 @@ def init_roi(config_file):
     cfg['images'][0].setdefault('clr')
     cfg['images'][0].setdefault('cld')
     cfg['images'][0].setdefault('roi')
+    cfg['images'][0].setdefault('wat')
 
     # update roi definition if the full_img flag is set to true
     if ('full_img' in cfg) and cfg['full_img']:

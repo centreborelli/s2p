@@ -65,6 +65,7 @@ def pointing_correction(tile_info):
         img2, rpc2 = cfg['images'][i]['img'], cfg['images'][i]['rpc']
         roi_msk = cfg['images'][0]['roi']
         cld_msk = cfg['images'][0]['cld']
+        wat_msk = cfg['images'][0]['wat']
 
         # create a directory for the experiment
         if not os.path.exists(paired_tile_dir):
@@ -82,7 +83,7 @@ def pointing_correction(tile_info):
         else:
             # check if the ROI is masked by water or out of image domain
             H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
-            if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk, cld_msk):
+            if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk, cld_msk, wat_msk):
                 print "Tile masked by water or outside definition domain, skip"
                 open("%s/this_tile_is_masked.txt" % paired_tile_dir, 'a').close()
             else:

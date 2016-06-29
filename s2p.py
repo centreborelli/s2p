@@ -134,8 +134,6 @@ def process_tile_pair(tile_info, pair_id):
     tile_dir = tile_info['directory']
     col, row, tw, th = tile_info['coordinates']
     images = cfg['images']
-    cld_msk = cfg['images'][0]['cld']
-    roi_msk = cfg['images'][0]['roi']
 
     img1, rpc1 = images[0]['img'], images[0]['rpc']
     img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
@@ -163,8 +161,7 @@ def process_tile_pair(tile_info, pair_id):
     else:
         print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
         process.rectify(out_dir, np.loadtxt(A_global), img1, rpc1,
-                        img2, rpc2, col, row, tw, th, None, cld_msk,
-                        roi_msk)
+                        img2, rpc2, col, row, tw, th, None)
 
     # disparity estimation
     if (cfg['skip_existing'] and
@@ -174,7 +171,7 @@ def process_tile_pair(tile_info, pair_id):
     else:
         print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
         process.disparity(out_dir, img1, rpc1, img2, rpc2, col, row,
-                          tw, th, None, cld_msk, roi_msk)
+                          tw, th, None)
 
     # triangulation
     if (cfg['skip_existing'] and
@@ -183,8 +180,7 @@ def process_tile_pair(tile_info, pair_id):
     else:
         print '\ttriangulating tile %d %d (pair %d)...' % (col, row, pair_id)
         process.triangulate(out_dir, img1, rpc1, img2, rpc2, col,
-                            row, tw, th, None, cld_msk, roi_msk,
-                            np.loadtxt(A_global))
+                            row, tw, th, None, np.loadtxt(A_global))
 
 
 def process_tile(tile_info):
