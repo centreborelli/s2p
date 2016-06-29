@@ -271,8 +271,7 @@ def finalize_tile(tile_info, height_maps, utm_zone=None):
 
 
 def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
-            w=None, h=None, prv1=None, cld_msk=None,
-            roi_msk=None):
+            w=None, h=None, prv1=None):
     """
     Computes rectifications, without tiling
 
@@ -287,10 +286,7 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        prv1 (optional): path to a preview of the reference image
-        cld_msk (optional): path to a gml file containing a cloud mask
-        roi_msk (optional): path to a gml file containing a mask defining the
-            area contained in the full image.
+        prv1 (optional): path to a preview of the reference image.
 
     Returns:
         nothing
@@ -300,7 +296,6 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
     rect2 = '%s/rectified_sec.tif' % (out_dir)
     disp = '%s/rectified_disp.tif' % (out_dir)
     mask = '%s/rectified_mask.png' % (out_dir)
-    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
     center = '%s/center_keypts_sec.txt' % out_dir
@@ -333,8 +328,7 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
 
 
 def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-              w=None, h=None, prv1=None, cld_msk=None,
-              roi_msk=None):
+              w=None, h=None, prv1=None):
     """
     Computes a disparity map from a Pair of Pleiades images, without tiling
 
@@ -352,7 +346,8 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         prv1 (optional): path to a preview of the reference image
         cld_msk (optional): path to a gml file containing a cloud mask
         roi_msk (optional): path to a gml file containing a mask defining the
-            area contained in the full image.
+            area contained in the full image
+        wat_msk (optional): path to a tiff file containing a water mask.
 
     Returns:
         nothing
@@ -363,6 +358,8 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     disp = '%s/rectified_disp.tif' % (out_dir)
     mask = '%s/rectified_mask.png' % (out_dir)
     cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
+    cwid_msk_rect = '%s/rectified_cloud_water_image_domain_mask.png' % (out_dir)
+
     subsampling = '%s/subsampling.txt' % (out_dir)
     pointing = '%s/pointing.txt' % out_dir
     center = '%s/center_keypts_sec.txt' % out_dir
@@ -388,18 +385,18 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
     # get to be sampled on the epipolar grid)
     ww, hh = common.image_size(rect1)
     H1 = np.loadtxt(H_ref)
-    masking.cloud_water_image_domain(cwid_msk, ww, hh, H1, rpc1, roi_msk,
-                                     cld_msk)
+    H_inv = np.array([[1, 0, x], [0, 1, y], [0, 0, 1]])
+    common.image_apply_homography(cwid_msk_rect, cwid_msk, np.dot(H1,H_inv), ww, hh)
+
     try:
-        masking.intersection(mask, mask, cwid_msk)
+        masking.intersection(mask, mask, cwid_msk_rect)
         masking.erosion(mask, mask, cfg['msk_erosion'])
     except OSError:
         print "file %s not produced" % mask
 
 
 def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-                w=None, h=None, prv1=None, cld_msk=None,
-                roi_msk=None, A=None):
+                w=None, h=None, prv1=None, A=None):
     """
     Computes triangulations, without tiling
 
@@ -415,9 +412,6 @@ def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
         prv1 (optional): path to a preview of the reference image
-        cld_msk (optional): path to a gml file containing a cloud mask
-        roi_msk (optional): path to a gml file containing a mask defining the
-            area contained in the full image.
         A (optional, default None): pointing correction matrix.
 
     Returns:

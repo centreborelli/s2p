@@ -8,7 +8,7 @@ import common
 from config import cfg
 
 
-def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None):
+def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None, wat_msk=None):
     """
     Computes a mask for pixels masked by clouds, water, or out of image domain.
 
@@ -20,9 +20,10 @@ def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None):
         rpc: paths to the xml file containing the rpc coefficients of the image.
             RPC model is used with SRTM data to derive the water mask.
         roi_gml (optional, default None): path to a gml file containing a mask
-            defining the area contained in the full image.
+            defining the area contained in the full image
         cld_gml (optional, default None): path to a gml file containing a mask
-            defining the areas covered by clouds.
+            defining the areas covered by clouds
+        wat_msk (optional): path to a tiff file containing a water mask.
 
     Returns:
         True if the tile is completely masked, False otherwise.
@@ -53,13 +54,19 @@ def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None):
 
         intersection(out, out, cld_msk)
 
-    # water mask
-    water_msk = common.tmpfile('.png')
-    env = os.environ.copy()
-    env['SRTM4_CACHE'] = cfg['srtm_dir']
-    common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc, water_msk),
-               env)
-    intersection(out, out, water_msk)
+    if wat_msk is not None:
+        # water mask (tiff)
+        wat_msk_crop = common.tmpfile('.png')
+        common.image_apply_homography(wat_msk_crop, wat_msk, H, w, h)
+        intersection(out, out, wat_msk_crop)
+    else:
+        # water mask (srtm)
+        water_msk = common.tmpfile('.png')
+        env = os.environ.copy()
+        env['SRTM4_CACHE'] = cfg['srtm_dir']
+        common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc, water_msk),
+                   env)
+        intersection(out, out, water_msk)
 
     return common.is_image_black(out)
 
