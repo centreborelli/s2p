@@ -525,11 +525,11 @@ def main(config_file, step=None, clusterMode=None, misc=None):
            
         if 6 in steps:
             print '\ncompute dsm...'
-            args=[]
+            args = []
             for i in range(cfg['dsm_nb_tiles']):
-                args.append([cfg['dsm_nb_tiles'],i])
+                args.append([config_file, cfg['dsm_nb_tiles'], i])
             show_progress.total = cfg['dsm_nb_tiles']
-            launch_parallel_calls(compute_dsm,args,nb_workers)
+            launch_parallel_calls(compute_dsm, args, nb_workers)
             print_elapsed_time()
 
         if 7 in steps:
