@@ -85,5 +85,6 @@ target_link_libraries (sift_roi ${GDAL_LIBRARIES})
 # Link -lm
 find_library (M_LIBRARY m)
 if (M_LIBRARY)
+    target_link_libraries (sift_roi ${M_LIBRARY})
     target_link_libraries (matching ${M_LIBRARY})
 endif()
