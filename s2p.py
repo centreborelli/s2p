@@ -140,8 +140,8 @@ def process_tile_pair(tile_info, pair_id):
 
     out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id)
 
-    
-    
+
+
     A_global = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_%d.txt' % pair_id)
 
@@ -151,7 +151,7 @@ def process_tile_pair(tile_info, pair_id):
     if os.path.isfile(os.path.join(out_dir, 'this_tile_is_masked.txt')):
         print 'tile %s already masked, skip' % out_dir
         return
-    
+
     # rectification
     if (cfg['skip_existing'] and
         os.path.isfile(os.path.join(out_dir, 'disp_min_max.txt')) and
@@ -215,7 +215,7 @@ def process_tile(tile_info):
             if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
                 height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
         process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
-        
+
         # ply extrema
         common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
 
@@ -237,56 +237,55 @@ def global_extent(tiles_full_info):
     Compute the global extent from the extrema of each ply file
     """
     xmin, xmax, ymin, ymax = float('inf'), -float('inf'), float('inf'), -float('inf')
-    
+
     for tile in tiles_full_info:
         plyextrema_file = os.path.join(tile['directory'], 'plyextrema.txt')
-                                         
+
         if (os.path.exists(plyextrema_file)):
             extremaxy = np.loadtxt(plyextrema_file)
             xmin = min(xmin, extremaxy[0])
             xmax = max(xmax, extremaxy[1])
             ymin = min(ymin, extremaxy[2])
             ymax = max(ymax, extremaxy[3])
-        
+
     global_extent = [xmin, xmax, ymin, ymax]
     np.savetxt(os.path.join(cfg['out_dir'], 'global_extent.txt'), global_extent,
-               fmt='%6.3f') 
+               fmt='%6.3f')
 
 
 def compute_dsm(args):
     """
     Compute the DSMs
 
-    Args: 
+    Args:
          - args  ( <==> [config_file,number_of_tiles,current_tile])
     """
     list_of_tiles_dir = os.path.join(cfg['out_dir'],'list_of_tiles.txt')
-   
+
     config_file,number_of_tiles,current_tile = args
-    
+
     dsm_dir = os.path.join(cfg['out_dir'],'dsm')
     out_dsm = os.path.join(dsm_dir,'dsm_%d.tif' % (current_tile) )
-    
+
     extremaxy = np.loadtxt(os.path.join(cfg['out_dir'], 'global_extent.txt'))
-    
+
     global_xmin,global_xmax,global_ymin,global_ymax = extremaxy
-    
+
     global_y_diff = global_ymax-global_ymin
     tile_y_size = (global_y_diff)/(number_of_tiles)
-    
+
     # horizontal cuts
     ymin = global_ymin + current_tile*tile_y_size
     ymax = ymin + tile_y_size
-    
+
     # cutting info
     x, y, w, h, z, ov, tw, th, nb_pairs = initialization.cutting(config_file)
     range_y = np.arange(y, y + h - ov, th - ov)
     range_x = np.arange(x, x + w - ov, tw - ov)
     colmin, rowmin, tw, th = common.round_roi_to_nearest_multiple(z, range_x[0], range_y[0], tw, th)
-    colint, rowint, tw, th = common.round_roi_to_nearest_multiple(z, range_x[1], range_y[1], tw, th)
     colmax, rowmax, tw, th = common.round_roi_to_nearest_multiple(z, range_x[-1], range_y[-1], tw, th)
-    cutsinf = '%d %d %d %d %d %d %d %d' % (rowmin, rowint-rowmin, rowmax, colmin, colint - colmin, colmax, tw, th)
-    
+    cutsinf = '%d %d %d %d %d %d %d %d' % (rowmin, th - ov, rowmax, colmin, tw - ov, colmax, tw, th)
+
     flags = {}
     flags['average-orig'] = 0
     flags['average'] = 1
@@ -295,7 +294,7 @@ def compute_dsm(args):
     flags['max'] = 4
     flags['median'] = 5
     flag = "-flag %d" % (flags.get(cfg['dsm_option'], 0))
-    
+
     if (ymax <= global_ymax):
         common.run("plytodsm %s %f %s %f %f %f %f %s %s" % (flag,
                                                             cfg['dsm_resolution'],
@@ -304,8 +303,8 @@ def compute_dsm(args):
                                                             global_xmax, ymin,
                                                             ymax, cutsinf,
                                                             cfg['out_dir']))
-                                                 
-                                             
+
+
 def global_finalization(tiles_full_info):
     """
     Produce a single height map, DSM and point cloud for the whole ROI.
@@ -334,7 +333,7 @@ def global_finalization(tiles_full_info):
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
-        shutil.copy2(img['rpc'], cfg['out_dir'])       
+        shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
 def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
@@ -371,7 +370,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
-        
+
 
     pool.close()
     pool.join()
@@ -387,9 +386,9 @@ def execute_job(config_file,params):
     """
     tile_dir = params[0]
     step = int(params[1])
-    
+
     tiles_full_info = initialization.init_tiles_full_info(config_file)
-    
+
     if not (tile_dir == 'all_tiles' or 'dsm' in tile_dir ):
         for tile in tiles_full_info:
             if tile_dir == tile['directory']:
@@ -397,11 +396,11 @@ def execute_job(config_file,params):
                 break
 
     try:
-        
+
         if step == 2:#"preprocess_tiles":
             print 'preprocess_tiles on %s ...' % tile_to_process
             preprocess_tile(tile_to_process)
-        
+
         if step == 3:#"global_values":
             print 'global values ...'
             global_values(tiles_full_info)
@@ -409,20 +408,20 @@ def execute_job(config_file,params):
         if step == 4:#"process_tiles" :
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
-        
+
         if step == 5:#"global extent" :
-            print 'global extent ...' 
+            print 'global extent ...'
             global_extent(tiles_full_info)
-            
+
         if step == 6:#"compute_dsm" :
             print 'compute_dsm ...'
             current_tile=int(tile_dir.split('_')[1]) # for instance, dsm_2 becomes 2
             compute_dsm([config_file,cfg['dsm_nb_tiles'],current_tile])
-            
-        if step == 7:#"global_finalization":    
-            print 'global finalization...'     
-            global_finalization(tiles_full_info)  
-                
+
+        if step == 7:#"global_finalization":
+            print 'global finalization...'
+            global_finalization(tiles_full_info)
+
     except KeyboardInterrupt:
         pool.terminate()
         sys.exit(1)
@@ -439,7 +438,7 @@ def list_jobs(config_file, step):
 
     if not (os.path.exists(cfg['out_dir'])):
         os.mkdir(cfg['out_dir'])
-    
+
     if step in [2,4]:           #preprocessing, processing
         f = open(os.path.join(cfg['out_dir'],filename),'w')
         for tile in tiles_full_info:
@@ -475,7 +474,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         config_file: path to a json configuration file
         step: integer between 1 and 5 specifying which step to run. Default
         value is None. In that case all the steps are run.
-    """    
+    """
     print_elapsed_time.t0 = datetime.datetime.now()
 
     if clusterMode == 'list_jobs':
@@ -517,12 +516,12 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             show_progress.total = len(tiles_full_info)
             launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
             print_elapsed_time()
-           
+
         if 5 in steps:
             print '\ncomputing global extent...'
             global_extent(tiles_full_info)
             print_elapsed_time()
-           
+
         if 6 in steps:
             print '\ncompute dsm...'
             args = []
@@ -536,7 +535,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             print '\nglobal finalization...'
             global_finalization(tiles_full_info)
             print_elapsed_time()
-        
+
     # cleanup
     print_elapsed_time(since_first_call=True)
     common.garbage_cleanup()
@@ -549,7 +548,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) < 2:
         error = True
-        
+
     elif sys.argv[1].endswith(".json"):
         if len(sys.argv) == 2:
             main(sys.argv[1])
@@ -567,7 +566,7 @@ if __name__ == '__main__':
                 else:
                     error = True
 
-            if sys.argv[1] == 'job': 
+            if sys.argv[1] == 'job':
                 if len(sys.argv) >= 5 and int(sys.argv[4]) in steps:
                     main(sys.argv[2], None, 'job', sys.argv[3:])
                 else:
@@ -595,6 +594,6 @@ if __name__ == '__main__':
 
           All the parameters, paths to input and output files, are defined in
           the json configuration file.
-          
+
         """ % (sys.argv[0], sys.argv[0], sys.argv[0])
         sys.exit(1)
