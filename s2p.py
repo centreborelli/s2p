@@ -321,7 +321,7 @@ def global_finalization(tiles_full_info):
             processed tiles
     """
     globalfinalization.write_vrt_files(tiles_full_info)
-    globalfinalization.write_dsm(tiles_full_info)
+    globalfinalization.write_dsm()
 
     # whole point cloud (LidarViewer format)
     if common.which('LidarPreprocessor'):
