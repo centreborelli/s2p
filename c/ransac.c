@@ -224,7 +224,9 @@ int ransac(
 	fprintf(stderr, "a model must have more than %d inliers\n",
 			min_inliers);
 
-
+	if (n < nfit)
+	  return 0;
+	
 	mt_init((unsigned long int) 0);  // fix seed for the Mersenne Twister PRNG
 	int best_ninliers = 0;
 	float best_model[modeldim];
