@@ -143,6 +143,7 @@ def generate_cloud(tile_info, do_offset=False, utm_zone=None):
     common.garbage_cleanup()
 
 
+
 def merge_height_maps(height_maps, tile_dir, thresh, conservative, k=1, garbage=[]):
     """
     Merges a list of height maps recursively, computed for one tile from N image pairs.
@@ -186,6 +187,19 @@ def merge_height_maps(height_maps, tile_dir, thresh, conservative, k=1, garbage=
                 common.run('rm -f %s' % imtemp)
 
 
+def cargarse_basura(inputf, outputf):
+    se=5
+    tmp1 = outputf + '1.tif'
+    tmp2 = outputf + '2.tif'
+    tmpM = outputf + 'M.tif'
+    common.run('morphoop %s min %d %s'%(inputf,se,tmpM))
+    common.run('morphoop %s max %d %s'%(inputf,se,tmp1))
+    common.run('morphoop %s max %d %s'%(inputf,se,tmpM))
+    common.run('morphoop %s min %d %s'%(inputf,se,tmp2))
+    common.run('plambda %s %s %s "x y - fabs %d > nan z if" -o %s'%(tmp1,tmp2,inputf,5,tmpM))
+    common.run('remove_small_cc %s %s %d %d'%(tmpM,outputf,200,5))
+    common.run('rm -f %s %s %s'%(tmp1,tmp2,tmpM))
+
 def finalize_tile(tile_info, height_maps, utm_zone=None):
     """
     Finalize the processing of a tile.
@@ -205,6 +219,12 @@ def finalize_tile(tile_info, height_maps, utm_zone=None):
     ov = tile_info['overlap']
     pos = tile_info['position_type']
     img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
+
+    # remove spurious matches
+    if cfg['cargarse_basura']:
+    	for i in range(1, len(height_maps) + 1):
+    	    height_map = tile_dir + '/pair_%d/height_map.tif'%(i) 
+    	    cargarse_basura(height_map, height_map)
 
     # merge the n height maps
     local_merged_height_map = os.path.join(tile_dir,

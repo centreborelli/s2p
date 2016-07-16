@@ -253,6 +253,120 @@ def global_extent(tiles_full_info):
                fmt='%6.3f')
 
 
+def global_align(tiles_full_info):
+    """
+    Align the N-plets vertically to remove the affine bias due to the pointing error, 
+    computed for one tile from N image pairs.
+    Uses the first height map as a reference. Stores the old (and biased) height maps 
+    as height_map_bias_ and overwrites the height_map_
+
+    Args :
+         - height_maps : list of height map directories
+         - tile_dir : directory of the tile from which to get a merged height map
+         - garbage : a list used to remove temp data (default = [], first call)
+    """
+    from osgeo import gdal,ogr
+
+    # first assemble the full height maps associated to each pair
+    globalfinalization.write_vrt_files(tiles_full_info)
+
+    nb_pairs = tiles_full_info[0]['number_of_pairs']
+    if nb_pairs == 1:
+       return
+
+
+    # 1. read the reference height map and create the ij grid
+    reference_height_map = cfg['out_dir'] + '/heightMap_pair_%d.vrt'%1
+
+    hhd = gdal.Open(reference_height_map)
+    hhr = hhd.GetRasterBand(1)
+    hh  = hhr.ReadAsArray()
+    #hh = piio.read(reference_height_map).squeeze() # TODO USE GDAL 
+    XX, YY = np.meshgrid(range(hh.shape[1]),range(hh.shape[0]))
+
+    # 2. if the reference height map is almost entirely NAN skip the process? TODO: or choose a new reference? 
+    #if np.sum(np.isfinite(hh) < ): 
+    #    pass
+
+    from python import piio
+    piio.write(reference_height_map+'.tif', hh)
+
+    # 3. for each remaining pair of height maps
+    for i in range(2, nb_pairs + 1):
+        height_map = cfg['out_dir'] + '/heightMap_pair_%d.vrt'%i
+
+        # 3.1 read the secondary height map  
+        hhd = gdal.Open(height_map)
+        hhr = hhd.GetRasterBand(1)
+        hh2 = hhr.ReadAsArray()
+        #hh2 = piio.read(height_map).squeeze()
+
+        # 3.2 use only the non-nan points in both maps
+        mask = np.isfinite(hh) & np.isfinite(hh2) 
+        HH  = hh[mask]
+        HH2 = hh2[mask] 
+        XX2 = XX[mask]
+        YY2 = YY[mask]
+
+        def solve_lsq(X,Y):
+           ''' 
+           solves argmin_A ||A X - Y||^2
+             A = Y X^T inv(X X^T)
+           '''
+           return Y.dot(X.transpose()).dot( np.linalg.inv(X.dot(X.transpose())) )
+
+        def solve_irls(X,Y,iter=100):
+           ''' 
+           solves argmin_A ||A X - Y|| with irls
+           for more information about IRLS and sparsity:
+           http://www.ricam.oeaw.ac.at/people/page/fornasier/DDFG14.pdf
+           
+           initialize W as identity matrix
+           iterate: 
+              argmin_A ||A X W - Y W||^2
+              A = Y W X^T inv(X W X^T)
+              W = diag( ||AX - Y|| )^(p-2) 
+           '''
+
+           # initialize with least squares
+           pesos = np.ones(X.shape[1])
+
+           p=0.8
+           for t in range(iter):
+              W = pesos[:,np.newaxis]
+              WXt = W*(X.transpose())
+
+              A = Y.dot(WXt).dot( np.linalg.inv(X.dot(WXt)) )
+              r = Y - A.dot(X)
+              pesos = np.sqrt(np.sum(r*r,axis=0))**(p-2)
+           return A, pesos
+
+        # 4. compute the transformation
+        # [ h2 X Y 1 ] alpha = h 
+        ##### also implement data centering to improve numerical stability
+        #Yo = np.hstack([xy1, h1m[:, np.newaxis]]).transpose()
+        #Xo = np.hstack([xy2, h2m[:, np.newaxis], np.ones(( xy1.shape[0] ,1))]).transpose()
+        ## center the data for numerical stability
+        #center = Xo.mean(axis=1); center[3] = 0;
+        #X = Xo - center[:,np.newaxis]
+        #Y = Yo - center[0:3,np.newaxis]
+
+        Xo = np.vstack( [ HH2, XX2, YY2,  np.ones(( XX2.shape[0] ,1)).squeeze() ])
+        Yo = HH
+        ## center the data for numerical stability
+        #center = Xo.mean(axis=1); center[3] = 0;
+        #X = Xo - center[:,np.newaxis]
+        #Y = Yo - center[0,np.newaxis]
+
+        alpha = solve_lsq(Xo,Yo)
+        #alpha,W = solve_irls(Xo,Yo)
+	print alpha
+
+        hh2 = hh2 * alpha[0] + XX*alpha[1] + YY*alpha[2] + alpha[3]
+        from python import piio
+        piio.write(height_map+'.tif', hh2)
+
+
 def compute_dsm(args):
     """
     Compute the DSMs
@@ -319,7 +433,7 @@ def global_finalization(tiles_full_info):
         tiles_full_info: dictionary providing all the information about the
             processed tiles
     """
-    globalfinalization.write_vrt_files(tiles_full_info)
+    #globalfinalization.write_vrt_files(tiles_full_info)
     globalfinalization.write_dsm()
 
     # whole point cloud (LidarViewer format)
@@ -520,6 +634,11 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         if 5 in steps:
             print '\ncomputing global extent...'
             global_extent(tiles_full_info)
+            print_elapsed_time()
+
+        if 7 in steps: 
+            print '\ncomputing global alignement ..'
+            global_align(tiles_full_info)
             print_elapsed_time()
 
         if 6 in steps:

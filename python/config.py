@@ -113,3 +113,6 @@ cfg['srtm_dir'] = os.path.join(parent_dir, '.srtm')
 
 # DSM options
 cfg['dsm_option'] = 'median'
+
+# clean height maps outliers
+cfg['cargarse_basura'] = True
