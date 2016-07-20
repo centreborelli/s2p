@@ -209,15 +209,15 @@ def process_tile(tile_info):
         for pair_id in range(1, nb_pairs + 1):
             process_tile_pair(tile_info, pair_id)
 
-        # finalization
-        height_maps = []
-        for i in xrange(nb_pairs):
-            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
-                height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
-        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
-
-        # ply extrema
-        common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
+#        # finalization
+#        height_maps = []
+#        for i in xrange(nb_pairs):
+#            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
+#                height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
+#        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
+#
+#        # ply extrema
+#        common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
 
     except Exception:
         print("Exception in processing tile:")
@@ -247,6 +247,8 @@ def process_tile_fusion(tile_info):
         sys.stderr = fout
 
     try:
+        nb_pairs = tile_info['number_of_pairs']
+
         # check that the tile is not masked
         if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
             print 'tile %s already masked, skip' % tile_dir
@@ -274,6 +276,7 @@ def process_tile_fusion(tile_info):
         sys.stderr = sys.__stderr__
         fout.close()
 
+vabcd=[]
 
 def apply_global_alignment(tile_info):
     """
@@ -283,6 +286,7 @@ def apply_global_alignment(tile_info):
         tile_info: a dictionary that provides all you need to process a tile
     """
     tile_dir = tile_info['directory']
+    global vabcd
 
     # check that the tile is not masked
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
@@ -290,11 +294,11 @@ def apply_global_alignment(tile_info):
         return
 
     # process each pair to get a height map
-    nb_pairs = tile_info['number_of_pairs']
+    nb_pairs = int(tile_info['number_of_pairs'])
     for pair_id in range(nb_pairs):
-        abcd = tile_info['alignment_correction_parameters'][pair_id]
+        abcd = vabcd[pair_id]# = tile_info['alignment_correction_parameters'][pair_id]
         tile_dir = tile_info['directory']
-        out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id + 1)
+        out_dir = os.path.join(tile_dir, 'pair_%d' %(pair_id + 1))
         fname_h = os.path.join(out_dir, 'height_map.tif')
         cmd = 'plambda %s \"%f * %f +\" -o %s' % (fname_h, abcd[0], abcd[3], fname_h)
         common.run(cmd)
@@ -337,12 +341,13 @@ def global_align(tiles_full_info):
         - list of N 4-tuples describing the (a,b,c,d) correction for each pair
     """
     from osgeo import gdal,ogr
-    ret = [(1,0,0,0)]
+    ret = [np.array([1,0,0,0])]
 
     # first assemble the full height maps associated to each pair
     globalfinalization.write_vrt_files(tiles_full_info)
 
     nb_pairs = tiles_full_info[0]['number_of_pairs']
+
     if nb_pairs == 1:
        return ret
 
@@ -380,12 +385,6 @@ def global_align(tiles_full_info):
         XX2 = XX[mask]
         YY2 = YY[mask]
 
-        def solve_lsq(X,Y):
-           ''' 
-           solves argmin_A ||A X - Y||^2
-             A = Y X^T inv(X X^T)
-           '''
-           return Y.dot(X.transpose()).dot( np.linalg.inv(X.dot(X.transpose())) )
 
         def solve_irls(X,Y,iter=100):
            ''' 
@@ -430,17 +429,19 @@ def global_align(tiles_full_info):
         #X = Xo - center[:,np.newaxis]
         #Y = Yo - center[0,np.newaxis]
 
-        alpha = solve_lsq(Xo,Yo)
+        #   solves argmin_A ||A X - Y||^2
+        alpha = np.linalg.lstsq(Xo.transpose(), Yo)[0]
         #alpha,W = solve_irls(Xo,Yo)
-        assert(alpha[1] == 0)
-        assert(alpha[2] == 0)
-        print alpha
+        #assert(alpha[1] == 0)
+        #assert(alpha[2] == 0)
+
         ret.append(alpha)
 
         #hh2 = hh2 * alpha[0] + XX*alpha[1] + YY*alpha[2] + alpha[3]
         #from python import piio
         #piio.write(height_map+'.tif', hh2)
 
+    print ret
     return ret
 
 
@@ -683,7 +684,7 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         execute_job(config_file,misc)
     else:
         # determine which steps to run
-        steps = [step] if step else [1, 2, 3, 4, 5, 6, 7]
+        steps = [step] if step else [1, 2, 3, 4, 4.5, 5, 6, 7]
 
         # initialization (has to be done whatever the queried steps)
         initialization.init_dirs_srtm(config_file)
@@ -719,10 +720,11 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         if 4.5 in steps:
             print '\nsplit global alignment...'
             abcd = global_align(tiles_full_info)
+            global vabcd
+            vabcd=abcd
             print_elapsed_time()
 
             print '\napply global alignment...'
-            tiles_full_info['alignment_correction_parameters'] = abcd
             launch_parallel_calls(apply_global_alignment, tiles_full_info, nb_workers)
             print_elapsed_time()
 
@@ -735,10 +737,6 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             global_extent(tiles_full_info)
             print_elapsed_time()
 
-        if 7 in steps: 
-            print '\ncomputing global alignement ..'
-            global_align(tiles_full_info)
-            print_elapsed_time()
 
         if 6 in steps:
             print '\ncompute dsm...'
