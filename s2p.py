@@ -295,7 +295,7 @@ def apply_global_alignment(tile_info):
         abcd = tile_info['alignment_correction_parameters'][pair_id]
         tile_dir = tile_info['directory']
         out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id + 1)
-        fname_h = os.path.join(out_dir, 'height_map.tif'))
+        fname_h = os.path.join(out_dir, 'height_map.tif')
         cmd = 'plambda %s \"%f * %f +\" -o %s' % (fname_h, abcd[0], abcd[3], fname_h)
         common.run(cmd)
 
