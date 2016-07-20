@@ -358,15 +358,11 @@ def global_align(tiles_full_info):
     hhd = gdal.Open(reference_height_map)
     hhr = hhd.GetRasterBand(1)
     hh  = hhr.ReadAsArray()
-    #hh = piio.read(reference_height_map).squeeze() # TODO USE GDAL 
     XX, YY = np.meshgrid(range(hh.shape[1]),range(hh.shape[0]))
 
     # 2. if the reference height map is almost entirely NAN skip the process? TODO: or choose a new reference? 
     #if np.sum(np.isfinite(hh) < ): 
     #    pass
-
-    from python import piio
-    piio.write(reference_height_map+'.tif', hh)
 
     # 3. for each remaining pair of height maps
     for i in range(2, nb_pairs + 1):
@@ -376,7 +372,6 @@ def global_align(tiles_full_info):
         hhd = gdal.Open(height_map)
         hhr = hhd.GetRasterBand(1)
         hh2 = hhr.ReadAsArray()
-        #hh2 = piio.read(height_map).squeeze()
 
         # 3.2 use only the non-nan points in both maps
         mask = np.isfinite(hh) & np.isfinite(hh2) 
@@ -438,8 +433,6 @@ def global_align(tiles_full_info):
         ret.append(alpha)
 
         #hh2 = hh2 * alpha[0] + XX*alpha[1] + YY*alpha[2] + alpha[3]
-        #from python import piio
-        #piio.write(height_map+'.tif', hh2)
 
     print ret
     return ret
