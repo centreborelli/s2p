@@ -211,15 +211,16 @@ def process_tile(tile_info):
         for pair_id in range(1, nb_pairs + 1):
             process_tile_pair(tile_info, pair_id)
 
-#        # finalization
-#        height_maps = []
-#        for i in xrange(nb_pairs):
-#            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
-#                height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
-#        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
-#
-#        # ply extrema
-#        common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
+	##### SOMEHOW THIS IS ABSOLUTELY NECESSARY! IT CREATES SOMETHING MAGIC THAT ALLOWS TO RUN global_align
+        # finalization
+        height_maps = []
+        for i in xrange(nb_pairs):
+            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
+                height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
+        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
+
+        # ply extrema
+        common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
 
     except Exception:
         print("Exception in processing tile:")
@@ -356,23 +357,33 @@ def global_align(tiles_full_info):
     # 1. read the reference height map and create the ij grid
     reference_height_map = cfg['out_dir'] + '/heightMap_pair_%d.vrt'%1
 
+    if not os.path.isfile(reference_height_map ):
+        print reference_height_map
+        print("the VRT file is supposed to be there after calling globalfinalization.write_vrt_files but it's not!")
+        exit()
+
     hhd = gdal.Open(reference_height_map)
     hhr = hhd.GetRasterBand(1)
-    hh  = hhr.ReadAsArray()
+    hh  = hhr.ReadAsArray().copy()
+    hhd = None
     XX, YY = np.meshgrid(range(hh.shape[1]),range(hh.shape[0]))
 
     # 2. if the reference height map is almost entirely NAN skip the process? TODO: or choose a new reference? 
     #if np.sum(np.isfinite(hh) < ): 
     #    pass
 
+    #from python import piio
+    #piio.write(reference_height_map+'.tif', hh)
+
     # 3. for each remaining pair of height maps
     for i in range(2, nb_pairs + 1):
         height_map = cfg['out_dir'] + '/heightMap_pair_%d.vrt'%i
 
         # 3.1 read the secondary height map  
-        hhd = gdal.Open(height_map)
-        hhr = hhd.GetRasterBand(1)
-        hh2 = hhr.ReadAsArray()
+        hhd2 = gdal.Open(height_map)
+        hhr2 = hhd2.GetRasterBand(1)
+        hh2 = hhr2.ReadAsArray().copy()
+	hhd2 = None
 
         # 3.2 use only the non-nan points in both maps
         mask = np.isfinite(hh) & np.isfinite(hh2) 
@@ -380,6 +391,8 @@ def global_align(tiles_full_info):
         HH2 = hh2[mask] 
         XX2 = XX[mask]
         YY2 = YY[mask]
+
+        print HH.mean(), HH2.mean()
 
 
         def solve_irls(X,Y,iter=100):
@@ -418,22 +431,25 @@ def global_align(tiles_full_info):
         #X = Xo - center[:,np.newaxis]
         #Y = Yo - center[0:3,np.newaxis]
 
-        Xo = np.vstack( [ HH2, 0*XX2, 0*YY2,  np.ones(( XX2.shape[0] ,1)).squeeze() ])
-        Yo = HH
-        ## center the data for numerical stability
-        #center = Xo.mean(axis=1); center[3] = 0;
-        #X = Xo - center[:,np.newaxis]
-        #Y = Yo - center[0,np.newaxis]
+        #Xo = np.vstack( [ HH2, XX2*0, YY2*0,  np.ones(( XX2.shape[0] ,1)).squeeze() ])
+        #Yo = HH
+        ### center the data for numerical stability
+        ##center = Xo.mean(axis=1); center[3] = 0;
+        ##X = Xo - center[:,np.newaxis]
+        ##Y = Yo - center[0,np.newaxis]
 
-        #   solves argmin_A ||A X - Y||^2
-        alpha = np.linalg.lstsq(Xo.transpose(), Yo)[0]
+        ##   solves argmin_A ||A X - Y||^2
+        #alpha = np.linalg.lstsq(Xo.transpose(), Yo)[0]
         #alpha,W = solve_irls(Xo,Yo)
         #assert(alpha[1] == 0)
         #assert(alpha[2] == 0)
+        alpha = np.array([1,0,0, HH.mean() - HH2.mean() ])
 
         ret.append(alpha)
 
         #hh2 = hh2 * alpha[0] + XX*alpha[1] + YY*alpha[2] + alpha[3]
+        #from python import piio
+        #piio.write(height_map+'.tif', hh2)
 
     print ret
     return ret
