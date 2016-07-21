@@ -35,6 +35,8 @@ from python import globalvalues
 from python import process
 from python import globalfinalization
 
+global vabcd
+vabcd=[]
 
 def show_progress(a):
     """
@@ -276,7 +278,6 @@ def process_tile_fusion(tile_info):
         sys.stderr = sys.__stderr__
         fout.close()
 
-vabcd=[]
 
 def apply_global_alignment(tile_info):
     """
@@ -286,7 +287,6 @@ def apply_global_alignment(tile_info):
         tile_info: a dictionary that provides all you need to process a tile
     """
     tile_dir = tile_info['directory']
-    global vabcd
 
     # check that the tile is not masked
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
@@ -296,6 +296,7 @@ def apply_global_alignment(tile_info):
     # process each pair to get a height map
     nb_pairs = int(tile_info['number_of_pairs'])
     for pair_id in range(nb_pairs):
+    	global vabcd
         abcd = vabcd[pair_id]# = tile_info['alignment_correction_parameters'][pair_id]
         tile_dir = tile_info['directory']
         out_dir = os.path.join(tile_dir, 'pair_%d' %(pair_id + 1))
@@ -512,7 +513,7 @@ def global_finalization(tiles_full_info):
         tiles_full_info: dictionary providing all the information about the
             processed tiles
     """
-    #globalfinalization.write_vrt_files(tiles_full_info)
+    globalfinalization.write_vrt_files(tiles_full_info)
     globalfinalization.write_dsm()
 
     # whole point cloud (LidarViewer format)
