@@ -25,15 +25,24 @@
 void utm_alt_zone(double *out, double lat, double lon, int zone);
 void utm_zone(int *zone, bool *northp, double lat, double lon);
 
+static void lonlat_from_ijh(double ll[2],
+		struct rpc *r, double i, double j, double h)
+{
+	eval_rpc(ll, r, i, j, h);
+}
+
+void utm_from_lonlat_and_zone(double xy[2], double lon, double lat, int zone)
+{
+	utm_alt_zone(xy, lon, lat, zone);
+}
 
 static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h,
         int zone)
 {
-    double lon_lat[2];
-    eval_rpc(lon_lat, r, i, j, h);
-    utm_alt_zone(xyz, lon_lat[1], lon_lat[0], zone);
+    double ll[3];
+    lonlat_from_ijh(ll, r, i, j, h);
+    utm_from_lonlat_and_zone(xyz, ll[1], ll[0], zone);
     xyz[2] = h;
-    //printf("%f %f\n", xyz[0], xyz[1]);
 }
 
 
@@ -137,6 +146,7 @@ static void help(char *s)
     fprintf(stderr, "\t usage: %s out.ply heights.tif rpc.xml "
             "[colors.png] [-h \"h1 ... h9\"] [--utm-zone ZONE] "
             "[--offset_x x0] [--offset_y y0] [--with-normals] "
+	    "[--lon-min l0] [--lon-max lf] [--lat-min l0] [--lat-max lf] "
             "[--max-memory MB]\n", s);
 
     // offset allows the user to choose the origin of the coordinates system,
@@ -168,6 +178,12 @@ int main(int c, char *v[])
     bool hem;
     char *utm_string = pick_option(&c, &v, "-utm-zone", "no_utm_zone");
     parse_utm_string(&zone, &hem, utm_string);
+
+    // longitude-latitude bounding box
+    double lon_min = atof(pick_option(&c, &v, "-lon-min", "-inf"));
+    double lon_max = atof(pick_option(&c, &v, "-lon-max", "inf"));
+    double lat_min = atof(pick_option(&c, &v, "-lat-min", "-inf"));
+    double lat_max = atof(pick_option(&c, &v, "-lat-max", "inf"));
 
     // rectifying homography. If not provided, it is identity (ie full images)
     char *hom_string = pick_option(&c, &v, "h", "");
@@ -283,9 +299,15 @@ int main(int c, char *v[])
             if (there_is_a_homography)
                 apply_homography(xy, inv_hom, xy);
 
-            // compute utm coordinates
-            double xyz[3], nrm[3], tmp[3];
-            getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
+            // compute utm coordinates (rejecting points outside lonlat bbx)
+            double xyz[3], nrm[3], tmp[3], ll[2];
+            //getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
+	    lonlat_from_ijh(ll, r, xy[0], xy[1], h);
+	    if (ll[0] < lon_min || ll[0] > lon_max ||
+			    ll[1] < lat_min || ll[1] > lat_max)
+		    continue;
+	    utm_from_lonlat_and_zone(xyz, ll[1], ll[0], zone);
+	    xyz[2] = h;
 
             if (there_is_an_offset) {
                 xyz[0] -= x0;
