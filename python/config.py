@@ -116,3 +116,6 @@ cfg['dsm_option'] = 'median'
 
 # clean height maps outliers
 cfg['cargarse_basura'] = True
+
+# longitude/latitude bounding box
+cfg['ll_bbx'] = (-float("inf"), float("inf"), float("-inf"), float("inf"))

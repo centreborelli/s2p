@@ -146,8 +146,8 @@ static void help(char *s)
     fprintf(stderr, "\t usage: %s out.ply heights.tif rpc.xml "
             "[colors.png] [-h \"h1 ... h9\"] [--utm-zone ZONE] "
             "[--offset_x x0] [--offset_y y0] [--with-normals] "
-	    "[--lon-min l0] [--lon-max lf] [--lat-min l0] [--lat-max lf] "
-            "[--max-memory MB]\n", s);
+	    "[--lon-m l0] [--lon-M lf] [--lat-m l0] [--lat-M lf] "
+	    "[--lonlat-clip polygon.kml] [--max-memory MB]\n", s);
 
     // offset allows the user to choose the origin of the coordinates system,
     // in order to avoid visualisation problems due to huge values of the
@@ -180,10 +180,10 @@ int main(int c, char *v[])
     parse_utm_string(&zone, &hem, utm_string);
 
     // longitude-latitude bounding box
-    double lon_min = atof(pick_option(&c, &v, "-lon-min", "-inf"));
-    double lon_max = atof(pick_option(&c, &v, "-lon-max", "inf"));
-    double lat_min = atof(pick_option(&c, &v, "-lat-min", "-inf"));
-    double lat_max = atof(pick_option(&c, &v, "-lat-max", "inf"));
+    double lon_m = atof(pick_option(&c, &v, "-lon-m", "-inf"));
+    double lon_M = atof(pick_option(&c, &v, "-lon-M", "inf"));
+    double lat_m = atof(pick_option(&c, &v, "-lat-m", "-inf"));
+    double lat_M = atof(pick_option(&c, &v, "-lat-M", "inf"));
 
     // rectifying homography. If not provided, it is identity (ie full images)
     char *hom_string = pick_option(&c, &v, "h", "");
@@ -303,8 +303,7 @@ int main(int c, char *v[])
             double xyz[3], nrm[3], tmp[3], ll[2];
             //getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
 	    lonlat_from_ijh(ll, r, xy[0], xy[1], h);
-	    if (ll[0] < lon_min || ll[0] > lon_max ||
-			    ll[1] < lat_min || ll[1] > lat_max)
+	    if (ll[0]<lon_m || ll[0]>lon_M || ll[1]<lat_m || ll[1]>lat_M)
 		    continue;
 	    utm_from_lonlat_and_zone(xyz, ll[1], ll[0], zone);
 	    xyz[2] = h;

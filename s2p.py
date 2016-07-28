@@ -217,7 +217,7 @@ def process_tile(tile_info):
         for i in xrange(nb_pairs):
             if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
                 height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
-        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
+        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'], cfg['ll_bbx'])
 
         # ply extrema
         common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
@@ -262,7 +262,7 @@ def process_tile_fusion(tile_info):
         for i in xrange(nb_pairs):
             if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
                 height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
-        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
+        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'], cfg['ll_bbx'])
 
         # ply extrema
         common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
