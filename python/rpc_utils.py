@@ -340,6 +340,29 @@ def utm_zone(rpc, x, y, w, h):
         return '%dN' % zone
 
 
+def utm_roi_to_img_roi(rpc, roi):
+    """
+    """
+    # define utm rectangular box
+    x, y, w, h = [roi[k] for k in ['x', 'y', 'w', 'h']]
+    box = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
+
+    # convert utm to lon/lat
+    utm_z = roi['utm_band']
+    north = roi['hemisphere'] == 'N'
+    box_latlon = [utm.to_latlon(p[0], p[1], utm_z, northern=north) for p in box]
+
+    # project lon/lat vertices into the image
+    if not isinstance(rpc, rpc_model.RPCModel):
+        rpc = rpc_model.RPCModel(rpc)
+    img_pts = [rpc.inverse_estimate(p[1], p[0], rpc.altOff)[:2] for p in
+               box_latlon]
+
+    # return image roi
+    x, y, w, h = common.bounding_box2D(img_pts)
+    return {'x': x, 'y': y, 'w': w, 'h': h}
+
+
 def generate_point_mesh(col_range, row_range, alt_range):
     """
     Generates image coordinates (col, row, alt) of 3D points located on the grid
@@ -413,7 +436,7 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
         to contain the projections of the 3D points that are visible in the
         input ROI.
     """
-    # read rpc files 
+    # read rpc files
     if not isinstance(rpc1, rpc_model.RPCModel):
         rpc1 = rpc_model.RPCModel(rpc1)
     if not isinstance(rpc2, rpc_model.RPCModel):

@@ -713,11 +713,10 @@ def bounding_box2D(pts):
     """
     bounding box for the points pts
     """
-    dim = len(pts[0])      #should be 2
-    bb_min = [ min([ t[i] for t in pts ]) for i in range(0, dim) ]
-    bb_max = [ max([ t[i] for t in pts ]) for i in range(0, dim) ]
-    x, y, w, h = bb_min[0], bb_min[1], bb_max[0]-bb_min[0], bb_max[1]-bb_min[1]
-    return x, y, w, h
+    dim = len(pts[0])  # should be 2
+    bb_min = [min([t[i] for t in pts]) for i in xrange(dim)]
+    bb_max = [max([t[i] for t in pts]) for i in xrange(dim)]
+    return bb_min[0], bb_min[1], bb_max[0] - bb_min[0], bb_max[1] - bb_min[1]
 
 
 def image_crop_tif(im, x, y, w, h, out=None):

@@ -14,6 +14,9 @@ import os.path
 
 cfg = {}
 
+# path to output directory
+cfg['out_dir'] = "output"
+
 # path to directory where (many) temporary files will be stored
 cfg['temporary_dir'] = "/tmp"
 

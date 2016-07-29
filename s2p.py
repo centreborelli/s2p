@@ -489,7 +489,9 @@ def compute_dsm(args):
     ymax = ymin + tile_y_size
 
     # cutting info
-    x, y, w, h, z, ov, tw, th, nb_pairs = initialization.cutting(config_file)
+    z = cfg['subsampling_factor']
+    x, y, w, h = cfg['roi'].values()
+    tw, th, ov = initialization.adjust_tile_size()
     range_y = np.arange(y, y + h - ov, th - ov)
     range_x = np.arange(x, x + w - ov, tw - ov)
     colmin, rowmin, tw, th = common.round_roi_to_nearest_multiple(z, range_x[0], range_y[0], tw, th)
@@ -597,7 +599,7 @@ def execute_job(config_file,params):
     tile_dir = params[0]
     step = int(params[1])
 
-    tiles_full_info = initialization.init_tiles_full_info(config_file)
+    tiles_full_info = initialization.tiles_full_info()
 
     if not (tile_dir == 'all_tiles' or 'dsm' in tile_dir ):
         for tile in tiles_full_info:
@@ -643,7 +645,7 @@ def execute_job(config_file,params):
 
 def list_jobs(config_file, step):
 
-    tiles_full_info = initialization.init_tiles_full_info(config_file)
+    tiles_full_info = initialization.tiles_full_info()
     filename = str(step) + ".jobs"
 
     if not (os.path.exists(cfg['out_dir'])):
@@ -697,8 +699,9 @@ def main(config_file, step=None, clusterMode=None, misc=None):
         steps = [step] if step else [1, 2, 3, 4, 4.5, 5, 6, 7]
 
         # initialization (has to be done whatever the queried steps)
-        initialization.init_dirs_srtm(config_file)
-        tiles_full_info = initialization.init_tiles_full_info(config_file)
+        initialization.build_cfg(config_file)
+        initialization.make_dirs()
+        tiles_full_info = initialization.tiles_full_info()
 
         # multiprocessing setup
         nb_workers = multiprocessing.cpu_count()  # nb of available cores

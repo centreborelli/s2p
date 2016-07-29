@@ -15,72 +15,73 @@ from python import rpc_utils
 from config import cfg
 
 
-def check_parameters(usr_cfg):
+def dict_has_keys(d, l):
     """
-    Checks that the provided dictionary defines all the mandatory
-    arguments, and warns about unknown optional arguments.
+    Return True if the dict d contains all the keys of the input list l.
+    """
+    return all(k in d for k in l)
+
+
+def check_parameters(d):
+    """
+    Checks that the provided dictionary defines all the mandatory arguments.
 
     Args:
-        usr_cfg: python dict read from the json input file
+        d: python dictionary
     """
-
-    # verify that i/o files are defined
-    if 'out_dir' not in usr_cfg:
-        print "missing output dir: abort"
+    # verify that input files paths are defined
+    if 'images' not in d or len(d['images']) < 2:
+        print 'ERROR: missing paths to input images'
         sys.exit(1)
-    if 'images' not in usr_cfg or len(usr_cfg['images']) < 2:
-        print "missing input data paths: abort"
-        sys.exit(1)
-    for i in range(0, len(usr_cfg['images'])):
-        if 'img' not in usr_cfg['images'][i] or 'rpc' not in usr_cfg['images'][i]:
-            errMsg = 'missing input data paths for image ' + str(i) + ': abort'
-            print errMsg
+    for img in d['images']:
+        if not dict_has_keys(img, ['img', 'rpc']):
+            print 'ERROR: missing img or rpc paths for image', img
             sys.exit(1)
 
     # verify that roi or path to preview file are defined
-    if ('full_img' not in usr_cfg) or (not usr_cfg['full_img']):
-        if 'roi' not in usr_cfg or any(p not in usr_cfg['roi'] for p in ['x',
-                                                                         'y',
-                                                                         'w',
-                                                                         'h']):
-            if 'prv' not in usr_cfg['images'][0]:
-                print """missing or incomplete roi definition, and no preview
-                file is specified: abort"""
-                sys.exit(1)
+    if 'full_img' in d and d['full_img']:
+        sz = common.image_size_tiffinfo(d['images'][0]['img'])
+        d['roi'] = {'x': 0, 'y': 0, 'w': sz[0], 'h': sz[1]}
+    elif 'roi' in d and dict_has_keys(d['roi'], ['x', 'y', 'w', 'h']):
+        pass
+    elif 'roi_utm' in d and dict_has_keys(d['roi_utm'], ['utm_band',
+                                                         'hemisphere',
+                                                         'x', 'y', 'w', 'h']):
+        d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpc'],
+                                                d['roi_utm'])
+    elif 'prv' in d['images'][0]:
+        x, y, w, h = common.get_roi_coordinates(d['images'][0]['img'],
+                                                d['images'][0]['prv'])
+        d['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
+    else:
+        print 'ERROR: missing or incomplete roi definition'
+        sys.exit(1)
 
-    # warn about unknown optional parameters: these parameters have no default
-    # value in the global config.cfg dictionary, and thus they are not used
-    # anywhere.  They may appear in the usr_cfg because of a typo.
-    l = usr_cfg.keys()
-
-    # remove mandatory parameters (they are not in config.cfg)
-    l.remove('out_dir')
-    l.remove('images')
-    if 'roi' in l:
-        l.remove('roi')
-
-    # check
-    for k in l:
-        if k not in cfg:
-            print """parameter %s unknown: you should remove it from the input
-            json file. It will be ignored.""" % k
+    # warn about unknown parameters. The known parameters are those defined in
+    # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
+    # 'roi_utm'
+    for k in d.keys():
+        if k not in ['images', 'roi', 'roi_utm']:
+            if k not in cfg:
+                print 'WARNING: ignoring unknown parameter {}.'.format(k)
 
 
-def init_roi(config_file):
+def build_cfg(config_file):
     """
-    1) Loads configuration file
-    2) Checks parameters
-    3) Selects the ROI
-    4) Checks the zoom factor
+    Update the dictionary containing all the parameters controlling s2p.
+
+    This dictionary is contained in the global variable 'cfg' of the config
+    module.
+
+    Args:
+        config_file: path to a json configuration file
     """
-	
     # read the json configuration file
     f = open(config_file)
     user_cfg = json.load(f)
     f.close()
 
-    # Check that all the mandatory arguments are defined, and warn about
-    # 'unknown' params
+    # check that all the mandatory arguments are defined
     check_parameters(user_cfg)
 
     # fill the config module: updates the content of the config.cfg dictionary
@@ -96,76 +97,28 @@ def init_roi(config_file):
     cfg['images'][0].setdefault('roi')
     cfg['images'][0].setdefault('wat')
 
-    # update roi definition if the full_img flag is set to true
-    if ('full_img' in cfg) and cfg['full_img']:
-        sz = common.image_size_tiffinfo(cfg['images'][0]['img'])
-        cfg['roi'] = {}
-        cfg['roi']['x'] = 0
-        cfg['roi']['y'] = 0
-        cfg['roi']['w'] = sz[0]
-        cfg['roi']['h'] = sz[1]
-
-    # check that the roi is well defined
-    if 'roi' not in cfg or any(p not in cfg['roi'] for p in ['x', 'y', 'w',
-                                                             'h']):
-        print "missing or incomplete ROI definition"
-        print "ROI will be redefined by interactive selection"
-        x, y, w, h = common.get_roi_coordinates(cfg['images'][0]['img'],
-                                                cfg['images'][0]['prv'])
-        cfg['roi'] = {}
-        cfg['roi']['x'] = x
-        cfg['roi']['y'] = y
-        cfg['roi']['w'] = w
-        cfg['roi']['h'] = h
-    else :
-        x = cfg['roi']['x']    
-        y = cfg['roi']['y']
-        w = cfg['roi']['w']
-        h = cfg['roi']['h']
-
-    try:
-        print "ROI x, y, w, h = %d, %d, %d, %d" % (x, y, w, h)
-    except TypeError:
-        print 'Neither a ROI nor a preview file are defined. Aborting.'
-        return
-
     # check the zoom factor
     z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
        
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.          
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
-    cfg['roi']['x'] = x    
-    cfg['roi']['y'] = y
-    cfg['roi']['w'] = w
-    cfg['roi']['h'] = h
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, *cfg['roi'].values())
+    cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
     # get utm zone
-    utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpc'],
-                                  *[cfg['roi'][v] for v in ['x', 'y',
-                                                            'w', 'h']])
-    cfg['utm_zone'] = utm_zone
+    cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
 
-def init_dirs_srtm(config_file):
+
+def make_dirs():
     """
-    1) Creates different directories : output, temp...
-    2) Downloads srtm files
-    
-    Args:
-        - config_file : a json configuratio file
+    Create directories needed to run s2p.
     """
-
-    init_roi(config_file)
-
-
-    # create tmp dir and output directory for the experiment, and store a json
-    # dump of the config.cfg dictionary there, download srtm files...
     if not os.path.exists(cfg['out_dir']):
         os.makedirs(cfg['out_dir'])
 
-    if not os.path.exists( os.path.join(cfg['out_dir'],'dsm') ):
-        os.makedirs( os.path.join(cfg['out_dir'],'dsm') )
+    if not os.path.exists(os.path.join(cfg['out_dir'], 'dsm')):
+        os.makedirs(os.path.join(cfg['out_dir'], 'dsm'))
 
     if not os.path.exists(cfg['temporary_dir']):
         os.makedirs(cfg['temporary_dir'])
@@ -173,60 +126,38 @@ def init_dirs_srtm(config_file):
     if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
         os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
 
-    f = open('%s/config.json' % cfg['out_dir'], 'w')
+    # store a json dump of the config.cfg dictionary
+    f = open(os.path.join(cfg['out_dir'], 'config.json'), 'w')
     json.dump(cfg, f, indent=2)
     f.close()
 
     # duplicate stdout and stderr to log file
-    tee.Tee('%s/stdout.log' % cfg['out_dir'], 'w')
+    tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
 
-    # needed srtm tiles
-    srtm_tiles = srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
-                                      *cfg['roi'].values())
-    for s in srtm_tiles:
+    # download needed srtm tiles
+    for s in srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                  *cfg['roi'].values()):
         srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
-def cutting(config_file):
+def adjust_tile_size():
     """
-    1) Make sure coordinates of the ROI are multiples of the zoom factor
-    2) Compute optimal size for tiles, get the number of pairs
+    Adjust the size of the tiles.
     """
-    init_roi(config_file)
+    zoom = cfg['subsampling_factor']
+    overlap = 100 * zoom  # overlap between tiles
+    tile_w = min(cfg['roi']['w'], zoom * cfg['tile_size'])  # tile width
+    tile_h = min(cfg['roi']['h'], zoom * cfg['tile_size'])  # tile height
+    print 'tile size: {} {}'.format(tile_w, tile_h)
+
+    ntx = int(np.ceil(float(cfg['roi']['w'] - overlap) / (tile_w - overlap)))
+    nty = int(np.ceil(float(cfg['roi']['h'] - overlap) / (tile_h - overlap)))
+    print 'total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty)
     
-    # Get ROI
-    x = cfg['roi']['x']    
-    y = cfg['roi']['y']
-    w = cfg['roi']['w']
-    h = cfg['roi']['h']    
-    z = cfg['subsampling_factor']
-
-    # Automatically compute optimal size for tiles
-    # tw, th : dimensions of the tiles
-    # ov : width of overlapping bands between tiles
-    ov = z * 100
-    if w <= z * cfg['tile_size']:
-        tw = w
-    else:
-        tw = z * cfg['tile_size']
-    if h <= z * cfg['tile_size']:
-        th = h
-    else:
-        th = z * cfg['tile_size']
-
-    ntx = np.ceil(float(w - ov) / (tw - ov))
-    nty = np.ceil(float(h - ov) / (th - ov))
-    nt = ntx * nty
-
-    print 'tiles size: (%d, %d)' % (tw, th)
-    print 'total number of tiles: %d (%d x %d)' % (nt, ntx, nty)
-    nb_pairs = len(cfg['images']) - 1
-    print 'total number of pairs: %d' % nb_pairs
-    
-    return x, y, w, h, z, ov, tw, th, nb_pairs
+    return tile_w, tile_h, overlap
 
 
-def init_tiles_full_info(config_file):
+def tiles_full_info():
     """
     Prepare the entire process.
 
@@ -241,14 +172,12 @@ def init_tiles_full_info(config_file):
        * nb_pairs : number of pairs
        * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
 
-    Args:
-         config_file: path to a json configuration file
-
     Returns:
         tiles_full_info: list containing dictionaries
     """
-
-    x, y, w, h, z, ov, tw, th, nb_pairs = cutting(config_file)
+    tw, th, ov = adjust_tile_size()
+    x, y, w, h = cfg['roi'].values()
+    z =  cfg['subsampling_factor']
 
     # build tile_info dictionaries and store them in a list
     tiles_full_info = list()
@@ -293,12 +222,11 @@ def init_tiles_full_info(config_file):
             tile_info['position_type'] = pos
             tile_info['roi_coordinates'] = (x, y, w, h)
             tile_info['overlap'] = ov
-            tile_info['number_of_pairs'] = nb_pairs
+            tile_info['number_of_pairs'] = len(cfg['images']) - 1
             tile_info['images'] = cfg['images']
             tiles_full_info.append(tile_info)
 
     if len(tiles_full_info) == 1:
         tiles_full_info[0]['position_type'] = 'Single'
 
-    
     return tiles_full_info
