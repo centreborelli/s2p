@@ -61,6 +61,10 @@ def check_parameters(d):
         print 'ERROR: missing or incomplete roi definition'
         sys.exit(1)
 
+    # if srtm is disable set disparity range method to sift
+    if 'disable_srtm' in d:
+        d['disp_range_method'] = 'sift'
+
     # warn about unknown parameters. The known parameters are those defined in
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
     # 'roi_utm'
