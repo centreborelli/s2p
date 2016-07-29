@@ -5,6 +5,7 @@
 
 import os
 import sys
+import utm
 import json
 import numpy as np
 
@@ -50,7 +51,7 @@ def check_parameters(d):
         d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpc'],
                                                 d['roi_utm'])
     elif 'roi_kml' in d:
-        # this call defines cfg['ll_bbx'] as a side effect
+        # this call defines cfg['ll_bbx'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpc'],
                                              d['roi_kml'])
     elif 'prv' in d['images'][0]:
@@ -115,7 +116,14 @@ def build_cfg(config_file):
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
     # get utm zone
-    cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
+    if cfg.has_key('roi_utm'):
+        cfg['utm_zone'] = cfg['roi_utm']['utm_band']
+    elif cfg.has_key('roi_kml'):
+        lon = (cfg['ll_bbx'][0] + cfg['ll_bbx'][1]) * .5
+        lat = (cfg['ll_bbx'][2] + cfg['ll_bbx'][3]) * .5
+        cfg['utm_zone'] = utm.conversion.latlon_to_zone_number(lat, lon)
+    else:
+        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
 
 
 def make_dirs():

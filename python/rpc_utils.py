@@ -374,11 +374,22 @@ def kml_roi_process(rpc, kml):
     ll_bbx = np.array([map(float, x.split(',')) for x in a])[:4, :2]
 
     # save lon lat bounding box to cfg dictionary
-    lon_m = min(ll_bbx[:, 0])
-    lon_M = max(ll_bbx[:, 0])
-    lat_m = min(ll_bbx[:, 1])
-    lat_M = max(ll_bbx[:, 1])
-    cfg['ll_bbx'] = (lon_m, lon_M, lat_m, lat_M)
+    lon_min = min(ll_bbx[:, 0])
+    lon_max = max(ll_bbx[:, 0])
+    lat_min = min(ll_bbx[:, 1])
+    lat_max = max(ll_bbx[:, 1])
+    cfg['ll_bbx'] = (lon_min, lon_max, lat_min, lat_max)
+
+    # convert lon lat bbox to utm
+    z = utm.conversion.latlon_to_zone_number((lat_min + lat_max) * .5,
+                                             (lon_min + lon_max) * .5)
+    utm_bbx = np.array([utm.from_latlon(p[1], p[0], force_zone_number=z)[:2] for
+                        p in ll_bbx])
+    east_min = min(utm_bbx[:, 0])
+    east_max = max(utm_bbx[:, 0])
+    nort_min = min(utm_bbx[:, 1])
+    nort_max = max(utm_bbx[:, 1])
+    cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image
     if not isinstance(rpc, rpc_model.RPCModel):
