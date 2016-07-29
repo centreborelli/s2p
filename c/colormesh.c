@@ -26,14 +26,14 @@ void utm_alt_zone(double *out, double lat, double lon, int zone);
 void utm_zone(int *zone, bool *northp, double lat, double lon);
 
 static void lonlat_from_ijh(double ll[2],
-		struct rpc *r, double i, double j, double h)
+        struct rpc *r, double i, double j, double h)
 {
-	eval_rpc(ll, r, i, j, h);
+    eval_rpc(ll, r, i, j, h);
 }
 
 void utm_from_lonlat_and_zone(double xy[2], double lon, double lat, int zone)
 {
-	utm_alt_zone(xy, lon, lat, zone);
+    utm_alt_zone(xy, lon, lat, zone);
 }
 
 static void getxyz(double xyz[3], struct rpc *r, double i, double j, double h,
@@ -146,8 +146,8 @@ static void help(char *s)
     fprintf(stderr, "\t usage: %s out.ply heights.tif rpc.xml "
             "[colors.png] [-h \"h1 ... h9\"] [--utm-zone ZONE] "
             "[--offset_x x0] [--offset_y y0] [--with-normals] "
-	    "[--lon-m l0] [--lon-M lf] [--lat-m l0] [--lat-M lf] "
-	    "[--lonlat-clip polygon.kml] [--max-memory MB]\n", s);
+        "[--lon-m l0] [--lon-M lf] [--lat-m l0] [--lat-M lf] "
+        "[--lonlat-clip polygon.kml] [--max-memory MB]\n", s);
 
     // offset allows the user to choose the origin of the coordinates system,
     // in order to avoid visualisation problems due to huge values of the
@@ -302,11 +302,11 @@ int main(int c, char *v[])
             // compute utm coordinates (rejecting points outside lonlat bbx)
             double xyz[3], nrm[3], tmp[3], ll[2];
             //getxyz(xyz, r, xy[0], xy[1], height[pix], zone);
-	    lonlat_from_ijh(ll, r, xy[0], xy[1], h);
-	    if (ll[0]<lon_m || ll[0]>lon_M || ll[1]<lat_m || ll[1]>lat_M)
-		    continue;
-	    utm_from_lonlat_and_zone(xyz, ll[1], ll[0], zone);
-	    xyz[2] = h;
+            lonlat_from_ijh(ll, r, xy[0], xy[1], height[pix]);
+            if (ll[0]<lon_m || ll[0]>lon_M || ll[1]<lat_m || ll[1]>lat_M)
+                continue;
+            utm_from_lonlat_and_zone(xyz, ll[1], ll[0], zone);
+            xyz[2] = height[pix];
 
             if (there_is_an_offset) {
                 xyz[0] -= x0;
