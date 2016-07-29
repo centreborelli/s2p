@@ -65,7 +65,7 @@ def check_parameters(d):
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
     # 'roi_utm'
     for k in d.keys():
-        if k not in ['images', 'roi', 'roi_utm']:
+        if k not in ['images', 'roi', 'roi_kml', 'roi_utm']:
             if k not in cfg:
                 print 'WARNING: ignoring unknown parameter {}.'.format(k)
 
