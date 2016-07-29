@@ -79,12 +79,6 @@ cfg['use_pleiades_unsharpening'] = True
 # sift calls
 cfg['pointing_correction_rois_mode'] = 'automatic'
 
-# method used to compute the disparity range: "sift", "srtm" or
-# "wider_sift_srtm"
-cfg['disp_range_method'] = "wider_sift_srtm"
-cfg['disp_range_srtm_low_margin'] = -10
-cfg['disp_range_srtm_high_margin'] = +100
-
 # set these params if you want to impose the disparity range manually
 cfg['disp_min'] = None
 cfg['disp_max'] = None
@@ -104,9 +98,16 @@ cfg['fusion_conservative'] = False
 # binary used to paste together the altitude maps of each tile
 cfg['mosaic_method'] = 'piio'
 
+cfg['disable_srtm'] = False
+
+# method to compute the disparity range: "sift", "srtm" or "wider_sift_srtm"
+cfg['disp_range_method'] = "wider_sift_srtm"
+cfg['disp_range_srtm_low_margin'] = -10
+cfg['disp_range_srtm_high_margin'] = +100
+
 # url of the srtm database mirror
-#cfg['srtm_url'] = 'http://138.231.80.250:443/srtm/tiff'
-#cfg['srtm_url'] = 'ftp://xftp.jrc.it/pub/srtmV4/tiff'
+cfg['srtm_url'] = 'http://138.231.80.250:443/srtm/tiff'
+cfg['srtm_url'] = 'ftp://xftp.jrc.it/pub/srtmV4/tiff'
 cfg['srtm_url'] = 'http://data_public:GDdci@data.cgiar-csi.org/srtm/tiles/GeoTIFF'
 
 # directory where to store the srtm tiles

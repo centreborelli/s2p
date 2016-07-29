@@ -139,9 +139,10 @@ def make_dirs():
     tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
 
     # download needed srtm tiles
-    for s in srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
-                                  *cfg['roi'].values()):
-        srtm.get_srtm_tile(s, cfg['srtm_dir'])
+    if not cfg['disable_srtm']:
+        for s in srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
+                                      *cfg['roi'].values()):
+            srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
 def adjust_tile_size():
