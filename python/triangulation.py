@@ -221,7 +221,7 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     utm = "--utm-zone %s" % utm_zone if utm_zone else ""
     lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
     if not (os.path.isfile(cloud) and cfg['skip_existing']):
-        command = "colormesh %s %s %s %s -h \"%s\" %s %s %s %s %s" % (cloud,
+        command = "colormesh %s %s %s %s -h \"%s\" %s %s %s %s" % (cloud,
                           heights, rpc, crop_colorized, hij, asc, nrm, utm, lbb)
         if off_x:
             command += " --offset_x %d" % off_x

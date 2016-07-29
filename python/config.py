@@ -118,4 +118,4 @@ cfg['dsm_option'] = 'median'
 cfg['cargarse_basura'] = True
 
 # longitude/latitude bounding box
-cfg['ll_bbx'] = (-float("inf"), float("inf"), float("-inf"), float("inf"))
+cfg['ll_bbx'] = ("-inf", "inf", "-inf", "inf")
