@@ -368,8 +368,8 @@ def kml_roi_process(rpc, kml):
     """
     """
     # extract lon lat from kml
-    f = open(kml, 'r'))
-    a = bs4.BeautifulSoup(f).find_all('coordinates')[0].text.split()
+    f = open(kml, 'r')
+    a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
     f.close()
     ll_bbx = np.array([map(float, x.split(',')) for x in a])[:4, :2]
 
@@ -383,7 +383,7 @@ def kml_roi_process(rpc, kml):
     # project lon lat vertices into the image
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.inverse_estimate(p[1], p[0], rpc.altOff)[:2] for p in ll_bbox]
+    img_pts = [rpc.inverse_estimate(p[0], p[1], rpc.altOff)[:2] for p in ll_bbx]
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
