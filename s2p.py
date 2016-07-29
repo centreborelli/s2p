@@ -455,66 +455,25 @@ def global_align(tiles_full_info):
     return ret
 
 
-def compute_dsm(args):
+def compute_dsm():
     """
-    Compute the DSMs from ply files
-
-    Args:
-         - args  ( <==> [config_file,number_of_tiles,current_tile])
-
-    Files with input data (assumed to exist):
-        ${out_dir}/tile_*_row_*/col_*/plyextrema.ply
-        ${out_dir}/tile_*_row_*/col_*/cloud.ply
-
-    Files created by this code:
-        ${out_dir}/tile_*_row_*/col_*/dsm.tif
-
     """
-    list_of_tiles_dir = os.path.join(cfg['out_dir'],'list_of_tiles.txt')
-
-    config_file, number_of_tiles, current_tile = args
-
-    dsm_dir = os.path.join(cfg['out_dir'],'dsm')
-    out_dsm = os.path.join(dsm_dir,'dsm_%d.tif' % (current_tile) )
-
-    extremaxy = np.loadtxt(os.path.join(cfg['out_dir'], 'global_extent.txt'))
-
-    global_xmin,global_xmax,global_ymin,global_ymax = extremaxy
-
-    global_y_diff = global_ymax-global_ymin
-    tile_y_size = (global_y_diff)/(number_of_tiles)
-
-    # horizontal cuts
-    ymin = global_ymin + current_tile*tile_y_size
-    ymax = ymin + tile_y_size
-
-    # cutting info
-    z = cfg['subsampling_factor']
-    x, y, w, h = cfg['roi'].values()
-    tw, th, ov = initialization.adjust_tile_size()
-    range_y = np.arange(y, y + h - ov, th - ov)
-    range_x = np.arange(x, x + w - ov, tw - ov)
-    colmin, rowmin, tw, th = common.round_roi_to_nearest_multiple(z, range_x[0], range_y[0], tw, th)
-    colmax, rowmax, tw, th = common.round_roi_to_nearest_multiple(z, range_x[-1], range_y[-1], tw, th)
-    cutsinf = '%d %d %d %d %d %d %d %d' % (rowmin, th - ov, rowmax, colmin, tw - ov, colmax, tw, th)
-
-    flags = {}
-    flags['average-orig'] = 0
-    flags['average'] = 1
-    flags['variance'] = 2
-    flags['min'] = 3
-    flags['max'] = 4
-    flags['median'] = 5
-    flag = "-flag %d" % (flags.get(cfg['dsm_option'], 0))
-
-    if (ymax <= global_ymax):
-        common.run("plytodsm %s %f %s %f %f %f %f %s %s" % (flag,
-                                                            cfg['dsm_resolution'],
-                                                            out_dsm,
-                                                            global_xmin,
-                                                            global_xmax, ymin,
-                                                            ymax, cutsinf,
-                                                            cfg['out_dir']))
+    out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
+    clouds = ' '.join(glob.glob(os.path.join(cfg['out_dir'], 'tile_*', 'col_*',
+                                             'cloud.ply')))
+    if cfg.has_key('utm_bbx'):
+        bbx = cfg['utm_bbx']
+        common.run("ls %s | plyflatten -bb \"%f %f %f %f \" %f %s" % (clouds,
+                                                                      bbx[0],
+                                                                      bbx[1],
+                                                                      bbx[2],
+                                                                      bbx[3],
+                                                                      cfg['dsm_resolution'],
+                                                                      out_dsm))
+    else:
+        common.run("ls %s | plyflatten %f %s" % (clouds, cfg['dsm_resolution'],
+                                                 out_dsm))
+    # ls files | ./bin/plyflatten [-c column] [-bb "xmin xmax ymin ymax"] resolution out.tif
 
 
 def global_finalization(tiles_full_info):
@@ -609,26 +568,25 @@ def execute_job(config_file,params):
 
     try:
 
-        if step == 2:#"preprocess_tiles":
+        if step == 2:
             print 'preprocess_tiles on %s ...' % tile_to_process
             preprocess_tile(tile_to_process)
 
-        if step == 3:#"global_values":
+        if step == 3:
             print 'global values ...'
             global_values(tiles_full_info)
 
-        if step == 4:#"process_tiles" :
+        if step == 4:
             print 'process_tiles on %s ...' % tile_to_process
             process_tile(tile_to_process)
 
-        if step == 5:#"global extent" :
+        if step == 5:
             print 'global extent ...'
             global_extent(tiles_full_info)
 
-        if step == 6:#"compute_dsm" :
+        if step == 6:
             print 'compute_dsm ...'
-            current_tile=int(tile_dir.split('_')[1]) # for instance, dsm_2 becomes 2
-            compute_dsm([config_file,cfg['dsm_nb_tiles'],current_tile])
+            compute_dsm()
 
         if step == 7:#"global_finalization":
             print 'global finalization...'
@@ -745,19 +703,9 @@ def main(config_file, step=None, clusterMode=None, misc=None):
             launch_parallel_calls(process_tile_fusion,tiles_full_info,nb_workers)
             print_elapsed_time()
 
-        if 5 in steps:
-            print '\ncomputing global extent...'
-            global_extent(tiles_full_info)
-            print_elapsed_time()
-
-
         if 6 in steps:
             print '\ncompute dsm...'
-            args = []
-            for i in range(cfg['dsm_nb_tiles']):
-                args.append([config_file, cfg['dsm_nb_tiles'], i])
-            show_progress.total = cfg['dsm_nb_tiles']
-            launch_parallel_calls(compute_dsm, args, nb_workers)
+            compute_dsm()
             print_elapsed_time()
 
         if 7 in steps:
