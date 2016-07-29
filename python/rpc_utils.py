@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+import bs4
 import utm
 import datetime
 import numpy as np
@@ -357,6 +358,32 @@ def utm_roi_to_img_roi(rpc, roi):
         rpc = rpc_model.RPCModel(rpc)
     img_pts = [rpc.inverse_estimate(p[1], p[0], rpc.altOff)[:2] for p in
                box_latlon]
+
+    # return image roi
+    x, y, w, h = common.bounding_box2D(img_pts)
+    return {'x': x, 'y': y, 'w': w, 'h': h}
+
+
+def kml_roi_process(rpc, kml):
+    """
+    """
+    # extract lon lat from kml
+    f = open(kml, 'r'))
+    a = bs4.BeautifulSoup(f).find_all('coordinates')[0].text.split()
+    f.close()
+    ll_bbx = np.array([map(float, x.split(',')) for x in a])[:4, :2]
+
+    # save lon lat bounding box to cfg dictionary
+    lon_m = min(ll_bbx[:, 0])
+    lon_M = max(ll_bbx[:, 0])
+    lat_m = min(ll_bbx[:, 1])
+    lat_M = max(ll_bbx[:, 1])
+    cfg['ll_bbx'] = (lon_m, lon_M, lat_m, lat_M)
+
+    # project lon lat vertices into the image
+    if not isinstance(rpc, rpc_model.RPCModel):
+        rpc = rpc_model.RPCModel(rpc)
+    img_pts = [rpc.inverse_estimate(p[1], p[0], rpc.altOff)[:2] for p in ll_bbox]
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)

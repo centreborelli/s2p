@@ -49,6 +49,10 @@ def check_parameters(d):
                                                          'x', 'y', 'w', 'h']):
         d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpc'],
                                                 d['roi_utm'])
+    elif 'roi_kml' in d:
+        # this call defines cfg['ll_bbx'] as a side effect
+        d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpc'],
+                                             d['roi_kml'])
     elif 'prv' in d['images'][0]:
         x, y, w, h = common.get_roi_coordinates(d['images'][0]['img'],
                                                 d['images'][0]['prv'])
