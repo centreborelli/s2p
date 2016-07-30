@@ -183,7 +183,6 @@ $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 $(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
-
 # GEOGRAPHICLIB STUFF
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
