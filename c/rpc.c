@@ -470,6 +470,16 @@ void eval_rpc_pair(double xprime[2],
 	eval_rpci(xprime, pb, tmp[0], tmp[1], z);
 }
 
+void rpc_projection(double ij[2], struct rpc *r, double lonlatheight[3])
+{
+	eval_rpci(ij, r, lonlatheight[0], lonlatheight[1], lonlatheight[2]);
+}
+
+void rpc_localization(double lonlat[2], struct rpc *r, double ijh[3])
+{
+	eval_rpc(lonlat, r, ijh[0], ijh[1], ijh[2]);
+}
+
 
 #define RPCH_MAXIT 100
 #define RPCH_HSTEP 1
