@@ -35,6 +35,10 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         disp_max : biggest disparity to consider
         extra_params: optional string with algorithm-dependent parameters
     """
+    # round disparity bounds
+    disp_min = int(np.floor(disp_min))
+    disp_max = int(np.ceil(disp_max))
+
     # call the block_matching binary
     if (algo == 'hirschmuller02'):
         bm_binary = hirschmuller02
