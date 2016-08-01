@@ -367,7 +367,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     # impose a minimal disparity range (TODO this is valid only with the
     # 'center' flag for register_horizontally_translation)
     disp_m = min(-3, disp_m)
-    disp_M = max(3, disp_m)
+    disp_M = max(3, disp_M)
 
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
