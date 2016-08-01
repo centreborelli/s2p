@@ -16,7 +16,8 @@ from config import cfg
 
 def write_vrt_files(tiles_full_info):
     """
-    Merges pieces of data into single VRT files : height map comprising the N pairs, height map for each signle pair, and err_rpc
+    Merges pieces of data into single VRT files: height map comprising the N
+    pairs, height map for each single pair, and err_rpc
 
     Args:
          tiles_full_info: a list of tile_info dictionaries
@@ -74,25 +75,15 @@ def write_vrt_files(tiles_full_info):
         tileSizesAndPositions[tile_reldir] = dicoPos[pos]
 
     z = cfg['subsampling_factor']
-    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_N_pairs.vrt',
-                               tileSizesAndPositions, 'local_merged_height_map_crop.tif', fw, fh, z)
+#    tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_N_pairs.vrt',
+#                               tileSizesAndPositions, 'local_merged_height_map_crop.tif', fw, fh, z)
 
     # VRT file : height map (for each single pair)
-    # VRT file : rpc_err (for each single pair)
-    for i in range(0, nb_pairs):
-
-        pair_id = i + 1
-
-        pairSizesAndPositions = {}
-        for tile_reldir in tileSizesAndPositions:
-            pair_reldir = tile_reldir + '/pair_%d' % (pair_id)
-            pairSizesAndPositions[
-                pair_reldir] = tileSizesAndPositions[tile_reldir]
-
-        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/heightMap_pair_%d.vrt' % (
-            pair_id), pairSizesAndPositions, 'height_map_crop.tif', fw, fh, z)
-        tile_composer.mosaic_gdal2(cfg['out_dir'] + '/rpc_err_pair_%d.vrt' % (
-            pair_id), pairSizesAndPositions, 'rpc_err_crop.tif', fw, fh, z)
+    for i in xrange(nb_pairs):
+        tile_composer.mosaic_gdal2(os.path.join(cfg['out_dir'], 'heightMap_pair_%d.vrt' % (i+1)), 
+                                   tiles_full_info,
+                                   os.path.join('pair_%d' % (i+1), 'height_map_crop.tif'), 
+                                   fw, fh, z)
 
 
 def write_dsm():

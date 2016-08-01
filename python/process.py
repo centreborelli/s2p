@@ -103,7 +103,6 @@ def generate_cloud(tile_info, do_offset=False, utm_zone=None, ll_bbx=None):
     x, y, w, h = tile_info['coordinates']
     img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
 
-    #height_map = tile_dir + '/local_merged_height_map.tif'
     height_map = tile_dir + '/local_merged_height_map_crop.tif'
     crop_color = tile_dir + '/roi_color_ref.tif'
     if not os.path.exists(crop_color):
@@ -139,53 +138,9 @@ def generate_cloud(tile_info, do_offset=False, utm_zone=None, ll_bbx=None):
 
     triangulation.compute_point_cloud(cloud, height_map, rpc1, trans,
                                       crop_color, off_x, off_y,
-                                      utm_zone=utm_zone, llbbx=ll_bbx)
+                                      utm_zone=utm_zone, llbbx=tuple(ll_bbx))
 
     common.garbage_cleanup()
-
-
-
-def merge_height_maps(height_maps, tile_dir, thresh, conservative, k=1, garbage=[]):
-    """
-    Merges a list of height maps recursively, computed for one tile from N image pairs.
-
-    Args :
-         - height_maps : list of height map directories
-         - tile_dir : directory of the tile from which to get a merged height map
-         - thresh : threshold used for the fusion algorithm, in meters.
-         - conservative (optional, default is False): if True, keep only the
-            pixels where the two height map agree (fusion algorithm)
-         - k : used to identify the current call of merge_height_maps (default = 1, first call)
-         - garbage : a list used to remove temp data (default = [], first call)
-
-    """
-
-    # output file
-    local_merged_height_map = tile_dir + '/local_merged_height_map.tif'
-
-    if len(height_maps) == 0:
-        return
-
-    if os.path.isfile(local_merged_height_map) and cfg['skip_existing']:
-        print 'final height map %s already done, skip' % local_merged_height_map
-    else:
-        list_height_maps = []
-        for i in range(len(height_maps) - 1):
-            height_map = tile_dir + '/height_map_' + \
-                str(i) + '_' + str(i + 1) + '_' + str(k) + '.tif'
-            fusion.merge(height_maps[i], height_maps[i + 1], thresh, height_map,
-                         conservative)
-            list_height_maps.append(height_map)
-            garbage.append(height_map)
-
-        if len(list_height_maps) > 1:
-            merge_height_maps(list_height_maps, tile_dir,
-                              thresh, conservative, k + 1, garbage)
-        else:
-            common.run('cp %s %s' %
-                       (list_height_maps[0], local_merged_height_map))
-            for imtemp in garbage:
-                common.run('rm -f %s' % imtemp)
 
 
 def cargarse_basura(inputf, outputf):
@@ -200,6 +155,7 @@ def cargarse_basura(inputf, outputf):
     common.run('plambda %s %s %s "x y - fabs %d > nan z if" -o %s'%(tmp1,tmp2,inputf,5,tmpM))
     common.run('remove_small_cc %s %s %d %d'%(tmpM,outputf,200,5))
     common.run('rm -f %s %s %s'%(tmp1,tmp2,tmpM))
+
 
 def finalize_tile(tile_info, height_maps, utm_zone=None, ll_bbx=None):
     """
@@ -223,27 +179,17 @@ def finalize_tile(tile_info, height_maps, utm_zone=None, ll_bbx=None):
 
     # remove spurious matches
     if cfg['cargarse_basura']:
-    	for i in range(1, len(height_maps) + 1):
-    	    height_map = tile_dir + '/pair_%d/height_map.tif'%(i) 
-    	    cargarse_basura(height_map, height_map)
+        for img in height_maps:
+    	    cargarse_basura(img, img)
 
     # merge the n height maps
     local_merged_height_map = os.path.join(tile_dir,
                                            'local_merged_height_map.tif')
-    if len(height_maps) > 1:
-        merge_height_maps(height_maps, tile_dir, cfg['fusion_thresh'],
-                          cfg['fusion_conservative'], 1, [])
-    elif len(height_maps) == 0:
-        return
-    else:
-        common.run('cp %s %s' % (height_maps[0], local_merged_height_map))
+    fusion.merge_n(local_merged_height_map, height_maps)
 
     # remove overlapping areas
     # By tile
-    local_merged_height_map = tile_dir + '/local_merged_height_map.tif'
     local_merged_height_map_crop = tile_dir + '/local_merged_height_map_crop.tif'
-    crop_ref = tile_dir + '/roi_ref.tif'
-    crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
 
     dicoPos = {}
     dicoPos['M'] = [ov / 2, ov / 2, -ov, -ov]
@@ -267,9 +213,11 @@ def finalize_tile(tile_info, height_maps, utm_zone=None, ll_bbx=None):
     
     # z=1 beacause local_merged_height_map, crop_ref (and so forth) have
     # already been zoomed. So don't zoom again to crop these images.
+    crop_ref = tile_dir + '/roi_ref.tif'
     if not (os.path.isfile(local_merged_height_map_crop) and cfg['skip_existing']):
         common.cropImage(local_merged_height_map, local_merged_height_map_crop,
                          newcol, newrow, w, h)
+    crop_ref_crop = tile_dir + '/roi_ref_crop.tif'
     if not (os.path.isfile(crop_ref_crop) and cfg['skip_existing']):
         common.cropImage(crop_ref, crop_ref_crop, newcol, newrow, w, h)
 

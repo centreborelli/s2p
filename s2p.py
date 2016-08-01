@@ -27,6 +27,7 @@ import datetime
 import traceback
 import numpy as np
 import multiprocessing
+from osgeo import gdal, ogr
 
 from python.config import cfg
 from python import common
@@ -36,8 +37,6 @@ from python import globalvalues
 from python import process
 from python import globalfinalization
 
-global vabcd
-vabcd=[]
 
 def show_progress(a):
     """
@@ -212,17 +211,6 @@ def process_tile(tile_info):
         for pair_id in range(1, nb_pairs + 1):
             process_tile_pair(tile_info, pair_id)
 
-	##### SOMEHOW THIS IS ABSOLUTELY NECESSARY! IT CREATES SOMETHING MAGIC THAT ALLOWS TO RUN global_align
-        # finalization
-        height_maps = []
-        for i in xrange(nb_pairs):
-            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
-                height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
-        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'], cfg['ll_bbx'])
-
-        # ply extrema
-        common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
-
     except Exception:
         print("Exception in processing tile:")
         traceback.print_exc()
@@ -260,14 +248,9 @@ def process_tile_fusion(tile_info):
             return
 
         # finalization
-        height_maps = []
-        for i in xrange(nb_pairs):
-            if not os.path.isfile(os.path.join(tile_dir, 'pair_%d' % (i+1), 'this_tile_is_masked.txt')):
-                height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
+        height_maps = [os.path.join(tile_dir, 'pair_%d' % (i+1),
+                                    'height_map.tif') for i in xrange(nb_pairs)]
         process.finalize_tile(tile_info, height_maps, cfg['utm_zone'], cfg['ll_bbx'])
-
-        # ply extrema
-        common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
 
     except Exception:
         print("Exception in processing tile:")
@@ -282,30 +265,41 @@ def process_tile_fusion(tile_info):
         fout.close()
 
 
-def apply_global_alignment(tile_info):
+def apply_global_alignment(tile_dir, transformations):
     """
-    Apply global alignment
+    Apply global alignment.
 
     Args:
-        tile_info: a dictionary that provides all you need to process a tile
+        tile_dir: directory of the tile
     """
-    tile_dir = tile_info['directory']
+    # redirect stdout and stderr to log file
+    if not cfg['debug']:
+        fout = open('%s/stdout.log' % tile_dir, 'a', 0)  # '0' for no buffering
+        sys.stdout = fout
+        sys.stderr = fout
 
-    # check that the tile is not masked
-    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-        print 'tile %s already masked, skip' % tile_dir
-        return
+    try:
+        # check that the tile is not masked
+        if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
+            print 'tile %s already masked, skip' % tile_dir
+            return
 
-    # process each pair to get a height map
-    nb_pairs = int(tile_info['number_of_pairs'])
-    for pair_id in range(nb_pairs):
-    	global vabcd
-        abcd = vabcd[pair_id]# = tile_info['alignment_correction_parameters'][pair_id]
-        tile_dir = tile_info['directory']
-        out_dir = os.path.join(tile_dir, 'pair_%d' %(pair_id + 1))
-        fname_h = os.path.join(out_dir, 'height_map.tif')
-        cmd = 'plambda %s \"%f * %f +\" -o %s' % (fname_h, abcd[0], abcd[3], fname_h)
-        common.run(cmd)
+        # apply the transformation corresponding to each pair
+        for i, trans in enumerate(transformations):
+            fname_h = os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
+            cmd = 'plambda %s \"%f * %f +\" -o %s' % (fname_h, trans[0], trans[3], fname_h)
+            common.run(cmd)
+
+    except Exception:
+        print("Exception in transforming tile:")
+        traceback.print_exc()
+        raise
+
+    # close logs
+    if not cfg['debug']:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        fout.close()
 
 
 def global_align(tiles_full_info):
@@ -315,33 +309,24 @@ def global_align(tiles_full_info):
     Uses the first height map as a reference. Stores the old (and biased) height maps 
     as height_map_bias_ and overwrites the height_map_
 
-    Args :
-         - height_maps : list of height map directories
-         - tile_dir : directory of the tile from which to get a merged height map
-         - garbage : a list used to remove temp data (default = [], first call)
-
-    Return value :
-        - list of N 4-tuples describing the (a,b,c,d) correction for each pair
+    Return:
+        list of N 4-tuples describing the (a,b,c,d) correction for each pair
     """
-    from osgeo import gdal,ogr
-    ret = [np.array([1,0,0,0])]
+    ret = [np.array([1, 0, 0, 0])]
+    nb_pairs = tiles_full_info[0]['number_of_pairs']
+    if nb_pairs == 1:
+       return ret
 
     # first assemble the full height maps associated to each pair
     globalfinalization.write_vrt_files(tiles_full_info)
 
-    nb_pairs = tiles_full_info[0]['number_of_pairs']
-
-    if nb_pairs == 1:
-       return ret
-
-
     # 1. read the reference height map and create the ij grid
-    reference_height_map = cfg['out_dir'] + '/heightMap_pair_%d.vrt'%1
+    reference_height_map = os.path.join(cfg['out_dir'], 'heightMap_pair_%d.vrt' % 1)
 
-    if not os.path.isfile(reference_height_map ):
+    if not os.path.isfile(reference_height_map):
         print reference_height_map
         print("the VRT file is supposed to be there after calling globalfinalization.write_vrt_files but it's not!")
-        exit()
+        sys.exit(1)
 
     hhd = gdal.Open(reference_height_map)
     hhr = hhd.GetRasterBand(1)
@@ -358,13 +343,13 @@ def global_align(tiles_full_info):
 
     # 3. for each remaining pair of height maps
     for i in range(2, nb_pairs + 1):
-        height_map = cfg['out_dir'] + '/heightMap_pair_%d.vrt'%i
+        height_map = os.path.join(cfg['out_dir'], 'heightMap_pair_%d.vrt' % i)
 
         # 3.1 read the secondary height map  
         hhd2 = gdal.Open(height_map)
         hhr2 = hhd2.GetRasterBand(1)
         hh2 = hhr2.ReadAsArray().copy()
-	hhd2 = None
+        hhd2 = None
 
         # 3.2 use only the non-nan points in both maps
         mask = np.isfinite(hh) & np.isfinite(hh2) 
@@ -374,7 +359,6 @@ def global_align(tiles_full_info):
         YY2 = YY[mask]
 
         print HH.mean(), HH2.mean()
-
 
         def solve_irls(X,Y,iter=100):
            ''' 
@@ -432,7 +416,7 @@ def global_align(tiles_full_info):
         #from python import piio
         #piio.write(height_map+'.tif', hh2)
 
-    print ret
+    print "global_align:", ret
     return ret
 
 
@@ -471,9 +455,6 @@ def global_finalization(tiles_full_info):
         tiles_full_info: dictionary providing all the information about the
             processed tiles
     """
-    globalfinalization.write_vrt_files(tiles_full_info)
-    globalfinalization.write_dsm()
-
     # whole point cloud (LidarViewer format)
     if common.which('LidarPreprocessor'):
         out = os.path.join(cfg['out_dir'], 'cloud.lidar_viewer')
@@ -522,7 +503,6 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
-
 
     pool.close()
     pool.join()
@@ -585,16 +565,16 @@ def main(config_file, step=None):
     if 4.5 in steps:
         print '\nsplit global alignment...'
         abcd = global_align(tiles_full_info)
-        global vabcd
-        vabcd=abcd
         print_elapsed_time()
 
         print '\napply global alignment...'
-        launch_parallel_calls(apply_global_alignment, tiles_full_info, nb_workers)
+        launch_parallel_calls(apply_global_alignment, [t['directory'] for t in
+                                                       tiles_full_info],
+                              nb_workers, extra_args=(abcd,))
         print_elapsed_time()
 
         print '\ncreate ply clouds...'
-        launch_parallel_calls(process_tile_fusion,tiles_full_info,nb_workers)
+        launch_parallel_calls(process_tile_fusion, tiles_full_info, nb_workers)
         print_elapsed_time()
 
     if 6 in steps:

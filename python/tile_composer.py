@@ -69,48 +69,35 @@ def mosaic_gdal(fout, w, h, list_tiles, tw, th, ov):
     return
 
 
-def mosaic_gdal2(fout, tiles_full_info, filename, w,h,z=1):
+def mosaic_gdal2(fout, tiles_full_info, filename, w, h, z=1):
     """
-    Compose several tiles of differents sizes into a bigger image (using gdal vrt)
+    Compose several tiles of differents sizes into a bigger image using gdal vrt.
 
     Args:
         fout: path to the output image
-        fullInfo : all that you need to process a tile:
-            col,row,tw,th,ov,i,j,pos,images=tiles_full_info[tile_dir]
-
-    Returns:
-        nothing
+        tiles_full_info: list of tiles_info dictionaries
     """
-    vrtfilename = fout
+    vrt = open(fout, 'w')
+    vrt.write('<VRTDataset rasterXSize="%i" rasterYSize="%i">\n' % (w/z, h/z))
+    vrt.write('\t<VRTRasterBand dataType="Float32" band="1">\n')
+    vrt.write('\t\t<ColorInterp>Gray</ColorInterp>\n')
 
-    vrtfile = open(vrtfilename, 'w')
+    x, y = tiles_full_info[0]['roi_coordinates'][:2]
+    for tile in tiles_full_info:
+        col, row, tw, th = tile['coordinates']
+        img = os.path.join(tile['directory'], filename) 
+        if os.path.isfile(img):
+            vrt.write('\t\t<SimpleSource>\n')
+            vrt.write('\t\t\t<SourceFilename>%s</SourceFilename>\n' % os.path.abspath(img))
+            vrt.write('\t\t\t<SourceBand>1</SourceBand>\n')
+            vrt.write('\t\t\t<SrcRect xOff="%i" yOff="%i" xSize="%i" ySize="%i"/>\n' % (0, 0, tw/z, th/z))
+            vrt.write('\t\t\t<DstRect xOff="%i" yOff="%i" xSize="%i" ySize="%i"/>\n' % ((col-x)/z, (row-y)/z, tw/z, th/z))
+            vrt.write('\t\t</SimpleSource>\n')
 
-    vrtfile.write("<VRTDataset rasterXSize=\"%i\" rasterYSize=\"%i\">\n" % (w/z,
-                                                                            h/z))
-    vrtfile.write("\t<VRTRasterBand dataType=\"Float32\" band=\"1\">\n")
-    vrtfile.write("\t\t<ColorInterp>Gray</ColorInterp>\n")
-
-    for tile_dir in tiles_full_info:
-        
-        col,row,tw,th=tiles_full_info[tile_dir]
-        
-        height_map = os.path.join(tile_dir,filename)
-
-        if os.path.isfile(os.path.join(cfg['out_dir'],height_map)):
-            vrtfile.write("\t\t<SimpleSource>\n")
-            vrtfile.write("\t\t\t<SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n" % height_map)
-            vrtfile.write("\t\t\t<SourceBand>1</SourceBand>\n")
-            vrtfile.write("\t\t\t<SrcRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (0, 0, tw/z, th/z))
-            vrtfile.write("\t\t\t<DstRect xOff=\"%i\" yOff=\"%i\" xSize=\"%i\" ySize=\"%i\"/>\n" % (col/z, row/z, tw/z, th/z))
-            vrtfile.write("\t\t</SimpleSource>\n")
-
-    vrtfile.write("\t</VRTRasterBand>\n")
-    vrtfile.write("</VRTDataset>\n")
-    vrtfile.close()
-
+    vrt.write('\t</VRTRasterBand>\n')
+    vrt.write('</VRTDataset>\n')
+    vrt.close()
     #common.run('gdal_translate %s %s' % (vrtfilename, fout))
-
-    return
 
 
 def mosaic(fout, w, h, list_tiles, tw, th, ov):
