@@ -4,6 +4,8 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import numpy as np
+from osgeo import gdal
+
 import common
 import piio
 
@@ -104,3 +106,23 @@ def merge(im1, im2, thresh, out, conservative=False):
             plambda %s %s "x isfinite y isfinite x y - fabs %f < x y + 2 / nan if x
             if y if" -o %s
             """ % ( im1, im2, thresh, out))
+
+
+def merge_n(output, inputs):
+    """
+    Merge n images of equal sizes by taking the median pixelwise.
+
+    Args:
+        inputs: list of paths to the input images
+        output: path to the output image
+    """
+    # read input images
+    files = []
+    for img in inputs:
+        files.append(gdal.Open(img))
+    x = np.dstack([f.GetRasterBand(1).ReadAsArray() for f in files])
+    for f in files:  # close files (gdal specific)
+        f = None
+
+    # compute the median (ignoring nans) and write it to output
+    piio.write(output, np.nanmedian(x, axis=2))
