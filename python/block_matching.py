@@ -5,6 +5,8 @@
 
 import os
 import common
+import numpy as np
+
 from config import cfg
 
 
