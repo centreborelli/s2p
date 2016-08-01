@@ -235,6 +235,7 @@ def process_tile(tile_info):
         sys.stderr = sys.__stderr__
         fout.close()
 
+
 def process_tile_fusion(tile_info):
     """
     Process a tile by merging the height maps computed for each image pair.
@@ -305,27 +306,6 @@ def apply_global_alignment(tile_info):
         fname_h = os.path.join(out_dir, 'height_map.tif')
         cmd = 'plambda %s \"%f * %f +\" -o %s' % (fname_h, abcd[0], abcd[3], fname_h)
         common.run(cmd)
-
-
-def global_extent(tiles_full_info):
-    """
-    Compute the global extent from the extrema of each ply file
-    """
-    xmin, xmax, ymin, ymax = float('inf'), -float('inf'), float('inf'), -float('inf')
-
-    for tile in tiles_full_info:
-        plyextrema_file = os.path.join(tile['directory'], 'plyextrema.txt')
-
-        if (os.path.exists(plyextrema_file)):
-            extremaxy = np.loadtxt(plyextrema_file)
-            xmin = min(xmin, extremaxy[0])
-            xmax = max(xmax, extremaxy[1])
-            ymin = min(ymin, extremaxy[2])
-            ymax = max(ymax, extremaxy[3])
-
-    global_extent = [xmin, xmax, ymin, ymax]
-    np.savetxt(os.path.join(cfg['out_dir'], 'global_extent.txt'), global_extent,
-               fmt='%6.3f')
 
 
 def global_align(tiles_full_info):
@@ -548,88 +528,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     pool.join()
 
 
-def execute_job(config_file,params):
-    """
-    Execute a job.
-
-    Args:
-         - json config file
-         - params  ( <==> [tile_dir,step,...])
-    """
-    tile_dir = params[0]
-    step = int(params[1])
-
-    tiles_full_info = initialization.tiles_full_info()
-
-    if not (tile_dir == 'all_tiles' or 'dsm' in tile_dir ):
-        for tile in tiles_full_info:
-            if tile_dir == tile['directory']:
-                tile_to_process = tile
-                break
-
-    try:
-
-        if step == 2:
-            print 'preprocess_tiles on %s ...' % tile_to_process
-            preprocess_tile(tile_to_process)
-
-        if step == 3:
-            print 'global values ...'
-            global_values(tiles_full_info)
-
-        if step == 4:
-            print 'process_tiles on %s ...' % tile_to_process
-            process_tile(tile_to_process)
-
-        if step == 5:
-            print 'global extent ...'
-            global_extent(tiles_full_info)
-
-        if step == 6:
-            print 'compute_dsm ...'
-            compute_dsm()
-
-        if step == 7:#"global_finalization":
-            print 'global finalization...'
-            global_finalization(tiles_full_info)
-
-    except KeyboardInterrupt:
-        pool.terminate()
-        sys.exit(1)
-
-    except common.RunFailure as e:
-        print "FAILED call: ", e.args[0]["command"]
-        print "\toutput: ", e.args[0]["output"]
-
-
-def list_jobs(config_file, step):
-
-    tiles_full_info = initialization.tiles_full_info()
-    filename = str(step) + ".jobs"
-
-    if not (os.path.exists(cfg['out_dir'])):
-        os.mkdir(cfg['out_dir'])
-
-    if step in [2,4]:           #preprocessing, processing
-        f = open(os.path.join(cfg['out_dir'],filename),'w')
-        for tile in tiles_full_info:
-            tile_dir = tile['directory']
-            f.write(tile_dir + ' ' + str(step) + '\n')
-        f.close()
-    elif step in [3,5,7]:       # global values, global extent, finalization
-        f = open(os.path.join(cfg['out_dir'],filename),'w')
-        f.write('all_tiles ' + str(step) + '\n')
-        f.close()
-    elif step ==6 :             # compute dsm
-        f = open(os.path.join(cfg['out_dir'],filename),'w')
-        for i in range(cfg['dsm_nb_tiles']):
-            f.write('dsm_'+ str(i) + ' ' + str(step) + '\n')
-        f.close()
-    else:
-        print "Unkown step required: %s" % str(step)
-
-
-def main(config_file, step=None, clusterMode=None, misc=None):
+def main(config_file, step=None):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
 
@@ -648,130 +547,102 @@ def main(config_file, step=None, clusterMode=None, misc=None):
     """
     print_elapsed_time.t0 = datetime.datetime.now()
 
-    if clusterMode == 'list_jobs':
-        list_jobs(config_file, step)
-    elif clusterMode == 'job':
-        cfg['omp_num_threads'] = 1
-        execute_job(config_file,misc)
-    else:
-        # determine which steps to run
-        steps = [step] if step else [1, 2, 3, 4, 4.5, 5, 6, 7]
+    # determine which steps to run
+    steps = [step] if step else [1, 2, 3, 4, 4.5, 5, 6, 7]
 
-        # initialization (has to be done whatever the queried steps)
-        initialization.build_cfg(config_file)
-        initialization.make_dirs()
-        tiles_full_info = initialization.tiles_full_info()
+    # initialization (has to be done whatever the queried steps)
+    initialization.build_cfg(config_file)
+    initialization.make_dirs()
+    tiles_full_info = initialization.tiles_full_info()
 
-        # multiprocessing setup
-        nb_workers = multiprocessing.cpu_count()  # nb of available cores
-        if cfg['max_nb_threads']:
-            nb_workers = min(nb_workers, cfg['max_nb_threads'])
+    # multiprocessing setup
+    nb_workers = multiprocessing.cpu_count()  # nb of available cores
+    if cfg['max_nb_threads']:
+        nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
-        # omp_num_threads: should not exceed nb_workers when multiplied by the
-        # number of tiles
-        cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
+    # omp_num_threads: should not exceed nb_workers when multiplied by the
+    # number of tiles
+    cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
 
-        # do the job
-        if 2 in steps:
-            print '\npreprocessing tiles...'
-            show_progress.total = len(tiles_full_info)
-            launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
-            print_elapsed_time()
+    # do the job
+    if 2 in steps:
+        print '\npreprocessing tiles...'
+        show_progress.total = len(tiles_full_info)
+        launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
+        print_elapsed_time()
 
-        if 3 in steps:
-            print '\ncomputing global values...'
-            global_values(tiles_full_info)
-            print_elapsed_time()
+    if 3 in steps:
+        print '\ncomputing global values...'
+        global_values(tiles_full_info)
+        print_elapsed_time()
 
-        if 4 in steps:
-            print '\nprocessing tiles...'
-            show_progress.total = len(tiles_full_info)
-            launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
-            print_elapsed_time()
+    if 4 in steps:
+        print '\nprocessing tiles...'
+        show_progress.total = len(tiles_full_info)
+        launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
+        print_elapsed_time()
 
-        if 4.5 in steps:
-            print '\nsplit global alignment...'
-            abcd = global_align(tiles_full_info)
-            global vabcd
-            vabcd=abcd
-            print_elapsed_time()
+    if 4.5 in steps:
+        print '\nsplit global alignment...'
+        abcd = global_align(tiles_full_info)
+        global vabcd
+        vabcd=abcd
+        print_elapsed_time()
 
-            print '\napply global alignment...'
-            launch_parallel_calls(apply_global_alignment, tiles_full_info, nb_workers)
-            print_elapsed_time()
+        print '\napply global alignment...'
+        launch_parallel_calls(apply_global_alignment, tiles_full_info, nb_workers)
+        print_elapsed_time()
 
-            print '\ncreate ply clouds...'
-            launch_parallel_calls(process_tile_fusion,tiles_full_info,nb_workers)
-            print_elapsed_time()
+        print '\ncreate ply clouds...'
+        launch_parallel_calls(process_tile_fusion,tiles_full_info,nb_workers)
+        print_elapsed_time()
 
-        if 6 in steps:
-            print '\ncompute dsm...'
-            compute_dsm()
-            print_elapsed_time()
+    if 6 in steps:
+        print '\ncompute dsm...'
+        compute_dsm()
+        print_elapsed_time()
 
-        if 7 in steps:
-            print '\nglobal finalization...'
-            global_finalization(tiles_full_info)
-            print_elapsed_time()
+    if 7 in steps:
+        print '\nglobal finalization...'
+        global_finalization(tiles_full_info)
+        print_elapsed_time()
 
     # cleanup
     print_elapsed_time(since_first_call=True)
     common.garbage_cleanup()
 
 
+def print_help_and_exit(script_name):
+    """
+    """
+    print """
+    Incorrect syntax, use:
+      > %s config.json [step (integer between 1 and 7)]
+        1: initialization
+        2: preprocessing (tilewise sift, local pointing correction)
+        3: global-pointing
+        4: processing (tilewise rectification, matching and triangulation)
+        5: global-extent
+        6: compute dsm from ply files (one per tile)
+        7: finalization
+        Launches the s2p pipeline.
+
+      All the parameters, paths to input and output files, are defined in
+      the json configuration file.
+
+    """ % (script_name, script_name, script_name)
+
+
 if __name__ == '__main__':
 
-    error = False
     steps=[1,2,3,4,5,6,7]
 
     if len(sys.argv) < 2:
-        error = True
+        print_help_and_exit(sys.argv[0])
 
-    elif sys.argv[1].endswith(".json"):
-        if len(sys.argv) == 2:
-            main(sys.argv[1])
-        elif len(sys.argv) == 3 and int(sys.argv[2]) in steps:
-            main(sys.argv[1], int(sys.argv[2]))
-        else:
-            error = True
-    else:  # cluster modes
-        if sys.argv[1] not in ['list_jobs', 'job']:
-            error = True
-        else:
-            if sys.argv[1] == 'list_jobs':
-                if len(sys.argv) == 4 and int(sys.argv[3]) in steps:
-                    main(sys.argv[2], int(sys.argv[3]), 'list_jobs')
-                else:
-                    error = True
-
-            if sys.argv[1] == 'job':
-                if len(sys.argv) >= 5 and int(sys.argv[4]) in steps:
-                    main(sys.argv[2], None, 'job', sys.argv[3:])
-                else:
-                    error = True
-    if error:
-        print """
-        Incorrect syntax, use:
-          > %s config.json [step (integer between 1 and 7)]
-            1: initialization
-            2: preprocessing (tilewise sift, local pointing correction)
-            3: global-pointing
-            4: processing (tilewise rectification, matching and triangulation)
-            5: global-extent
-            6: compute dsm from ply files (one per tile)
-            7: finalization
-            Launches the s2p pipeline.
-
-          > %s list_jobs config.json step (integer between 2 and 7)
-            Return the list of jobs for a specific step.
-
-          > %s job config.json tile_dir step (integer between 2 and 7)
-            Run a specific job defined by a json string. This mode allows to run jobs returned
-            by the list_jobs running mode.
-
-
-          All the parameters, paths to input and output files, are defined in
-          the json configuration file.
-
-        """ % (sys.argv[0], sys.argv[0], sys.argv[0])
-        sys.exit(1)
+    if len(sys.argv) == 2:
+        main(sys.argv[1])
+    elif len(sys.argv) == 3 and int(sys.argv[2]) in steps:
+        main(sys.argv[1], int(sys.argv[2]))
+    else:
+        print_help_and_exit(sys.argv[0])
