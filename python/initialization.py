@@ -121,7 +121,8 @@ def build_cfg(config_file):
     elif cfg.has_key('roi_kml'):
         lon = (cfg['ll_bbx'][0] + cfg['ll_bbx'][1]) * .5
         lat = (cfg['ll_bbx'][2] + cfg['ll_bbx'][3]) * .5
-        cfg['utm_zone'] = utm.conversion.latlon_to_zone_number(lat, lon)
+        z = utm.conversion.latlon_to_zone_number(lat, lon)
+        cfg['utm_zone'] = '%dS' % z if lat < 0 else '%dN' % z
     else:
         cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
 
