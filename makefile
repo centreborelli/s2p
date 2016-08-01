@@ -1,6 +1,6 @@
 C99 = $(CC) -std=c99
 CFLAGS = -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN
-CPPFLAGS = -g -O3
+CPPFLAGS = -g -O3 -fpermissive
 LDLIBS = -lstdc++
 IIOLIBS = $(TIFDIR)/lib/libtiff.a -lz -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
