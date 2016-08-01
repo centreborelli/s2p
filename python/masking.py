@@ -59,7 +59,7 @@ def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None, wat_
         wat_msk_crop = common.tmpfile('.png')
         common.image_apply_homography(wat_msk_crop, wat_msk, H, w, h)
         intersection(out, out, wat_msk_crop)
-    else:
+    elif not cfg['disable_srtm']:
         # water mask (srtm)
         water_msk = common.tmpfile('.png')
         env = os.environ.copy()
