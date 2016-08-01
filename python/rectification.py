@@ -6,7 +6,6 @@
 import sys
 import numpy as np
 
-import homography_cropper
 import rpc_model
 import rpc_utils
 import estimation
@@ -74,15 +73,50 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     return np.array(out)
 
 
-def register_horizontally(matches, H1, H2, do_shear=False, flag='center'):
+def register_horizontally_shear(matches, H1, H2):
     """
-    Adjust rectifying homographies to modify the disparity range.
+    Adjust rectifying homographies with a shear to modify the disparity range.
 
     Args:
         matches: list of pairs of 2D points, stored as a Nx4 numpy array
         H1, H2: two homographies, stored as numpy 3x3 matrices
-        do_shear: boolean flag indicating wheter to minimize the shear on im2
-            or not.
+
+    Returns:
+        H2: corrected homography H2
+
+    The matches are provided in the original images coordinate system. By
+    transforming these coordinates with the provided homographies, we obtain
+    matches whose disparity is only along the x-axis.
+    """
+    # transform the matches according to the homographies
+    p1 = common.points_apply_homography(H1, matches[:, :2])
+    x1 = p1[:, 0]
+    y1 = p1[:, 1]
+    p2 = common.points_apply_homography(H2, matches[:, 2:])
+    x2 = p2[:, 0]
+    y2 = p2[:, 1]
+
+    if cfg['debug']:
+        print "Residual vertical disparities: max, min, mean. Should be zero"
+        print np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1)
+
+    # we search the (s, b) vector that minimises \sum (x1 - (x2+s*y2+b))^2
+    # it is a least squares minimisation problem
+    A = np.vstack((y2, y2*0+1)).T
+    B = x1 - x2
+    s, b = np.linalg.lstsq(A, B)[0].flatten()
+
+    # correct H2 with the estimated shear
+    return np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
+
+
+def register_horizontally_translation(matches, H1, H2, flag='center'):
+    """
+    Adjust rectifying homographies with a translation to modify the disparity range.
+
+    Args:
+        matches: list of pairs of 2D points, stored as a Nx4 numpy array
+        H1, H2: two homographies, stored as numpy 3x3 matrices
         flag: option needed to control how to modify the disparity range:
             'center': move the barycenter of disparities of matches to zero
             'positive': make all the disparities positive
@@ -99,28 +133,17 @@ def register_horizontally(matches, H1, H2, do_shear=False, flag='center'):
     on the disparity range.
     """
     # transform the matches according to the homographies
-    p1 = common.points_apply_homography(H1, matches[:, 0:2])
+    p1 = common.points_apply_homography(H1, matches[:, :2])
     x1 = p1[:, 0]
     y1 = p1[:, 1]
-    p2 = common.points_apply_homography(H2, matches[:, 2:4])
+    p2 = common.points_apply_homography(H2, matches[:, 2:])
     x2 = p2[:, 0]
     y2 = p2[:, 1]
 
     # for debug, print the vertical disparities. Should be zero.
-    print "Residual vertical disparities: max, min, mean. Should be zero ------"
-    print np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1)
-
-    # shear correction
-    # we search the (s, b) vector that minimises \sum (x1 - (x2+s*y2+b))^2
-    # it is a least squares minimisation problem
-    if do_shear:
-        A = np.vstack((y2, y2*0+1)).T
-        B = x1 - x2
-        z = np.linalg.lstsq(A, B)[0]
-        s = z[0]
-        b = z[1]
-        H2 = np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
-        x2 = x2 + s*y2 + b
+    if cfg['debug']:
+        print "Residual vertical disparities: max, min, mean. Should be zero"
+        print np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1)
 
     # compute the disparity offset according to selected option
     t = 0
@@ -318,6 +341,16 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     # compute rectifying homographies
     H1, H2, F = rectification_homographies(matches, x, y, w, h)
 
+    if cfg['register_with_shear']:
+        # compose H2 with a horizontal shear to reduce the disparity range
+        a = np.mean(rpc_utils.altitude_range(rpc1, x, y, w, h))
+        lon, lat, alt = rpc_utils.ground_control_points(rpc1, x, y, w, h, a, a, 4)
+        x1, y1 = rpc1.inverse_estimate(lon, lat, alt)[:2]
+        x2, y2 = rpc2.inverse_estimate(lon, lat, alt)[:2]
+        m = np.vstack([x1, y1, x2, y2]).T
+        m = np.vstack({tuple(row) for row in m})  # remove duplicates due to no alt range
+        H2 = register_horizontally_shear(m, H1, H2)
+
     # compose H2 with a horizontal translation to center disp range around 0
     if sift_matches is not None:
         sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
@@ -325,7 +358,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         if len(sift_matches) < 10:
             print 'WARNING: no registration with less than 10 matches'
         else:
-            H2 = register_horizontally(sift_matches, H1, H2)
+            H2 = register_horizontally_translation(sift_matches, H1, H2)
 
     # compute disparity range
     disp_m, disp_M = disparity_range(rpc1, rpc2, x, y, w, h, H1, H2,

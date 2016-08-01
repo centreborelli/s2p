@@ -251,7 +251,7 @@ def altitude_range_coarse(rpc):
     return m, M
 
 
-def altitude_range(rpc, x, y, w, h, margin_top, margin_bottom):
+def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     """
     Computes an altitude range using SRTM data.
 
@@ -453,8 +453,7 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
     row_range = [y+(1.0/(2*n))*h, y+((2*n-1.0)/(2*n))*h, n]
     alt_range = [m, M, n]
     col, row, alt = generate_point_mesh(col_range, row_range, alt_range)
-    lon, lat, alt = rpc.direct_estimate(col, row, alt)
-    return lon, lat, alt
+    return rpc.direct_estimate(col, row, alt)
 
 
 def corresponding_roi(rpc1, rpc2, x, y, w, h):
