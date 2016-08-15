@@ -44,11 +44,11 @@ int remove_small_cc(int w, int h, float *in, float *out, int minarea, float inte
 		out[i] = in[i];
 
 	// identify the connected components of non nan values
-	int *rep = malloc(w * h * sizeof*rep);
+	int *rep = (int*) malloc(w * h * sizeof*rep);
 	connected_component_filter(rep, w, h, in, intensity_threshold);
 
 	// measure the area of connected components
-	int *area = malloc(w * h * sizeof*area);
+	int *area = (int*) malloc(w * h * sizeof*area);
 	for (int i = 0; i < w*h; i++)
 		area[i] = 0;
 	for (int i = 0; i < w*h; i++)
@@ -68,6 +68,7 @@ int remove_small_cc(int w, int h, float *in, float *out, int minarea, float inte
 
 	// cleanup and exit
 	free(rep);
+	free(area);
 	return remaining_cc;
 }
 
