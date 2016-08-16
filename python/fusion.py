@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+import shutil
 import numpy as np
 from osgeo import gdal
 
@@ -125,4 +126,10 @@ def merge_n(output, inputs):
         f = None
 
     # compute the median (ignoring nans) and write it to output
-    piio.write(output, np.nanmedian(x, axis=2))
+    if inputs:
+        # copy the first input file to output to keep the metadata
+        shutil.copy(inputs[0], output)
+        # update the output file content with the median
+        f = gdal.Open(output, gdal.GA_Update)
+        f.GetRasterBand(1).WriteArray(np.nanmedian(x, axis=2))
+        f = None
