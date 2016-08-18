@@ -1,13 +1,20 @@
+#include <ctime>
 #include <stdlib.h>
 
-#include "timing.h"
-#include "pickopt.h"
-#include "sift_anatomy_20141201/lib_sift_anatomy.h"
+#include "Utilities/Time.h"
+#include "Utilities/Parameters.h"
+#include "LibImages/LibImages.h"
+#include "LibSift/LibSift.h"
+
 #include "gdal.h"
 #include "cpl_conv.h"
 
+extern "C" {
+    #include "pickopt.h"
+}
 
-void print_help(char *v[])
+
+static void print_help(char *v[])
 {
     fprintf(stderr, "usage:\n\t%s file.tif x y w h [-o file] [--max-nb-pts n]"
     //                          0 1        2 3 4 5
@@ -17,11 +24,13 @@ void print_help(char *v[])
 
 
 int main(int c, char *v[]) {
-    // process input arguments
     if (c < 2) {
         print_help(v);
         return 1;
     }
+
+    // initialise time
+    Time time;
 
     // optional arguments
     const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
@@ -31,10 +40,6 @@ int main(int c, char *v[]) {
     float thresh_dog = (float) atof(pick_option(&c, &v, "-thresh-dog", "0.0133"));
     int ss_noct = atoi(pick_option(&c, &v, "-scale-space-noct", "8"));
     int ss_nspo = atoi(pick_option(&c, &v, "-scale-space-nspo", "3"));
-
-    // initialise time
-    struct timespec ts;
-    portable_gettime(&ts);
 
     // define the rectangular region of interest (roi)
     int x, y, w, h;
@@ -81,44 +86,36 @@ int main(int c, char *v[]) {
     float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
     GDALRasterIO(hBand, GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
     GDALClose(hDataset);
-    if (verbose) print_elapsed_time(&ts, "read ROI", 35);
+    if (verbose) time.get_time("read roi", 35);
+    Image im(roi, (const size_t) w, (const size_t) h, 1);
+    if (verbose) time.get_time("copy roi into Marc's image object", 35);
+    CPLFree(roi);
 
-    // prepare sift parameters
-    struct sift_parameters* p = sift_assign_default_parameters();
-    p->C_DoG = thresh_dog;
-    p->n_oct = ss_noct;
-    p->n_spo = ss_nspo;
+    // prepare params object
+    Parameters params;
+    params.setDefaultValues();
+    params.set_thresh_dog(thresh_dog);
+    params.set_noct(ss_noct);
+    params.set_nspo(ss_nspo);
 
-    // compute sift keypoints
-    struct sift_scalespace **ss = (struct sift_scalespace**) malloc(4 * sizeof(struct sift_scalespace*));
-    struct sift_keypoints **kk = (struct sift_keypoints**) malloc(6 * sizeof(struct sift_keypoints*));
-    for (int i = 0; i < 6; i++)
-        kk[i] = sift_malloc_keypoints();
-    struct sift_keypoints* kpts = sift_anatomy(roi, w, h, p, ss, kk);
-    if (verbose) print_elapsed_time(&ts, "run SIFT", 35);
+    // run sift
+    Sift sift(params);
+    if (verbose) time.get_time("initialization", 35);
+    sift.computeKeyPoints(im);
+    if (verbose) time.get_time("compute keypoints", 35);
 
     // add (x, y) offset to keypoints coordinates
-    for (int i = 0; i < kpts->size; i++) {
-        kpts->list[i]->x += y;  // in Ives' conventions x is the row index
-        kpts->list[i]->y += x;
+    std::list<KeyPoint*>::iterator key = sift.m_keyPoints->begin();
+    for (; key != sift.m_keyPoints->end(); key++) {
+        KeyPoint* k = new KeyPoint(**key);  // copy the keypoint
+        k->setX((*key)->getX() + y); // in Ives' conventions x is the row index
+        k->setY((*key)->getY() + x);
+        **key = *k;
     }
-    if (verbose) print_elapsed_time(&ts, "add offset", 35);
+    if (verbose) time.get_time("add offset", 35);
 
-    // write to standard output
-    FILE *f = fopen(output_file, "w");
-    fprintf_keypoints(f, kpts, max_nb_pts, binary, 1);
-    fclose(f);
-    if (verbose) print_elapsed_time(&ts, "write output", 35);
-
-    // cleanup
-    CPLFree(roi);
-    sift_free_keypoints(kpts);
-    for (int i = 0; i < 6; i++)
-        sift_free_keypoints(kk[i]);
-    free(kk);
-    for (int i = 0; i < 4; i++)
-        sift_free_scalespace(ss[i]);
-    free(ss);
-    free(p);
+    // write output
+    sift.writeKeyPoints(output_file);
+    if (verbose) time.get_time("write output", 35);
     return 0;
 }
