@@ -186,7 +186,7 @@ void Sift::init(
   i_im.rgb2gray(*m_im);
 
   //! Normalize the image into [0, 1[
-  (*m_im) *= (1. / 256.);
+  //(*m_im) *= (1. / 256.);
 
   //! Determine the number of octaves.
   const size_t nbOct = getNbOctaves();
