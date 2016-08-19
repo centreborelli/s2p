@@ -99,6 +99,12 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
             disp_min, disp_max, im1, im2, out_disp, out_mask))
 
     if (algo == 'mgm'):
+        # TODO FIXME XXX quick hack to fit 16GB ram for the iarpa challenge
+        if disp_max - disp_min > 200:
+            center = int(0.5 * (disp_min + disp_max))
+            disp_min = center - 100
+            disp_max = center + 100
+
         env = os.environ.copy()
         env['OMP_NUM_THREADS'] = "1" #str(cfg['omp_num_threads'])
         env['MEDIAN'] = '1'
