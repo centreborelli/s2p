@@ -16,9 +16,10 @@ extern "C" {
 
 static void print_help(char *v[])
 {
-    fprintf(stderr, "usage:\n\t%s file.tif x y w h [-o file] [--max-nb-pts n]"
+    fprintf(stderr, "usage:\n\t%s file.tif x y w h [-o file]"
     //                          0 1        2 3 4 5
-            " [-b] [--verbose] [--thresh-dog t (0.0133)]"
+    //        " [-b] [--verbose] [--thresh-dog t (0.0133)]"
+            " [--verbose] [--thresh-dog t (0.0133)]"
             " [--scale-space-noct n (8)] [--scale-space-nspo n (3)]\n", *v);
 }
 
@@ -34,9 +35,9 @@ int main(int c, char *v[]) {
 
     // optional arguments
     const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
-    bool binary = (bool) pick_option(&c, &v, "b", NULL);
+    //bool binary = (bool) pick_option(&c, &v, "b", NULL);
     bool verbose = (bool) pick_option(&c, &v, "-verbose", NULL);
-    int max_nb_pts = atoi(pick_option(&c, &v, "-max-nb-pts", "INT_MAX"));
+    //int max_nb_pts = atoi(pick_option(&c, &v, "-max-nb-pts", "INT_MAX"));
     float thresh_dog = (float) atof(pick_option(&c, &v, "-thresh-dog", "0.0133"));
     int ss_noct = atoi(pick_option(&c, &v, "-scale-space-noct", "8"));
     int ss_nspo = atoi(pick_option(&c, &v, "-scale-space-nspo", "3"));
