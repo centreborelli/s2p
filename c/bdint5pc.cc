@@ -139,7 +139,7 @@ int main(int c, char *v[])
 {
 	char *opt_a = (char*) pick_option(&c, &v, "a", "min");
 	char *filename_mask = (char*) pick_option(&c, &v, "m", "");
-	int help_argument = reinterpret_cast<int>((char*)pick_option(&c, &v, "h", 0));
+	int help_argument = (((char*)pick_option(&c, &v, "h", 0)) != 0);
 	if (help_argument || (c != 1 && c != 2 && c != 3)) {
 		fprintf(stderr, "usage:\n\t"
 			"%s [-a {min|max|avg}] [in.tiff [out.tiff]]\n", *v);

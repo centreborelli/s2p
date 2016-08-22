@@ -37,7 +37,7 @@ int utm_from_lonlat(double out_eastnorth[2], double lon, double lat)
 extern "C"
 void lonlat_from_eastnorthzone(double out_lonlat[2], double e, double n, int z)
 {
-	GeographicLib::GeoCoords p(abs(z), z>0, e, n);
+	GeographicLib::GeoCoords p(fabs(z), z>0, e, n);
 	out_lonlat[0] = p.Longitude();
 	out_lonlat[1] = p.Latitude();
 }
