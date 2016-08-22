@@ -62,11 +62,11 @@ Sift::Sift() :
 Sift::Sift(
   const Parameters& p_params) :
 
-  //! Set of parameters
-  m_params((Parameters*) new Parameters(p_params)),
-
   //! List of keypoints
   m_keyPoints((list<KeyPoint*>*) new list<KeyPoint*>(0)),
+
+  //! Set of parameters
+  m_params((Parameters*) new Parameters(p_params)),
 
   //! Image (gray version)
   m_im(NULL),
@@ -89,11 +89,11 @@ Sift::Sift(
 Sift::Sift(
   const Sift& i_sift) :
 
-  //! Set of parameters
-  m_params((Parameters*) new Parameters(*i_sift.m_params)),
-
   //! List of keypoints
   m_keyPoints((list<KeyPoint*>*) new list<KeyPoint*>(0)),
+
+  //! Set of parameters
+  m_params((Parameters*) new Parameters(*i_sift.m_params)),
 
   //! Image (gray version)
   m_im(i_sift.m_im == NULL ? NULL : (Image*) new Image(*i_sift.m_im)),
