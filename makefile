@@ -2,7 +2,7 @@ C99 = $(CC) -std=c99
 CFLAGS = -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN
 CPPFLAGS = -g -O3 -fpermissive
 LDLIBS = -lstdc++
-IIOLIBS = $(TIFDIR)/lib/libtiff.a -lz -lpng -ljpeg -lm
+IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
@@ -18,9 +18,8 @@ endif
 BINDIR = bin
 SRCDIR = c
 GEODIR = 3rdparty/GeographicLib-1.32
-TIFDIR = 3rdparty/tiff-4.0.4beta
 
-default: $(BINDIR) libtiff geographiclib homography sift imscript mgm piio
+default: $(BINDIR) geographiclib homography sift imscript mgm piio
 
 all: default msmw3 sgbm tvl1
 
@@ -28,20 +27,8 @@ all: default msmw3 sgbm tvl1
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-
-libtiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)/raw2tiff $(BINDIR)/tiffinfo
-
-$(TIFDIR)/lib/libtiff.a:
-	cd $(TIFDIR); ./configure --prefix=`pwd` --disable-lzma --disable-jbig --with-pic; $(MAKE) install -j
-	cd $(TIFDIR); $(MAKE) distclean
-
-$(BINDIR)/raw2tiff: $(TIFDIR)/lib/libtiff.a $(BINDIR)
-	cp $(TIFDIR)/bin/raw2tiff $(BINDIR)
-
-$(BINDIR)/tiffinfo: $(TIFDIR)/lib/libtiff.a $(BINDIR)
-	cp $(TIFDIR)/bin/tiffinfo $(BINDIR)
-
 piio: python/piio/libiio.so
+
 python/piio/libiio.so: python/piio/setup.py python/piio/freemem.c c/iio.c c/iio.h
 	cd python/piio; python setup.py build
 
@@ -64,12 +51,12 @@ asift:
 
 homography: $(BINDIR)
 	mkdir -p $(BINDIR)/build_homography
-	cd $(BINDIR)/build_homography; cmake -D CMAKE_BUILD_TYPE=Release ../../c/homography; $(MAKE)
+	cd $(BINDIR)/build_homography; cmake ../../c/homography; $(MAKE)
 	cp $(BINDIR)/build_homography/homography $(BINDIR)
 
 sift: $(BINDIR)
 	mkdir -p $(BINDIR)/build_sift
-	cd $(BINDIR)/build_sift; cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_FLAGS=-lm ../../c/sift; $(MAKE)
+	cd $(BINDIR)/build_sift; cmake ../../c/sift; $(MAKE)
 	cp $(BINDIR)/build_sift/sift_roi $(BINDIR)
 	cp $(BINDIR)/build_sift/matching $(BINDIR)
 
@@ -119,7 +106,7 @@ SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten plyextrema plytodsm
 
-imscript: $(BINDIR) $(TIFDIR)/lib/libtiff.a $(PROGRAMS)
+imscript: $(BINDIR) $(PROGRAMS)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS)
@@ -214,14 +201,9 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 test:
 	python -u s2p.py test.json
 
-clean: clean_libtiff clean_geographiclib clean_homography clean_asift\
+clean: clean_geographiclib clean_homography clean_asift\
 	clean_sift clean_imscript clean_msmw clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm\
 	clean_mgm
-
-clean_libtiff:
-	-rm $(TIFDIR)/lib/libtiff.a
-	-rm $(TIFDIR)/bin/{raw2tiff,tiffinfo}
-	-rm $(BINDIR)/{raw2tiff,tiffinfo}
 
 clean_geographiclib:
 	-rm $(BINDIR)/{Cart,Geo}Convert
@@ -272,5 +254,5 @@ clean_mgm:
 	-rm $(BINDIR)/mgm
 
 .PHONY: default all geographiclib sift sgbm sgbm_opencv msmw tvl1\
-	imscript clean clean_libtiff clean_geographiclib clean_sift\
+	imscript clean clean_geographiclib clean_sift\
 	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test
