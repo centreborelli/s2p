@@ -39,12 +39,6 @@ find_package (OpenMP)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 
-# Link LibTIFF and LibPNG
-find_package (TIFF REQUIRED)
-find_package (PNG REQUIRED)
-include_directories (PUBLIC ${TIFF_INCLUDE_DIR} PUBLIC ${PNG_INCLUDE_DIRS})
-link_libraries (${TIFF_LIBRARIES} ${PNG_LIBRARIES})
-
 # Link -lm
 find_library (M_LIBRARY m)
 if (M_LIBRARY)
