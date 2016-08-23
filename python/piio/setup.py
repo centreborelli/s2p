@@ -102,9 +102,7 @@ class build_iio(distutils.cmd.Command):
             compiler.set_executable('linker_so', ['cc', '-dynamiclib', '-arch', 'x86_64'])
         else:
             libname = compiler.library_filename(libname, lib_type='shared')
-        s2p_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        libtiff_static = '%s/3rdparty/tiff-4.0.4beta/lib/libtiff.a' % s2p_dir
-        linker_postargs = [libtiff_static, '-lpng', '-ljpeg', '-lz']
+        linker_postargs = ['-ltiff', '-lpng', '-ljpeg', '-lz']
         if platform.system() == 'Linux' and platform.machine() == 'x86_64':
             linker_postargs += ['-fPIC']
         if platform.system() in ('Windows', 'Microsoft'):
