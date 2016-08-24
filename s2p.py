@@ -92,10 +92,9 @@ def preprocess_tile(tile_info):
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        fout = open(os.path.join(tile_dir, 'stdout.log'), 'w', 0)
-        # the last arg '0' is for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
+        f = open(os.path.join(tile_dir, 'stdout.log'), 'w', 0)  # 0 for no buffering
+        sys.stdout = f
+        sys.stderr = f
 
     try:
         preprocess.pointing_correction(tile_info)
@@ -110,7 +109,7 @@ def preprocess_tile(tile_info):
     if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        fout.close()
+        f.close()
 
 
 def global_values(tiles_full_info):
@@ -136,23 +135,13 @@ def process_tile_pair(tile_info, pair_id):
     tile_dir = tile_info['directory']
     col, row, tw, th = tile_info['coordinates']
     images = cfg['images']
-
     img1, rpc1 = images[0]['img'], images[0]['rpc']
     img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
-
     out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id)
-
-
-
     A_global = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_%d.txt' % pair_id)
 
     print 'processing tile %d %d...' % (col, row)
-
-    # check that the tile is not masked
-    if os.path.isfile(os.path.join(out_dir, 'this_tile_is_masked.txt')):
-        print 'tile %s already masked, skip' % out_dir
-        return
 
     # rectification
     if (cfg['skip_existing'] and
@@ -196,20 +185,19 @@ def process_tile(tile_info):
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        fout = open('%s/stdout.log' % tile_dir, 'a', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
+        f = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
+        sys.stdout = f
+        sys.stderr = f
+
+    # check that the tile is not masked
+    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
+        print 'tile %s already masked, skip' % tile_dir
+        return
 
     try:
-        # check that the tile is not masked
-        if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-            print 'tile %s already masked, skip' % tile_dir
-            return
-
         # process each pair to get a height map
-        nb_pairs = tile_info['number_of_pairs']
-        for pair_id in range(1, nb_pairs + 1):
-            process_tile_pair(tile_info, pair_id)
+        for pair_id in xrange(tile_info['number_of_pairs']):
+            process_tile_pair(tile_info, pair_id + 1)
 
     except Exception:
         print("Exception in processing tile:")
@@ -221,7 +209,7 @@ def process_tile(tile_info):
     if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        fout.close()
+        f.close()
 
 
 def process_tile_fusion(tile_info):
@@ -235,21 +223,19 @@ def process_tile_fusion(tile_info):
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        fout = open('%s/stdout.log' % tile_dir, 'a', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
+        f = open('%s/stdout.log' % tile_dir, 'a', 0)  # '0' for no buffering
+        sys.stdout = f
+        sys.stderr = f
+
+    # check that the tile is not masked
+    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
+        print 'tile %s already masked, skip' % tile_dir
+        return
 
     try:
-        nb_pairs = tile_info['number_of_pairs']
-
-        # check that the tile is not masked
-        if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-            print 'tile %s already masked, skip' % tile_dir
-            return
-
-        # finalization
         height_maps = [os.path.join(tile_dir, 'pair_%d' % (i+1),
-                                    'height_map.tif') for i in xrange(nb_pairs)]
+                                    'height_map.tif') for i in
+                       xrange(tile_info['number_of_pairs'])]
         process.finalize_tile(tile_info, height_maps, cfg['utm_zone'], cfg['ll_bbx'])
 
     except Exception:
@@ -262,7 +248,7 @@ def process_tile_fusion(tile_info):
     if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        fout.close()
+        f.close()
 
 
 def apply_global_alignment(tile_dir, transformations):
