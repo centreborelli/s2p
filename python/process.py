@@ -7,13 +7,9 @@
 import numpy as np
 from config import cfg
 import os
-import sys
-import multiprocessing
 
 from python import common
-from python import geographiclib
 from python import triangulation
-from python import fusion
 from python import block_matching
 from python import rectification
 from python import masking
@@ -104,13 +100,13 @@ def cargarse_basura(inputf, outputf):
     common.run('rm -f %s %s %s'%(tmp1,tmp2,tmpM))
 
 
-def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
-            w=None, h=None, prv1=None):
+def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x, y, w, h):
     """
-    Computes rectifications, without tiling
+    Perform stereo rectification of a given ROI in a pair of images.
 
     Args:
         out_dir: path to the output directory
+        A_global:
         img1: path to the reference image.
         rpc1: paths to the xml file containing the rpc coefficients of the
             reference image
@@ -120,105 +116,55 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x=None, y=None,
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        prv1 (optional): path to a preview of the reference image.
-
-    Returns:
-        nothing
     """
-    # output files
-    rect1 = '%s/rectified_ref.tif' % (out_dir)
-    rect2 = '%s/rectified_sec.tif' % (out_dir)
-    disp = '%s/rectified_disp.tif' % (out_dir)
-    mask = '%s/rectified_mask.png' % (out_dir)
-    subsampling = '%s/subsampling.txt' % (out_dir)
-    pointing = '%s/pointing.txt' % out_dir
-    center = '%s/center_keypts_sec.txt' % out_dir
-    sift_matches = '%s/sift_matches.txt' % out_dir
-    sift_matches_plot = '%s/sift_matches_plot.png' % out_dir
-    H_ref = '%s/H_ref.txt' % out_dir
-    H_sec = '%s/H_sec.txt' % out_dir
-    disp_min_max = '%s/disp_min_max.txt' % out_dir
-    config = '%s/config.json' % out_dir
-
-    A, m = None, None
-
-    if os.path.isfile('%s/pointing.txt' % out_dir):
-        A = np.loadtxt('%s/pointing.txt' % out_dir)
-    else:
+    try:
+        A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
+    except IOError:
         A = A_global
-    if os.path.isfile('%s/sift_matches.txt' % out_dir):
-        m = np.loadtxt('%s/sift_matches.txt' % out_dir)
+    try:
+        m = np.loadtxt(os.path.join(out_dir, 'sift_matches.txt'))
+    except IOError:
+        m = None
 
     # rectification
+    rect1 = os.path.join(out_dir, 'rectified_ref.tif')
+    rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
                                                             rpc2, x, y, w, h,
                                                             rect1, rect2, A, m)
-
-    z = cfg['subsampling_factor']
-    np.savetxt(subsampling, np.array([z]), fmt='%.1f')
-    np.savetxt(H_ref, H1, fmt='%12.6f')
-    np.savetxt(H_sec, H2, fmt='%12.6f')
-    np.savetxt(disp_min_max, np.array([disp_min, disp_max]), fmt='%3.1f')
+    np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
+    np.savetxt(os.path.join(out_dir, 'H_sec.txt'), H2, fmt='%12.6f')
+    np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
+                            fmt='%3.1f')
 
 
-def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-              w=None, h=None, prv1=None):
+def disparity(out_dir, x, y):
     """
     Computes a disparity map from a Pair of Pleiades images, without tiling
 
     Args:
         out_dir: path to the output directory
-        img1: path to the reference image.
-        rpc1: paths to the xml file containing the rpc coefficients of the
-            reference image
-        img2: path to the secondary image.
-        rpc2: paths to the xml file containing the rpc coefficients of the
-            secondary image
-        x, y, w, h: four integers defining the rectangular ROI in the reference
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle.
-        prv1 (optional): path to a preview of the reference image
-        cld_msk (optional): path to a gml file containing a cloud mask
-        roi_msk (optional): path to a gml file containing a mask defining the
-            area contained in the full image
-        wat_msk (optional): path to a tiff file containing a water mask.
-
-    Returns:
-        nothing
+        x, y: two integers defining the top-left corner of the rectangular ROI
+            being processed.
     """
-    # output files
-    rect1 = '%s/rectified_ref.tif' % (out_dir)
-    rect2 = '%s/rectified_sec.tif' % (out_dir)
-    disp = '%s/rectified_disp.tif' % (out_dir)
-    mask = '%s/rectified_mask.png' % (out_dir)
-    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
-    cwid_msk_rect = '%s/rectified_cloud_water_image_domain_mask.png' % (out_dir)
-
-    subsampling = '%s/subsampling.txt' % (out_dir)
-    pointing = '%s/pointing.txt' % out_dir
-    center = '%s/center_keypts_sec.txt' % out_dir
-    sift_matches = '%s/sift_matches.txt' % out_dir
-    sift_matches_plot = '%s/sift_matches_plot.png' % out_dir
-    H_ref = '%s/H_ref.txt' % out_dir
-    H_sec = '%s/H_sec.txt' % out_dir
-    disp_min_max = '%s/disp_min_max.txt' % out_dir
-    config = '%s/config.json' % out_dir
-
     # disparity (block-matching)
-    disp_min, disp_max = np.loadtxt(disp_min_max)
-
-    if cfg['disp_min'] is not None:
-        disp_min = cfg['disp_min']
-    if cfg['disp_max'] is not None:
-        disp_max = cfg['disp_max']
+    rect1 = os.path.join(out_dir, 'rectified_ref.tif')
+    rect2 = os.path.join(out_dir, 'rectified_sec.tif')
+    disp = os.path.join(out_dir, 'rectified_disp.tif')
+    mask = os.path.join(out_dir, 'rectified_mask.png')
+    disp_min, disp_max = np.loadtxt(os.path.join(out_dir, 'disp_min_max.txt'))
+    if cfg['disp_min'] is not None: disp_min = cfg['disp_min']
+    if cfg['disp_max'] is not None: disp_max = cfg['disp_max']
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
                                          cfg['matching_algorithm'], disp_min,
                                          disp_max)
 
     # intersect mask with the cloud_water_image_domain mask (recomputed here to
     # get to be sampled on the epipolar grid)
+    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
+    cwid_msk_rect = '%s/rectified_cloud_water_image_domain_mask.png' % (out_dir)
     ww, hh = common.image_size(rect1)
-    H1 = np.loadtxt(H_ref)
+    H1 = np.loadtxt(os.path.join(out_dir, 'H_ref.txt'))
     H_inv = np.array([[1, 0, x], [0, 1, y], [0, 0, 1]])
     common.image_apply_homography(cwid_msk_rect, cwid_msk, np.dot(H1,H_inv), ww, hh)
 

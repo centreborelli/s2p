@@ -155,7 +155,7 @@ def process_tile_pair(tile_info, pair_id):
     else:
         print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
         process.rectify(out_dir, np.loadtxt(A_global), img1, rpc1,
-                        img2, rpc2, col, row, tw, th, None)
+                        img2, rpc2, col, row, tw, th)
 
     # disparity estimation
     if (cfg['skip_existing'] and
@@ -164,8 +164,7 @@ def process_tile_pair(tile_info, pair_id):
         print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
         print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
-        process.disparity(out_dir, img1, rpc1, img2, rpc2, col, row,
-                          tw, th, None)
+        process.disparity(out_dir, col, row)
 
     # triangulation
     height_map = os.path.join(out_dir, 'height_map.tif')
