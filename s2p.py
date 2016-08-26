@@ -382,14 +382,10 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
 
 def compute_global_pairwise_height_means(mean_heights_local):
     """
+    Global mean height is the weighted average of local mean heights.
     """
     a = np.array(mean_heights_local)
-    nb_pairs = a.shape[1]
-    out = np.zeros(nb_pairs)
-    for k in xrange(nb_pairs):
-        # global mean height is the weighted average of local mean heights
-        out[k] = np.dot(a[:, k, 0], a[:, k, 1]) / a[:, k, 0].sum()
-    return out
+    return np.einsum('ij,ij->j', a[:, :, 0], a[:, :, 1]) / a[:, :, 0].sum(0)
 
 
 def main(config_file, steps=range(1, 8)):
@@ -482,7 +478,7 @@ def print_help_and_exit(script_name):
         4: processing (tilewise rectification, matching and triangulation)
         5: global height maps registration
         6: heights map merging and ply generation
-        7: compute dsm from ply files (one per tile)
+        7: compute dsm from ply files
         8: lidarviewer
         Launches the s2p pipeline.
 
