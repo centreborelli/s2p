@@ -110,14 +110,16 @@ def merge(im1, im2, thresh, out, conservative=False):
             """ % ( im1, im2, thresh, out))
 
 
-def merge_n(output, inputs, offsets, method='median'):
+def merge_n(output, inputs, offsets, averaging_operator=np.nanmedian):
     """
     Merge n images of equal sizes by taking the median/mean/min/max pixelwise.
 
     Args:
         inputs: list of paths to the input images
         output: path to the output image
-        method (optional, default is 'median'):
+        averaging_operator (optional, default is np.min): possible values are,
+            for instance np.min, np.max, np.mean, np.median and their nanproof
+            counterparts, ie np.nanmin, np.nanmax, np.nanmean, np.nanmedian
     """
     assert(len(inputs) == len(offsets))
 
@@ -142,12 +144,5 @@ def merge_n(output, inputs, offsets, method='median'):
         shutil.copy(inputs[0], output)
         # update the output file content
         f = gdal.Open(output, gdal.GA_Update)
-        if method == 'median':
-            f.GetRasterBand(1).WriteArray(m + np.nanmedian(x, axis=2))
-        elif method == 'mean':
-            f.GetRasterBand(1).WriteArray(m + np.nanmean(x, axis=2))
-        elif method == 'min':
-            f.GetRasterBand(1).WriteArray(m + np.nanmin(x, axis=2))
-        elif method == 'max':
-            f.GetRasterBand(1).WriteArray(m + np.nanmax(x, axis=2))
+        f.GetRasterBand(1).WriteArray(m + averaging_operator(x, axis=2))
         f = None
