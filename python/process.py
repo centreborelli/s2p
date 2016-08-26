@@ -41,11 +41,14 @@ def color_crop_ref(tile_info, clr=None):
     z = cfg['subsampling_factor']
 
     # paths
-    crop_ref = tile_dir + '/roi_ref_crop.tif'
     global_minmax = cfg['out_dir'] + '/global_minmax.txt'
     applied_minmax = tile_dir + '/applied_minmax.txt'
 
     global_minmax_arr = np.loadtxt(global_minmax)
+
+    # crop ref
+    crop_ref = os.path.join(tile_dir, 'roi_ref_crop.tif')
+    common.image_crop_tif(cfg['images'][0]['img'], x, y, w, h, crop_ref)
 
     if cfg['color_ply']:
 
@@ -116,28 +119,17 @@ def generate_cloud(tile_info, do_offset=False, utm_zone=None, ll_bbx=None):
     # col and row have been divided by z inside 'finalize_tile' for
     # convinience; col*z and row*z allow to get the initial values back.
     A = common.matrix_translation(-x * z, -y * z)
-    z = cfg['subsampling_factor']
     f = 1.0 / z
     Z = np.diag([f, f, 1])
     A = np.dot(Z, A)
     trans = tile_dir + '/trans.txt'
     np.savetxt(trans, A, fmt='%9.3f')
 
-    # compute coordinates (offsets) of the point we want to use as origin in
-    # the local coordinate system of the computed cloud
-    if do_offset:
-        r = rpc_model.RPCModel(rpc1)
-        lat = r.latOff
-        lon = r.lonOff
-        off_x, off_y = geographiclib.geodetic_to_utm(lat, lon)[0:2]
-    else:
-        off_x, off_y = 0, 0
-
     # output
     cloud = tile_dir + '/cloud.ply'
 
     triangulation.compute_point_cloud(cloud, height_map, rpc1, trans,
-                                      crop_color, off_x, off_y,
+                                      crop_color,
                                       utm_zone=utm_zone, llbbx=tuple(ll_bbx))
 
     common.garbage_cleanup()
@@ -362,40 +354,3 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         masking.erosion(mask, mask, cfg['msk_erosion'])
     except OSError:
         print "file %s not produced" % mask
-
-
-def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
-                w=None, h=None, prv1=None, A=None):
-    """
-    Computes triangulations, without tiling
-
-    Args:
-        out_dir: path to the output directory
-        img1: path to the reference image.
-        rpc1: paths to the xml file containing the rpc coefficients of the
-            reference image
-        img2: path to the secondary image.
-        rpc2: paths to the xml file containing the rpc coefficients of the
-            secondary image
-        x, y, w, h: four integers defining the rectangular ROI in the reference
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle.
-        prv1 (optional): path to a preview of the reference image
-        A (optional, default None): pointing correction matrix.
-
-    Returns:
-        nothing
-    """
-    # output files
-    disp = '%s/rectified_disp.tif' % (out_dir)
-    mask = '%s/rectified_mask.png' % (out_dir)
-    H_ref = '%s/H_ref.txt' % out_dir
-    H_sec = '%s/H_sec.txt' % out_dir
-    rpc_err = '%s/rpc_err.tif' % out_dir
-    height_map = '%s/height_map.tif' % out_dir
-
-    # triangulation
-    z = cfg['subsampling_factor']
-    triangulation.compute_dem(height_map, x, y, w, h, z,
-                              rpc1, rpc2, H_ref, H_sec, disp, mask,
-                              rpc_err, A)

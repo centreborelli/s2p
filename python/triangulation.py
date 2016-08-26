@@ -12,7 +12,7 @@ import common
 from config import cfg
 
 
-def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
+def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
     """
     Computes a height map from a disparity map, using rpc.
 
@@ -23,11 +23,12 @@ def compute_height_map(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
         disp, mask: paths to the diparity and mask maps
         height: path to the output height map
         rpc_err: path to the output rpc_error of triangulation
-        A (optional): pointing correction matrix for im2
+        A (optional): path to txt file containing the pointing correction matrix
+            for im2
     """
     if A is not None:
         HH2 = common.tmpfile('.txt')
-        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
+        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(np.loadtxt(A))))
     else:
         HH2 = H2
 
@@ -79,8 +80,8 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
 
 
-def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
-                A=None):
+def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
+               A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -97,15 +98,14 @@ def compute_dem(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
             the rectifying homographies
         disp, mask: paths to the diparity and mask maps
         rpc_err: path to the output rpc_error of triangulation
-        A (optional): pointing correction matrix for im2
+        A (optional): path to txt file containing the pointing correction matrix
+            for im2
 
     Returns:
         nothing
     """
-    out_dir = os.path.dirname(out)
-
     tmp = common.tmpfile('.tif')
-    compute_height_map(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
+    height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
 
 
@@ -203,10 +203,10 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
         heights: height map, sampled on the same grid as the crop_colorized
             image. In particular, its size is the same as crop_colorized.
         rpc: path to xml file containing RPC data for the current Pleiade image
-        H (optional, default None): path to the file containing the coefficients
-            of the homography transforming the coordinates system of the
-            original full size image into the coordinates system of the crop we
-            are dealing with.
+        H (optional, default None): numpy array of size 3x3 defining the
+            homography transforming the coordinates system of the original full
+            size image into the coordinates system of the crop we are dealing
+            with.
         crop_colorized (optional, default ''): path to a colorized crop of a
             Pleiades image
         off_{x,y} (optional, default None): coordinates of the point we want to
@@ -215,7 +215,9 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
             ply file should be encoded in plain text (ascii).
         utm_zone (optional, default None):
     """
-    hij = " ".join([str(x) for x in np.loadtxt(H).flatten()]) if H else ""
+    if not os.path.exists(crop_colorized):
+        crop_colorized = ''
+    hij = " ".join([str(x) for x in H.flatten()]) if H is not None else ""
     asc = "--ascii" if ascii_ply else ""
     nrm = "--with-normals" if with_normals else ""
     utm = "--utm-zone %s" % utm_zone if utm_zone else ""

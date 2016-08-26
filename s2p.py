@@ -28,6 +28,7 @@ import traceback
 import numpy as np
 import multiprocessing
 from osgeo import gdal, ogr
+gdal.UseExceptions()
 
 from python.config import cfg
 from python import common
@@ -35,6 +36,8 @@ from python import initialization
 from python import preprocess
 from python import globalvalues
 from python import process
+from python import fusion
+from python import triangulation
 from python import globalfinalization
 
 
@@ -165,13 +168,26 @@ def process_tile_pair(tile_info, pair_id):
                           tw, th, None)
 
     # triangulation
-    if (cfg['skip_existing'] and
-        os.path.isfile(os.path.join(out_dir, 'height_map.tif'))):
-        print '\ttriangulation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
+    height_map = os.path.join(out_dir, 'height_map.tif')
+    if (cfg['skip_existing'] and os.path.isfile(height_map)):
+        print '\tfile %s already there, skip triangulation' % height_map
     else:
         print '\ttriangulating tile %d %d (pair %d)...' % (col, row, pair_id)
-        process.triangulate(out_dir, img1, rpc1, img2, rpc2, col,
-                            row, tw, th, None, np.loadtxt(A_global))
+        H_ref = os.path.join(out_dir, 'H_ref.txt')
+        H_sec = os.path.join(out_dir, 'H_sec.txt')
+        disp = os.path.join(out_dir, 'rectified_disp.tif')
+        mask = os.path.join(out_dir, 'rectified_mask.png')
+        rpc_err = os.path.join(out_dir, 'rpc_err.tif')
+        triangulation.height_map(height_map, col, row, tw, th,
+                                 cfg['subsampling_factor'], rpc1, rpc2, H_ref,
+                                 H_sec, disp, mask, rpc_err, A_global)
+
+    f = gdal.Open(height_map)
+    img = f.GetRasterBand(1).ReadAsArray()
+    f = None  # this is the gdal way of closing files
+    print 'number of valid heights', img.size - np.count_nonzero(np.isnan(img))
+    print 'mean height', np.nanmean(img)
+    return img.size - np.count_nonzero(np.isnan(img)), np.nanmean(img)
 
 
 def process_tile(tile_info):
@@ -194,10 +210,11 @@ def process_tile(tile_info):
         print 'tile %s already masked, skip' % tile_dir
         return
 
+    mean_heights = []
     try:
-        # process each pair to get a height map
+        # process each pair to get a height map and record the mean height
         for pair_id in xrange(tile_info['number_of_pairs']):
-            process_tile_pair(tile_info, pair_id + 1)
+            mean_heights.append(process_tile_pair(tile_info, pair_id + 1))
 
     except Exception:
         print("Exception in processing tile:")
@@ -211,19 +228,24 @@ def process_tile(tile_info):
         sys.stderr = sys.__stderr__
         f.close()
 
+    return mean_heights
 
-def process_tile_fusion(tile_info):
+
+def tile_fusion_and_ply(tile_info, mean_heights_global):
     """
-    Process a tile by merging the height maps computed for each image pair.
+    Merge the height maps computed for each image pair and generate a ply cloud.
 
     Args:
         tile_info: a dictionary that provides all you need to process a tile
+        mean_heights_global: list containing the means of all the global height
+            maps
     """
     tile_dir = tile_info['directory']
+    nb_pairs = len(mean_heights_global)
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        f = open('%s/stdout.log' % tile_dir, 'a', 0)  # '0' for no buffering
+        f = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
         sys.stdout = f
         sys.stderr = f
 
@@ -232,14 +254,33 @@ def process_tile_fusion(tile_info):
         print 'tile %s already masked, skip' % tile_dir
         return
 
+    height_maps = [os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif')
+                   for i in xrange(nb_pairs)]
     try:
-        height_maps = [os.path.join(tile_dir, 'pair_%d' % (i+1),
-                                    'height_map.tif') for i in
-                       xrange(tile_info['number_of_pairs'])]
-        process.finalize_tile(tile_info, height_maps, cfg['utm_zone'], cfg['ll_bbx'])
+        # remove spurious matches
+        if cfg['cargarse_basura']:
+            for img in height_maps:
+        	    process.cargarse_basura(img, img)
 
+        # merge the height maps (applying mean offset to register)
+        fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
+                       mean_heights_global)
+
+
+        # compute ply: H is the homography transforming the coordinates system of
+        # the original full size image into the coordinates system of the crop
+        x, y, w, h = tile_info['coordinates']
+        z = cfg['subsampling_factor']
+        H = np.dot(np.diag([1/z, 1/z, 1]), common.matrix_translation(-x, -y))
+        process.color_crop_ref(tile_info, clr=cfg['images'][0]['clr'])
+        triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
+                                          os.path.join(tile_dir, 'height_map.tif'),
+                                          cfg['images'][0]['rpc'], H,
+                                          os.path.join(tile_dir, 'roi_color_ref.tif'),
+                                          utm_zone=cfg['utm_zone'],
+                                          llbbx=tuple(cfg['ll_bbx']))
     except Exception:
-        print("Exception in processing tile:")
+        print("Exception in tile_fusion_and_ply:")
         traceback.print_exc()
         raise
 
@@ -249,161 +290,6 @@ def process_tile_fusion(tile_info):
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         f.close()
-
-
-def apply_global_alignment(tile_dir, transformations):
-    """
-    Apply global alignment.
-
-    Args:
-        tile_dir: directory of the tile
-    """
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        fout = open('%s/stdout.log' % tile_dir, 'a', 0)  # '0' for no buffering
-        sys.stdout = fout
-        sys.stderr = fout
-
-    try:
-        # check that the tile is not masked
-        if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-            print 'tile %s already masked, skip' % tile_dir
-            return
-
-        # apply the transformation corresponding to each pair
-        for i, trans in enumerate(transformations):
-            fname_h = os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
-            cmd = 'plambda %s \"%f * %f +\" -o %s' % (fname_h, trans[0], trans[3], fname_h)
-            common.run(cmd)
-
-    except Exception:
-        print("Exception in transforming tile:")
-        traceback.print_exc()
-        raise
-
-    # close logs
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        fout.close()
-
-
-def global_align(tiles_full_info):
-    """
-    Align the N-plets vertically to remove the affine bias due to the pointing error, 
-    computed for one tile from N image pairs.
-    Uses the first height map as a reference. Stores the old (and biased) height maps 
-    as height_map_bias_ and overwrites the height_map_
-
-    Return:
-        list of N 4-tuples describing the (a,b,c,d) correction for each pair
-    """
-    ret = [np.array([1, 0, 0, 0])]
-    nb_pairs = tiles_full_info[0]['number_of_pairs']
-    if nb_pairs == 1:
-       return ret
-
-    # first assemble the full height maps associated to each pair
-    globalfinalization.write_vrt_files(tiles_full_info)
-
-    # 1. read the reference height map and create the ij grid
-    reference_height_map = os.path.join(cfg['out_dir'], 'heightMap_pair_%d.vrt' % 1)
-
-    if not os.path.isfile(reference_height_map):
-        print reference_height_map
-        print("the VRT file is supposed to be there after calling globalfinalization.write_vrt_files but it's not!")
-        sys.exit(1)
-
-    hhd = gdal.Open(reference_height_map)
-    hhr = hhd.GetRasterBand(1)
-    hh  = hhr.ReadAsArray().copy()
-    hhd = None
-    XX, YY = np.meshgrid(range(hh.shape[1]),range(hh.shape[0]))
-
-    # 2. if the reference height map is almost entirely NAN skip the process? TODO: or choose a new reference? 
-    #if np.sum(np.isfinite(hh) < ): 
-    #    pass
-
-    #from python import piio
-    #piio.write(reference_height_map+'.tif', hh)
-
-    # 3. for each remaining pair of height maps
-    for i in range(2, nb_pairs + 1):
-        height_map = os.path.join(cfg['out_dir'], 'heightMap_pair_%d.vrt' % i)
-
-        # 3.1 read the secondary height map  
-        hhd2 = gdal.Open(height_map)
-        hhr2 = hhd2.GetRasterBand(1)
-        hh2 = hhr2.ReadAsArray().copy()
-        hhd2 = None
-
-        # 3.2 use only the non-nan points in both maps
-        mask = np.isfinite(hh) & np.isfinite(hh2) 
-        HH  = hh[mask]
-        HH2 = hh2[mask] 
-        XX2 = XX[mask]
-        YY2 = YY[mask]
-
-        print HH.mean(), HH2.mean()
-
-        def solve_irls(X,Y,iter=100):
-           ''' 
-           solves argmin_A ||A X - Y|| with irls
-           for more information about IRLS and sparsity:
-           http://www.ricam.oeaw.ac.at/people/page/fornasier/DDFG14.pdf
-           
-           initialize W as identity matrix
-           iterate: 
-              argmin_A ||A X W - Y W||^2
-              A = Y W X^T inv(X W X^T)
-              W = diag( ||AX - Y|| )^(p-2) 
-           '''
-
-           # initialize with least squares
-           pesos = np.ones(X.shape[1])
-
-           p=0.8
-           for t in range(iter):
-              W = pesos[:,np.newaxis]
-              WXt = W*(X.transpose())
-
-              A = Y.dot(WXt).dot( np.linalg.inv(X.dot(WXt)) )
-              r = Y - A.dot(X)
-              pesos = np.sqrt(np.sum(r*r,axis=0))**(p-2)
-           return A, pesos
-
-        # 4. compute the transformation
-        # [ h2 X Y 1 ] alpha = h 
-        ##### also implement data centering to improve numerical stability
-        #Yo = np.hstack([xy1, h1m[:, np.newaxis]]).transpose()
-        #Xo = np.hstack([xy2, h2m[:, np.newaxis], np.ones(( xy1.shape[0] ,1))]).transpose()
-        ## center the data for numerical stability
-        #center = Xo.mean(axis=1); center[3] = 0;
-        #X = Xo - center[:,np.newaxis]
-        #Y = Yo - center[0:3,np.newaxis]
-
-        #Xo = np.vstack( [ HH2, XX2*0, YY2*0,  np.ones(( XX2.shape[0] ,1)).squeeze() ])
-        #Yo = HH
-        ### center the data for numerical stability
-        ##center = Xo.mean(axis=1); center[3] = 0;
-        ##X = Xo - center[:,np.newaxis]
-        ##Y = Yo - center[0,np.newaxis]
-
-        ##   solves argmin_A ||A X - Y||^2
-        #alpha = np.linalg.lstsq(Xo.transpose(), Yo)[0]
-        #alpha,W = solve_irls(Xo,Yo)
-        #assert(alpha[1] == 0)
-        #assert(alpha[2] == 0)
-        alpha = np.array([1,0,0, HH.mean() - HH2.mean() ])
-
-        ret.append(alpha)
-
-        #hh2 = hh2 * alpha[0] + XX*alpha[1] + YY*alpha[2] + alpha[3]
-        #from python import piio
-        #piio.write(height_map+'.tif', hh2)
-
-    print "global_align:", ret
-    return ret
 
 
 def compute_dsm():
@@ -427,7 +313,7 @@ def compute_dsm():
     # ls files | ./bin/plyflatten [-c column] [-bb "xmin xmax ymin ymax"] resolution out.tif
 
 
-def global_finalization(tiles_full_info):
+def lidar_preprocessor(tiles_full_info):
     """
     Produce a single height map, DSM and point cloud for the whole ROI.
 
@@ -468,6 +354,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
             to be passed to fun (same value for all calls)
     """
     results = []
+    outputs = []
     show_progress.counter = 0
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
@@ -476,25 +363,36 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
 
     for r in results:
         try:
-            r.get(3600)  # wait at most one hour per call
+            outputs.append(r.get(600))  # wait at most 10 min per call
         except multiprocessing.TimeoutError:
             print "Timeout while running %s" % str(r)
+            outputs.append(None)
         except common.RunFailure as e:
             print "FAILED call: ", e.args[0]["command"]
             print "\toutput: ", e.args[0]["output"]
-        except ValueError as e:
-            print traceback.format_exc()
-            print str(r)
-            pass
+            outputs.append(None)
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
 
     pool.close()
     pool.join()
+    return outputs
 
 
-def main(config_file, step=None):
+def compute_global_pairwise_height_means(mean_heights_local):
+    """
+    """
+    a = np.array(mean_heights_local)
+    nb_pairs = a.shape[1]
+    out = np.zeros(nb_pairs)
+    for k in xrange(nb_pairs):
+        # global mean height is the weighted average of local mean heights
+        out[k] = np.dot(a[:, k, 0], a[:, k, 1]) / a[:, k, 0].sum()
+    return out
+
+
+def main(config_file, steps=range(1, 8)):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
 
@@ -508,13 +406,10 @@ def main(config_file, step=None):
 
     Args:
         config_file: path to a json configuration file
-        step: integer between 1 and 5 specifying which step to run. Default
-        value is None. In that case all the steps are run.
+        steps: list of integers between 1 and 8 specifying which steps to run.
+            By default all steps are run.
     """
     print_elapsed_time.t0 = datetime.datetime.now()
-
-    # determine which steps to run
-    steps = [step] if step else [1, 2, 3, 4, 4.5, 5, 6, 7]
 
     # initialization (has to be done whatever the queried steps)
     initialization.build_cfg(config_file)
@@ -545,32 +440,29 @@ def main(config_file, step=None):
     if 4 in steps:
         print '\nprocessing tiles...'
         show_progress.total = len(tiles_full_info)
-        launch_parallel_calls(process_tile, tiles_full_info, nb_workers)
+        mean_heights_local = launch_parallel_calls(process_tile,
+                                                   tiles_full_info, nb_workers)
         print_elapsed_time()
 
-    if 4.5 in steps:
-        print '\nsplit global alignment...'
-        abcd = global_align(tiles_full_info)
-        print_elapsed_time()
-
-        print '\napply global alignment...'
-        launch_parallel_calls(apply_global_alignment, [t['directory'] for t in
-                                                       tiles_full_info],
-                              nb_workers, extra_args=(abcd,))
-        print_elapsed_time()
-
-        print '\ncreate ply clouds...'
-        launch_parallel_calls(process_tile_fusion, tiles_full_info, nb_workers)
+    if 5 in steps:
+        print '\ncompute global pairwise height offsets...'
+        mean_heights_global = compute_global_pairwise_height_means(mean_heights_local)
         print_elapsed_time()
 
     if 6 in steps:
+        print '\nmerge height maps and compute ply clouds...'
+        launch_parallel_calls(tile_fusion_and_ply, tiles_full_info, nb_workers,
+                              (mean_heights_global,))
+        print_elapsed_time()
+
+    if 7 in steps:
         print '\ncompute dsm...'
         compute_dsm()
         print_elapsed_time()
 
-    if 7 in steps:
+    if 8 in steps:
         print '\nglobal finalization...'
-        global_finalization(tiles_full_info)
+        lidar_preprocessor(tiles_full_info)
         print_elapsed_time()
 
     # cleanup
@@ -583,14 +475,15 @@ def print_help_and_exit(script_name):
     """
     print """
     Incorrect syntax, use:
-      > %s config.json [step (integer between 1 and 7)]
+      > %s config.json [steps (list of integer between 1 and 8)]
         1: initialization
         2: preprocessing (tilewise sift, local pointing correction)
         3: global-pointing
         4: processing (tilewise rectification, matching and triangulation)
-        5: global-extent
-        6: compute dsm from ply files (one per tile)
-        7: finalization
+        5: global height maps registration
+        6: heights map merging and ply generation
+        7: compute dsm from ply files (one per tile)
+        8: lidarviewer
         Launches the s2p pipeline.
 
       All the parameters, paths to input and output files, are defined in

@@ -6,6 +6,7 @@
 import shutil
 import numpy as np
 from osgeo import gdal
+gdal.UseExceptions()
 
 import common
 import piio
@@ -109,14 +110,17 @@ def merge(im1, im2, thresh, out, conservative=False):
             """ % ( im1, im2, thresh, out))
 
 
-def merge_n(output, inputs):
+def merge_n(output, inputs, offsets, method='median'):
     """
-    Merge n images of equal sizes by taking the median pixelwise.
+    Merge n images of equal sizes by taking the median/mean/min/max pixelwise.
 
     Args:
         inputs: list of paths to the input images
         output: path to the output image
+        method (optional, default is 'median'):
     """
+    assert(len(inputs) == len(offsets))
+
     # read input images
     files = []
     for img in inputs:
@@ -125,11 +129,25 @@ def merge_n(output, inputs):
     for f in files:  # close files (gdal specific)
         f = None
 
-    # compute the median (ignoring nans) and write it to output
+    # apply offsets
+    for i, offset in enumerate(offsets):
+        x[:, :, i] -= offset
+
+    # compute the mean offset to be added back after median/mean/min/max
+    m = np.mean(offsets)
+
+    # compute the median/mean/min/max (ignoring nans) and write it to output
     if inputs:
         # copy the first input file to output to keep the metadata
         shutil.copy(inputs[0], output)
-        # update the output file content with the median
+        # update the output file content
         f = gdal.Open(output, gdal.GA_Update)
-        f.GetRasterBand(1).WriteArray(np.nanmedian(x, axis=2))
+        if method == 'median':
+            f.GetRasterBand(1).WriteArray(m + np.nanmedian(x, axis=2))
+        elif method == 'mean':
+            f.GetRasterBand(1).WriteArray(m + np.nanmean(x, axis=2))
+        elif method == 'min':
+            f.GetRasterBand(1).WriteArray(m + np.nanmin(x, axis=2))
+        elif method == 'max':
+            f.GetRasterBand(1).WriteArray(m + np.nanmax(x, axis=2))
         f = None

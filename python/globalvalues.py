@@ -38,11 +38,8 @@ def minmax_intensities(tiles_full_info):
     Args:
          tiles_full_info: list of tile_info dictionaries
     """
-
     min_max_file = os.path.join(cfg['out_dir'], 'global_minmax.txt')
-
     if not (os.path.isfile(min_max_file) and cfg['skip_existing']):
-
         minlist = []
         maxlist = []
         for tile_info in tiles_full_info:
@@ -51,7 +48,4 @@ def minmax_intensities(tiles_full_info):
             minlist.append(minmax[0])
             maxlist.append(minmax[1])
 
-            global_minmax = [min(minlist), max(maxlist)]
-
-            np.savetxt(min_max_file, global_minmax,
-                       fmt='%6.3f')
+        np.savetxt(min_max_file, [min(minlist), max(maxlist)], fmt='%6.3f')
