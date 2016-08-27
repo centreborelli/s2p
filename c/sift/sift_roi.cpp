@@ -108,10 +108,8 @@ int main(int c, char *v[]) {
     // add (x, y) offset to keypoints coordinates
     std::list<KeyPoint*>::iterator key = sift.m_keyPoints->begin();
     for (; key != sift.m_keyPoints->end(); key++) {
-        KeyPoint* k = new KeyPoint(**key);  // copy the keypoint
-        k->setX((*key)->getX() + y); // in Ives' conventions x is the row index
-        k->setY((*key)->getY() + x);
-        **key = *k;
+        (*key)->setX((*key)->getX() + y); // in Ives' conventions x is the row index
+        (*key)->setY((*key)->getY() + x);
     }
     if (verbose) time.get_time("add offset", 35);
 
