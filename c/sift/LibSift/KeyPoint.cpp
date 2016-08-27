@@ -64,7 +64,7 @@ KeyPoint::KeyPoint(
   m_edgeResp(i_keyPoint.m_edgeResp),
   m_nbHist(i_keyPoint.m_nbHist),
   m_nbOri(i_keyPoint.m_nbOri),
-  m_descriptors((float*) memalloc(16, m_nbOri * m_nbHist * m_nbHist * sizeof(float))),
+  m_descriptors((float*) memalloc(16, m_nbOri * (m_nbHist + 1) * (m_nbHist + 1) * sizeof(float))),
 
   m_nbBins(i_keyPoint.m_nbBins),
   m_oriHist((float*) memalloc(16, m_nbBins * sizeof(float))) {
