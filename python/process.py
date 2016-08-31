@@ -392,7 +392,7 @@ def disparity(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,
         masking.intersection(mask, mask, cwid_msk_rect)
         masking.erosion(mask, mask, cfg['msk_erosion'])
     except OSError:
-        print "file %s not produced" % mask
+        print "file %s not produced" % mask 
 
 
 def triangulate(out_dir, img1, rpc1, img2, rpc2, x=None, y=None,

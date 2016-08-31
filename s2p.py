@@ -163,6 +163,9 @@ def process_tile_pair(tile_info, pair_id):
         process.rectify(out_dir, np.loadtxt(A_global), img1, rpc1,
                         img2, rpc2, col, row, tw, th, None)
 
+        if(cfg['clean_intermediate']):
+            common.remove_if_exists(os.path.join(out_dir,'sift_matches.txt'))
+        
     # disparity estimation
     if (cfg['skip_existing'] and
         os.path.isfile(os.path.join(out_dir, 'rectified_mask.png')) and
@@ -173,6 +176,13 @@ def process_tile_pair(tile_info, pair_id):
         process.disparity(out_dir, img1, rpc1, img2, rpc2, col, row,
                           tw, th, None)
 
+    if(cfg['clean_intermediate']):
+        common.remove_if_exists(os.path.join(out_dir,'disp_min_max.txt'))
+        common.remove_if_exists(os.path.join(out_dir,'rectified_ref.tif'))
+        common.remove_if_exists(os.path.join(out_dir,'rectified_sec.tif'))
+        common.remove_if_exists(os.path.join(out_dir,'cloud_water_image_domain_mask.png'))
+        common.remove_if_exists(os.path.join(out_dir,'rectified_cloud_water_image_domain_mask.png'))
+        
     # triangulation
     if (cfg['skip_existing'] and
         os.path.isfile(os.path.join(out_dir, 'height_map.tif'))):
@@ -216,6 +226,8 @@ def process_tile(tile_info):
                 height_maps.append(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
         process.finalize_tile(tile_info, height_maps, cfg['utm_zone'])
 
+        
+
         # ply extrema
         common.run("plyextrema {} {}".format(tile_dir, os.path.join(tile_dir, 'plyextrema.txt')))
 
@@ -231,7 +243,18 @@ def process_tile(tile_info):
         sys.stderr = sys.__stderr__
         fout.close()
 
-
+    if cfg['clean_intermediate']:
+        for i in xrange(nb_pairs):
+           shutil.rmtree(os.path.join(tile_dir,'pair_%d' %(i+1)))
+        common.remove_if_exists(os.path.join(tile_dir,'roi_ref.tif'))
+        common.remove_if_exists(os.path.join(tile_dir,'rpc_err.tif'))
+        common.remove_if_exists(os.path.join(tile_dir,'height_map.tif'))
+        common.remove_if_exists(os.path.join(tile_dir,'nb_views.tif'))
+        common.remove_if_exists(os.path.join(tile_dir,'local_merged_height_map.tif'))
+        common.remove_if_exists(os.path.join(tile_dir,'roi_color_ref.tif'))
+        common.remove_if_exists(os.path.join(tile_dir,'local_minmax.txt'))
+        common.remove_if_exists(os.path.join(tile_dir,'applied_minmax.txt'))
+        common.remove_if_exists(os.path.join(tile_dir,'roi_color_ref.tif'))
 def global_extent(tiles_full_info):
     """
     Compute the global extent from the extrema of each ply file
@@ -270,7 +293,7 @@ def compute_dsm(args):
     extremaxy = np.loadtxt(os.path.join(cfg['out_dir'], 'global_extent.txt'))
 
     global_xmin,global_xmax,global_ymin,global_ymax = extremaxy
-
+    
     global_y_diff = global_ymax-global_ymin
     tile_y_size = (global_y_diff)/(number_of_tiles)
 

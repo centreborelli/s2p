@@ -31,6 +31,12 @@ os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
 garbage = list()
 
 
+def remove_if_exists(target):
+    try:
+        os.remove(target)
+    except OSError:
+        pass
+
 def garbage_cleanup():
     """
     Removes all the files listed in the global variable 'garbage'.

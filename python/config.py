@@ -20,6 +20,9 @@ cfg['temporary_dir'] = "/tmp"
 # temporary files are erased when s2p terminates. Switch to False to keep them
 cfg['clean_tmp'] = True
 
+# clean-up all unnecessary data
+cfg['clean_intermediate'] = True
+
 # switch to True if you want to process the whole image
 cfg['full_img']  = False
 
