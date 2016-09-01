@@ -255,6 +255,8 @@ def process_tile(tile_info):
         common.remove_if_exists(os.path.join(tile_dir,'local_minmax.txt'))
         common.remove_if_exists(os.path.join(tile_dir,'applied_minmax.txt'))
         common.remove_if_exists(os.path.join(tile_dir,'roi_color_ref.tif'))
+        common.remove_if_exists(os.path.join(tile_dir,'roi_ref_crop.tif'))
+        
 def global_extent(tiles_full_info):
     """
     Compute the global extent from the extrema of each ply file
