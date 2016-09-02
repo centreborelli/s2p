@@ -265,7 +265,8 @@ def tile_fusion_and_ply(tile_info, mean_heights_global):
 
         # merge the height maps (applying mean offset to register)
         fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
-                       mean_heights_global)
+                       mean_heights_global, averaging=cfg['fusion_operator'],
+                       threshold=cfg['fusion_thresh'])
 
 
         # compute ply: H is the homography transforming the coordinates system of

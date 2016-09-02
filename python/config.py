@@ -11,7 +11,6 @@
 
 import os.path
 
-
 cfg = {}
 
 # path to output directory
@@ -88,6 +87,8 @@ cfg['disp_max'] = None
 
 # radius for erosion of valid disparity areas. Ignored if less than 2
 cfg['msk_erosion'] = 2
+
+cfg['fusion_operator'] = 'average_if_close'
 
 # threshold (in meters) used for the fusion of two dems in triplet processing
 # It should be adapted to the zoom factor
