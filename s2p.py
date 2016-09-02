@@ -181,51 +181,53 @@ def process_tile_pair(tile_info, pair_id):
                                  cfg['subsampling_factor'], rpc1, rpc2, H_ref,
                                  H_sec, disp, mask, rpc_err, A_global)
 
-    f = gdal.Open(height_map)
-    img = f.GetRasterBand(1).ReadAsArray()
-    f = None  # this is the gdal way of closing files
-    print 'number of valid heights', img.size - np.count_nonzero(np.isnan(img))
-    print 'mean height', np.nanmean(img)
-    return img.size - np.count_nonzero(np.isnan(img)), np.nanmean(img)
-
 
 def process_tile(tile_info):
     """
-    Process a tile by merging the height maps computed for each image pair.
+    Compute a height map on the tile for each image pair.
 
     Args:
         tile_info: a dictionary that provides all you need to process a tile
     """
     tile_dir = tile_info['directory']
+    w, h = tile_info['coordinates'][2:]
+    n = len(cfg['images']) - 1
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        f = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
-        sys.stdout = f
-        sys.stderr = f
+        l = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
+        sys.stdout = l
+        sys.stderr = l
 
     # check that the tile is not masked
     if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
         print 'tile %s already masked, skip' % tile_dir
         return
 
-    mean_heights = []
-    try:
-        # process each pair to get a height map and record the mean height
-        for pair_id in xrange(tile_info['number_of_pairs']):
-            mean_heights.append(process_tile_pair(tile_info, pair_id + 1))
-
+    try:  # process each pair to get a height map
+        for i in xrange(n):
+            process_tile_pair(tile_info, i + 1)
     except Exception:
         print("Exception in processing tile:")
         traceback.print_exc()
         raise
+
+    maps = np.empty((h, w, n))
+    for i in xrange(n):
+        f = gdal.Open(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
+        maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
+        f = None  # this is the gdal way of closing files
+
+    validity_mask = maps.sum(axis=2)  # sum to propagate nan values
+    validity_mask += 1 - validity_mask  # 1 on valid pixels, and nan on invalid
+    mean_heights = [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)]
 
     # close logs
     common.garbage_cleanup()
     if not cfg['debug']:
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        f.close()
+        l.close()
 
     return mean_heights
 
@@ -379,14 +381,6 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     return outputs
 
 
-def compute_global_pairwise_height_means(mean_heights_local):
-    """
-    Global mean height is the weighted average of local mean heights.
-    """
-    a = np.array(mean_heights_local)
-    return np.einsum('ij,ij->j', a[:, :, 0], a[:, :, 1]) / a[:, :, 0].sum(0)
-
-
 def main(config_file, steps=range(1, 8)):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
@@ -441,7 +435,9 @@ def main(config_file, steps=range(1, 8)):
 
     if 5 in steps:
         print '\ncompute global pairwise height offsets...'
-        mean_heights_global = compute_global_pairwise_height_means(mean_heights_local)
+        mean_heights_global = np.mean(mean_heights_local, axis=0)
+        print np.array(mean_heights_local)
+        print mean_heights_global
         print_elapsed_time()
 
     if 6 in steps:

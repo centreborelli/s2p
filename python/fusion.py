@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+import os
 import shutil
 import numpy as np
 from osgeo import gdal
@@ -123,20 +124,22 @@ def merge_n(output, inputs, offsets, averaging_operator=np.nanmedian):
     """
     assert(len(inputs) == len(offsets))
 
-    # read input images
-    files = []
-    for img in inputs:
-        files.append(gdal.Open(img))
-    x = np.dstack([f.GetRasterBand(1).ReadAsArray() for f in files])
-    for f in files:  # close files (gdal specific)
-        f = None
-
-    # apply offsets
-    for i, offset in enumerate(offsets):
-        x[:, :, i] -= offset
-
     # compute the mean offset to be added back after median/mean/min/max
     m = np.mean(offsets)
+
+    # get input images size
+    f = gdal.Open(inputs[0])
+    w, h = f.RasterXSize, f.RasterYSize
+    f = None  # this is the gdal way of closing files
+
+    # read input images and apply offsets
+    x = np.empty((h, w, len(inputs)))
+    for i, img in enumerate(inputs):
+        f = gdal.Open(img)
+        x[:, :, i] = f.GetRasterBand(1).ReadAsArray() - offsets[i]
+        f = None
+        piio.write('%s_registered.tif' % os.path.splitext(img)[0],
+                   x[:, :, i] + m)
 
     # compute the median/mean/min/max (ignoring nans) and write it to output
     if inputs:
