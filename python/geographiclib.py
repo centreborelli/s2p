@@ -71,64 +71,6 @@ def geodetic_to_mercator(lat, lon, ref_lon=0):
     return x, y
 
 
-def geodetic_to_utm(lat, lon, zone=None):
-    """
-    Converts WGS84 ellipsoidal coordinates to UTM coordinates, using
-    the most appropriate zone. Please note that forcing an UTM zone
-    may raise an exception if the lat, lon falls too far from the
-    requested UTM zone.
-
-    Args:
-        lat: latitude, in degrees between -90 and 90
-        lon: longitude, between -180 and 180
-        zone: None (automatic zone determination) or string ('31N' for instance)
-
-    Returns:
-        x, y, zone: the UTM coordinates of the input point, and the zone
-        when lat and lon are lists returns three lists (x, y, zone)
-    """
-
-    command = ['GeoConvert']
-
-    # if zone is None, we let GeoConvert guess the zone
-    if zone is None:
-        command.append("-u")
-        command.append("-s")
-    else:
-        command.append("-u")
-        command.append("-z")
-        command.append(zone)
-
-    # detemine if inputs are lists
-    if not hasattr(lon, "__iter__"):
-       lon = [lon]
-       lat = [lat]
-       n = 1
-    else:
-       if not len(lon) == len(lat):
-          print "geodetic_to_utm: ERROR: lon and lat should be the same lenght!"
-       n = len(lon)
-
-    x, y, zone = [], [], []
-    for t in range(n):
-       p2 = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-       pout = p2.communicate(input='%s %s\n'%(str(lat[t]), str(lon[t])))
-       line = pout[0].strip()
-       #p1 = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
-       #p2 = subprocess.Popen(command, stdin=p1.stdout, stdout=subprocess.PIPE)
-       #line = p2.stdout.readline()
-   
-       splits = line.split()
-       zone.append( splits[0] )
-       x.append( float(splits[1]) )
-       y.append( float(splits[2]) )
-
-    if n == 1:
-       return x[0], y[0], zone[0]
-    else:
-       return x, y, zone
-
-
 def geoid_above_ellipsoid(lat, lon):
     """
     Computes the height, in meters, of the EGM96 geoid above the WGS84 ellipsoid.

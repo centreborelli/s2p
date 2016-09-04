@@ -32,16 +32,10 @@ piio: python/piio/libiio.so
 python/piio/libiio.so: python/piio/setup.py python/piio/freemem.c c/iio.c c/iio.h
 	cd python/piio; python setup.py build
 
-geographiclib: $(BINDIR) $(BINDIR)/CartConvert $(BINDIR)/GeoConvert
+geographiclib: $(BINDIR) $(BINDIR)/CartConvert
 
 $(BINDIR)/CartConvert: $(GEODIR)/tools/CartConvert.cpp $(GEODIR)/src/DMS.cpp\
 	$(GEODIR)/src/Geocentric.cpp $(GEODIR)/src/LocalCartesian.cpp
-	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
-
-$(BINDIR)/GeoConvert: $(GEODIR)/tools/GeoConvert.cpp $(GEODIR)/src/DMS.cpp\
-	$(GEODIR)/src/GeoCoords.cpp $(GEODIR)/src/MGRS.cpp\
-	$(GEODIR)/src/PolarStereographic.cpp $(GEODIR)/src/TransverseMercator.cpp\
-	$(GEODIR)/src/UTMUPS.cpp
 	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
 
 asift:
