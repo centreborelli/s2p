@@ -58,10 +58,27 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         common.run('{0} {1} {2} {3} {4} {5} {6} {7}'.format(bm_binary, im1, im2, disp, mask, disp_min,
                                                             disp_max, extra_params))
     if algo == 'sgbm':
-        bm_binary = 'call_sgbm.sh'
-        out_cost = common.tmpfile('.tif')
-        common.run('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format(bm_binary, im1, im2, disp, out_cost,
-                                                                mask, disp_min, disp_max, extra_params))
+        # opencv sgbm function implements a modified version of Hirschmuller's
+        # Semi-Global Matching (SGM) algorithm described in "Stereo Processing
+        # by Semiglobal Matching and Mutual Information", PAMI, 2008
+
+        p1 = 8  # penalizes disparity changes of 1 between neighbor pixels
+        p2 = 32  # penalizes disparity changes of more than 1
+        # it is required that p2 > p1. The larger p1, p2, the smoother the disparity
+
+        win = 3  # matched block size. It must be a positive odd number
+        lr = 1  # maximum difference allowed in the left-right disparity check
+        cost = common.tmpfile('.tif')
+        common.run('sgbm {} {} {} {} {} {} {} {} {} {}'.format(im1, im2,
+                                                               disp, cost,
+                                                               disp_min,
+                                                               disp_max,
+                                                               win, p1, p2, lr))
+
+        # create rejection mask (0 means rejected, 1 means accepted)
+        # keep only the points that are matched and present in both input images
+        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
+
     if algo == 'tvl1':
         tvl1 = 'callTVL1.sh'
         common.run('{0} {1} {2} {3} {4}'.format(tvl1, im1, im2, disp, mask))
