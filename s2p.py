@@ -437,8 +437,6 @@ def main(config_file, steps=range(1, 9)):
     if 5 in steps:
         print '\ncompute global pairwise height offsets...'
         mean_heights_global = np.mean(mean_heights_local, axis=0)
-        print np.array(mean_heights_local)
-        print mean_heights_global
         print_elapsed_time()
 
     if 6 in steps:
