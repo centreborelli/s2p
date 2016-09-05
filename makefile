@@ -61,7 +61,6 @@ mgm:
 sgbm:
 	cd 3rdparty/sgbm; $(MAKE)
 	cp 3rdparty/sgbm/sgbm $(BINDIR)
-	cp 3rdparty/sgbm/call_sgbm.sh $(BINDIR)
 
 sgbm_opencv:
 	mkdir -p bin/build_sgbm
@@ -241,7 +240,6 @@ clean_tvl1:
 clean_sgbm:
 	cd 3rdparty/sgbm; $(MAKE) clean
 	-rm $(BINDIR)/sgbm
-	-rm $(BINDIR)/call_sgbm.sh
 
 clean_mgm:
 	cd 3rdparty/mgm; $(MAKE) clean
