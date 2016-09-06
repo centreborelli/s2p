@@ -20,7 +20,9 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         disp: path to the output diparity map
         mask: path to the output rejection mask
         algo: string used to indicate the desired binary. Currently it can be
-            one among 'hirschmuller02', 'hirschmuller08', 'hirschmuller08_laplacian', 'hirschmuller08_cauchy', 'sgbm', and 'msmw'
+            one among 'hirschmuller02', 'hirschmuller08',
+            'hirschmuller08_laplacian', 'hirschmuller08_cauchy', 'sgbm',
+            'msmw', 'tvl1', 'mgm', 'mgm_multi' and 'micmac'
         disp_min : smallest disparity to consider
         disp_max : biggest disparity to consider
         extra_params: optional string with algorithm-dependent parameters
