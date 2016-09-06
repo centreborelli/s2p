@@ -13,6 +13,7 @@ import urlparse
 import datetime
 import tempfile
 import subprocess
+import multiprocessing
 import numpy as np
 
 
@@ -461,7 +462,7 @@ def image_apply_homography(out, im, H, w, h):
     Facciolo.
     """
     # write the matrix to a string
-    hij = " ".join([str(x) for x in H.flatten()])
+    hij = " ".join(str(x) for x in H.flatten())
 
     # apply the homography
     run("homography %s -h \"%s\" %s %d %d" % (im, hij, out, w, h))
@@ -907,7 +908,6 @@ def which(program):
     This function was copied from:
     http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
     """
-
     fpath, fname = os.path.split(program)
     if fpath:
         if is_exe(program):
@@ -920,6 +920,7 @@ def which(program):
                 return exe_file
 
     return None
+
 
 def url_with_authorization_header(from_url):
     """
@@ -945,6 +946,7 @@ def url_with_authorization_header(from_url):
                 from_url = request
 
     return from_url
+
 
 def download(to_file, from_url):
     """
@@ -998,5 +1000,22 @@ def round_roi_to_nearest_multiple(n, x, y, w, h):
     y = n * np.floor(y / n)
     w = n * np.ceil(w / n)
     h = n * np.ceil(h / n)
-    x, y, w, h = map(int, [x, y, w, h])
-    return x, y, w, h
+    return map(int, [x, y, w, h])
+
+
+def lidar_preprocessor(output, input_plys):
+    """
+    Compute a multi-scale representation of a large point cloud.
+
+    The output file can be viewed with LidarPreprocessor. This is useful for
+    huge point clouds. The input is a list of ply files.
+
+    Args:
+        output: path to the output folder
+        input_plys: list of paths to ply files
+    """
+    tmp = cfg['temporary_dir']
+    nthreads = multiprocessing.cpu_count()
+    plys = ' '.join(input_plys)
+    common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (
+        tmp, tmp, nthreads, plys, output))
