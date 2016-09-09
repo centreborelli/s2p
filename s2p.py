@@ -80,23 +80,23 @@ def print_elapsed_time(since_first_call=False):
     print_elapsed_time.t1 = t2
 
 
-def preprocess_tile(tile_info):
+def preprocess_tile(tile):
     """
     Compute pointing corrections and extrema intensities for a single tile.
 
     Args:
-        tile_info: dictionary containing all the information needed to process a
+        tile: dictionary containing all the information needed to process a
             tile.
     """
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        f = open(os.path.join(tile_info['directory'], 'stdout.log'), 'w', 0)  # 0 for no buffering
+        f = open(os.path.join(tile['directory'], 'stdout.log'), 'w', 0)  # 0 for no buffering
         sys.stdout = f
         sys.stderr = f
 
     try:
-        preprocess.pointing_correction(tile_info)
-        preprocess.minmax_color_on_tile(tile_info)
+        preprocess.pointing_correction(tile)
+        preprocess.minmax_color_on_tile(tile)
     except Exception:
         print("Exception in preprocessing tile:")
         traceback.print_exc()
@@ -110,28 +110,28 @@ def preprocess_tile(tile_info):
         f.close()
 
 
-def global_values(tiles_full_info):
+def global_values(tiles):
     """
     Compute the global pointing correction and extrema intensities for the ROI.
     """
-    globalvalues.pointing_correction(tiles_full_info)
-    globalvalues.minmax_intensities(tiles_full_info)
+    globalvalues.pointing_correction(tiles)
+    globalvalues.minmax_intensities(tiles)
 
 
-def process_tile_pair(tile_info, pair_id):
+def process_tile_pair(tile, pair_id):
     """
     Process a pair of images on a given tile.
 
     It includes rectification, disparity estimation and triangulation.
 
     Args:
-        tile_info: dictionary containing all the information needed to process a
+        tile: dictionary containing all the information needed to process a
             tile.
         pair_id: index of the pair to process
     """
     # read all the information
-    tile_dir = tile_info['directory']
-    col, row, tw, th = tile_info['coordinates']
+    tile_dir = tile['directory']
+    col, row, tw, th = tile['coordinates']
     images = cfg['images']
     img1, rpc1 = images[0]['img'], images[0]['rpc']
     img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
@@ -179,15 +179,15 @@ def process_tile_pair(tile_info, pair_id):
                                  H_sec, disp, mask, rpc_err, out_mask, A_global)
 
 
-def process_tile(tile_info):
+def process_tile(tile):
     """
     Compute a height map on the tile for each image pair.
 
     Args:
-        tile_info: a dictionary that provides all you need to process a tile
+        tile: a dictionary that provides all you need to process a tile
     """
-    tile_dir = tile_info['directory']
-    w, h = tile_info['coordinates'][2:]
+    tile_dir = tile['directory']
+    w, h = tile['coordinates'][2:]
     n = len(cfg['images']) - 1
 
     # redirect stdout and stderr to log file
@@ -198,7 +198,7 @@ def process_tile(tile_info):
 
     try:  # process each pair to get a height map
         for i in xrange(n):
-            process_tile_pair(tile_info, i + 1)
+            process_tile_pair(tile, i + 1)
     except Exception:
         print("Exception in processing tile:")
         traceback.print_exc()
@@ -224,16 +224,16 @@ def process_tile(tile_info):
     return mean_heights
 
 
-def tile_fusion_and_ply(tile_info, mean_heights_global):
+def tile_fusion_and_ply(tile, mean_heights_global):
     """
     Merge the height maps computed for each image pair and generate a ply cloud.
 
     Args:
-        tile_info: a dictionary that provides all you need to process a tile
+        tile: a dictionary that provides all you need to process a tile
         mean_heights_global: list containing the means of all the global height
             maps
     """
-    tile_dir = tile_info['directory']
+    tile_dir = tile['directory']
     nb_pairs = len(mean_heights_global)
 
     # redirect stdout and stderr to log file
@@ -257,10 +257,10 @@ def tile_fusion_and_ply(tile_info, mean_heights_global):
 
         # compute ply: H is the homography transforming the coordinates system of
         # the original full size image into the coordinates system of the crop
-        x, y, w, h = tile_info['coordinates']
+        x, y, w, h = tile['coordinates']
         z = cfg['subsampling_factor']
         H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
-        process.color_crop_ref(tile_info, clr=cfg['images'][0]['clr'])
+        process.color_crop_ref(tile, clr=cfg['images'][0]['clr'])
         triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
                                           os.path.join(tile_dir, 'height_map.tif'),
                                           cfg['images'][0]['rpc'], H,
@@ -280,12 +280,12 @@ def tile_fusion_and_ply(tile_info, mean_heights_global):
         f.close()
 
 
-def compute_dsm(tiles_full_info):
+def compute_dsm(tiles):
     """
     """
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
     clouds = ' '.join(os.path.join(t['directory'], 'cloud.ply') for t in
-                      tiles_full_info)
+                      tiles)
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         common.run("ls %s | plyflatten -bb \"%f %f %f %f \" %f %s" % (clouds,
@@ -301,7 +301,7 @@ def compute_dsm(tiles_full_info):
         # ls files | ./bin/plyflatten [-c column] [-bb "xmin xmax ymin ymax"] resolution out.tif
 
 
-def lidar_preprocessor(tiles_full_info):
+def lidar_preprocessor(tiles):
     """
     Produce a single height map, DSM and point cloud for the whole ROI.
 
@@ -312,15 +312,15 @@ def lidar_preprocessor(tiles_full_info):
     clouds, in the LidarViewer format.
 
     Args:
-        tiles_full_info: dictionary providing all the information about the
+        tiles: dictionary providing all the information about the
             processed tiles
     """
     # whole point cloud (LidarViewer format)
     if common.which('LidarPreprocessor'):
         out = os.path.join(cfg['out_dir'], 'cloud.lidar_viewer')
         plys = []
-        for tile_info in tiles_full_info:
-            plys.append(os.path.join(os.path.abspath(tile_info['directory']),
+        for tile in tiles:
+            plys.append(os.path.join(os.path.abspath(tile['directory']),
                                      'cloud.ply'))
         common.lidar_preprocessor(out, plys)
 
@@ -390,7 +390,7 @@ def main(config_file, steps=range(1, 9)):
     # initialization (has to be done whatever the queried steps)
     initialization.build_cfg(config_file)
     initialization.make_dirs()
-    tiles_full_info = initialization.tiles_full_info()
+    tiles = initialization.tiles_full_info()
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -399,25 +399,25 @@ def main(config_file, steps=range(1, 9)):
 
     # omp_num_threads: should not exceed nb_workers when multiplied by the
     # number of tiles
-    # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
+    # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles)))
 
     # do the job
     if 2 in steps:
         print '\npreprocessing tiles...'
-        show_progress.total = len(tiles_full_info)
-        launch_parallel_calls(preprocess_tile, tiles_full_info, nb_workers)
+        show_progress.total = len(tiles)
+        launch_parallel_calls(preprocess_tile, tiles, nb_workers)
         print_elapsed_time()
 
     if 3 in steps:
         print '\ncomputing global values...'
-        global_values(tiles_full_info)
+        global_values(tiles)
         print_elapsed_time()
 
     if 4 in steps:
         print '\nprocessing tiles...'
-        show_progress.total = len(tiles_full_info)
+        show_progress.total = len(tiles)
         mean_heights_local = launch_parallel_calls(process_tile,
-                                                   tiles_full_info, nb_workers)
+                                                   tiles, nb_workers)
         print_elapsed_time()
 
     if 5 in steps:
@@ -427,18 +427,18 @@ def main(config_file, steps=range(1, 9)):
 
     if 6 in steps:
         print '\nmerge height maps and compute ply clouds...'
-        launch_parallel_calls(tile_fusion_and_ply, tiles_full_info, nb_workers,
+        launch_parallel_calls(tile_fusion_and_ply, tiles, nb_workers,
                               (mean_heights_global,))
         print_elapsed_time()
 
     if 7 in steps:
         print '\ncompute dsm...'
-        compute_dsm(tiles_full_info)
+        compute_dsm(tiles)
         print_elapsed_time()
 
     if 8 in steps:
         print '\nglobal finalization...'
-        lidar_preprocessor(tiles_full_info)
+        lidar_preprocessor(tiles)
         print_elapsed_time()
 
     # cleanup
