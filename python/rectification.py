@@ -1,7 +1,6 @@
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import sys
 import numpy as np
@@ -249,7 +248,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
         return disp
 
 
-def rectification_homographies(matches, x, y, w, h):
+def rectification_homographies(matches, x, y, w, h, margin=0):
     """
     Computes rectifying homographies from point matches for a given ROI.
 
@@ -260,9 +259,11 @@ def rectification_homographies(matches, x, y, w, h):
     Args:
         matches: numpy array of shape (n, 4) containing a list of 2D point
             correspondences between the two images.
-        x, y, w, h: four integers definig the rectangular ROI in the first
+        x, y, w, h: four integers defining the rectangular ROI in the first
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
+        margin: translation added to the rectifying similarities to extend the
+            horizontal footprint of the rectified images
 
     Returns:
         S1, S2, F: three numpy arrays of shape (3, 3) representing the
@@ -282,15 +283,15 @@ def rectification_homographies(matches, x, y, w, h):
         print "max, min, mean rectification error on point matches: ",
         print np.max(err), np.min(err), np.mean(err)
 
-    # pull back top-left corner of the ROI to the origin
+    # pull back top-left corner of the ROI to the origin (plus margin)
     pts = common.points_apply_homography(S1, [[x, y], [x+w, y], [x+w, y+h], [x, y+h]])
     x0, y0 = common.bounding_box2D(pts)[:2]
-    T = common.matrix_translation(-x0, -y0)
+    T = common.matrix_translation(-x0 + margin, -y0)
     return np.dot(T, S1), np.dot(T, S2), F
 
 
 def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
-                 sift_matches=None, method='rpc'):
+                 sift_matches=None, method='rpc', margin=0):
     """
     Rectify a ROI in a pair of images.
 
@@ -308,6 +309,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
             matches, in the full image coordinates frame
         method (default: 'rpc'): option to decide wether to use rpc of sift
             matches for the fundamental matrix estimation.
+        margin (optional): horizontal margin added on the left and right sides of
+            the rectified images
 
         This function uses the parameter subsampling_factor from the
         config module. If the factor z > 1 then the output images will
@@ -339,7 +342,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         matches = sift_matches
 
     # compute rectifying homographies
-    H1, H2, F = rectification_homographies(matches, x, y, w, h)
+    H1, H2, F = rectification_homographies(matches, x, y, w, h, margin)
 
     if cfg['register_with_shear']:
         # compose H2 with a horizontal shear to reduce the disparity range
@@ -374,13 +377,13 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     pts1 = common.points_apply_homography(H1, roi)
     x0, y0, w0, h0 = common.bounding_box2D(pts1)
     # check that the first homography maps the ROI in the positive quadrant
-    np.testing.assert_allclose(np.round([x0, y0]), 0, atol=.01)
+    np.testing.assert_allclose(np.round([x0, y0]), [margin, 0], atol=.01)
 
     # apply homographies and do the crops TODO XXX FIXME cleanup here
     #homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, cfg['subsampling_factor'], True)
     #homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, cfg['subsampling_factor'], True)
-    common.image_apply_homography(out1, im1, H1, w0, h0)
-    common.image_apply_homography(out2, im2, H2, w0, h0)
+    common.image_apply_homography(out1, im1, H1, w0 + 2*margin, h0)
+    common.image_apply_homography(out2, im2, H2, w0 + 2*margin, h0)
 
     #  if subsampling_factor'] the homographies are altered to reflect the zoom
     if cfg['subsampling_factor'] != 1:

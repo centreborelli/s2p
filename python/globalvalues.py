@@ -18,8 +18,7 @@ def pointing_correction(tiles):
     Args:
         tiles: list of tile_info dictionaries
     """
-    nb_pairs = tiles[0]['number_of_pairs']
-    for i in range(1, nb_pairs + 1):
+    for i in xrange(1, len(cfg['images'])):
         global_point_file = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
         if not (os.path.isfile(global_point_file) and cfg['skip_existing']):
             list_of_tiles = [os.path.join(t['directory'], 'pair_%d' % i) for t in

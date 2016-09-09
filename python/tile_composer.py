@@ -82,7 +82,8 @@ def mosaic_gdal2(fout, tiles_full_info, filename, w, h, z=1):
     vrt.write('\t<VRTRasterBand dataType="Float32" band="1">\n')
     vrt.write('\t\t<ColorInterp>Gray</ColorInterp>\n')
 
-    x, y = tiles_full_info[0]['roi_coordinates'][:2]
+    x = cfg['roi']['x']
+    y = cfg['roi']['y']
     for tile in tiles_full_info:
         col, row, tw, th = tile['coordinates']
         img = os.path.join(tile['directory'], filename) 

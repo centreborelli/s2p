@@ -160,16 +160,15 @@ def adjust_tile_size():
     Adjust the size of the tiles.
     """
     zoom = cfg['subsampling_factor']
-    overlap = 100 * zoom  # overlap between tiles
     tile_w = min(cfg['roi']['w'], zoom * cfg['tile_size'])  # tile width
     tile_h = min(cfg['roi']['h'], zoom * cfg['tile_size'])  # tile height
     print 'tile size: {} {}'.format(tile_w, tile_h)
 
-    ntx = int(np.ceil(float(cfg['roi']['w'] - overlap) / (tile_w - overlap)))
-    nty = int(np.ceil(float(cfg['roi']['h'] - overlap) / (tile_h - overlap)))
+    ntx = int(np.ceil(float(cfg['roi']['w']) / tile_w))
+    nty = int(np.ceil(float(cfg['roi']['h']) / tile_h))
     print 'total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty)
     
-    return tile_w, tile_h, overlap
+    return tile_w, tile_h
 
 
 def tiles_full_info():
@@ -179,69 +178,30 @@ def tiles_full_info():
     Build tiles_full_info: a list of dictionaries, one per tile, providing all you need to process a tile
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
-       * ov : size of the overlapping
-       * i/j : relative position of the tile
-       * pos : position inside the ROI : UL for a tile place at th Upper Left corner, M for the ones placed in the middle, and so forth.
-       * x/y/w/h : information about the ROI
-       * images : a dictionary directly given by the json config file, that store the information about all the involved images, their rpc, and so forth.
-       * nb_pairs : number of pairs
-       * cld_msk/roi_msk : path to a gml file containing a cloud mask/ defining the area contained in the full image
 
     Returns:
         tiles_full_info: list containing dictionaries
     """
-    tw, th, ov = adjust_tile_size()
-    x, y, w, h = cfg['roi'].values()
+    tw, th = adjust_tile_size()  # default tile size
+    rx, ry, rw, rh = cfg['roi'].values()  # roi coordinates
     z =  cfg['subsampling_factor']
 
     # build tile_info dictionaries and store them in a list
     tiles_full_info = list()
-    range_y = np.arange(y, y + h - ov, th - ov)
-    range_x = np.arange(x, x + w - ov, tw - ov)
-    rowmin, rowmax = range_y[0], range_y[-1]
-    colmin, colmax = range_x[0], range_x[-1]
-       
-    for i, row in enumerate(range_y):
-        for j, col in enumerate(range_x):
-            # ensure that tile coordinates are multiples of the zoom factor
-            col, row, tw, th = common.round_roi_to_nearest_multiple(z, col, row,
-                                                                    tw, th)
-            tile_dir = os.path.join(cfg['out_dir'], 'tile_%d_%d_row_%d' % (tw,
-                                                                           th,
-                                                                           row),
-                                    'col_%d' % col)
+    for y in np.arange(ry, ry + rh, th):
+        h = min(th, ry + rh - y)
+        for x in np.arange(rx, rx + rw, tw):
+            w = min(tw, rx + rw - x)
 
-            if row == rowmin and col == colmin:
-                pos = 'UL'
-            elif row == rowmin and col == colmax:
-                pos = 'UR'
-            elif row == rowmax and col == colmax:
-                pos = 'BR'
-            elif row == rowmax and col == colmin:
-                pos = 'BL'
-            elif row == rowmin and col > colmin:
-                pos = 'U'
-            elif col == colmin and row > rowmin:
-                pos = 'L'
-            elif row == rowmax and col > colmin:
-                pos = 'B'
-            elif col == colmax and row > rowmin:
-                pos = 'R'
-            else:
-                pos = 'M'
+            # ensure that tile coordinates are multiples of the zoom factor
+            x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
             tile_info = {}
-            tile_info['directory'] = tile_dir
-            tile_info['coordinates'] = (col, row, tw, th)
-            tile_info['index_in_roi'] = (i, j)
-            tile_info['position_type'] = pos
-            tile_info['roi_coordinates'] = (x, y, w, h)
-            tile_info['overlap'] = ov
-            tile_info['number_of_pairs'] = len(cfg['images']) - 1
-            tile_info['images'] = cfg['images']
+            tile_info['directory'] = os.path.join(cfg['out_dir'],
+                                                  'tiles_row_%d_height_%d' % (y,
+                                                                              h),
+                                                  'col_%d_width_%d' % (x, w))
+            tile_info['coordinates'] = (x, y, w, h)
             tiles_full_info.append(tile_info)
-
-    if len(tiles_full_info) == 1:
-        tiles_full_info[0]['position_type'] = 'Single'
 
     return tiles_full_info

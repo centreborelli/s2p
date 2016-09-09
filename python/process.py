@@ -1,13 +1,12 @@
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 
-import numpy as np
-from config import cfg
 import os
+import numpy as np
 
+from config import cfg
 from python import common
 from python import triangulation
 from python import block_matching
@@ -100,7 +99,7 @@ def cargarse_basura(inputf, outputf):
     common.run('rm -f %s %s %s'%(tmp1,tmp2,tmpM))
 
 
-def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x, y, w, h):
+def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x, y, w, h, margin=0):
     """
     Perform stereo rectification of a given ROI in a pair of images.
 
@@ -116,6 +115,8 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x, y, w, h):
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
+        margin (optional): horizontal margin added on the left an right sides of
+            the rectified images
     """
     try:
         A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
@@ -131,21 +132,20 @@ def rectify(out_dir, A_global, img1, rpc1, img2, rpc2, x, y, w, h):
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
                                                             rpc2, x, y, w, h,
-                                                            rect1, rect2, A, m)
+                                                            rect1, rect2, A, m,
+                                                            margin=margin)
     np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'H_sec.txt'), H2, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
                             fmt='%3.1f')
 
 
-def disparity(out_dir, x, y):
+def disparity(out_dir):
     """
     Computes a disparity map from a Pair of Pleiades images, without tiling
 
     Args:
         out_dir: path to the output directory
-        x, y: two integers defining the top-left corner of the rectangular ROI
-            being processed.
     """
     # disparity (block-matching)
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
@@ -159,17 +159,5 @@ def disparity(out_dir, x, y):
                                          cfg['matching_algorithm'], disp_min,
                                          disp_max)
 
-    # intersect mask with the cloud_water_image_domain mask (recomputed here to
-    # get to be sampled on the epipolar grid)
-    cwid_msk = '%s/cloud_water_image_domain_mask.png' % (out_dir)
-    cwid_msk_rect = '%s/rectified_cloud_water_image_domain_mask.png' % (out_dir)
-    ww, hh = common.image_size(rect1)
-    H1 = np.loadtxt(os.path.join(out_dir, 'H_ref.txt'))
-    H_inv = np.array([[1, 0, x], [0, 1, y], [0, 0, 1]])
-    common.image_apply_homography(cwid_msk_rect, cwid_msk, np.dot(H1,H_inv), ww, hh)
-
-    try:
-        masking.intersection(mask, mask, cwid_msk_rect)
-        masking.erosion(mask, mask, cfg['msk_erosion'])
-    except OSError:
-        print "file %s not produced" % mask
+    # add margin around masked pixels
+    masking.erosion(mask, mask, cfg['msk_erosion'])

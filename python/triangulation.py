@@ -81,7 +81,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
 
 
 def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
-               A=None):
+               out_filt, A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -100,13 +100,13 @@ def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
         rpc_err: path to the output rpc_error of triangulation
         A (optional): path to txt file containing the pointing correction matrix
             for im2
-
-    Returns:
-        nothing
     """
     tmp = common.tmpfile('.tif')
     height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
     transfer_map(tmp, H1, x, y, w, h, z, out)
+
+    # apply output filter
+    common.run('plambda {0} {1} "x 0 > y nan if" -o {1}'.format(out_filt, out))
 
 
 def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):

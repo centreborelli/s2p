@@ -155,7 +155,7 @@ def process_tile_pair(tile_info, pair_id):
     else:
         print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
         process.rectify(out_dir, np.loadtxt(A_global), img1, rpc1,
-                        img2, rpc2, col, row, tw, th)
+                        img2, rpc2, col, row, tw, th, cfg['horizontal_margin'])
 
     # disparity estimation
     if (cfg['skip_existing'] and
@@ -164,7 +164,7 @@ def process_tile_pair(tile_info, pair_id):
         print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
         print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
-        process.disparity(out_dir, col, row)
+        process.disparity(out_dir)
 
     # triangulation
     height_map = os.path.join(out_dir, 'height_map.tif')
@@ -176,10 +176,11 @@ def process_tile_pair(tile_info, pair_id):
         H_sec = os.path.join(out_dir, 'H_sec.txt')
         disp = os.path.join(out_dir, 'rectified_disp.tif')
         mask = os.path.join(out_dir, 'rectified_mask.png')
+        out_mask = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
         rpc_err = os.path.join(out_dir, 'rpc_err.tif')
         triangulation.height_map(height_map, col, row, tw, th,
                                  cfg['subsampling_factor'], rpc1, rpc2, H_ref,
-                                 H_sec, disp, mask, rpc_err, A_global)
+                                 H_sec, disp, mask, rpc_err, out_mask, A_global)
 
 
 def process_tile(tile_info):
@@ -293,12 +294,12 @@ def tile_fusion_and_ply(tile_info, mean_heights_global):
         f.close()
 
 
-def compute_dsm():
+def compute_dsm(tiles_full_info):
     """
     """
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
-    clouds = ' '.join(glob.glob(os.path.join(cfg['out_dir'], 'tile_*', 'col_*',
-                                             'cloud.ply')))
+    clouds = ' '.join(os.path.join(t['directory'], 'cloud.ply') for t in
+                      tiles_full_info)
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         common.run("ls %s | plyflatten -bb \"%f %f %f %f \" %f %s" % (clouds,
@@ -446,7 +447,7 @@ def main(config_file, steps=range(1, 9)):
 
     if 7 in steps:
         print '\ncompute dsm...'
-        compute_dsm()
+        compute_dsm(tiles_full_info)
         print_elapsed_time()
 
     if 8 in steps:

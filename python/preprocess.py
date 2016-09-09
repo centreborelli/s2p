@@ -59,7 +59,7 @@ def pointing_correction(tile_info):
     tile_dir = tile_info['directory']
     x, y, w, h = tile_info['coordinates']
 
-    for i in range(1, tile_info['number_of_pairs'] + 1):
+    for i in xrange(1, len(cfg['images'])):
         paired_tile_dir = os.path.join(tile_dir, 'pair_%d' % i)
         img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
         img2, rpc2 = cfg['images'][i]['img'], cfg['images'][i]['rpc']
