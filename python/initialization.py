@@ -133,14 +133,9 @@ def make_dirs():
     """
     Create directories needed to run s2p.
     """
-    if not os.path.exists(cfg['out_dir']):
-        os.makedirs(cfg['out_dir'])
-
-    if not os.path.exists(cfg['temporary_dir']):
-        os.makedirs(cfg['temporary_dir'])
-
-    if not os.path.exists(os.path.join(cfg['temporary_dir'], 'meta')):
-        os.makedirs(os.path.join(cfg['temporary_dir'], 'meta'))
+    common.mkdir_p(cfg['out_dir'])
+    common.mkdir_p(cfg['temporary_dir'])
+    common.mkdir_p(os.path.join(cfg['temporary_dir'], 'meta'))
 
     # store a json dump of the config.cfg dictionary
     f = open(os.path.join(cfg['out_dir'], 'config.json'), 'w')
@@ -219,10 +214,10 @@ def tiles_full_info():
             tiles_full_info.append(tile_info)
 
             # make the directory
-            os.makedirs(tile_info['directory'])
+            common.mkdir_p(tile_info['directory'])
             for i in xrange(1, len(cfg['images'])):
-                os.makedirs(os.path.join(tile_info['directory'],
-                                         'pair_{}'.format(i)))
+                common.mkdir_p(os.path.join(tile_info['directory'],
+                                            'pair_{}'.format(i)))
 
             # keep the mask
             shutil.copy(msk, os.path.join(tile_info['directory'],

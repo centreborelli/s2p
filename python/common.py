@@ -7,6 +7,7 @@
 import os
 import re
 import sys
+import errno
 import urllib2
 import base64
 import urlparse
@@ -91,6 +92,18 @@ def run(cmd, env=os.environ):
         # pool to crash
         raise RunFailure({"command": e.cmd, "environment": env, "output":
                           e.output})
+
+
+def mkdir_p(path):
+    """
+    Create a directory without complaining if it already exists.
+    """
+    try:
+        os.makedirs(path)
+    except OSError as exc: # requires Python > 2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 
 def shellquote(s):
