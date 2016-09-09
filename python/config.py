@@ -108,9 +108,6 @@ cfg['fusion_thresh'] = 3
 # be kept.
 cfg['fusion_conservative'] = False
 
-# binary used to paste together the altitude maps of each tile
-cfg['mosaic_method'] = 'piio'
-
 cfg['disable_srtm'] = False
 
 # method to compute the disparity range: "sift", "srtm" or "wider_sift_srtm"
