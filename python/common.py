@@ -1017,5 +1017,8 @@ def lidar_preprocessor(output, input_plys):
     tmp = cfg['temporary_dir']
     nthreads = multiprocessing.cpu_count()
     plys = ' '.join(input_plys)
-    common.run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (
-        tmp, tmp, nthreads, plys, output))
+    run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (tmp,
+                                                                           tmp,
+                                                                           nthreads,
+                                                                           plys,
+                                                                           output))

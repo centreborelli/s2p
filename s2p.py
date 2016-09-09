@@ -39,7 +39,6 @@ from python import globalvalues
 from python import process
 from python import fusion
 from python import triangulation
-from python import globalfinalization
 
 
 def show_progress(a):
@@ -336,7 +335,7 @@ def lidar_preprocessor(tiles_full_info):
         for tile_info in tiles_full_info:
             plys.append(os.path.join(os.path.abspath(tile_info['directory']),
                                      'cloud.ply'))
-        globalfinalization.lidar_preprocessor(out, plys)
+        common.lidar_preprocessor(out, plys)
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
