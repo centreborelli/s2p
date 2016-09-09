@@ -37,7 +37,10 @@ def garbage_cleanup():
     """
     if cfg['clean_tmp']:
         while garbage:
-            os.remove(garbage.pop())
+            try:
+                os.remove(garbage.pop())
+            except OSError:
+                pass
 
 
 def tmpfile(ext=''):
