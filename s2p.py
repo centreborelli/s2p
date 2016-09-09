@@ -88,14 +88,9 @@ def preprocess_tile(tile_info):
         tile_info: dictionary containing all the information needed to process a
             tile.
     """
-    # create output directory for the tile
-    tile_dir = tile_info['directory']
-    if not os.path.exists(tile_dir):
-        os.makedirs(tile_dir)
-
     # redirect stdout and stderr to log file
     if not cfg['debug']:
-        f = open(os.path.join(tile_dir, 'stdout.log'), 'w', 0)  # 0 for no buffering
+        f = open(os.path.join(tile_info['directory'], 'stdout.log'), 'w', 0)  # 0 for no buffering
         sys.stdout = f
         sys.stderr = f
 
@@ -176,7 +171,8 @@ def process_tile_pair(tile_info, pair_id):
         H_sec = os.path.join(out_dir, 'H_sec.txt')
         disp = os.path.join(out_dir, 'rectified_disp.tif')
         mask = os.path.join(out_dir, 'rectified_mask.png')
-        out_mask = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+        out_mask = os.path.join(os.path.dirname(out_dir),
+                                'cloud_water_image_domain_mask.png')
         rpc_err = os.path.join(out_dir, 'rpc_err.tif')
         triangulation.height_map(height_map, col, row, tw, th,
                                  cfg['subsampling_factor'], rpc1, rpc2, H_ref,
@@ -199,11 +195,6 @@ def process_tile(tile_info):
         l = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
         sys.stdout = l
         sys.stderr = l
-
-    # check that the tile is not masked
-    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-        print 'tile %s already masked, skip' % tile_dir
-        return
 
     try:  # process each pair to get a height map
         for i in xrange(n):
@@ -250,11 +241,6 @@ def tile_fusion_and_ply(tile_info, mean_heights_global):
         f = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
         sys.stdout = f
         sys.stderr = f
-
-    # check that the tile is not masked
-    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-        print 'tile %s already masked, skip' % tile_dir
-        return
 
     height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
                    for i in xrange(nb_pairs)]

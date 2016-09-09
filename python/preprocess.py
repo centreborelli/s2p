@@ -38,9 +38,7 @@ def minmax_color_on_tile(tile_info):
         common.cropImage(img, crop_ref, *coords, zoom=z)
     else:
         print 'roi_ref.tif for tile %s already generated, skip' % tile_dir
-    if os.path.isfile(os.path.join(tile_dir, 'this_tile_is_masked.txt')):
-        print 'tile %s is masked, skip' % tile_dir
-    elif os.path.isfile(os.path.join(tile_dir, 'local_minmax.txt')) and cfg['skip_existing']:
+    if os.path.isfile(os.path.join(tile_dir, 'local_minmax.txt')) and cfg['skip_existing']:
         print 'extrema intensities on tile %s already computed, skip' % tile_dir
     else:
         common.image_getminmax(crop_ref, local_minmax)
@@ -67,12 +65,7 @@ def pointing_correction(tile_info):
         cld_msk = cfg['images'][0]['cld']
         wat_msk = cfg['images'][0]['wat']
 
-        # create a directory for the experiment
-        if not os.path.exists(paired_tile_dir):
-            os.makedirs(paired_tile_dir)
-
         # output files
-        cwid_msk = '%s/cloud_water_image_domain_mask.png' % (paired_tile_dir)
         pointing = '%s/pointing.txt' % paired_tile_dir
         center = '%s/center_keypts_sec.txt' % paired_tile_dir
         sift_matches = '%s/sift_matches.txt' % paired_tile_dir
@@ -81,23 +74,16 @@ def pointing_correction(tile_info):
         if os.path.isfile('%s/pointing.txt' % paired_tile_dir) and cfg['skip_existing']:
             print "pointing correction on tile %d %d (pair %d) already done, skip" % (x, y, i)
         else:
-            # check if the ROI is masked by water or out of image domain
-            H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
-            if masking.cloud_water_image_domain(cwid_msk, w, h, H, rpc1, roi_msk, cld_msk, wat_msk):
-                print "Tile masked by water or outside definition domain, skip"
-                open("%s/this_tile_is_masked.txt" % paired_tile_dir, 'a').close()
-            else:
-                # correct pointing error
-                # A is the correction matrix and m is the list of sift matches
-                A, m = pointing_accuracy.compute_correction(img1, rpc1, img2,
-                                                            rpc2, x, y, w, h)
-                if A is not None:
-                    np.savetxt(pointing, A, fmt='%6.3f')
-                if m is not None:
-                    np.savetxt(sift_matches, m, fmt='%9.3f')
-                    np.savetxt(center, np.mean(m[:, 2:4], 0), fmt='%9.3f')
-                    if cfg['debug']:
-                        png = '%s/sift_matches_plot.png' % paired_tile_dir
-                        visualisation.plot_matches_pleiades(img1, img2, rpc1,
-                                                            rpc2, m, x, y, w, h,
-                                                            png)
+            # correct pointing error
+            # A is the correction matrix and m is the list of sift matches
+            A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2,
+                                                        x, y, w, h)
+            if A is not None:
+                np.savetxt(pointing, A, fmt='%6.3f')
+            if m is not None:
+                np.savetxt(sift_matches, m, fmt='%9.3f')
+                np.savetxt(center, np.mean(m[:, 2:4], 0), fmt='%9.3f')
+                if cfg['debug']:
+                    png = '%s/sift_matches_plot.png' % paired_tile_dir
+                    visualisation.plot_matches_pleiades(img1, img2, rpc1, rpc2,
+                                                        m, x, y, w, h, png)

@@ -7,12 +7,14 @@ import os
 import sys
 import utm
 import json
+import shutil
 import numpy as np
 
 from python import common
 from python import srtm
 from python import tee
 from python import rpc_utils
+from python import masking
 from config import cfg
 
 
@@ -182,9 +184,13 @@ def tiles_full_info():
     Returns:
         tiles_full_info: list containing dictionaries
     """
-    tw, th = adjust_tile_size()  # default tile size
-    rx, ry, rw, rh = cfg['roi'].values()  # roi coordinates
+    rpc = cfg['images'][0]['rpc']
+    roi_msk = cfg['images'][0]['roi']
+    cld_msk = cfg['images'][0]['cld']
+    wat_msk = cfg['images'][0]['wat']
     z =  cfg['subsampling_factor']
+    rx, ry, rw, rh = cfg['roi'].values()  # roi coordinates
+    tw, th = adjust_tile_size()  # default tile size
 
     # build tile_info dictionaries and store them in a list
     tiles_full_info = list()
@@ -196,6 +202,14 @@ def tiles_full_info():
             # ensure that tile coordinates are multiples of the zoom factor
             x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
+            # check if the tile is entirely masked by water, clouds, or img mask
+            H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
+            msk = common.tmpfile('.png')
+            if masking.cloud_water_image_domain(msk, w, h, H, rpc, roi_msk, cld_msk, wat_msk):
+                print 'tile {} {} {} {} masked, we skip it'.format(x, y, w, h)
+                continue
+
+            # add the tile to the list
             tile_info = {}
             tile_info['directory'] = os.path.join(cfg['out_dir'],
                                                   'tiles_row_%d_height_%d' % (y,
@@ -203,5 +217,15 @@ def tiles_full_info():
                                                   'col_%d_width_%d' % (x, w))
             tile_info['coordinates'] = (x, y, w, h)
             tiles_full_info.append(tile_info)
+
+            # make the directory
+            os.makedirs(tile_info['directory'])
+            for i in xrange(1, len(cfg['images'])):
+                os.makedirs(os.path.join(tile_info['directory'],
+                                         'pair_{}'.format(i)))
+
+            # keep the mask
+            shutil.copy(msk, os.path.join(tile_info['directory'],
+                                          'cloud_water_image_domain_mask.png'))
 
     return tiles_full_info
