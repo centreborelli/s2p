@@ -5,6 +5,7 @@
 
 import os
 import common
+import subprocess
 from config import cfg
 
 
@@ -36,21 +37,26 @@ def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None, wat_
 
     # image domain mask
     if roi_gml is None:  # initialize to 255
-        common.run('plambda zero:%dx%d "x 255 +" -o %s' % (w, h, out))
+        subprocess.check_call('plambda zero:%dx%d "x 255 +" -o %s' % (w, h,
+                                                                      out),
+                              shell=True)
     else:
-        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, roi_gml, out))
+        subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
+                                                               roi_gml, out),
+                              shell=True)
         if common.is_image_black(out):  # if we are already out, return
             return True
 
     # cloud mask
     if cld_gml is not None:
         cld_msk = common.tmpfile('.png')
-        common.run('cldmask %d %d -h "%s" %s %s' % (w, h, hij, cld_gml,
-                                                    cld_msk))
+        subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij, cld_gml,
+                                                    cld_msk), shell=True)
         # cld msk has to be inverted.
         # TODO: add flag to the cldmask binary, to avoid using read/write the
         # msk one more time for this
-        common.run('plambda %s "255 x -" -o %s' % (cld_msk, cld_msk))
+        subprocess.check_call('plambda %s "255 x -" -o %s' % (cld_msk, cld_msk),
+                              shell=True)
 
         intersection(out, out, cld_msk)
 
@@ -64,8 +70,9 @@ def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None, wat_
         water_msk = common.tmpfile('.png')
         env = os.environ.copy()
         env['SRTM4_CACHE'] = cfg['srtm_dir']
-        common.run('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc, water_msk),
-                   env)
+        subprocess.check_call('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc,
+                                                                 water_msk),
+                              shell=True, env=env)
         intersection(out, out, water_msk)
 
     return common.is_image_black(out)
