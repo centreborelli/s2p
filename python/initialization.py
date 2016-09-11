@@ -158,13 +158,15 @@ def adjust_tile_size():
     """
     zoom = cfg['subsampling_factor']
     tile_w = min(cfg['roi']['w'], zoom * cfg['tile_size'])  # tile width
-    tile_h = min(cfg['roi']['h'], zoom * cfg['tile_size'])  # tile height
-    print 'tile size: {} {}'.format(tile_w, tile_h)
+    ntx = int(np.round(float(cfg['roi']['w']) / tile_w))
+    tile_w = int(np.ceil(float(cfg['roi']['w']) / ntx))
 
-    ntx = int(np.ceil(float(cfg['roi']['w']) / tile_w))
-    nty = int(np.ceil(float(cfg['roi']['h']) / tile_h))
+    tile_h = min(cfg['roi']['h'], zoom * cfg['tile_size'])  # tile height
+    nty = int(np.round(float(cfg['roi']['h']) / tile_h))
+    tile_h = int(np.ceil(float(cfg['roi']['h']) / nty))
+
+    print 'tile size: {} {}'.format(tile_w, tile_h)
     print 'total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty)
-    
     return tile_w, tile_h
 
 
@@ -213,7 +215,7 @@ def tiles_full_info():
             tile_info['coordinates'] = (x, y, w, h)
             tiles_full_info.append(tile_info)
 
-            # make the directory
+            # make the directories
             common.mkdir_p(tile_info['directory'])
             for i in xrange(1, len(cfg['images'])):
                 common.mkdir_p(os.path.join(tile_info['directory'],
