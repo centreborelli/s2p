@@ -111,9 +111,9 @@ def build_cfg(config_file):
     # check the zoom factor
     z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
-       
+
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problems.          
+    # to avoid bad registration of tiles due to rounding problems.
     x, y, w, h = common.round_roi_to_nearest_multiple(z, *cfg['roi'].values())
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
@@ -159,6 +159,7 @@ def adjust_tile_size():
     zoom = cfg['subsampling_factor']
     tile_w = min(cfg['roi']['w'], zoom * cfg['tile_size'])  # tile width
     ntx = int(np.round(float(cfg['roi']['w']) / tile_w))
+    # ceil so that, if needed, the last tile is slightly smaller
     tile_w = int(np.ceil(float(cfg['roi']['w']) / ntx))
 
     tile_h = min(cfg['roi']['h'], zoom * cfg['tile_size'])  # tile height

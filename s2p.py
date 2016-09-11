@@ -437,7 +437,7 @@ def main(config_file, steps=range(1, 9)):
         print_elapsed_time()
 
     if 8 in steps:
-        print '\nglobal finalization...'
+        print '\nlidar preprocessor...'
         lidar_preprocessor(tiles)
         print_elapsed_time()
 
