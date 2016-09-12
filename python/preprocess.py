@@ -34,7 +34,7 @@ def minmax_color_on_tile(tile_info):
     local_minmax = os.path.join(tile_dir, 'local_minmax.txt')
 
     # do the job
-    if os.path.isfile(crop_ref) and cfg['skip_existing']):
+    if os.path.isfile(crop_ref) and cfg['skip_existing']:
         print 'roi_ref.tif for tile %s already generated, skip' % tile_dir
     else:
         common.cropImage(img, crop_ref, *coords, zoom=z)
