@@ -27,7 +27,7 @@ def pointing_correction(tiles):
                        pointing_accuracy.global_from_local(list_of_tiles), fmt='%12.6f')
 
 
-def minmax_intensities(tiles_full_info):
+def minmax_intensities(tiles):
     """
     Compute the min and max intensities from the tiles that will be processed.
 
@@ -35,15 +35,15 @@ def minmax_intensities(tiles_full_info):
     more, and to better vizualise the ply files.
 
     Args:
-         tiles_full_info: list of tile_info dictionaries
+         tiles: list of tile dictionaries
     """
     min_max_file = os.path.join(cfg['out_dir'], 'global_minmax.txt')
     if not (os.path.isfile(min_max_file) and cfg['skip_existing']):
         minlist = []
         maxlist = []
-        for tile_info in tiles_full_info:
-            minmax = np.loadtxt(os.path.join(tile_info['directory'],
-                                            'local_minmax.txt'))
+        for tile in tiles:
+            minmax = np.loadtxt(os.path.join(tile['directory'],
+                                             'local_minmax.txt'))
             minlist.append(minmax[0])
             maxlist.append(minmax[1])
 
