@@ -33,12 +33,12 @@ gdal.UseExceptions()
 from python.config import cfg
 from python import common
 from python import initialization
-from python import preprocess
-from python import globalvalues
-from python import process
-from python import fusion
-from python import triangulation
 from python import pointing_accuracy
+from python import rectification
+from python import block_matching
+from python import masking
+from python import triangulation
+from python import fusion
 from python import visualisation
 
 
@@ -81,28 +81,29 @@ def print_elapsed_time(since_first_call=False):
     print_elapsed_time.t1 = t2
 
 
-def pointing_correction_pair(tile, pair_id):
+def pointing_correction_pair(tile, i):
     """
     Compute the translation that correct the pointing error on a pair of tiles.
 
     Args:
         tile: dictionary containing the information needed to process the tile
-        pair_id: index of the pair
+        i: index of the pair
     """
     x, y, w, h = tile['coordinates']
-    tile_dir = os.path.join(tile['directory'], 'pair_%d' % pair_id)
+    tile_dir = os.path.join(tile['directory'], 'pair_%d' % i)
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
-    img2 = cfg['images'][pair_id]['img']
-    rpc2 = cfg['images'][pair_id]['rpc']
+    img2 = cfg['images'][i]['img']
+    rpc2 = cfg['images'][i]['rpc']
 
     if cfg['skip_existing'] and os.path.isfile(os.path.join(tile_dir,
                                                             'pointing.txt')):
-        print "pointing correction on tile %d %d (pair %d) already done" % (x, y, i)
+        print 'pointing correction done on tile %d %d pair %d'.format(x, y, i)
         return
-    else:  # correct pointing error
-        A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2,
-                                                    x, y, w, h)
+
+    # correct pointing error
+    A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
+
     if A is not None:  # A is the correction matrix
         np.savetxt(os.path.join(tile_dir, 'pointing.txt'), A, fmt='%6.3f')
     if m is not None:  # m is the list of sift matches
@@ -156,64 +157,110 @@ def global_pointing_correction(tiles):
             np.savetxt(out, pointing_accuracy.global_from_local(l), fmt='%12.6f')
 
 
-def process_tile_pair(tile, pair_id):
+def rectification_pair(tile, i):
     """
-    Process a pair of images on a given tile.
-
-    It includes rectification, disparity estimation and triangulation.
+    Rectify a pair of images on a given tile.
 
     Args:
         tile: dictionary containing the information needed to process a tile.
-        pair_id: index of the pair to process
+        i: index of the pair to process
     """
-    # read all the information
-    tile_dir = tile['directory']
-    col, row, tw, th = tile['coordinates']
-    images = cfg['images']
-    img1, rpc1 = images[0]['img'], images[0]['rpc']
-    img2, rpc2 = images[pair_id]['img'], images[pair_id]['rpc']
-    out_dir = os.path.join(tile_dir, 'pair_%d' % pair_id)
-    A_global = os.path.join(cfg['out_dir'],
-                            'global_pointing_pair_%d.txt' % pair_id)
+    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i))
+    x, y, w, h = tile['coordinates']
+    img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
+    img2, rpc2 = cfg['images'][i]['img'], cfg['images'][i]['rpc']
+    pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
 
-    print 'processing tile %d %d...' % (col, row)
+    outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
+    if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
+                                    f in outputs):
+        print 'rectification done on tile {} {} pair {}'.format(x, y, i)
+        return
 
-    # rectification
-    if (cfg['skip_existing'] and
-            os.path.isfile(os.path.join(out_dir, 'disp_min_max.txt')) and
-            os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and
-            os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif'))):
-        print '\trectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-    else:
-        print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
-        process.rectify(out_dir, np.loadtxt(A_global), img1, rpc1,
-                        img2, rpc2, col, row, tw, th, cfg['horizontal_margin'])
+    print 'rectifying tile {} {} pair {}...'.format(x, y, i)
+    try:
+        A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
+    except IOError:
+        A = pointing
+    try:
+        m = np.loadtxt(os.path.join(out_dir, 'sift_matches.txt'))
+    except IOError:
+        m = None
+    rect1 = os.path.join(out_dir, 'rectified_ref.tif')
+    rect2 = os.path.join(out_dir, 'rectified_sec.tif')
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
+                                                            rpc2, x, y, w, h,
+                                                            rect1, rect2, A, m,
+                                                            margin=cfg['horizontal_margin'])
+    np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
+    np.savetxt(os.path.join(out_dir, 'H_sec.txt'), H2, fmt='%12.6f')
+    np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
+                            fmt='%3.1f')
 
-    # disparity estimation
-    if (cfg['skip_existing'] and
-            os.path.isfile(os.path.join(out_dir, 'rectified_mask.png')) and
-            os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif'))):
-        print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
-    else:
-        print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
-        process.disparity(out_dir)
 
-    # triangulation
+def disparity_pair(tile, i):
+    """
+    Compute the disparity of a pair of images on a given tile.
+
+    Args:
+        tile: dictionary containing the information needed to process a tile.
+        i: index of the pair to process
+    """
+    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i))
+    x, y = tile['coordinates'][:2]
+
+    outputs = ['rectified_mask.png', 'rectified_disp.tif']
+    if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
+                                    f in outputs):
+        print 'disparity estimation done on tile {} {} pair {}'.format(x, y, i)
+        return
+
+    print 'estimating disparity on tile {} {} pair {}...'.format(x, y, i)
+    rect1 = os.path.join(out_dir, 'rectified_ref.tif')
+    rect2 = os.path.join(out_dir, 'rectified_sec.tif')
+    disp = os.path.join(out_dir, 'rectified_disp.tif')
+    mask = os.path.join(out_dir, 'rectified_mask.png')
+    disp_min, disp_max = np.loadtxt(os.path.join(out_dir, 'disp_min_max.txt'))
+    if cfg['disp_min'] is not None: disp_min = cfg['disp_min']
+    if cfg['disp_max'] is not None: disp_max = cfg['disp_max']
+    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+                                         cfg['matching_algorithm'], disp_min,
+                                         disp_max)
+
+    # add margin around masked pixels
+    masking.erosion(mask, mask, cfg['msk_erosion'])
+
+
+def triangulation_pair(tile, i):
+    """
+    Triangulate a pair of images on a given tile.
+
+    Args:
+        tile: dictionary containing the information needed to process a tile.
+        i: index of the pair to process
+    """
+    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i))
     height_map = os.path.join(out_dir, 'height_map.tif')
+    x, y, w, h = tile['coordinates']
+
     if cfg['skip_existing'] and os.path.isfile(height_map):
-        print '\tfile %s already there, skip triangulation' % height_map
-    else:
-        print '\ttriangulating tile %d %d (pair %d)...' % (col, row, pair_id)
-        H_ref = os.path.join(out_dir, 'H_ref.txt')
-        H_sec = os.path.join(out_dir, 'H_sec.txt')
-        disp = os.path.join(out_dir, 'rectified_disp.tif')
-        mask = os.path.join(out_dir, 'rectified_mask.png')
-        out_mask = os.path.join(os.path.dirname(out_dir),
-                                'cloud_water_image_domain_mask.png')
-        rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-        triangulation.height_map(height_map, col, row, tw, th,
-                                 cfg['subsampling_factor'], rpc1, rpc2, H_ref,
-                                 H_sec, disp, mask, rpc_err, out_mask, A_global)
+        print 'triangulation done on tile {} {} pair {}'.format(x, y, i)
+        return
+
+    print 'triangulating tile {} {} pair {}...'.format(x, y, i)
+    rpc1 = cfg['images'][0]['rpc']
+    rpc2 = cfg['images'][i]['rpc']
+    H_ref = os.path.join(out_dir, 'H_ref.txt')
+    H_sec = os.path.join(out_dir, 'H_sec.txt')
+    disp = os.path.join(out_dir, 'rectified_disp.tif')
+    mask = os.path.join(out_dir, 'rectified_mask.png')
+    rpc_err = os.path.join(out_dir, 'rpc_err.tif')
+    out_mask = os.path.join(os.path.dirname(out_dir),
+                            'cloud_water_image_domain_mask.png')
+    pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
+    triangulation.height_map(height_map, x, y, w, h, cfg['subsampling_factor'],
+                             rpc1, rpc2, H_ref, H_sec, disp, mask, rpc_err,
+                             out_mask, pointing)
 
 
 def process_tile(tile):
@@ -224,8 +271,6 @@ def process_tile(tile):
         tile: a dictionary that provides all you need to process a tile
     """
     tile_dir = tile['directory']
-    w, h = tile['coordinates'][2:]
-    n = len(cfg['images']) - 1
 
     # redirect stdout and stderr to log file
     if not cfg['debug']:
@@ -234,13 +279,17 @@ def process_tile(tile):
         sys.stderr = l
 
     try:  # process each pair to get a height map
-        for i in xrange(n):
-            process_tile_pair(tile, i + 1)
+        for i in xrange(1, len(cfg['images'])):
+            rectification_pair(tile, i)
+            disparity_pair(tile, i)
+            triangulation_pair(tile, i)
     except Exception:
         print("Exception in processing tile:")
         traceback.print_exc()
         raise
 
+    w, h = tile['coordinates'][2:]
+    n = len(cfg['images']) - 1
     maps = np.empty((h, w, n))
     for i in xrange(n):
         f = gdal.Open(os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif'))
@@ -285,7 +334,7 @@ def tile_fusion_and_ply(tile, mean_heights_global):
         # remove spurious matches
         if cfg['cargarse_basura']:
             for img in height_maps:
-                process.cargarse_basura(img, img)
+                common.cargarse_basura(img, img)
 
         # merge the height maps (applying mean offset to register)
         fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,

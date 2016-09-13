@@ -1037,3 +1037,17 @@ def lidar_preprocessor(output, input_plys):
                                                                            nthreads,
                                                                            plys,
                                                                            output))
+
+
+def cargarse_basura(inputf, outputf):
+    se=5
+    tmp1 = outputf + '1.tif'
+    tmp2 = outputf + '2.tif'
+    tmpM = outputf + 'M.tif'
+    run('morphoop %s min %d %s' % (inputf, se, tmpM))
+    run('morphoop %s max %d %s' % (inputf, se, tmp1))
+    run('morphoop %s max %d %s' % (inputf, se, tmpM))
+    run('morphoop %s min %d %s' % (inputf, se, tmp2))
+    run('plambda %s %s %s "x y - fabs %d > nan z if" -o %s' % (tmp1, tmp2, inputf, 5, tmpM))
+    run('remove_small_cc %s %s %d %d' % (tmpM, outputf, 200, 5))
+    run('rm -f %s %s %s' % (tmp1, tmp2, tmpM))
