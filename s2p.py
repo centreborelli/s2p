@@ -411,18 +411,16 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     return outputs
 
 
-def main(config_file, steps=range(1, 9)):
+def main(config_file):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
 
     Args:
         config_file: path to a json configuration file
-        steps: list of integers between 1 and 8 specifying which steps to run.
-            By default all steps are run.
     """
     print_elapsed_time.t0 = datetime.datetime.now()
 
-    # initialization (has to be done whatever the queried steps)
+    # initialization
     initialization.build_cfg(config_file)
     initialization.make_dirs()
     tiles = initialization.tiles_full_info()
@@ -437,42 +435,34 @@ def main(config_file, steps=range(1, 9)):
     # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles)))
 
     # do the job
-    if 2 in steps:
-        print '\ncorrecting pointing locally...'
-        launch_parallel_calls(pointing_correction, tiles, nb_workers)
-        print_elapsed_time()
+    print '\ncorrecting pointing locally...'
+    launch_parallel_calls(pointing_correction, tiles, nb_workers)
+    print_elapsed_time()
 
-    if 3 in steps:
-        print '\ncorrecting pointing globally...'
-        global_pointing_correction(tiles)
-        print_elapsed_time()
+    print '\ncorrecting pointing globally...'
+    global_pointing_correction(tiles)
+    print_elapsed_time()
 
-    if 4 in steps:
-        print '\nprocessing tiles...'
-        mean_heights_local = launch_parallel_calls(process_tile,
-                                                   tiles, nb_workers)
-        print_elapsed_time()
+    print '\nprocessing tiles...'
+    mean_heights_local = launch_parallel_calls(process_tile, tiles, nb_workers)
+    print_elapsed_time()
 
-    if 5 in steps:
-        print '\ncompute global pairwise height offsets...'
-        mean_heights_global = np.mean(mean_heights_local, axis=0)
-        print_elapsed_time()
+    print '\ncompute global pairwise height offsets...'
+    mean_heights_global = np.mean(mean_heights_local, axis=0)
+    print_elapsed_time()
 
-    if 6 in steps:
-        print '\nmerge height maps and compute ply clouds...'
-        launch_parallel_calls(tile_fusion_and_ply, tiles, nb_workers,
-                              (mean_heights_global,))
-        print_elapsed_time()
+    print '\nmerge height maps and compute ply clouds...'
+    launch_parallel_calls(tile_fusion_and_ply, tiles, nb_workers,
+                          (mean_heights_global,))
+    print_elapsed_time()
 
-    if 7 in steps:
-        print '\ncompute dsm...'
-        compute_dsm(tiles)
-        print_elapsed_time()
+    print '\ncompute dsm...'
+    compute_dsm(tiles)
+    print_elapsed_time()
 
-    if 8 in steps:
-        print '\nlidar preprocessor...'
-        lidar_preprocessor(tiles)
-        print_elapsed_time()
+    print '\nlidar preprocessor...'
+    lidar_preprocessor(tiles)
+    print_elapsed_time()
 
     # cleanup
     print_elapsed_time(since_first_call=True)
@@ -484,27 +474,18 @@ def print_help_and_exit(script_name):
     """
     print """
     Incorrect syntax, use:
-      > %s config.json [steps (list of integer between 1 and 8)]
-        1: initialization
-        2: preprocessing (tilewise sift, local pointing correction)
-        3: global-pointing
-        4: processing (tilewise rectification, matching and triangulation)
-        5: global height maps registration
-        6: heights map merging and ply generation
-        7: compute dsm from ply files
-        8: lidarviewer
+      > %s config.json
         Launches the s2p pipeline.
 
       All the parameters, paths to input and output files, are defined in
       the json configuration file.
 
     """ % script_name
+    sys.exit()
 
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
         main(sys.argv[1])
-    elif len(sys.argv) == 3 and int(sys.argv[2]) in range(1, 9):
-        main(sys.argv[1], int(sys.argv[2]))
     else:
         print_help_and_exit(sys.argv[0])
