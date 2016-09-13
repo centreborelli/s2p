@@ -116,33 +116,6 @@ def pointing_correction_pair(tile, i):
                                                     'sift_matches_plot.png'))
 
 
-def pointing_correction(tile):
-    """
-    Compute pointing corrections for a single tile.
-
-    Args:
-        tile: dictionary containing the information needed to process a tile.
-    """
-    if not cfg['debug']:  # redirect stdout and stderr to log file
-        f = open(os.path.join(tile['directory'], 'stdout.log'), 'w', 0)  # 0 for no buffering
-        sys.stdout = f
-        sys.stderr = f
-
-    try:
-        for i in xrange(1, len(cfg['images'])):
-            pointing_correction_pair(tile, i)
-    except Exception:
-        print("Exception in pointing_correction:")
-        traceback.print_exc()
-        raise
-
-    common.garbage_cleanup()
-    if not cfg['debug']:  # close logs
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        f.close()
-
-
 def global_pointing_correction(tiles):
     """
     Compute the global pointing corrections for each pair of images.
@@ -263,51 +236,20 @@ def triangulation_pair(tile, i):
                              out_mask, pointing)
 
 
-def process_tile(tile):
+def compute_mean_heights(tile):
     """
-    Compute a height map on the tile for each image pair.
-
-    Args:
-        tile: a dictionary that provides all you need to process a tile
     """
-    tile_dir = tile['directory']
-
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        l = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
-        sys.stdout = l
-        sys.stderr = l
-
-    try:  # process each pair to get a height map
-        for i in xrange(1, len(cfg['images'])):
-            rectification_pair(tile, i)
-            disparity_pair(tile, i)
-            triangulation_pair(tile, i)
-    except Exception:
-        print("Exception in processing tile:")
-        traceback.print_exc()
-        raise
-
     w, h = tile['coordinates'][2:]
     n = len(cfg['images']) - 1
     maps = np.empty((h, w, n))
     for i in xrange(n):
-        f = gdal.Open(os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif'))
+        f = gdal.Open(os.path.join(tile['directory'], 'pair_%d' % (i + 1), 'height_map.tif'))
         maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
         f = None  # this is the gdal way of closing files
 
     validity_mask = maps.sum(axis=2)  # sum to propagate nan values
     validity_mask += 1 - validity_mask  # 1 on valid pixels, and nan on invalid
-    mean_heights = [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)]
-
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        l.close()
-
-    return mean_heights
+    return [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)]
 
 
 def tile_fusion_and_ply(tile, mean_heights_global):
@@ -322,53 +264,35 @@ def tile_fusion_and_ply(tile, mean_heights_global):
     tile_dir = tile['directory']
     nb_pairs = len(mean_heights_global)
 
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
-        f = open(os.path.join(tile_dir, 'stdout.log'), 'a', 0)  # '0' for no buffering
-        sys.stdout = f
-        sys.stderr = f
-
     height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
                    for i in xrange(nb_pairs)]
-    try:
-        # remove spurious matches
-        if cfg['cargarse_basura']:
-            for img in height_maps:
-                common.cargarse_basura(img, img)
 
-        # merge the height maps (applying mean offset to register)
-        fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
-                       mean_heights_global, averaging=cfg['fusion_operator'],
-                       threshold=cfg['fusion_thresh'])
+    # remove spurious matches
+    if cfg['cargarse_basura']:
+        for img in height_maps:
+            common.cargarse_basura(img, img)
 
-        # compute ply: H is the homography transforming the coordinates system of
-        # the original full size image into the coordinates system of the crop
-        x, y, w, h = tile['coordinates']
-        z = cfg['subsampling_factor']
-        H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
-        colors = os.path.join(tile_dir, 'ref.png')
-        if cfg['images'][0]['clr']:
-            common.image_crop_tif(cfg['images'][0]['clr'], x, y, w, h, colors)
-        else:
-            common.image_qauto(common.image_crop_tif(cfg['images'][0]['img'], x,
-                                                     y, w, h), colors)
-        triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
-                                          os.path.join(tile_dir, 'height_map.tif'),
-                                          cfg['images'][0]['rpc'], H,
-                                          colors,
-                                          utm_zone=cfg['utm_zone'],
-                                          llbbx=tuple(cfg['ll_bbx']))
-    except Exception:
-        print("Exception in tile_fusion_and_ply:")
-        traceback.print_exc()
-        raise
+    # merge the height maps (applying mean offset to register)
+    fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
+                   mean_heights_global, averaging=cfg['fusion_operator'],
+                   threshold=cfg['fusion_thresh'])
 
-    # close logs
-    common.garbage_cleanup()
-    if not cfg['debug']:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        f.close()
+    # compute ply: H is the homography transforming the coordinates system of
+    # the original full size image into the coordinates system of the crop
+    x, y, w, h = tile['coordinates']
+    z = cfg['subsampling_factor']
+    H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
+    colors = os.path.join(tile_dir, 'ref.png')
+    if cfg['images'][0]['clr']:
+        common.image_crop_tif(cfg['images'][0]['clr'], x, y, w, h, colors)
+    else:
+        common.image_qauto(common.image_crop_tif(cfg['images'][0]['img'], x, y,
+                                                 w, h), colors)
+    triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
+                                      os.path.join(tile_dir, 'height_map.tif'),
+                                      cfg['images'][0]['rpc'], H, colors,
+                                      utm_zone=cfg['utm_zone'],
+                                      llbbx=tuple(cfg['ll_bbx']))
 
 
 def compute_dsm(tiles):
@@ -420,7 +344,32 @@ def lidar_preprocessor(tiles):
         shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
-def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
+def tilewise_wrapper(fun, *args, **kwargs):
+    """
+    """
+    if not cfg['debug']:  # redirect stdout and stderr to log file
+        # the last argument '0' disables buffering
+        f = open(kwargs['stdout'], 'a', 0)
+        sys.stdout = f
+        sys.stderr = f
+
+    try:
+        out = fun(*args)
+    except Exception:
+        print("Exception in %s" % fun.__name__)
+        traceback.print_exc()
+        raise
+
+    common.garbage_cleanup()
+    if not cfg['debug']:  # close logs
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        f.close()
+
+    return out
+
+
+def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
     """
     Run a function several times in parallel with different given inputs.
 
@@ -429,8 +378,8 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
         list_of_args: list of (first positional) arguments passed to fun, one
             per call
         nb_workers: number of calls run simultaneously
-        extra_args (optional, default is None): tuple containing extra arguments
-            to be passed to fun (same value for all calls)
+        extra_args (optional): tuple containing extra arguments to be passed to
+            fun (same value for all calls)
     """
     results = []
     outputs = []
@@ -438,8 +387,15 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     show_progress.total = len(list_of_args)
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
-        args = (x,) + extra_args if extra_args else (x,)
-        results.append(pool.apply_async(fun, args=args, callback=show_progress))
+        if type(x) == tuple:
+            args = (fun,) + x + extra_args
+            log = os.path.join(x[0]['directory'], 'pair_%d' % x[1], 'stdout.log')
+        else:
+            args = (fun, x) + extra_args
+            log = os.path.join(x['directory'], 'stdout.log')
+        results.append(pool.apply_async(tilewise_wrapper, args=args,
+                                        kwds={'stdout': log},
+                                        callback=show_progress))
 
     for r in results:
         try:
@@ -473,6 +429,7 @@ def main(config_file):
     initialization.build_cfg(config_file)
     initialization.make_dirs()
     tiles = initialization.tiles_full_info()
+    tiles_pairs = [(t, i) for i in xrange(1, len(cfg['images'])) for t in tiles]
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -485,15 +442,27 @@ def main(config_file):
 
     # do the job
     print '\ncorrecting pointing locally...'
-    launch_parallel_calls(pointing_correction, tiles, nb_workers)
+    launch_parallel_calls(pointing_correction_pair, tiles_pairs, nb_workers)
     print_elapsed_time()
 
     print '\ncorrecting pointing globally...'
     global_pointing_correction(tiles)
     print_elapsed_time()
 
-    print '\nprocessing tiles...'
-    mean_heights_local = launch_parallel_calls(process_tile, tiles, nb_workers)
+    print '\nrectifying tiles...'
+    launch_parallel_calls(rectification_pair, tiles_pairs, nb_workers)
+    print_elapsed_time()
+
+    print '\nrunning stereo matching...'
+    launch_parallel_calls(disparity_pair, tiles_pairs, nb_workers)
+    print_elapsed_time()
+
+    print '\ntriangulating tiles...'
+    launch_parallel_calls(triangulation_pair, tiles_pairs, nb_workers)
+    print_elapsed_time()
+
+    print '\nregistering height maps...'
+    mean_heights_local = launch_parallel_calls(compute_mean_heights, tiles, nb_workers)
     print_elapsed_time()
 
     print '\ncompute global pairwise height offsets...'
@@ -502,7 +471,7 @@ def main(config_file):
 
     print '\nmerge height maps and compute ply clouds...'
     launch_parallel_calls(tile_fusion_and_ply, tiles, nb_workers,
-                          (mean_heights_global,))
+                          mean_heights_global)
     print_elapsed_time()
 
     print '\ncompute dsm...'
