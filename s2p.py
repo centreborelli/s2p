@@ -20,7 +20,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import glob
 import shutil
 import os.path
 import datetime
@@ -39,6 +38,8 @@ from python import globalvalues
 from python import process
 from python import fusion
 from python import triangulation
+from python import pointing_accuracy
+from python import visualisation
 
 
 def show_progress(a):
@@ -80,40 +81,79 @@ def print_elapsed_time(since_first_call=False):
     print_elapsed_time.t1 = t2
 
 
-def preprocess_tile(tile):
+def pointing_correction_pair(tile, pair_id):
     """
-    Compute pointing corrections and extrema intensities for a single tile.
+    Compute the translation that correct the pointing error on a pair of tiles.
 
     Args:
-        tile: dictionary containing all the information needed to process a
-            tile.
+        tile: dictionary containing the information needed to process the tile
+        pair_id: index of the pair
     """
-    # redirect stdout and stderr to log file
-    if not cfg['debug']:
+    x, y, w, h = tile['coordinates']
+    tile_dir = os.path.join(tile['directory'], 'pair_%d' % pair_id)
+    img1 = cfg['images'][0]['img']
+    rpc1 = cfg['images'][0]['rpc']
+    img2 = cfg['images'][pair_id]['img']
+    rpc2 = cfg['images'][pair_id]['rpc']
+
+    if cfg['skip_existing'] and os.path.isfile(os.path.join(tile_dir,
+                                                            'pointing.txt')):
+        print "pointing correction on tile %d %d (pair %d) already done" % (x, y, i)
+        return
+    else:  # correct pointing error
+        A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2,
+                                                    x, y, w, h)
+    if A is not None:  # A is the correction matrix
+        np.savetxt(os.path.join(tile_dir, 'pointing.txt'), A, fmt='%6.3f')
+    if m is not None:  # m is the list of sift matches
+        np.savetxt(os.path.join(tile_dir, 'sift_matches.txt'), m, fmt='%9.3f')
+        np.savetxt(os.path.join(tile_dir, 'center_keypts_sec.txt'),
+                   np.mean(m[:, 2:], 0), fmt='%9.3f')
+        if cfg['debug']:
+            visualisation.plot_matches(img1, img2, rpc1, rpc2, m, x, y, w, h,
+                                       os.path.join(tile_dir,
+                                                    'sift_matches_plot.png'))
+
+
+def pointing_correction(tile):
+    """
+    Compute pointing corrections for a single tile.
+
+    Args:
+        tile: dictionary containing the information needed to process a tile.
+    """
+    if not cfg['debug']:  # redirect stdout and stderr to log file
         f = open(os.path.join(tile['directory'], 'stdout.log'), 'w', 0)  # 0 for no buffering
         sys.stdout = f
         sys.stderr = f
 
     try:
-        preprocess.pointing_correction(tile)
+        for i in xrange(1, len(cfg['images'])):
+            pointing_correction_pair(tile, i)
     except Exception:
-        print("Exception in preprocessing tile:")
+        print("Exception in pointing_correction:")
         traceback.print_exc()
         raise
 
-    # close logs
     common.garbage_cleanup()
-    if not cfg['debug']:
+    if not cfg['debug']:  # close logs
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         f.close()
 
 
-def global_values(tiles):
+def global_pointing_correction(tiles):
     """
-    Compute the global pointing correction and extrema intensities for the ROI.
+    Compute the global pointing corrections for each pair of images.
+
+    Args:
+        tiles: list of tile dictionaries
     """
-    globalvalues.pointing_correction(tiles)
+    for i in xrange(1, len(cfg['images'])):
+        out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
+        if not (os.path.isfile(out) and cfg['skip_existing']):
+            l = [os.path.join(t['directory'], 'pair_%d' % i) for t in tiles]
+            np.savetxt(out, pointing_accuracy.global_from_local(l), fmt='%12.6f')
 
 
 def process_tile_pair(tile, pair_id):
@@ -123,8 +163,7 @@ def process_tile_pair(tile, pair_id):
     It includes rectification, disparity estimation and triangulation.
 
     Args:
-        tile: dictionary containing all the information needed to process a
-            tile.
+        tile: dictionary containing the information needed to process a tile.
         pair_id: index of the pair to process
     """
     # read all the information
@@ -347,6 +386,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     results = []
     outputs = []
     show_progress.counter = 0
+    show_progress.total = len(list_of_args)
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
         args = (x,) + extra_args if extra_args else (x,)
@@ -375,14 +415,6 @@ def main(config_file, steps=range(1, 9)):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
 
-    It is a succession of six steps:
-        initialization
-        preprocessing
-        global_values
-        processing
-        compute dsms
-        global_finalization
-
     Args:
         config_file: path to a json configuration file
         steps: list of integers between 1 and 8 specifying which steps to run.
@@ -406,19 +438,17 @@ def main(config_file, steps=range(1, 9)):
 
     # do the job
     if 2 in steps:
-        print '\npreprocessing tiles...'
-        show_progress.total = len(tiles)
-        launch_parallel_calls(preprocess_tile, tiles, nb_workers)
+        print '\ncorrecting pointing locally...'
+        launch_parallel_calls(pointing_correction, tiles, nb_workers)
         print_elapsed_time()
 
     if 3 in steps:
-        print '\ncomputing global values...'
-        global_values(tiles)
+        print '\ncorrecting pointing globally...'
+        global_pointing_correction(tiles)
         print_elapsed_time()
 
     if 4 in steps:
         print '\nprocessing tiles...'
-        show_progress.total = len(tiles)
         mean_heights_local = launch_parallel_calls(process_tile,
                                                    tiles, nb_workers)
         print_elapsed_time()

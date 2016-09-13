@@ -103,8 +103,8 @@ def plot_matches(im1, im2, matches):
     return outfile
 
 
-def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
-        w=None, h=None, outfile=None):
+def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
+                 outfile=None):
     """
     Plot matches on Pleiades images
 
@@ -123,7 +123,7 @@ def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None,
     """
     # if no matches, no plot
     if not matches.size:
-        print "visualisation.plot_matches_pleiades: nothing to plot"
+        print "visualisation.plot_matches: nothing to plot"
         return
 
     # read rpcs
@@ -217,7 +217,7 @@ def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h,
         matches_sift=None, f=100, out_files_pattern=None):
     """
     Args:
-        im1, im2: path to full pleiades images
+        im1, im2: path to full images
         rpc1, rcp2: path to associated rpc xml files
         x, y, w, h: four integers defining the rectangular tile in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
