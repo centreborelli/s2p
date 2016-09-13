@@ -167,7 +167,12 @@ def adjust_tile_size():
     tile_h = int(np.ceil(float(cfg['roi']['h']) / nty))
 
     print 'tile size: {} {}'.format(tile_w, tile_h)
-    print 'total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty)
+    n = len(cfg['images'])
+    if n == 2:
+        print 'total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty)
+    else:
+        print 'total number of tiles: {} ({} x {} x {})'.format(ntx*nty*(n-1),
+                                                                ntx, nty, n-1)
     return tile_w, tile_h
 
 

@@ -252,7 +252,7 @@ def compute_mean_heights(tile):
     return [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)]
 
 
-def tile_fusion_and_ply(tile, mean_heights_global):
+def tile_fusion(tile, mean_heights_global):
     """
     Merge the height maps computed for each image pair and generate a ply cloud.
 
@@ -263,7 +263,6 @@ def tile_fusion_and_ply(tile, mean_heights_global):
     """
     tile_dir = tile['directory']
     nb_pairs = len(mean_heights_global)
-
     height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
                    for i in xrange(nb_pairs)]
 
@@ -277,10 +276,20 @@ def tile_fusion_and_ply(tile, mean_heights_global):
                    mean_heights_global, averaging=cfg['fusion_operator'],
                    threshold=cfg['fusion_thresh'])
 
-    # compute ply: H is the homography transforming the coordinates system of
-    # the original full size image into the coordinates system of the crop
+
+def compute_ply(tile):
+    """
+    Generate a ply cloud.
+
+    Args:
+        tile: a dictionary that provides all you need to process a tile
+    """
+    tile_dir = tile['directory']
     x, y, w, h = tile['coordinates']
     z = cfg['subsampling_factor']
+
+    # H is the homography transforming the coordinates system of the original
+    # full size image into the coordinates system of the crop
     H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
     colors = os.path.join(tile_dir, 'ref.png')
     if cfg['images'][0]['clr']:
@@ -469,9 +478,12 @@ def main(config_file):
     mean_heights_global = np.mean(mean_heights_local, axis=0)
     print_elapsed_time()
 
-    print '\nmerge height maps and compute ply clouds...'
-    launch_parallel_calls(tile_fusion_and_ply, tiles, nb_workers,
-                          mean_heights_global)
+    print '\nmerging height maps...'
+    launch_parallel_calls(tile_fusion, tiles, nb_workers, mean_heights_global)
+    print_elapsed_time()
+
+    print '\ncomputing point clouds...'
+    launch_parallel_calls(compute_ply, tiles, nb_workers)
     print_elapsed_time()
 
     print '\ncompute dsm...'
