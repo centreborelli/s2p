@@ -357,14 +357,14 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
     if debug:
         theta_1 = get_angle_from_cos_and_sin(b, a)
         print "reference image:"
-        print "\trotation: %f deg " % np.rad2deg(theta_1)
-        print "\tzoom: %f " % z
+        print "\trotation: %f deg" % np.rad2deg(theta_1)
+        print "\tzoom: %f" % z
         print "\tvertical translation: %f" % t
         print
         theta_2 = get_angle_from_cos_and_sin(-d, -c)
         print "secondary image:"
-        print "\trotation: %f deg " % np.rad2deg(theta_2)
-        print "\tzoom: %f " % (1.0 / z)
+        print "\trotation: %f deg" % np.rad2deg(theta_2)
+        print "\tzoom: %f" % (1.0 / z)
         print "\tvertical translation: %f" % -t
 
     # output similarities
