@@ -1,10 +1,10 @@
-# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 
-import os 
+import os
 import numpy as np
 
 from config import cfg
@@ -25,26 +25,3 @@ def pointing_correction(tiles):
                              tiles]
             np.savetxt(global_point_file,
                        pointing_accuracy.global_from_local(list_of_tiles), fmt='%12.6f')
-
-
-def minmax_intensities(tiles):
-    """
-    Compute the min and max intensities from the tiles that will be processed.
-
-    This will allow to re-code colors by using 8-bits instead of 12-bits or
-    more, and to better vizualise the ply files.
-
-    Args:
-         tiles: list of tile dictionaries
-    """
-    min_max_file = os.path.join(cfg['out_dir'], 'global_minmax.txt')
-    if not (os.path.isfile(min_max_file) and cfg['skip_existing']):
-        minlist = []
-        maxlist = []
-        for tile in tiles:
-            minmax = np.loadtxt(os.path.join(tile['directory'],
-                                             'local_minmax.txt'))
-            minlist.append(minmax[0])
-            maxlist.append(minmax[1])
-
-        np.savetxt(min_max_file, [min(minlist), max(maxlist)], fmt='%6.3f')

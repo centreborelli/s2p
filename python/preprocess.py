@@ -1,47 +1,13 @@
-# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import os
-import sys
-import multiprocessing
 import numpy as np
 
 from config import cfg
-from python import common
-from python import masking
 from python import pointing_accuracy
 from python import visualisation
-
-
-def minmax_color_on_tile(tile_info):
-    """
-    Compute min and max intensities on a given tile and save them to a txt file.
-
-    Args:
-        tile_info: dictionary containing all the information needed to process
-            the tile
-    """
-    # read info
-    img = cfg['images'][0]['img']
-    coords = tile_info['coordinates']
-    tile_dir = tile_info['directory']
-    z = cfg['subsampling_factor']
-
-    # output files
-    crop_ref = os.path.join(tile_dir, 'roi_ref.tif')
-    local_minmax = os.path.join(tile_dir, 'local_minmax.txt')
-
-    # do the job
-    if os.path.isfile(crop_ref) and cfg['skip_existing']:
-        print 'roi_ref.tif for tile %s already generated, skip' % tile_dir
-    else:
-        common.cropImage(img, crop_ref, *coords, zoom=z)
-    if os.path.isfile(os.path.join(tile_dir, 'local_minmax.txt')) and cfg['skip_existing']:
-        print 'extrema intensities on tile %s already computed, skip' % tile_dir
-    else:
-        common.image_getminmax(crop_ref, local_minmax)
 
 
 def pointing_correction(tile_info):

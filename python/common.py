@@ -519,7 +519,6 @@ def image_qauto(im, out=None, tilewise=False):
     if out is None:
         extension = '.tif' if tilewise else '.png'
         out = tmpfile(extension)
-        out = tmpfile(extension)
     if tilewise:
         os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
         run('tiffu meta \"qauto ^ @\" %s -- %s' % (im, out))

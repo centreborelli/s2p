@@ -96,7 +96,6 @@ def preprocess_tile(tile):
 
     try:
         preprocess.pointing_correction(tile)
-        preprocess.minmax_color_on_tile(tile)
     except Exception:
         print("Exception in preprocessing tile:")
         traceback.print_exc()
@@ -115,7 +114,6 @@ def global_values(tiles):
     Compute the global pointing correction and extrema intensities for the ROI.
     """
     globalvalues.pointing_correction(tiles)
-    globalvalues.minmax_intensities(tiles)
 
 
 def process_tile_pair(tile, pair_id):
@@ -260,11 +258,13 @@ def tile_fusion_and_ply(tile, mean_heights_global):
         x, y, w, h = tile['coordinates']
         z = cfg['subsampling_factor']
         H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
-        process.color_crop_ref(tile, clr=cfg['images'][0]['clr'])
+        colors = os.path.join(tile_dir, 'crop_ref.tif')
+        common.image_crop_tif(cfg['images'][0]['img'], x, y, w, h, colors)
+        common.image_qauto(colors, colors)
         triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
                                           os.path.join(tile_dir, 'height_map.tif'),
                                           cfg['images'][0]['rpc'], H,
-                                          os.path.join(tile_dir, 'roi_color_ref.tif'),
+                                          colors,
                                           utm_zone=cfg['utm_zone'],
                                           llbbx=tuple(cfg['ll_bbx']))
     except Exception:

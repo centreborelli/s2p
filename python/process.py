@@ -8,81 +8,9 @@ import numpy as np
 
 from config import cfg
 from python import common
-from python import triangulation
 from python import block_matching
 from python import rectification
 from python import masking
-
-
-def color_crop_ref(tile_info, clr=None):
-    """
-    Colorizations of a crop_ref (for a given tile)
-
-    Args:
-        tile_info: a dictionary that provides all you need to process a tile
-        clr (optional): if crop_ref is a pan image, will perform the pansharpening with the color image clr
-
-        If clr is None then:
-            case 1: tile is an RGBI image, so removes I channel, and perform rescaling of the remaining channels
-            case 2: tile is already an RGB image, so just perform rescaling
-
-        Note that if rescaling is already performed, then the file applied_minmax.txt exists:
-            if applied_minmax.txt exists and cfg['skip_existing'] is True, rescaling won't be performed again
-            if applied_minmax.txt exists and is different from global_minmax, rescaling will be compulsorily performed (can occur if a new tile is added)
-    """
-    # get info
-    x, y, w, h = tile_info['coordinates']
-    tile_dir = tile_info['directory']
-    z = cfg['subsampling_factor']
-
-    # paths
-    global_minmax = cfg['out_dir'] + '/global_minmax.txt'
-    applied_minmax = tile_dir + '/applied_minmax.txt'
-
-    global_minmax_arr = np.loadtxt(global_minmax)
-
-    # crop ref
-    crop_ref = os.path.join(tile_dir, 'roi_ref_crop.tif')
-    common.image_crop_tif(cfg['images'][0]['img'], x, y, w, h, crop_ref)
-
-    if cfg['color_ply']:
-
-        doProcess = False
-        if not os.path.exists(applied_minmax):
-            doProcess = True
-            applied_minmax_arr = global_minmax_arr
-        else:
-            applied_minmax_arr = np.loadtxt(applied_minmax)
-
-            if (applied_minmax_arr[0] != global_minmax_arr[0]) or (applied_minmax_arr[1] != global_minmax_arr[1]):
-                doProcess = True
-                applied_minmax_arr = global_minmax_arr
-
-        if not doProcess and cfg['skip_existing']:
-            print 'Rescaling of tile %s already done, skip' % tile_dir
-        else:
-
-            crop_color = tile_dir + '/roi_color_ref.tif'
-            if clr is not None:
-                triangulation.colorize(crop_ref, clr, x, y, z, crop_color,
-                                       applied_minmax_arr[0],
-                                       applied_minmax_arr[1])
-            else:  # use of image_rescaleintensities
-                np.savetxt(applied_minmax, applied_minmax_arr)
-
-                if common.image_pix_dim_tiffinfo(crop_ref) == 4:
-                    print 'the image is pansharpened fusioned'
-                    tmp = common.rgbi_to_rgb(crop_ref, out=None, tilewise=True)
-                    #common.image_qauto(tmp, crop_color, tilewise=False)
-                    common.image_rescaleintensities(tmp, crop_color,
-                                                    applied_minmax_arr[0],
-                                                    applied_minmax_arr[1])
-                else:
-                    print 'no color data'
-                    #common.image_qauto(crop_ref, crop_color, tilewise=False)
-                    common.image_rescaleintensities(crop_ref, crop_color,
-                                                    applied_minmax_arr[0],
-                                                    applied_minmax_arr[1])
 
 
 def cargarse_basura(inputf, outputf):
