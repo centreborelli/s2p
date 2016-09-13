@@ -258,9 +258,12 @@ def tile_fusion_and_ply(tile, mean_heights_global):
         x, y, w, h = tile['coordinates']
         z = cfg['subsampling_factor']
         H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
-        colors = os.path.join(tile_dir, 'crop_ref.tif')
-        common.image_crop_tif(cfg['images'][0]['img'], x, y, w, h, colors)
-        common.image_qauto(colors, colors)
+        colors = os.path.join(tile_dir, 'ref.png')
+        if cfg['images'][0]['clr']:
+            common.image_crop_tif(cfg['images'][0]['clr'], x, y, w, h, colors)
+        else:
+            common.image_qauto(common.image_crop_tif(cfg['images'][0]['img'], x,
+                                                     y, w, h), colors)
         triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
                                           os.path.join(tile_dir, 'height_map.tif'),
                                           cfg['images'][0]['rpc'], H,
