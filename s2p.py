@@ -81,38 +81,41 @@ def print_elapsed_time(since_first_call=False):
     print_elapsed_time.t1 = t2
 
 
-def pointing_correction_pair(tile, i):
+def pointing_correction_pair(tile, i=None):
     """
     Compute the translation that correct the pointing error on a pair of tiles.
 
     Args:
         tile: dictionary containing the information needed to process the tile
-        i: index of the pair
+        i: index of the processed pair. If None, there's only one pair.
     """
     x, y, w, h = tile['coordinates']
-    tile_dir = os.path.join(tile['directory'], 'pair_%d' % i)
+    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
-    img2 = cfg['images'][i]['img']
-    rpc2 = cfg['images'][i]['rpc']
+    img2 = cfg['images'][i]['img'] if i else cfg['images'][1]['img']
+    rpc2 = cfg['images'][i]['rpc'] if i else cfg['images'][1]['rpc']
 
-    if cfg['skip_existing'] and os.path.isfile(os.path.join(tile_dir,
+    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
                                                             'pointing.txt')):
-        print 'pointing correction done on tile %d %d pair %d'.format(x, y, i)
+        print 'pointing correction done on tile {} {}'.format(x, y),
+        print 'pair {}'.format(i) if i else ''
         return
 
     # correct pointing error
+    print 'correcting pointing on tile {} {}'.format(x, y),
+    print 'pair {}...'.format(i) if i else '...'
     A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
 
     if A is not None:  # A is the correction matrix
-        np.savetxt(os.path.join(tile_dir, 'pointing.txt'), A, fmt='%6.3f')
+        np.savetxt(os.path.join(out_dir, 'pointing.txt'), A, fmt='%6.3f')
     if m is not None:  # m is the list of sift matches
-        np.savetxt(os.path.join(tile_dir, 'sift_matches.txt'), m, fmt='%9.3f')
-        np.savetxt(os.path.join(tile_dir, 'center_keypts_sec.txt'),
+        np.savetxt(os.path.join(out_dir, 'sift_matches.txt'), m, fmt='%9.3f')
+        np.savetxt(os.path.join(out_dir, 'center_keypts_sec.txt'),
                    np.mean(m[:, 2:], 0), fmt='%9.3f')
         if cfg['debug']:
             visualisation.plot_matches(img1, img2, rpc1, rpc2, m, x, y, w, h,
-                                       os.path.join(tile_dir,
+                                       os.path.join(out_dir,
                                                     'sift_matches_plot.png'))
 
 
@@ -123,34 +126,48 @@ def global_pointing_correction(tiles):
     Args:
         tiles: list of tile dictionaries
     """
-    for i in xrange(1, len(cfg['images'])):
-        out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
+    if len(cfg['images']) == 2:
+        out = os.path.join(cfg['out_dir'], 'global_pointing.txt')
         if not (os.path.isfile(out) and cfg['skip_existing']):
-            l = [os.path.join(t['directory'], 'pair_%d' % i) for t in tiles]
-            np.savetxt(out, pointing_accuracy.global_from_local(l), fmt='%12.6f')
+            np.savetxt(out, pointing_accuracy.global_from_local(t['directory']
+                                                                for t in tiles),
+                       fmt='%12.6f')
+    else:
+        for i in xrange(1, len(cfg['images'])):
+            out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
+            if not (os.path.isfile(out) and cfg['skip_existing']):
+                l = [os.path.join(t['directory'], 'pair_%d' % i) for t in tiles]
+                np.savetxt(out, pointing_accuracy.global_from_local(l),
+                           fmt='%12.6f')
 
 
-def rectification_pair(tile, i):
+def rectification_pair(tile, i=None):
     """
     Rectify a pair of images on a given tile.
 
     Args:
         tile: dictionary containing the information needed to process a tile.
-        i: index of the pair to process
+        i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i))
+    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
     x, y, w, h = tile['coordinates']
-    img1, rpc1 = cfg['images'][0]['img'], cfg['images'][0]['rpc']
-    img2, rpc2 = cfg['images'][i]['img'], cfg['images'][i]['rpc']
-    pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
+    img1 = cfg['images'][0]['img']
+    rpc1 = cfg['images'][0]['rpc']
+    img2 = cfg['images'][i]['img'] if i else cfg['images'][1]['img']
+    rpc2 = cfg['images'][i]['rpc'] if i else cfg['images'][1]['rpc']
+    pointing = os.path.join(cfg['out_dir'],
+                            'global_pointing_pair_{}.txt'.format(i) if i else
+                            'global_pointing.txt')
 
     outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
-        print 'rectification done on tile {} {} pair {}'.format(x, y, i)
+        print 'rectification done on tile {} {}'.format(x, y),
+        print 'pair {}'.format(i) if i else ''
         return
 
-    print 'rectifying tile {} {} pair {}...'.format(x, y, i)
+    print 'rectifying tile {} {}'.format(x, y),
+    print 'pair {}...'.format(i) if i else '...'
     try:
         A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
     except IOError:
@@ -171,24 +188,26 @@ def rectification_pair(tile, i):
                             fmt='%3.1f')
 
 
-def disparity_pair(tile, i):
+def disparity_pair(tile, i=None):
     """
     Compute the disparity of a pair of images on a given tile.
 
     Args:
         tile: dictionary containing the information needed to process a tile.
-        i: index of the pair to process
+        i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i))
+    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
     x, y = tile['coordinates'][:2]
 
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
-        print 'disparity estimation done on tile {} {} pair {}'.format(x, y, i)
+        print 'disparity estimation done on tile {} {}'.format(x, y),
+        print 'pair {}'.format(i) if i else ''
         return
 
-    print 'estimating disparity on tile {} {} pair {}...'.format(x, y, i)
+    print 'estimating disparity on tile {} {}'.format(x, y),
+    print 'pair {}...'.format(i) if i else '...'
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
@@ -204,33 +223,36 @@ def disparity_pair(tile, i):
     masking.erosion(mask, mask, cfg['msk_erosion'])
 
 
-def triangulation_pair(tile, i):
+def triangulation_pair(tile, i=None):
     """
     Triangulate a pair of images on a given tile.
 
     Args:
         tile: dictionary containing the information needed to process a tile.
-        i: index of the pair to process
+        i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i))
+    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
     height_map = os.path.join(out_dir, 'height_map.tif')
     x, y, w, h = tile['coordinates']
 
     if cfg['skip_existing'] and os.path.isfile(height_map):
-        print 'triangulation done on tile {} {} pair {}'.format(x, y, i)
+        print 'triangulation done on tile {} {}'.format(x, y),
+        print 'pair {}'.format(i) if i else ''
         return
 
-    print 'triangulating tile {} {} pair {}...'.format(x, y, i)
+    print 'triangulating tile {} {}'.format(x, y),
+    print 'pair {}...'.format(i) if i else '...'
     rpc1 = cfg['images'][0]['rpc']
-    rpc2 = cfg['images'][i]['rpc']
+    rpc2 = cfg['images'][i]['rpc'] if i else cfg['images'][1]['rpc']
     H_ref = os.path.join(out_dir, 'H_ref.txt')
     H_sec = os.path.join(out_dir, 'H_sec.txt')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-    out_mask = os.path.join(os.path.dirname(out_dir),
-                            'cloud_water_image_domain_mask.png')
-    pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
+    out_mask = os.path.join(tile['directory'], 'cloud_water_image_domain_mask.png')
+    pointing = os.path.join(cfg['out_dir'],
+                            'global_pointing_pair_{}.txt'.format(i) if i else
+                            'global_pointing.txt')
     triangulation.height_map(height_map, x, y, w, h, cfg['subsampling_factor'],
                              rpc1, rpc2, H_ref, H_sec, disp, mask, rpc_err,
                              out_mask, pointing)
@@ -396,10 +418,10 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
     show_progress.total = len(list_of_args)
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
-        if type(x) == tuple:
+        if type(x) == tuple:  # we expect x = (tile_dictionary, pair_id)
             args = (fun,) + x + extra_args
             log = os.path.join(x[0]['directory'], 'pair_%d' % x[1], 'stdout.log')
-        else:
+        else:  # we expect x = tile_dictionary
             args = (fun, x) + extra_args
             log = os.path.join(x['directory'], 'stdout.log')
         results.append(pool.apply_async(tilewise_wrapper, args=args,
@@ -438,7 +460,11 @@ def main(config_file):
     initialization.build_cfg(config_file)
     initialization.make_dirs()
     tiles = initialization.tiles_full_info()
-    tiles_pairs = [(t, i) for i in xrange(1, len(cfg['images'])) for t in tiles]
+    if len(cfg['images']) > 2:
+        tiles_pairs = [(t, i) for i in xrange(1, len(cfg['images'])) for t in
+                       tiles]
+    else:
+        tiles_pairs = tiles
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -470,17 +496,20 @@ def main(config_file):
     launch_parallel_calls(triangulation_pair, tiles_pairs, nb_workers)
     print_elapsed_time()
 
-    print '\nregistering height maps...'
-    mean_heights_local = launch_parallel_calls(compute_mean_heights, tiles, nb_workers)
-    print_elapsed_time()
+    if len(cfg['images']) > 2:
+        print '\nregistering height maps...'
+        mean_heights_local = launch_parallel_calls(compute_mean_heights, tiles,
+                                                   nb_workers)
+        print_elapsed_time()
 
-    print '\ncompute global pairwise height offsets...'
-    mean_heights_global = np.mean(mean_heights_local, axis=0)
-    print_elapsed_time()
+        print '\ncompute global pairwise height offsets...'
+        mean_heights_global = np.mean(mean_heights_local, axis=0)
+        print_elapsed_time()
 
-    print '\nmerging height maps...'
-    launch_parallel_calls(tile_fusion, tiles, nb_workers, mean_heights_global)
-    print_elapsed_time()
+        print '\nmerging height maps...'
+        launch_parallel_calls(tile_fusion, tiles, nb_workers,
+                              mean_heights_global)
+        print_elapsed_time()
 
     print '\ncomputing point clouds...'
     launch_parallel_calls(compute_ply, tiles, nb_workers)

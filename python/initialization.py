@@ -223,9 +223,10 @@ def tiles_full_info():
 
             # make the directories
             common.mkdir_p(tile_info['directory'])
-            for i in xrange(1, len(cfg['images'])):
-                common.mkdir_p(os.path.join(tile_info['directory'],
-                                            'pair_{}'.format(i)))
+            if len(cfg['images']) > 2:
+                for i in xrange(1, len(cfg['images'])):
+                    common.mkdir_p(os.path.join(tile_info['directory'],
+                                                'pair_{}'.format(i)))
 
             # keep the mask
             shutil.copy(msk, os.path.join(tile_info['directory'],
