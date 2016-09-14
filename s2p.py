@@ -172,7 +172,7 @@ def rectification_pair(tile, i=None):
     try:
         A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
     except IOError:
-        A = pointing
+        A = np.loadtxt(pointing)
     try:
         m = np.loadtxt(os.path.join(out_dir, 'sift_matches.txt'))
     except IOError:
