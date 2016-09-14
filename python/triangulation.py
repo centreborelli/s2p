@@ -125,9 +125,9 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors,
     xbb = "--col-m %s --col-M %s --row-m %s --row-M %s" % xybbx if xybbx else ""
     msk = "--mask-orig %s" % xymsk if xymsk else ""
 
-    command = 'disp2ply {} {} {} {} {} {}'.format(out, disp, mask, rpc1, rpc2, colors)
-    command += '-href "{}" -hsec "{}"'.format(href, hsec)
-    command += '{} {} {} {}'.format(utm, lbb, xbb, msk)
+    command = 'disp2ply {} {} {} {} {}'.format(out, disp, mask, rpc1, rpc2)
+    command += ' {} -href "{}" -hsec "{}"'.format(colors, href, hsec)
+    command += ' {} {} {} {}'.format(utm, lbb, xbb, msk)
     common.run(command)
 
 

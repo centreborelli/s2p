@@ -83,9 +83,9 @@ void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
 }
 
 
-static void parse_utm_string(int *zone, bool *hem, char *s)
+static void parse_utm_string(int *zone, bool *hem, const char *s)
 {
-    if (s == "no_utm_zone") {
+    if (strncmp(s, "no_utm_zone", 12)) {
         *zone = -1;
         return;
     }
@@ -139,7 +139,7 @@ int main(int c, char *v[])
     // utm zone and hemisphere: true for 'N' and false for 'S'
     int zone;
     bool hem;
-    char *utm_string = pick_option(&c, &v, "-utm-zone", "no_utm_zone");
+    const char *utm_string = pick_option(&c, &v, "-utm-zone", "no_utm_zone");
     parse_utm_string(&zone, &hem, utm_string);
 
     // ascii flag
@@ -158,32 +158,31 @@ int main(int c, char *v[])
     double row_M = atof(pick_option(&c, &v, "-row-M", "inf"));
 
     // mask on the unrectified image grid
-    int w, h;
-    char *msk_orig = pick_option(&c, &v, "-mask-orig", "");
-    float *mask_orig = iio_read_image_float(msk_orig, &w, &h);
-    if ((w != (int) col_M - col_m + 1) || (h != (int) row_M - row_m + 1))
-        fail("mask-orig and x-y bounding box size mismatch\n");
+    const char *msk_orig_fname = pick_option(&c, &v, "-mask-orig", "");
+    int msk_orig_w, msk_orig_h;
+    float *msk_orig = iio_read_image_float(msk_orig_fname, &msk_orig_w,
+                                           &msk_orig_h);
 
     // rectifying homography
     double href_inv[9], hsec_inv[9];
     int n_hom;
-    char *hom_string = pick_option(&c, &v, "href", "");
-    if (*hom_string) {
-        double *hom = alloc_parse_doubles(9, hom_string, &n_hom);
+    const char *hom_string_ref = pick_option(&c, &v, "href", "");
+    if (*hom_string_ref) {
+        double *hom = alloc_parse_doubles(9, hom_string_ref, &n_hom);
         if (n_hom != 9)
-            fail("can not read 3x3 matrix from \"%s\"", hom_string);
+            fail("can not read 3x3 matrix from \"%s\"", hom_string_ref);
         invert_homography(href_inv, hom);
     }
-    hom_string = pick_option(&c, &v, "hsec", "");
-    if (*hom_string) {
-        double *hom = alloc_parse_doubles(9, hom_string, &n_hom);
+    const char *hom_string_sec = pick_option(&c, &v, "hsec", "");
+    if (*hom_string_sec) {
+        double *hom = alloc_parse_doubles(9, hom_string_sec, &n_hom);
         if (n_hom != 9)
-            fail("can not read 3x3 matrix from \"%s\"", hom_string);
+            fail("can not read 3x3 matrix from \"%s\"", hom_string_sec);
         invert_homography(hsec_inv, hom);
     }
 
     // open disp and mask input images
-    int ww, hh, pd;
+    int w, h, ww, hh, pd;
     float *disp = iio_read_image_float(v[2], &w, &h);
     float *mask = iio_read_image_float(v[3], &ww, &hh);
     if (w != ww || h != hh) fail("disp and mask image size mismatch\n");
@@ -215,12 +214,14 @@ int main(int c, char *v[])
         apply_homography(p, href_inv, a);
 
         // check that it lies in the image domain bounding box
-        if (p[0] < col_m || p[0] > col_M || p[1] < row_m || p[1] > row_M)
+        if (round(p[0]) < col_m || round(p[0]) > col_M ||
+            round(p[1]) < row_m || round(p[1]) > row_M)
             continue;
 
         // check that it passes the image domain mask
-        int pix2 = ((int) round(p[1]) - row_m) * (col_M - col_m + 1) + (int) round(p[0]) - col_m;
-        if (!mask_orig[pix2])
+        int x = (int) round(p[0]) - col_m;
+        int y = (int) round(p[1]) - row_m;
+        if (!msk_orig[y * msk_orig_w + x])
             continue;
 
         // compute (lon, lat, alt) of the 3D point
@@ -257,12 +258,14 @@ int main(int c, char *v[])
         apply_homography(p, href_inv, a);
 
         // check that it lies in the image domain bounding box
-        if (p[0] < col_m || p[0] > col_M || p[1] < row_m || p[1] > row_M)
+        if (round(p[0]) < col_m || round(p[0]) > col_M ||
+            round(p[1]) < row_m || round(p[1]) > row_M)
             continue;
 
         // check that it passes the image domain mask
-        int pix2 = ((int) round(p[1]) - row_m) * (col_M - col_m + 1) + (int) round(p[0]) - col_m;
-        if (!mask_orig[pix2])
+        int x = (int) round(p[0]) - col_m;
+        int y = (int) round(p[1]) - row_m;
+        if (!msk_orig[y * msk_orig_w + x])
             continue;
 
         // compute (lon, lat, alt) of the 3D point

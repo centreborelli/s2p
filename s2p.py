@@ -298,7 +298,7 @@ def disparity_to_ply(tile):
                                           H_ref, H_sec, pointing, colors,
                                           utm_zone=cfg['utm_zone'],
                                           llbbx=tuple(cfg['ll_bbx']),
-                                          xybbx=(x, x+w-1, y, y+h-1),
+                                          xybbx=(x, x+w, y, y+h),
                                           xymsk=mask_orig)
 
 
@@ -508,9 +508,9 @@ def main(config_file):
     initialization.build_cfg(config_file)
     initialization.make_dirs()
     tiles = initialization.tiles_full_info()
-    if len(cfg['images']) > 2:
-        tiles_pairs = [(t, i) for i in xrange(1, len(cfg['images'])) for t in
-                       tiles]
+    n = len(cfg['images'])
+    if n > 2:
+        tiles_pairs = [(t, i) for i in xrange(1, n) for t in tiles]
     else:
         tiles_pairs = tiles
 
@@ -536,7 +536,7 @@ def main(config_file):
     print 'running stereo matching...'
     launch_parallel_calls(stereo_matching, tiles_pairs, nb_workers)
 
-    if len(cfg['images']) > 2:
+    if n > 2:
         print 'computing height maps...'
         launch_parallel_calls(disparity_to_height, tiles_pairs, nb_workers)
 
