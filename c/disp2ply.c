@@ -4,6 +4,7 @@
 #include "iio.h"
 #include "rpc.h"
 #include "fail.c"
+#include "parsenumbers.c"
 #include "pickopt.c"
 #include "read_matrix.c"
 
@@ -11,28 +12,32 @@
 void utm_alt_zone(double *out, double lat, double lon, int zone);
 void utm_zone(int *zone, bool *northp, double lat, double lon);
 
-static void apply_homography(double y[2], double h[3][3], double x[2])
+
+static void apply_homography(double y[2], double h[9], double x[2])
 {
-    double z = h[2][0]*x[0] + h[2][1]*x[1] + h[2][2];
-    y[0] = (h[0][0]*x[0] + h[0][1]*x[1] + h[0][2]) / z;
-    y[1] = (h[1][0]*x[0] + h[1][1]*x[1] + h[1][2]) / z;
+    //                    h[0] h[1] h[2]
+    // The convention is: h[3] h[4] h[5]
+    //                    h[6] h[7] h[8]
+    double z = h[6]*x[0] + h[7]*x[1] + h[8];
+    double tmp = x[0];  // to enable calls like 'apply_homography(x, h, x)'
+    y[0] = (h[0]*x[0] + h[1]*x[1] + h[2]) / z;
+    y[1] = (h[3]*tmp  + h[4]*x[1] + h[5]) / z;
 }
 
 
-static double invert_homography(double invh[3][3], double h[3][3])
+static double invert_homography(double o[9], double i[9])
 {
-    double *a = h[0], *r = invh[0];
-    double det = a[0]*a[4]*a[8] + a[2]*a[3]*a[7] + a[1]*a[5]*a[6]
-               - a[2]*a[4]*a[6] - a[1]*a[3]*a[8] - a[0]*a[5]*a[7];
-    r[0] = (a[4]*a[8] - a[5]*a[7]) / det;
-    r[1] = (a[2]*a[7] - a[1]*a[8]) / det;
-    r[2] = (a[1]*a[5] - a[2]*a[4]) / det;
-    r[3] = (a[5]*a[6] - a[3]*a[8]) / det;
-    r[4] = (a[0]*a[8] - a[2]*a[6]) / det;
-    r[5] = (a[2]*a[3] - a[0]*a[5]) / det;
-    r[6] = (a[3]*a[7] - a[4]*a[6]) / det;
-    r[7] = (a[1]*a[6] - a[0]*a[7]) / det;
-    r[8] = (a[0]*a[4] - a[1]*a[3]) / det;
+    double det = i[0]*i[4]*i[8] + i[2]*i[3]*i[7] + i[1]*i[5]*i[6]
+               - i[2]*i[4]*i[6] - i[1]*i[3]*i[8] - i[0]*i[5]*i[7];
+    o[0] = (i[4]*i[8] - i[5]*i[7]) / det;
+    o[1] = (i[2]*i[7] - i[1]*i[8]) / det;
+    o[2] = (i[1]*i[5] - i[2]*i[4]) / det;
+    o[3] = (i[5]*i[6] - i[3]*i[8]) / det;
+    o[4] = (i[0]*i[8] - i[2]*i[6]) / det;
+    o[5] = (i[2]*i[3] - i[0]*i[5]) / det;
+    o[6] = (i[3]*i[7] - i[4]*i[6]) / det;
+    o[7] = (i[1]*i[6] - i[0]*i[7]) / det;
+    o[8] = (i[0]*i[4] - i[1]*i[3]) / det;
     return det;
 }
 
@@ -115,15 +120,18 @@ void intersect_rays(double out[3], double p[2], double q[2], struct rpc *r1,
 
 static void help(char *s)
 {
-    fprintf(stderr, "\t usage: %s out.ply img_disp img_msk"
-            " hom_ref.txt hom_sec.txt rpc_ref.xml rpc_sec.xml"
-            " [img_ref] [--utm-zone ZONE] [--ascii]\n", s);
+    fprintf(stderr, "\t usage: %s out.ply disp.tif msk.png "
+            "rpc_ref.xml rpc_sec.xml [colors.png] "
+            "[-href \"h1 ... h9\"] [-hsec \"h1 ... h9\"] "
+            "[--utm-zone ZONE] [--ascii] [--mask-orig msk.png] "
+            "[--lon-m l0] [--lon-M lf] [--lat-m l0] [--lat-M lf] "
+            "[--col-m x0] [--col-M xf] [--row-m y0] [--row-M yf]\n", s);
 }
 
 
 int main(int c, char *v[])
 {
-    if (c != 8 && c != 9 && c != 10 && c != 11) {
+    if (c < 6 || c > 48) {
         help(v[0]);
         return 1;
     }
@@ -135,32 +143,62 @@ int main(int c, char *v[])
     parse_utm_string(&zone, &hem, utm_string);
 
     // ascii flag
-    bool ascii   = (pick_option(&c, &v, "-ascii", NULL) != NULL);
+    bool ascii = pick_option(&c, &v, "-ascii", NULL);
+
+    // longitude-latitude bounding box
+    double lon_m = atof(pick_option(&c, &v, "-lon-m", "-inf"));
+    double lon_M = atof(pick_option(&c, &v, "-lon-M", "inf"));
+    double lat_m = atof(pick_option(&c, &v, "-lat-m", "-inf"));
+    double lat_M = atof(pick_option(&c, &v, "-lat-M", "inf"));
+
+    // x-y bounding box
+    double col_m = atof(pick_option(&c, &v, "-col-m", "-inf"));
+    double col_M = atof(pick_option(&c, &v, "-col-M", "inf"));
+    double row_m = atof(pick_option(&c, &v, "-row-m", "-inf"));
+    double row_M = atof(pick_option(&c, &v, "-row-M", "inf"));
+
+    // mask on the unrectified image grid
+    int w, h;
+    char *msk_orig = pick_option(&c, &v, "-mask-orig", "");
+    float *mask_orig = iio_read_image_float(msk_orig, &w, &h);
+    if ((w != (int) col_M - col_m + 1) || (h != (int) row_M - row_m + 1))
+        fail("mask-orig and x-y bounding box size mismatch\n");
+
+    // rectifying homography
+    double href_inv[9], hsec_inv[9];
+    int n_hom;
+    char *hom_string = pick_option(&c, &v, "href", "");
+    if (*hom_string) {
+        double *hom = alloc_parse_doubles(9, hom_string, &n_hom);
+        if (n_hom != 9)
+            fail("can not read 3x3 matrix from \"%s\"", hom_string);
+        invert_homography(href_inv, hom);
+    }
+    hom_string = pick_option(&c, &v, "hsec", "");
+    if (*hom_string) {
+        double *hom = alloc_parse_doubles(9, hom_string, &n_hom);
+        if (n_hom != 9)
+            fail("can not read 3x3 matrix from \"%s\"", hom_string);
+        invert_homography(hsec_inv, hom);
+    }
 
     // open disp and mask input images
-    int w, h, ww, hh, pd;
+    int ww, hh, pd;
     float *disp = iio_read_image_float(v[2], &w, &h);
     float *mask = iio_read_image_float(v[3], &ww, &hh);
     if (w != ww || h != hh) fail("disp and mask image size mismatch\n");
 
     // open color images if provided
     uint8_t *clr = NULL;
-    if (c > 8) {
-        clr = iio_read_image_uint8_vec(v[8], &ww, &hh, &pd);
+    if (c > 6) {
+        clr = iio_read_image_uint8_vec(v[6], &ww, &hh, &pd);
         if (w != ww || h != hh) fail("disp and color image size mismatch\n");
     }
 
-    // read and invert input homographies
-    double hom_ref[3][3], hom_sec[3][3], hom_ref_inv[3][3], hom_sec_inv[3][3];
-    read_matrix(hom_ref, v[4]);
-    read_matrix(hom_sec, v[5]);
-    invert_homography(hom_ref_inv, hom_ref);
-    invert_homography(hom_sec_inv, hom_sec);
-
     // read input rpc models
     struct rpc rpc_ref[1], rpc_sec[1];
-    read_rpc_file_xml(rpc_ref, v[6]);
-    read_rpc_file_xml(rpc_sec, v[7]);
+    read_rpc_file_xml(rpc_ref, v[4]);
+    read_rpc_file_xml(rpc_sec, v[5]);
 
     // outputs
     double p[2], q[2], X[3];
@@ -170,23 +208,37 @@ int main(int c, char *v[])
     for (int row=0; row<h; row++)
     for (int col=0; col<w; col++) {
         int pix = row*w + col;
-        if (mask[pix]) {
-            npoints++;
-            // if not defined, utm zone is that of the first point
-            if (zone < 0) {
-                float d = disp[pix];
+        if (!mask[pix]) continue;
 
-                // compute coordinates of pix in the big image
-                double a[2] = {col, row};
-                double b[2] = {col + d, row};
-                apply_homography(p, hom_ref_inv, a);
-                apply_homography(q, hom_sec_inv, b);
+        // compute coordinates of pix in the full reference image
+        double a[2] = {col, row};
+        apply_homography(p, href_inv, a);
 
-                // compute (lon, lat, alt) of the 3D point
-                intersect_rays(X, p, q, rpc_ref, rpc_sec);
-                utm_zone(&zone, &hem, X[1], X[0]);
-            }
-        }
+        // check that it lies in the image domain bounding box
+        if (p[0] < col_m || p[0] > col_M || p[1] < row_m || p[1] > row_M)
+            continue;
+
+        // check that it passes the image domain mask
+        int pix2 = ((int) round(p[1]) - row_m) * (col_M - col_m + 1) + (int) round(p[0]) - col_m;
+        if (!mask_orig[pix2])
+            continue;
+
+        // compute (lon, lat, alt) of the 3D point
+        float d = disp[pix];
+        double b[2] = {col + d, row};
+        apply_homography(q, hsec_inv, b);
+        intersect_rays(X, p, q, rpc_ref, rpc_sec);
+
+        // check with lon/lat bounding box
+        if (X[0] < lon_m || X[0] > lon_M || X[1] < lat_m || X[1] > lat_M)
+            continue;
+
+        // if it passed all these tests then it's a valid point
+        npoints++;
+
+        // if not defined, utm zone is that of the first point
+        if (zone < 0)
+            utm_zone(&zone, &hem, X[1], X[0]);
     }
 
     // print header for ply file
@@ -198,41 +250,53 @@ int main(int c, char *v[])
     for (int row=0; row<h; row++)
     for (int col=0; col<w; col++) {
         int pix = row*w + col;
-        if (mask[pix]) {
-            float d = disp[pix];
+        if (!mask[pix]) continue;
 
-            // compute coordinates of pix in the big image
-            double a[2] = {col, row};
-            double b[2] = {col + d, row};
-            apply_homography(p, hom_ref_inv, a);
-            apply_homography(q, hom_sec_inv, b);
+        // compute coordinates of pix in the full reference image
+        double a[2] = {col, row};
+        apply_homography(p, href_inv, a);
 
-            // compute (lon, lat, alt) of the 3D point
-            intersect_rays(X, p, q, rpc_ref, rpc_sec);
+        // check that it lies in the image domain bounding box
+        if (p[0] < col_m || p[0] > col_M || p[1] < row_m || p[1] > row_M)
+            continue;
 
-            // convert (lon, lat, alt) to utm
-            utm_alt_zone(X, X[1], X[0], zone);
+        // check that it passes the image domain mask
+        int pix2 = ((int) round(p[1]) - row_m) * (col_M - col_m + 1) + (int) round(p[0]) - col_m;
+        if (!mask_orig[pix2])
+            continue;
 
-            // colorization: if greyscale, copy the grey level on each channel
-            uint8_t rgb[3];
+        // compute (lon, lat, alt) of the 3D point
+        float d = disp[pix];
+        double b[2] = {col + d, row};
+        apply_homography(q, hsec_inv, b);
+        intersect_rays(X, p, q, rpc_ref, rpc_sec);
+
+        // check with lon/lat bounding box
+        if (X[0] < lon_m || X[0] > lon_M || X[1] < lat_m || X[1] > lat_M)
+            continue;
+
+        // convert (lon, lat, alt) to utm
+        utm_alt_zone(X, X[1], X[0], zone);
+
+        // colorization: if greyscale, copy the grey level on each channel
+        uint8_t rgb[3];
+        if (clr) {
+            for (int k = 0; k < pd; k++) rgb[k] = clr[k + pd*pix];
+            for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
+        }
+
+        // write to ply
+        if (ascii) {
+            fprintf(ply_file, "%a %a %a ", X[0], X[1], X[2]);
+            if (clr)
+                fprintf(ply_file, "%d %d %d", rgb[0], rgb[1], rgb[2]);
+            fprintf(ply_file, "\n");
+        } else {
+            double XX[3] = {X[0], X[1], X[2]};
+            fwrite(XX, sizeof(double), 3, ply_file);
             if (clr) {
-                for (int k = 0; k < pd; k++) rgb[k] = clr[k + pd*pix];
-                for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
-            }
-
-            // write to ply
-            if (ascii) {
-                fprintf(ply_file, "%a %a %a ", X[0], X[1], X[2]);
-                if (clr)
-                    fprintf(ply_file, "%d %d %d", rgb[0], rgb[1], rgb[2]);
-                fprintf(ply_file, "\n");
-            } else {
-                double XX[3] = {X[0], X[1], X[2]};
-                fwrite(XX, sizeof(double), 3, ply_file);
-                if (clr) {
-                    unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
-                    fwrite(rgb, sizeof(unsigned char), 3, ply_file);
-                }
+                unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
+                fwrite(rgb, sizeof(unsigned char), 3, ply_file);
             }
         }
     }

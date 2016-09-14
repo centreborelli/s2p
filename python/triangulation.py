@@ -102,33 +102,38 @@ def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     common.run('plambda {0} {1} "x 0 > y nan if" -o {1}'.format(out_filt, out))
 
 
-def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
+def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors,
+                            utm_zone=None, llbbx=None, xybbx=None, xymsk=None):
     """
     Computes a 3D point cloud from a disparity map.
 
     Args:
         out: path to the output ply file
+        disp, mask: paths to the diparity and mask maps
         rpc1, rpc2: paths to the xml files
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
-        disp, mask: paths to the diparity and mask maps
-        img: path to the png image containing the colors
-        A (optional): path to txt file containing the pointing correction matrix
+        A: path to txt file containing the pointing correction matrix
             for im2
+        colors: path to the png image containing the colors
     """
-    if A is not None:
-        HH2 = common.tmpfile('.txt')
-        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(np.loadtxt(A))))
-    else:
-        HH2 = H2
+    href = " ".join(str(x) for x in np.loadtxt(H1).flatten())
+    hsec = " ".join(str(x) for x in np.dot(np.loadtxt(H2),
+                                           np.linalg.inv(np.loadtxt(A))).flatten())
+    utm = "--utm-zone %s" % utm_zone if utm_zone else ""
+    lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
+    xbb = "--col-m %s --col-M %s --row-m %s --row-M %s" % xybbx if xybbx else ""
+    msk = "--mask-orig %s" % xymsk if xymsk else ""
 
-    common.run("disp2ply %s %s %s %s %s %s %s %s" % (out, disp,  mask, H1, HH2,
-                                                     rpc1, rpc2, img))
+    command = 'disp2ply {} {} {} {} {} {}'.format(out, disp, mask, rpc1, rpc2, colors)
+    command += '-href "{}" -hsec "{}"'.format(href, hsec)
+    command += '{} {} {} {}'.format(utm, lbb, xbb, msk)
+    common.run(command)
 
 
-def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
-                        off_x=None, off_y=None, ascii_ply=False,
-                        with_normals=False, utm_zone=None, llbbx=None):
+def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
+                              off_x=None, off_y=None, ascii_ply=False,
+                              with_normals=False, utm_zone=None, llbbx=None):
     """
     Computes a color point cloud from a height map.
 
@@ -151,16 +156,18 @@ def compute_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     """
     if not os.path.exists(crop_colorized):
         crop_colorized = ''
-    hij = " ".join([str(x) for x in H.flatten()]) if H is not None else ""
+    hij = " ".join(str(x) for x in H.flatten()) if H is not None else ""
     asc = "--ascii" if ascii_ply else ""
     nrm = "--with-normals" if with_normals else ""
     utm = "--utm-zone %s" % utm_zone if utm_zone else ""
     lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
-    if not (os.path.isfile(cloud) and cfg['skip_existing']):
-        command = "colormesh %s %s %s %s -h \"%s\" %s %s %s %s" % (cloud,
-                          heights, rpc, crop_colorized, hij, asc, nrm, utm, lbb)
-        if off_x:
-            command += " --offset_x %d" % off_x
-        if off_y:
-            command += " --offset_y %d" % off_y
-        common.run(command)
+    command = "colormesh %s %s %s %s -h \"%s\" %s %s %s %s" % (cloud, heights,
+                                                               rpc,
+                                                               crop_colorized,
+                                                               hij, asc, nrm,
+                                                               utm, lbb)
+    if off_x:
+        command += " --offset_x %d" % off_x
+    if off_y:
+        command += " --offset_y %d" % off_y
+    common.run(command)

@@ -233,10 +233,21 @@ int main(int c, char *v[])
     uint64_t npoints = 0;
     printf("counting valid points...\n");
     TIMING_CPUCLOCK_START(0);
-    for (int row = 0; row < h; row++)
-    for (int col = 0; col < w; col++) {
-        uint64_t pix = (uint64_t) row * w + col;
+    for (uint64_t pix = 0; pix < (uint64_t) w*h; pix++) {
         if (!isnan(height[pix])) {
+            // compute coordinates of pix in the big image
+            int col = pix % w;
+            int row = pix / w;
+            double xy[2] = {col, row};
+            if (there_is_a_homography)
+                apply_homography(xy, inv_hom, xy);
+
+            // reject points outside lonlat bbx
+            double ll[2];
+            lonlat_from_ijh(ll, r, xy[0], xy[1], height[pix]);
+            if (ll[0]<lon_m || ll[0]>lon_M || ll[1]<lat_m || ll[1]>lat_M)
+                continue;
+
             npoints++;
 
             // UTM Zone will be the zone of first 'not NaN' point
@@ -277,7 +288,7 @@ int main(int c, char *v[])
         point_size += 3*sizeof(uint8_t);
 
     # pragma omp parallel for
-    for (int pix = 0; pix < (uint64_t) w*h; pix++) {
+    for (uint64_t pix = 0; pix < (uint64_t) w*h; pix++) {
         if (!isnan(height[pix])) {
 
             // if the buffer is full, write to file and reset

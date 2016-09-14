@@ -79,9 +79,10 @@ def print_elapsed_time(since_first_call=False):
         except AttributeError:
             print t2 - print_elapsed_time.t0
     print_elapsed_time.t1 = t2
+    print
 
 
-def pointing_correction_pair(tile, i=None):
+def pointing_correction(tile, i=None):
     """
     Compute the translation that correct the pointing error on a pair of tiles.
 
@@ -188,7 +189,7 @@ def rectification_pair(tile, i=None):
                             fmt='%3.1f')
 
 
-def disparity_pair(tile, i=None):
+def stereo_matching(tile, i=None):
     """
     Compute the disparity of a pair of images on a given tile.
 
@@ -223,7 +224,7 @@ def disparity_pair(tile, i=None):
     masking.erosion(mask, mask, cfg['msk_erosion'])
 
 
-def height_map_pair(tile, i):
+def disparity_to_height(tile, i):
     """
     Compute a height map from the disparity map of a pair of image tiles.
 
@@ -255,7 +256,7 @@ def height_map_pair(tile, i):
                              out_mask, pointing)
 
 
-def triangulation_pair(tile):
+def disparity_to_ply(tile):
     """
     Compute a point cloud from the disparity map of a pair of image tiles.
 
@@ -275,11 +276,12 @@ def triangulation_pair(tile):
     rpc2 = cfg['images'][1]['rpc']
     H_ref = os.path.join(out_dir, 'H_ref.txt')
     H_sec = os.path.join(out_dir, 'H_sec.txt')
-    disp = os.path.join(out_dir, 'rectified_disp.tif')
-    mask = os.path.join(out_dir, 'rectified_mask.png')
-    # TODO FIXME we'll have overlap between tiles here
-    #out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
     pointing = os.path.join(cfg['out_dir'], 'global_pointing.txt')
+    disp = os.path.join(out_dir, 'rectified_disp.tif')
+    mask_rect = os.path.join(out_dir, 'rectified_mask.png')
+    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+
+    # prepare the image needed to colorize point cloud
     colors = os.path.join(out_dir, 'rectified_ref.png')
     if cfg['images'][0]['clr']:
         hom = np.loadtxt(H_ref)
@@ -290,11 +292,17 @@ def triangulation_pair(tile):
         common.image_qauto(tmp, colors)
     else:
         common.image_qauto(os.path.join(out_dir, 'rectified_ref.tif'), colors)
-    triangulation.compute_ply(ply_file, rpc1, rpc2, H_ref, H_sec, disp, mask,
-                              colors, pointing)
+
+    # compute the point cloud
+    triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
+                                          H_ref, H_sec, pointing, colors,
+                                          utm_zone=cfg['utm_zone'],
+                                          llbbx=tuple(cfg['ll_bbx']),
+                                          xybbx=(x, x+w-1, y, y+h-1),
+                                          xymsk=mask_orig)
 
 
-def compute_mean_heights(tile):
+def mean_heights(tile):
     """
     """
     w, h = tile['coordinates'][2:]
@@ -343,27 +351,32 @@ def heights_to_ply(tile):
     Args:
         tile: a dictionary that provides all you need to process a tile
     """
-    tile_dir = tile['dir']
+    out_dir = tile['dir']
+    plyfile = os.path.join(out_dir, 'cloud.ply')
+    if cfg['skip_existing'] and os.path.isfile(plyfile):
+        print 'ply file already exists for tile {} {}'.format(x, y)
+        return
+
     x, y, w, h = tile['coordinates']
     z = cfg['subsampling_factor']
 
     # H is the homography transforming the coordinates system of the original
     # full size image into the coordinates system of the crop
     H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
-    colors = os.path.join(tile_dir, 'ref.png')
+    colors = os.path.join(out_dir, 'ref.png')
     if cfg['images'][0]['clr']:
         common.image_crop_tif(cfg['images'][0]['clr'], x, y, w, h, colors)
     else:
         common.image_qauto(common.image_crop_tif(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
-    triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
-                                      os.path.join(tile_dir, 'height_map.tif'),
-                                      cfg['images'][0]['rpc'], H, colors,
-                                      utm_zone=cfg['utm_zone'],
-                                      llbbx=tuple(cfg['ll_bbx']))
+    triangulation.height_map_to_point_cloud(plyfile, os.path.join(out_dir,
+                                                                  'height_map.tif'),
+                                            cfg['images'][0]['rpc'], H, colors,
+                                            utm_zone=cfg['utm_zone'],
+                                            llbbx=tuple(cfg['ll_bbx']))
 
 
-def compute_dsm(tiles):
+def plys_to_dsm(tiles):
     """
     """
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
@@ -479,6 +492,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
 
     pool.close()
     pool.join()
+    print_elapsed_time()
     return outputs
 
 
@@ -489,9 +503,8 @@ def main(config_file):
     Args:
         config_file: path to a json configuration file
     """
-    print_elapsed_time.t0 = datetime.datetime.now()
-
     # initialization
+    print_elapsed_time.t0 = datetime.datetime.now()
     initialization.build_cfg(config_file)
     initialization.make_dirs()
     tiles = initialization.tiles_full_info()
@@ -510,56 +523,46 @@ def main(config_file):
     # number of tiles
     # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles)))
 
-    # do the job
     print '\ncorrecting pointing locally...'
-    launch_parallel_calls(pointing_correction_pair, tiles_pairs, nb_workers)
-    print_elapsed_time()
+    launch_parallel_calls(pointing_correction, tiles_pairs, nb_workers)
 
-    print '\ncorrecting pointing globally...'
+    print 'correcting pointing globally...'
     global_pointing_correction(tiles)
     print_elapsed_time()
 
-    print '\nrectifying tiles...'
+    print 'rectifying tiles...'
     launch_parallel_calls(rectification_pair, tiles_pairs, nb_workers)
-    print_elapsed_time()
 
-    print '\nrunning stereo matching...'
-    launch_parallel_calls(disparity_pair, tiles_pairs, nb_workers)
-    print_elapsed_time()
+    print 'running stereo matching...'
+    launch_parallel_calls(stereo_matching, tiles_pairs, nb_workers)
 
     if len(cfg['images']) > 2:
-        print '\ncomputing height maps...'
-        launch_parallel_calls(height_map_pair, tiles_pairs, nb_workers)
-        print_elapsed_time()
+        print 'computing height maps...'
+        launch_parallel_calls(disparity_to_height, tiles_pairs, nb_workers)
 
-        print '\nregistering height maps...'
-        mean_heights_local = launch_parallel_calls(compute_mean_heights, tiles,
+        print 'registering height maps...'
+        mean_heights_local = launch_parallel_calls(mean_heights, tiles,
                                                    nb_workers)
-        print_elapsed_time()
 
-        print '\ncomputing global pairwise height offsets...'
+        print 'computing global pairwise height offsets...'
         mean_heights_global = np.mean(mean_heights_local, axis=0)
-        print_elapsed_time()
 
-        print '\nmerging height maps...'
+        print 'merging height maps...'
         launch_parallel_calls(heights_fusion, tiles, nb_workers,
                               mean_heights_global)
-        print_elapsed_time()
 
-        print '\ncomputing point clouds...'
+        print 'computing point clouds...'
         launch_parallel_calls(heights_to_ply, tiles, nb_workers)
-        print_elapsed_time()
 
     else:
-        print '\ntriangulating tiles...'
-        launch_parallel_calls(triangulation_pair, tiles, nb_workers)
-        print_elapsed_time()
+        print 'triangulating tiles...'
+        launch_parallel_calls(disparity_to_ply, tiles, nb_workers)
 
-    print '\ncompute dsm...'
-    compute_dsm(tiles)
+    print 'computing DSM...'
+    plys_to_dsm(tiles)
     print_elapsed_time()
 
-    print '\nlidar preprocessor...'
+    print 'lidar preprocessor...'
     lidar_preprocessor(tiles)
     print_elapsed_time()
 
