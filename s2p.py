@@ -223,27 +223,25 @@ def disparity_pair(tile, i=None):
     masking.erosion(mask, mask, cfg['msk_erosion'])
 
 
-def triangulation_pair(tile, i=None):
+def height_map_pair(tile, i):
     """
-    Triangulate a pair of images on a given tile.
+    Compute a height map from the disparity map of a pair of image tiles.
 
     Args:
         tile: dictionary containing the information needed to process a tile.
-        i: index of the processed pair. If None, there's only one pair.
+        i: index of the processed pair.
     """
-    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     height_map = os.path.join(out_dir, 'height_map.tif')
     x, y, w, h = tile['coordinates']
 
     if cfg['skip_existing'] and os.path.isfile(height_map):
-        print 'triangulation done on tile {} {}'.format(x, y),
-        print 'pair {}'.format(i) if i else ''
+        print 'triangulation done on tile {} {} pair {}'.format(x, y, i)
         return
 
-    print 'triangulating tile {} {}'.format(x, y),
-    print 'pair {}...'.format(i) if i else '...'
+    print 'triangulating tile {} {} pair {}...'.format(x, y, i)
     rpc1 = cfg['images'][0]['rpc']
-    rpc2 = cfg['images'][i]['rpc'] if i else cfg['images'][1]['rpc']
+    rpc2 = cfg['images'][i]['rpc']
     H_ref = os.path.join(out_dir, 'H_ref.txt')
     H_sec = os.path.join(out_dir, 'H_sec.txt')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
@@ -251,11 +249,49 @@ def triangulation_pair(tile, i=None):
     rpc_err = os.path.join(out_dir, 'rpc_err.tif')
     out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
     pointing = os.path.join(cfg['out_dir'],
-                            'global_pointing_pair_{}.txt'.format(i) if i else
-                            'global_pointing.txt')
+                            'global_pointing_pair_{}.txt'.format(i))
     triangulation.height_map(height_map, x, y, w, h, cfg['subsampling_factor'],
                              rpc1, rpc2, H_ref, H_sec, disp, mask, rpc_err,
                              out_mask, pointing)
+
+
+def triangulation_pair(tile):
+    """
+    Compute a point cloud from the disparity map of a pair of image tiles.
+
+    Args:
+        tile: dictionary containing the information needed to process a tile.
+    """
+    out_dir = tile['dir']
+    ply_file = os.path.join(out_dir, 'cloud.ply')
+    x, y, w, h = tile['coordinates']
+
+    if cfg['skip_existing'] and os.path.isfile(ply_file):
+        print 'triangulation done on tile {} {}'.format(x, y)
+        return
+
+    print 'triangulating tile {} {}...'.format(x, y)
+    rpc1 = cfg['images'][0]['rpc']
+    rpc2 = cfg['images'][1]['rpc']
+    H_ref = os.path.join(out_dir, 'H_ref.txt')
+    H_sec = os.path.join(out_dir, 'H_sec.txt')
+    disp = os.path.join(out_dir, 'rectified_disp.tif')
+    mask = os.path.join(out_dir, 'rectified_mask.png')
+    # TODO FIXME we'll have overlap between tiles here
+    #out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
+    pointing = os.path.join(cfg['out_dir'], 'global_pointing.txt')
+    colors = os.path.join(out_dir, 'rectified_ref.png')
+    if cfg['images'][0]['clr']:
+        hom = np.loadtxt(H_ref)
+        roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
+        ww, hh = common.bounding_box2D(common.points_apply_homography(hom, roi))[2:]
+        common.image_apply_homography(tmp, cfg['images'][0]['img'], hom,
+                                      ww + 2*cfg['horizontal_margin'], hh)
+        common.image_qauto(tmp, colors)
+    else:
+        common.image_qauto(os.path.join(out_dir, 'rectified_ref.tif'), colors)
+    triangulation.compute_ply(ply_file, rpc1, rpc2, H_ref, H_sec, disp, mask,
+                              colors, pointing)
 
 
 def compute_mean_heights(tile):
@@ -275,7 +311,7 @@ def compute_mean_heights(tile):
     return [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)]
 
 
-def tile_fusion(tile, mean_heights_global):
+def heights_fusion(tile, mean_heights_global):
     """
     Merge the height maps computed for each image pair and generate a ply cloud.
 
@@ -300,7 +336,7 @@ def tile_fusion(tile, mean_heights_global):
                    threshold=cfg['fusion_thresh'])
 
 
-def compute_ply(tile):
+def heights_to_ply(tile):
     """
     Generate a ply cloud.
 
@@ -491,28 +527,33 @@ def main(config_file):
     launch_parallel_calls(disparity_pair, tiles_pairs, nb_workers)
     print_elapsed_time()
 
-    print '\ntriangulating tiles...'
-    launch_parallel_calls(triangulation_pair, tiles_pairs, nb_workers)
-    print_elapsed_time()
-
     if len(cfg['images']) > 2:
+        print '\ncomputing height maps...'
+        launch_parallel_calls(height_map_pair, tiles_pairs, nb_workers)
+        print_elapsed_time()
+
         print '\nregistering height maps...'
         mean_heights_local = launch_parallel_calls(compute_mean_heights, tiles,
                                                    nb_workers)
         print_elapsed_time()
 
-        print '\ncompute global pairwise height offsets...'
+        print '\ncomputing global pairwise height offsets...'
         mean_heights_global = np.mean(mean_heights_local, axis=0)
         print_elapsed_time()
 
         print '\nmerging height maps...'
-        launch_parallel_calls(tile_fusion, tiles, nb_workers,
+        launch_parallel_calls(heights_fusion, tiles, nb_workers,
                               mean_heights_global)
         print_elapsed_time()
 
-    print '\ncomputing point clouds...'
-    launch_parallel_calls(compute_ply, tiles, nb_workers)
-    print_elapsed_time()
+        print '\ncomputing point clouds...'
+        launch_parallel_calls(heights_to_ply, tiles, nb_workers)
+        print_elapsed_time()
+
+    else:
+        print '\ntriangulating tiles...'
+        launch_parallel_calls(triangulation_pair, tiles, nb_workers)
+        print_elapsed_time()
 
     print '\ncompute dsm...'
     compute_dsm(tiles)
@@ -523,8 +564,8 @@ def main(config_file):
     print_elapsed_time()
 
     # cleanup
-    print_elapsed_time(since_first_call=True)
     common.garbage_cleanup()
+    print_elapsed_time(since_first_call=True)
 
 
 def print_help_and_exit(script_name):

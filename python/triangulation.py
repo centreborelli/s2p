@@ -31,7 +31,6 @@ def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None
 
     common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, HH2, disp,
                                                       mask, height, rpc_err))
-    return
 
 
 def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
@@ -67,9 +66,6 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     hij = ' '.join(['%r' % num for num in HH.flatten()])
     common.run('synflow hom "%s" zero:%dx%d /dev/null - | BILINEAR=1 backflow - %s %s' % (
         hij, w/zoom, h/zoom, in_map, out_map))
-
-    # w and h, provided by the s2p.process_pair_single_tile function, are
-    # always multiples of zoom.
 
     # replace the -inf with nan in the heights map, because colormesh filter
     # out nans but not infs
@@ -117,16 +113,15 @@ def compute_ply(out, rpc1, rpc2, H1, H2, disp, mask, img, A=None):
             the rectifying homographies
         disp, mask: paths to the diparity and mask maps
         img: path to the png image containing the colors
-        A (optional): pointing correction matrix for im2
+        A (optional): path to txt file containing the pointing correction matrix
+            for im2
     """
-    # apply correction matrix
     if A is not None:
-        HH2 = '%s/H_sec_corrected.txt' % os.path.dirname(out)
-        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(A)))
+        HH2 = common.tmpfile('.txt')
+        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(np.loadtxt(A))))
     else:
         HH2 = H2
 
-    # do the job
     common.run("disp2ply %s %s %s %s %s %s %s %s" % (out, disp,  mask, H1, HH2,
                                                      rpc1, rpc2, img))
 
