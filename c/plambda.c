@@ -2022,9 +2022,9 @@ int main_images(int c, char **v)
 		if (w[0] != w[i+1] || h[0] != h[i+1])// || pd[0] != pd[i+1])
 			fail("input images size mismatch");
 
-	if (n>1) FORI(n) if (!strstr(p->var->t[i], "hidden"))
-		fprintf(stderr, "plambda correspondence \"%s\" = \"%s\"\n",
-				p->var->t[i], v[i+1]);
+	//if (n>1) FORI(n) if (!strstr(p->var->t[i], "hidden"))
+	//	fprintf(stderr, "plambda correspondence \"%s\" = \"%s\"\n",
+	//			p->var->t[i], v[i+1]);
 
 	xsrand(SRAND());
 
