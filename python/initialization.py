@@ -171,8 +171,8 @@ def adjust_tile_size():
     if n == 2:
         print 'total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty)
     else:
-        print 'total number of tiles: {} ({} x {} x {})'.format(ntx*nty*(n-1),
-                                                                ntx, nty, n-1)
+        print 'total number of tiles: {} ({} x {}) x {} pairs'.format(ntx*nty*(n-1),
+                                                                      ntx, nty, n-1)
     return tile_w, tile_h
 
 
@@ -180,12 +180,12 @@ def tiles_full_info():
     """
     Prepare the entire process.
 
-    Build tiles_full_info: a list of dictionaries, one per tile, providing all you need to process a tile
+    Build tiles: a list of dictionaries, one per tile, providing all you need to process a tile
        * col/row : position of the tile (upper left corner)
        * tw/th : size of the tile
 
     Returns:
-        tiles_full_info: list containing dictionaries
+        tiles: list containing dictionaries
     """
     rpc = cfg['images'][0]['rpc']
     roi_msk = cfg['images'][0]['roi']
@@ -195,8 +195,8 @@ def tiles_full_info():
     rx, ry, rw, rh = cfg['roi'].values()  # roi coordinates
     tw, th = adjust_tile_size()  # default tile size
 
-    # build tile_info dictionaries and store them in a list
-    tiles_full_info = list()
+    # build tile dictionaries and store them in a list
+    tiles = list()
     for y in np.arange(ry, ry + rh, th):
         h = min(th, ry + rh - y)
         for x in np.arange(rx, rx + rw, tw):
@@ -213,23 +213,21 @@ def tiles_full_info():
                 continue
 
             # add the tile to the list
-            tile_info = {}
-            tile_info['directory'] = os.path.join(cfg['out_dir'],
-                                                  'tiles_row_%d_height_%d' % (y,
-                                                                              h),
-                                                  'col_%d_width_%d' % (x, w))
-            tile_info['coordinates'] = (x, y, w, h)
-            tiles_full_info.append(tile_info)
+            tile = {}
+            tile['dir'] = os.path.join(cfg['out_dir'], 'tiles_row_%d_height_%d'
+                                       % (y, h), 'col_%d_width_%d' % (x, w))
+            tile['coordinates'] = (x, y, w, h)
+            tiles.append(tile)
 
             # make the directories
-            common.mkdir_p(tile_info['directory'])
+            common.mkdir_p(tile['dir'])
             if len(cfg['images']) > 2:
                 for i in xrange(1, len(cfg['images'])):
-                    common.mkdir_p(os.path.join(tile_info['directory'],
+                    common.mkdir_p(os.path.join(tile['dir'],
                                                 'pair_{}'.format(i)))
 
             # keep the mask
-            shutil.copy(msk, os.path.join(tile_info['directory'],
+            shutil.copy(msk, os.path.join(tile['dir'],
                                           'cloud_water_image_domain_mask.png'))
 
-    return tiles_full_info
+    return tiles

@@ -90,7 +90,7 @@ def pointing_correction_pair(tile, i=None):
         i: index of the processed pair. If None, there's only one pair.
     """
     x, y, w, h = tile['coordinates']
-    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     img2 = cfg['images'][i]['img'] if i else cfg['images'][1]['img']
@@ -129,14 +129,14 @@ def global_pointing_correction(tiles):
     if len(cfg['images']) == 2:
         out = os.path.join(cfg['out_dir'], 'global_pointing.txt')
         if not (os.path.isfile(out) and cfg['skip_existing']):
-            np.savetxt(out, pointing_accuracy.global_from_local(t['directory']
+            np.savetxt(out, pointing_accuracy.global_from_local(t['dir']
                                                                 for t in tiles),
                        fmt='%12.6f')
     else:
         for i in xrange(1, len(cfg['images'])):
             out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
             if not (os.path.isfile(out) and cfg['skip_existing']):
-                l = [os.path.join(t['directory'], 'pair_%d' % i) for t in tiles]
+                l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
                 np.savetxt(out, pointing_accuracy.global_from_local(l),
                            fmt='%12.6f')
 
@@ -149,7 +149,7 @@ def rectification_pair(tile, i=None):
         tile: dictionary containing the information needed to process a tile.
         i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
     x, y, w, h = tile['coordinates']
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
@@ -196,7 +196,7 @@ def disparity_pair(tile, i=None):
         tile: dictionary containing the information needed to process a tile.
         i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
     x, y = tile['coordinates'][:2]
 
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
@@ -231,7 +231,7 @@ def triangulation_pair(tile, i=None):
         tile: dictionary containing the information needed to process a tile.
         i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['directory'], 'pair_{}'.format(i)) if i else tile['directory']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
     height_map = os.path.join(out_dir, 'height_map.tif')
     x, y, w, h = tile['coordinates']
 
@@ -249,7 +249,7 @@ def triangulation_pair(tile, i=None):
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-    out_mask = os.path.join(tile['directory'], 'cloud_water_image_domain_mask.png')
+    out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i) if i else
                             'global_pointing.txt')
@@ -265,7 +265,8 @@ def compute_mean_heights(tile):
     n = len(cfg['images']) - 1
     maps = np.empty((h, w, n))
     for i in xrange(n):
-        f = gdal.Open(os.path.join(tile['directory'], 'pair_%d' % (i + 1), 'height_map.tif'))
+        f = gdal.Open(os.path.join(tile['dir'], 'pair_%d' % (i + 1),
+                                   'height_map.tif'))
         maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
         f = None  # this is the gdal way of closing files
 
@@ -283,7 +284,7 @@ def tile_fusion(tile, mean_heights_global):
         mean_heights_global: list containing the means of all the global height
             maps
     """
-    tile_dir = tile['directory']
+    tile_dir = tile['dir']
     nb_pairs = len(mean_heights_global)
     height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
                    for i in xrange(nb_pairs)]
@@ -306,7 +307,7 @@ def compute_ply(tile):
     Args:
         tile: a dictionary that provides all you need to process a tile
     """
-    tile_dir = tile['directory']
+    tile_dir = tile['dir']
     x, y, w, h = tile['coordinates']
     z = cfg['subsampling_factor']
 
@@ -330,8 +331,7 @@ def compute_dsm(tiles):
     """
     """
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
-    clouds = ' '.join(os.path.join(t['directory'], 'cloud.ply') for t in
-                      tiles)
+    clouds = ' '.join(os.path.join(t['dir'], 'cloud.ply') for t in tiles)
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         common.run("ls %s | plyflatten -bb \"%f %f %f %f \" %f %s" % (clouds,
@@ -366,8 +366,7 @@ def lidar_preprocessor(tiles):
         out = os.path.join(cfg['out_dir'], 'cloud.lidar_viewer')
         plys = []
         for tile in tiles:
-            plys.append(os.path.join(os.path.abspath(tile['directory']),
-                                     'cloud.ply'))
+            plys.append(os.path.join(os.path.abspath(tile['dir']), 'cloud.ply'))
         common.lidar_preprocessor(out, plys)
 
     # copy RPC xml files in the output directory
@@ -420,10 +419,10 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
     for x in list_of_args:
         if type(x) == tuple:  # we expect x = (tile_dictionary, pair_id)
             args = (fun,) + x + extra_args
-            log = os.path.join(x[0]['directory'], 'pair_%d' % x[1], 'stdout.log')
+            log = os.path.join(x[0]['dir'], 'pair_%d' % x[1], 'stdout.log')
         else:  # we expect x = tile_dictionary
             args = (fun, x) + extra_args
-            log = os.path.join(x['directory'], 'stdout.log')
+            log = os.path.join(x['dir'], 'stdout.log')
         results.append(pool.apply_async(tilewise_wrapper, args=args,
                                         kwds={'stdout': log},
                                         callback=show_progress))
