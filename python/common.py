@@ -4,6 +4,7 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 
+from __future__ import print_function
 import os
 import re
 import sys
@@ -85,7 +86,7 @@ def run(cmd, env=os.environ):
     try:
         subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
                               stderr=sys.stdout, env=env)
-        print (datetime.datetime.now() - t)
+        print(datetime.datetime.now() - t)
 
     except subprocess.CalledProcessError as e:
         # raise a custom exception because the CalledProcessError causes the
@@ -179,7 +180,7 @@ def image_size(im):
             (nc, nr) = map(int, open(out).read().split())
             return (nc, nr)
     except IOError:
-        print "image_size: the input file %s doesn't exist" % str(im)
+        print("image_size: the input file %s doesn't exist" % str(im))
         sys.exit()
 
 
@@ -202,7 +203,7 @@ def image_size_gdal(im):
             nr = int(out[3])
             return (nc, nr)
     except IOError:
-        print "image_size_gdal: the input file %s doesn't exist" % str(im)
+        print("image_size_gdal: the input file %s doesn't exist" % str(im))
         sys.exit()
 
 
@@ -216,8 +217,8 @@ def image_size_tiffinfo(im):
         a tuple of size 2, giving width and height
     """
     if not im.lower().endswith(('.tif', '.tiff')):
-        print "image_size_tiffinfo function works only with TIF files"
-        print "use image_size_gdal or image_size instead"
+        print("image_size_tiffinfo function works only with TIF files")
+        print("use image_size_gdal or image_size instead")
         sys.exit()
     try:
         with open(im):
@@ -234,7 +235,7 @@ def image_size_tiffinfo(im):
             nr = int(out[5])
             return (nc, nr)
     except IOError:
-        print "image_size_tiffinfo: the input file %s doesn't exist" % str(im)
+        print("image_size_tiffinfo: the input file %s doesn't exist" % str(im))
         sys.exit()
 
 
@@ -261,13 +262,13 @@ def grep_xml(xml_file, tag):
                     stdin=p2.stdout, stdout=subprocess.PIPE)
             lines = p3.stdout.read().splitlines()
             if not lines:
-                print "grep_xml: no tag %s in file %s" % (tag, xml_file)
+                print("grep_xml: no tag %s in file %s" % (tag, xml_file))
                 return
             if len(lines) > 1:
-                print "grep_xml: WARNING several occurences of %s in file %s" % (tag, xml_file)
+                print("grep_xml: WARNING several occurences of %s in file %s" % (tag, xml_file))
             return lines[0]
     except IOError:
-        print "grep_xml: the input file %s doesn't exist" % xml_file
+        print("grep_xml: the input file %s doesn't exist" % xml_file)
         sys.exit()
 
 
@@ -294,7 +295,7 @@ def image_pix_dim(im):
             dim = open(out).readline().split()[0]
             return int(dim)
     except IOError:
-        print "image_pix_dim: the input file doesn't exist"
+        print("image_pix_dim: the input file doesn't exist")
         sys.exit()
 
 
@@ -309,8 +310,8 @@ def image_pix_dim_tiffinfo(im):
         number of channels of the image
     """
     if not im.lower().endswith('.tif'):
-        print "image_pix_dim_tiffinfo function works only with TIF files"
-        print "use image_pix_dim instead"
+        print("image_pix_dim_tiffinfo function works only with TIF files")
+        print("use image_pix_dim instead")
         sys.exit()
     try:
         with open(im):
@@ -326,7 +327,7 @@ def image_pix_dim_tiffinfo(im):
             n = int(out[2])
             return n
     except IOError:
-        print "image_pix_dim_tiffinfo: file %s doesn't exist" % str(im)
+        print("image_pix_dim_tiffinfo: file %s doesn't exist" % str(im))
         sys.exit()
 
 
@@ -452,7 +453,7 @@ def image_zoom_out_morpho(im, f):
         path to the output image
     """
     if (f != np.floor(f)):
-        print 'image_zoom_out_morpho: zoom factor has to be integer'
+        print('image_zoom_out_morpho: zoom factor has to be integer')
         sys.exit()
 
     out = tmpfile('.tif')
@@ -711,8 +712,8 @@ def points_apply_homography(H, pts):
 
     # convert the input points to homogeneous coordinates
     if len(pts[0]) < 2:
-        print """points_apply_homography: ERROR the input must be a numpy array
-          of 2D points, one point per line"""
+        print("""points_apply_homography: ERROR the input must be a numpy array
+          of 2D points, one point per line""")
         return
     pts = np.hstack((pts[:, 0:2], pts[:, 0:1]*0+1))
 
@@ -752,7 +753,7 @@ def image_crop_tif(im, x, y, w, h, out=None):
     tried to use tiffcrop but it fails.
     """
     if (int(x) != x or int(y) != y):
-        print 'Warning: image_crop_tif will round the coordinates of your crop'
+        print('Warning: image_crop_tif will round the coordinates of your crop')
 
     if out is None:
         out = tmpfile('.tif')
@@ -765,8 +766,8 @@ def image_crop_tif(im, x, y, w, h, out=None):
                                                  shellquote(out)))
 
     except IOError:
-        print """image_crop_tif: input image %s not found! Verify your paths to
-                 Pleiades full images"""%shellquote(im)
+        print("""image_crop_tif: input image %s not found! Verify your paths to
+                 Pleiades full images"""%shellquote(im))
         sys.exit()
 
     return out
@@ -774,11 +775,11 @@ def image_crop_tif(im, x, y, w, h, out=None):
 
 def image_crop_LARGE(im, x, y, w, h):
     if (int(x) != x or int(y) != y):
-        print 'Warning: image_crop_LARGE will round the coordinates of your crop'
+        print('Warning: image_crop_LARGE will round the coordinates of your crop')
     if im.lower().endswith(('tif', 'tiff', 'til')):
        return image_crop_tif(im, x, y, w, h)
     else:
-       print "image_crop_LARGE: the input image must be tif, tiff or til"
+       print("image_crop_LARGE: the input image must be tif, tiff or til")
        return image_crop(im, x, y, w, h)
 
 
@@ -901,7 +902,7 @@ def is_image_black(img):
             out = p.stdout.readline()
             return (out == '0\n')
     except IOError:
-        print "is_image_black: the input file %s doesn't exist" % str(img)
+        print("is_image_black: the input file %s doesn't exist" % str(img))
         sys.exit()
 
 
@@ -979,7 +980,7 @@ def download(to_file, from_url):
         u = urllib2.urlopen(from_url)
         meta = u.info()
         file_size = int(meta.getheaders("Content-Length")[0])
-        print "Downloading: %s Bytes: %s" % (to_file, file_size)
+        print("Downloading: %s Bytes: %s" % (to_file, file_size))
 
         while True:
             buffer = u.read(block_sz)
@@ -990,10 +991,10 @@ def download(to_file, from_url):
             f.write(buffer)
             status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
             status = status + chr(8)*(len(status)+1)
-            print status,
+            print(status, end=" ")
 
     except urllib2.URLError as e:
-        print "Download failed: ", e
+        print("Download failed: ", e)
 
     f.close()
 
