@@ -88,7 +88,8 @@ def intersection(out, in1, in2):
     or in both input masks. As 0 is the rejection value, the intersection is
     equivalent to a pixelwise product.
     """
-    common.run('plambda %s %s "x y 255 / *" -o %s' % (in1, in2, out))
+    subprocess.check_call('plambda %s %s "x y 255 / *" -o %s' % (in1, in2, out),
+                          shell=True)
 
 
 def erosion(out, msk, radius):

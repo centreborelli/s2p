@@ -503,27 +503,30 @@ def main(config_file):
     Args:
         config_file: path to a json configuration file
     """
-    # initialization
     print_elapsed_time.t0 = datetime.datetime.now()
-    initialization.build_cfg(config_file)
-    initialization.make_dirs()
-    tiles = initialization.tiles_full_info()
-    n = len(cfg['images'])
-    if n > 2:
-        tiles_pairs = [(t, i) for i in xrange(1, n) for t in tiles]
-    else:
-        tiles_pairs = tiles
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
     if cfg['max_nb_threads']:
         nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
+    print 'discarding masked tiles...'
+    initialization.build_cfg(config_file)
+    initialization.make_dirs()
+    tiles = initialization.tiles_full_info()
+    print_elapsed_time()
+
+    n = len(cfg['images'])
+    if n > 2:
+        tiles_pairs = [(t, i) for i in xrange(1, n) for t in tiles]
+    else:
+        tiles_pairs = tiles
+
     # omp_num_threads: should not exceed nb_workers when multiplied by the
     # number of tiles
     # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles)))
 
-    print '\ncorrecting pointing locally...'
+    print 'correcting pointing locally...'
     launch_parallel_calls(pointing_correction, tiles_pairs, nb_workers)
 
     print 'correcting pointing globally...'
