@@ -29,9 +29,10 @@ cfg['full_img']  = False
 # reference image. The width and height of the tiles are given by this param, in pixels.
 cfg['tile_size']  = 800
 
-# margin used to increase the horizontal footprint of the rectified tiles, to
+# margins used to increase the footprint of the rectified tiles, to
 # account for poor disparity estimation close to the borders
-cfg['horizontal_margin'] = 50
+cfg['horizontal_margin'] = 50  # for regularity and occlusions
+cfg['vertical_margin'] = 10  # for regularity
 
 # max number of tiles processed in parallel. None means the number of available cores
 cfg['max_nb_threads'] = None 

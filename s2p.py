@@ -182,7 +182,8 @@ def rectification_pair(tile, i=None):
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
                                                             rpc2, x, y, w, h,
                                                             rect1, rect2, A, m,
-                                                            margin=cfg['horizontal_margin'])
+                                                            hmargin=cfg['horizontal_margin'],
+                                                            vmargin=cfg['vertical_margin'])
     np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'H_sec.txt'), H2, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
@@ -288,7 +289,8 @@ def disparity_to_ply(tile):
         roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
         ww, hh = common.bounding_box2D(common.points_apply_homography(hom, roi))[2:]
         common.image_apply_homography(tmp, cfg['images'][0]['img'], hom,
-                                      ww + 2*cfg['horizontal_margin'], hh)
+                                      ww + 2*cfg['horizontal_margin'],
+                                      hh + 2*cfg['vertical_margin'])
         common.image_qauto(tmp, colors)
     else:
         common.image_qauto(os.path.join(out_dir, 'rectified_ref.tif'), colors)
