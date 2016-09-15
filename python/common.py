@@ -85,7 +85,7 @@ def run(cmd, env=os.environ):
     t = datetime.datetime.now()
     try:
         subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
-                              stderr=sys.stdout, env=env)
+                              stderr=sys.stderr, env=env)
         print(datetime.datetime.now() - t)
 
     except subprocess.CalledProcessError as e:
