@@ -64,7 +64,7 @@ def check_parameters(d):
         print 'ERROR: missing or incomplete roi definition'
         sys.exit(1)
 
-    # if srtm is disable set disparity range method to sift
+    # if srtm is disabled set disparity range method to sift
     if 'disable_srtm' in d:
         d['disp_range_method'] = 'sift'
 
@@ -176,7 +176,7 @@ def adjust_tile_size():
     return tile_w, tile_h
 
 
-def tiles_full_info():
+def tiles_full_info(tw, th):
     """
     Prepare the entire process.
 
@@ -193,7 +193,6 @@ def tiles_full_info():
     wat_msk = cfg['images'][0]['wat']
     z =  cfg['subsampling_factor']
     rx, ry, rw, rh = cfg['roi'].values()  # roi coordinates
-    tw, th = adjust_tile_size()  # default tile size
 
     # build tile dictionaries and store them in a list
     tiles = list()

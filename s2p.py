@@ -510,12 +510,13 @@ def main(config_file):
     if cfg['max_nb_threads']:
         nb_workers = min(nb_workers, cfg['max_nb_threads'])
 
-    print 'discarding masked tiles...'
     initialization.build_cfg(config_file)
     initialization.make_dirs()
-    tiles = initialization.tiles_full_info()
-    print_elapsed_time()
+    tw, th = initialization.adjust_tile_size()
 
+    print '\ndiscarding masked tiles...'
+    tiles = initialization.tiles_full_info(tw, th)
+    print_elapsed_time()
     n = len(cfg['images'])
     if n > 2:
         tiles_pairs = [(t, i) for i in xrange(1, n) for t in tiles]
