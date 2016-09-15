@@ -27,6 +27,14 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         disp_max : biggest disparity to consider
         extra_params: optional string with algorithm-dependent parameters
     """
+    # limit disparity bounds
+    if disp_min is not None and disp_max is not None:
+        w = common.image_size(im1)[0]
+        if disp_max - disp_min > w:
+            center = 0.5 * (disp_min + disp_max)
+            disp_min = int(center - 0.5 * w)
+            disp_max = int(center + 0.5 * w)
+
     # round disparity bounds
     if disp_min is not None:
         disp_min = int(np.floor(disp_min))
@@ -95,11 +103,6 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                 bm_binary, disp_min, disp_max, im1, im2, disp, mask))
 
     if algo == 'mgm':
-        if disp_max - disp_min > 200:
-            center = int(0.5 * (disp_min + disp_max))
-            disp_min = center - 100
-            disp_max = center + 100
-
         env = os.environ.copy()
         env['OMP_NUM_THREADS'] = str(cfg['omp_num_threads'])
         env['MEDIAN'] = '1'
