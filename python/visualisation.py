@@ -47,7 +47,7 @@ def plot_line(im, x1, y1, x2, y2, colour):
     return im
 
 
-def plot_matches(im1, im2, matches):
+def plot_matches_low_level(im1, im2, matches):
     """
     Displays two images side by side with matches highlighted
 
@@ -103,7 +103,7 @@ def plot_matches(im1, im2, matches):
     return outfile
 
 
-def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
+def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
                  outfile=None):
     """
     Plot matches on Pleiades images
@@ -177,7 +177,7 @@ def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None,
     pts2 = matches[:, 2:4] - [x2, y2]
 
     # plot the matches on the two crops
-    to_display = plot_matches(crop1, crop2, np.hstack((pts1, pts2)))
+    to_display = plot_matches_low_level(crop1, crop2, np.hstack((pts1, pts2)))
     if outfile is None:
         os.system('v %s &' % (to_display))
     else:
