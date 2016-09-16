@@ -103,7 +103,7 @@ def plot_matches(im1, im2, matches):
     return outfile
 
 
-def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
+def plot_matches_pleiades(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
                  outfile=None):
     """
     Plot matches on Pleiades images
