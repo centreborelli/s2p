@@ -661,18 +661,7 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
     r1 = rpc_model.RPCModel(rpc1)
     r2 = rpc_model.RPCModel(rpc2)
 
-    try:
-        if w*h < 2e6:
-            m = sift.matches_on_rpc_roi(img1, img2, r1, r2, x, y, w, h)
-        else:
-            m = filtered_sift_matches_full_img(img1, img2, r1, r2,
-                                               cfg['pointing_correction_rois_mode'],
-                                               None, 1000, x, y, w, h,
-                                               model=filter_matches)
-    except Exception as e:
-        print e
-        print "WARNING: pointing_accuracy.compute_correction: no sift matches."
-        m = None
+    m = sift.matches_on_rpc_roi(img1, img2, r1, r2, x, y, w, h)
 
     # A = optimize_pair(img1, img2, r1, r2, None, m)
     if m is not None:

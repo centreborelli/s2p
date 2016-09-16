@@ -1,4 +1,4 @@
-import warnings
+import os
 import numpy as np
 
 import common
@@ -59,7 +59,7 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
             inliers.
 
     Returns:
-        a numpy 2D array containing the list of inliers matches.
+        if any, a numpy 2D array containing the list of inliers matches.
     """
     # compute matches
     mfile = common.tmpfile('.txt')
@@ -81,8 +81,8 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
                                                                         mfile))
         common.run("ransac fmn 1000 .2 7 %s < %s" % (mfile, mfile))
 
-    # return numpy array of matches
-    return np.loadtxt(mfile)
+    if os.stat(mfile).st_size > 0:  # return numpy array of matches
+        return np.loadtxt(mfile)
 
 
 def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -112,13 +112,15 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
-    for i in range(6):
+    for i in range(4):
         p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
         matches = keypoints_match(p1, p2, 'relative', cfg['sift_match_thresh'],
                                   F, model='fundamental')
-        if matches.shape[0] > 10:
+        if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
             break
-        else:
-            thresh_dog /= 2.0
+        thresh_dog /= 2.0
+    else:
+        print "WARNING: sift.matches_on_rpc_roi: found no matches."
+        return None
     return matches
