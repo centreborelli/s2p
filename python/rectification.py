@@ -224,14 +224,14 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
         disp: 2-uple containing the horizontal disparity range
     """
     # srtm disparity range
-    if (cfg['disp_range_method'] in ['srtm', 'wider_sift_srtm']) or matches is None:
+    if (cfg['disp_range_method'] in ['srtm', 'wider_sift_srtm']) or matches is None or len(matches) < 2:
         srtm_disp = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h,
                                                          H1, H2, A,
                                                          cfg['disp_range_srtm_high_margin'],
                                                          cfg['disp_range_srtm_low_margin'])
         print "SRTM disparity range: [%f, %f]" % (srtm_disp[0], srtm_disp[1])
 
-    if cfg['disp_range_method'] == 'srtm' or matches is None:
+    if cfg['disp_range_method'] == 'srtm' or matches is None or len(matches) < 2:
         return srtm_disp
 
     # sift disparity range
