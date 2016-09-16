@@ -16,7 +16,7 @@ extern "C" {
 
 static void print_help(char *v[])
 {
-    fprintf(stderr, "usage:\n\t%s file.tif x y w h [-o file]"
+    fprintf(stderr, "usage:\n\t%s file.tif [x y w h] [-o file]"
     //                          0 1        2 3 4 5
     //        " [-b] [--verbose] [--thresh-dog t (0.0133)]"
             " [--verbose] [--thresh-dog t (0.0133)]"
@@ -42,6 +42,16 @@ int main(int c, char *v[]) {
     int ss_noct = atoi(pick_option(&c, &v, "-scale-space-noct", "8"));
     int ss_nspo = atoi(pick_option(&c, &v, "-scale-space-nspo", "3"));
 
+    // open the input image
+    GDALAllRegister();
+    GDALDatasetH hDataset = GDALOpen(v[1], GA_ReadOnly);
+    if (hDataset == NULL) {
+        fprintf(stderr, "ERROR: can't open %s\n", v[1]);
+        return 1;
+    }
+    int size_x = GDALGetRasterXSize(hDataset);
+    int size_y = GDALGetRasterYSize(hDataset);
+
     // define the rectangular region of interest (roi)
     int x, y, w, h;
     if (c == 6) {
@@ -50,16 +60,10 @@ int main(int c, char *v[]) {
         w = atoi(v[4]);
         h = atoi(v[5]);
     } else {
-        print_help(v);
-        return 1;
-    }
-
-    // open the input image
-    GDALAllRegister();
-    GDALDatasetH hDataset = GDALOpen(v[1], GA_ReadOnly);
-    if (hDataset == NULL) {
-        fprintf(stderr, "ERROR: can't open %s\n", v[1]);
-        return 1;
+        x = 0;
+        y = 0;
+        w = size_x;
+        h = size_y;
     }
 
     // clip roi to stay inside the image boundaries
@@ -71,8 +75,6 @@ int main(int c, char *v[]) {
         h += y;
         y = 0;
     }
-    int size_x = GDALGetRasterXSize(hDataset);
-    int size_y = GDALGetRasterYSize(hDataset);
     if (x + w > size_x)
         w = size_x - x;
     if (y + h > size_y)
