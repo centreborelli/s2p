@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+from __future__ import print_function
 import os
 import sys
 import utm
@@ -34,11 +35,11 @@ def check_parameters(d):
     """
     # verify that input files paths are defined
     if 'images' not in d or len(d['images']) < 2:
-        print 'ERROR: missing paths to input images'
+        print('ERROR: missing paths to input images')
         sys.exit(1)
     for img in d['images']:
         if not dict_has_keys(img, ['img', 'rpc']):
-            print 'ERROR: missing img or rpc paths for image', img
+            print('ERROR: missing img or rpc paths for image', img)
             sys.exit(1)
 
     # verify that roi or path to preview file are defined
@@ -61,7 +62,7 @@ def check_parameters(d):
                                                 d['images'][0]['prv'])
         d['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
     else:
-        print 'ERROR: missing or incomplete roi definition'
+        print('ERROR: missing or incomplete roi definition')
         sys.exit(1)
 
     # if srtm is disabled set disparity range method to sift
@@ -74,7 +75,7 @@ def check_parameters(d):
     for k in d.keys():
         if k not in ['images', 'roi', 'roi_kml', 'roi_utm']:
             if k not in cfg:
-                print 'WARNING: ignoring unknown parameter {}.'.format(k)
+                print('WARNING: ignoring unknown parameter {}.'.format(k))
 
 
 def build_cfg(config_file):
@@ -166,13 +167,13 @@ def adjust_tile_size():
     nty = int(np.round(float(cfg['roi']['h']) / tile_h))
     tile_h = int(np.ceil(float(cfg['roi']['h']) / nty))
 
-    print 'tile size: {} {}'.format(tile_w, tile_h)
+    print('tile size: {} {}'.format(tile_w, tile_h))
     n = len(cfg['images'])
     if n == 2:
-        print 'total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty)
+        print('total number of tiles: {} ({} x {})'.format(ntx * nty, ntx, nty))
     else:
-        print 'total number of tiles: {} ({} x {}) x {} pairs'.format(ntx*nty*(n-1),
-                                                                      ntx, nty, n-1)
+        print('total number of tiles: {} ({} x {}) x {} pairs'.format(ntx*nty*(n-1),
+                                                                      ntx, nty, n-1))
     return tile_w, tile_h
 
 
@@ -208,7 +209,7 @@ def tiles_full_info(tw, th):
             H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
             msk = common.tmpfile('.png')
             if masking.cloud_water_image_domain(msk, w, h, H, rpc, roi_msk, cld_msk, wat_msk):
-                print 'tile {} {} {} {} masked, we skip it'.format(x, y, w, h)
+                print('tile {} {} {} {} masked, we skip it'.format(x, y, w, h))
                 continue
 
             # add the tile to the list

@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+from __future__ import print_function
 import numpy as np
 import common
 
@@ -356,16 +357,16 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
 
     if debug:
         theta_1 = get_angle_from_cos_and_sin(b, a)
-        print "reference image:"
-        print "\trotation: %f deg" % np.rad2deg(theta_1)
-        print "\tzoom: %f" % z
-        print "\tvertical translation: %f" % t
-        print
+        print("reference image:")
+        print("\trotation: %f deg" % np.rad2deg(theta_1))
+        print("\tzoom: %f" % z)
+        print("\tvertical translation: %f" % t)
+        print()
         theta_2 = get_angle_from_cos_and_sin(-d, -c)
-        print "secondary image:"
-        print "\trotation: %f deg" % np.rad2deg(theta_2)
-        print "\tzoom: %f" % (1.0 / z)
-        print "\tvertical translation: %f" % -t
+        print("secondary image:")
+        print("\trotation: %f deg" % np.rad2deg(theta_2))
+        print("\tzoom: %f" % (1.0 / z))
+        print("\tvertical translation: %f" % -t)
 
     # output similarities
     S1 = np.zeros((3, 3))
@@ -442,7 +443,7 @@ def affine_transformation(x, xx):
     """
     # check that there are at least 3 points
     if len(x) < 3:
-        print "ERROR: estimation.affine_transformation needs 3 correspondences"
+        print("ERROR: estimation.affine_transformation needs 3 correspondences")
         return np.eye(3)
 
     # translate the input points so that the centroid is at the origin.

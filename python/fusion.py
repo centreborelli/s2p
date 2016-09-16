@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+from __future__ import print_function
 import os
 import sys
 import shutil
@@ -37,8 +38,8 @@ def register_heights(im1, im2):
     h2 = i2[ind]
 
     # for debug
-    print np.shape(i1)
-    print np.shape(h1)
+    print(np.shape(i1))
+    print(np.shape(h1))
 
 #    # 1st option: affine
 #    # we search the (u, v) vector that minimizes the following sum (over

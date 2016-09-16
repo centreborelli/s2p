@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+from __future__ import print_function
 import numpy as np
 
 def distance_point_to_line(x, l):
@@ -107,7 +108,7 @@ def fundamental_matrix(F, matches):
         d1 = distance_point_to_line(x, l)
         d2 = distance_point_to_line(xx, ll)
         d = max(d1, d2)
-#        print d # for debug only
+#        print(d) # for debug only
         if (d > d_max):
             d_max = d
     return d_max
@@ -186,7 +187,7 @@ def compare_homogeneous(a, b):
         the distance between normalized input data
     """
     if (a.shape != b.shape):
-        print "compare_homogeneous: inputs must have the same shape"
+        print("compare_homogeneous: inputs must have the same shape")
         return
 
     a = a/np.linalg.norm(a)

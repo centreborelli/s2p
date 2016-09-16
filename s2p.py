@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import sys
 import shutil
 import os.path
@@ -72,14 +73,14 @@ def print_elapsed_time(since_first_call=False):
     """
     t2 = datetime.datetime.now()
     if since_first_call:
-        print "Total elapsed time:", t2 - print_elapsed_time.t0
+        print("Total elapsed time:", t2 - print_elapsed_time.t0)
     else:
         try:
-            print "Elapsed time:", t2 - print_elapsed_time.t1
+            print("Elapsed time:", t2 - print_elapsed_time.t1)
         except AttributeError:
-            print t2 - print_elapsed_time.t0
+            print(t2 - print_elapsed_time.t0)
     print_elapsed_time.t1 = t2
-    print
+    print()
 
 
 def pointing_correction(tile, i=None):
@@ -99,13 +100,13 @@ def pointing_correction(tile, i=None):
 
     if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
                                                             'pointing.txt')):
-        print 'pointing correction done on tile {} {}'.format(x, y),
-        print 'pair {}'.format(i) if i else ''
+        print('pointing correction done on tile {} {}'.format(x, y), end=' ')
+        print('pair {}'.format(i) if i else '')
         return
 
     # correct pointing error
-    print 'correcting pointing on tile {} {}'.format(x, y),
-    print 'pair {}...'.format(i) if i else '...'
+    print('correcting pointing on tile {} {}'.format(x, y), end=' ')
+    print('pair {}...'.format(i) if i else '...')
     A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
 
     if A is not None:  # A is the correction matrix
@@ -163,12 +164,12 @@ def rectification_pair(tile, i=None):
     outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
-        print 'rectification done on tile {} {}'.format(x, y),
-        print 'pair {}'.format(i) if i else ''
+        print('rectification done on tile {} {}'.format(x, y), end=' ')
+        print('pair {}'.format(i) if i else '')
         return
 
-    print 'rectifying tile {} {}'.format(x, y),
-    print 'pair {}...'.format(i) if i else '...'
+    print('rectifying tile {} {}'.format(x, y), end=' ')
+    print('pair {}...'.format(i) if i else '...')
     try:
         A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
     except IOError:
@@ -204,12 +205,12 @@ def stereo_matching(tile, i=None):
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
-        print 'disparity estimation done on tile {} {}'.format(x, y),
-        print 'pair {}'.format(i) if i else ''
+        print('disparity estimation done on tile {} {}'.format(x, y), end=' ')
+        print('pair {}'.format(i) if i else '')
         return
 
-    print 'estimating disparity on tile {} {}'.format(x, y),
-    print 'pair {}...'.format(i) if i else '...'
+    print('estimating disparity on tile {} {}'.format(x, y), end=' ')
+    print('pair {}...'.format(i) if i else '...')
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
@@ -238,10 +239,10 @@ def disparity_to_height(tile, i):
     x, y, w, h = tile['coordinates']
 
     if cfg['skip_existing'] and os.path.isfile(height_map):
-        print 'triangulation done on tile {} {} pair {}'.format(x, y, i)
+        print('triangulation done on tile {} {} pair {}'.format(x, y, i))
         return
 
-    print 'triangulating tile {} {} pair {}...'.format(x, y, i)
+    print('triangulating tile {} {} pair {}...'.format(x, y, i))
     rpc1 = cfg['images'][0]['rpc']
     rpc2 = cfg['images'][i]['rpc']
     H_ref = os.path.join(out_dir, 'H_ref.txt')
@@ -269,10 +270,10 @@ def disparity_to_ply(tile):
     x, y, w, h = tile['coordinates']
 
     if cfg['skip_existing'] and os.path.isfile(ply_file):
-        print 'triangulation done on tile {} {}'.format(x, y)
+        print('triangulation done on tile {} {}'.format(x, y))
         return
 
-    print 'triangulating tile {} {}...'.format(x, y)
+    print('triangulating tile {} {}...'.format(x, y))
     rpc1 = cfg['images'][0]['rpc']
     rpc2 = cfg['images'][1]['rpc']
     H_ref = os.path.join(out_dir, 'H_ref.txt')
@@ -356,7 +357,7 @@ def heights_to_ply(tile):
     out_dir = tile['dir']
     plyfile = os.path.join(out_dir, 'cloud.ply')
     if cfg['skip_existing'] and os.path.isfile(plyfile):
-        print 'ply file already exists for tile {} {}'.format(x, y)
+        print('ply file already exists for tile {} {}'.format(x, y))
         return
 
     x, y, w, h = tile['coordinates']
@@ -482,11 +483,11 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
         try:
             outputs.append(r.get(600))  # wait at most 10 min per call
         except multiprocessing.TimeoutError:
-            print "Timeout while running %s" % str(r)
+            print("Timeout while running %s" % str(r))
             outputs.append(None)
         except common.RunFailure as e:
-            print "FAILED call: ", e.args[0]["command"]
-            print "\toutput: ", e.args[0]["output"]
+            print("FAILED call: ", e.args[0]["command"])
+            print("\toutput: ", e.args[0]["output"])
             outputs.append(None)
         except KeyboardInterrupt:
             pool.terminate()
@@ -516,7 +517,7 @@ def main(config_file):
     initialization.make_dirs()
     tw, th = initialization.adjust_tile_size()
 
-    print '\ndiscarding masked tiles...'
+    print('\ndiscarding masked tiles...')
     tiles = initialization.tiles_full_info(tw, th)
     print_elapsed_time()
     n = len(cfg['images'])
@@ -529,46 +530,46 @@ def main(config_file):
     # number of tiles
     # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles)))
 
-    print 'correcting pointing locally...'
+    print('correcting pointing locally...')
     launch_parallel_calls(pointing_correction, tiles_pairs, nb_workers)
 
-    print 'correcting pointing globally...'
+    print('correcting pointing globally...')
     global_pointing_correction(tiles)
     print_elapsed_time()
 
-    print 'rectifying tiles...'
+    print('rectifying tiles...')
     launch_parallel_calls(rectification_pair, tiles_pairs, nb_workers)
 
-    print 'running stereo matching...'
+    print('running stereo matching...')
     launch_parallel_calls(stereo_matching, tiles_pairs, nb_workers)
 
     if n > 2:
-        print 'computing height maps...'
+        print('computing height maps...')
         launch_parallel_calls(disparity_to_height, tiles_pairs, nb_workers)
 
-        print 'registering height maps...'
+        print('registering height maps...')
         mean_heights_local = launch_parallel_calls(mean_heights, tiles,
                                                    nb_workers)
 
-        print 'computing global pairwise height offsets...'
+        print('computing global pairwise height offsets...')
         mean_heights_global = np.mean(mean_heights_local, axis=0)
 
-        print 'merging height maps...'
+        print('merging height maps...')
         launch_parallel_calls(heights_fusion, tiles, nb_workers,
                               mean_heights_global)
 
-        print 'computing point clouds...'
+        print('computing point clouds...')
         launch_parallel_calls(heights_to_ply, tiles, nb_workers)
 
     else:
-        print 'triangulating tiles...'
+        print('triangulating tiles...')
         launch_parallel_calls(disparity_to_ply, tiles, nb_workers)
 
-    print 'computing DSM...'
+    print('computing DSM...')
     plys_to_dsm(tiles)
     print_elapsed_time()
 
-    print 'lidar preprocessor...'
+    print('lidar preprocessor...')
     lidar_preprocessor(tiles)
     print_elapsed_time()
 
@@ -580,7 +581,7 @@ def main(config_file):
 def print_help_and_exit(script_name):
     """
     """
-    print """
+    print("""
     Incorrect syntax, use:
       > %s config.json
         Launches the s2p pipeline.
@@ -588,7 +589,7 @@ def print_help_and_exit(script_name):
       All the parameters, paths to input and output files, are defined in
       the json configuration file.
 
-    """ % script_name
+    """ % script_name)
     sys.exit()
 
 
