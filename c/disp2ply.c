@@ -221,8 +221,9 @@ int main(int c, char *v[])
         // check that it passes the image domain mask
         int x = (int) round(p[0]) - col_m;
         int y = (int) round(p[1]) - row_m;
-        if (!msk_orig[y * msk_orig_w + x])
-            continue;
+        if ((x < msk_orig_w) && (y < msk_orig_h))
+            if (!msk_orig[y * msk_orig_w + x])
+                continue;
 
         // compute (lon, lat, alt) of the 3D point
         float d = disp[pix];
@@ -265,8 +266,9 @@ int main(int c, char *v[])
         // check that it passes the image domain mask
         int x = (int) round(p[0]) - col_m;
         int y = (int) round(p[1]) - row_m;
-        if (!msk_orig[y * msk_orig_w + x])
-            continue;
+        if ((x < msk_orig_w) && (y < msk_orig_h))
+            if (!msk_orig[y * msk_orig_w + x])
+                continue;
 
         // compute (lon, lat, alt) of the 3D point
         float d = disp[pix];
