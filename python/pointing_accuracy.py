@@ -633,8 +633,7 @@ def local_translation(r1, r2, x, y, w, h, m):
     return A
 
 
-def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
-                       filter_matches='fundamental'):
+def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -649,8 +648,6 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want. If bigger than
             1 Mpix, only five crops will be used to compute sift matches.
-        filter_matches (optional, default is 'fundamental'): model imposed by
-            RANSAC when searching the set of inliers
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to img2 in
@@ -663,7 +660,6 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h,
 
     m = sift.matches_on_rpc_roi(img1, img2, r1, r2, x, y, w, h)
 
-    # A = optimize_pair(img1, img2, r1, r2, None, m)
     if m is not None:
         A = local_translation(r1, r2, x, y, w, h, m)
     else:
