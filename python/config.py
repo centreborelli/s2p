@@ -110,6 +110,7 @@ cfg['fusion_thresh'] = 3
 cfg['fusion_conservative'] = False
 
 cfg['disable_srtm'] = False
+cfg['rpc_alt_range_scale_factor'] = 1
 
 # method to compute the disparity range: "sift", "srtm" or "wider_sift_srtm"
 cfg['disp_range_method'] = "wider_sift_srtm"

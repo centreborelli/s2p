@@ -236,18 +236,19 @@ def round_updown(a, b, q):
     return a, b
 
 
-def altitude_range_coarse(rpc):
+def altitude_range_coarse(rpc, scale_factor=1):
     """
     Computes a coarse altitude range using the RPC informations only.
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
+        scale_factor: factor by which the scale offset is multiplied
 
     Returns:
         the altitude validity range of the RPC.
     """
-    m = rpc.altOff - rpc.altScale
-    M = rpc.altOff + rpc.altScale
+    m = rpc.altOff - scale_factor * rpc.altScale
+    M = rpc.altOff + scale_factor * rpc.altScale
     return m, M
 
 
@@ -271,9 +272,9 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
         to the WGS84 reference ellipsoid.
     """
     # TODO: iterate the procedure used here to get a finer estimation of the
-    # TODO: bounding box on the ellipsoid and thus of the altitude range. For flat
-    # TODO: regions it will not improve much, but for mountainous regions there is a
-    # TODO: lot to improve.
+    # bounding box on the ellipsoid and thus of the altitude range. For flat
+    # regions it will not improve much, but for mountainous regions there is a
+    # lot to improve.
 
     # find bounding box on the ellipsoid (in geodesic coordinates)
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
@@ -281,7 +282,7 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     # if bounding box is out of srtm domain, return coarse altitude estimation
     if (lat_m < -60 or lat_M > 60 or cfg['disable_srtm']):
         print "WARNING: returning coarse range from rpc"
-        return altitude_range_coarse(rpc)
+        return altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
 
     # sample the bounding box with regular step of 3 arcseconds (srtm
     # resolution)
@@ -293,17 +294,11 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
                                                         cfg['srtm_dir']))
     h = np.ravel(srtm)
 
-    # TODO: choose between the two heuristics implemented here
     # srtm data may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
     # respect to geoid is 0. Thus we replace the nans with 0.
     # TODO: this should not be zero, but the geoid/ellipsoid offset
     srtm[np.isnan(h)] = 0
-
-    # But for safety we prefer to give up the precise
-    # altitude estimation in these cases and use the coarse one.
-#    if np.isnan(np.sum(srtm)):
-#        return altitude_range_coarse(rpc)
 
     # extract extrema (and add a +-100m security margin)
     h_m = np.round(h.min()) + margin_bottom
