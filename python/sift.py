@@ -112,7 +112,7 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
 
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
-    for i in range(4):
+    for i in range(2):
         p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
         matches = keypoints_match(p1, p2, 'relative', cfg['sift_match_thresh'],
