@@ -1,9 +1,8 @@
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
-
+from __future__ import print_function
 import numpy as np
 import os
 
@@ -123,7 +122,7 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
     """
     # if no matches, no plot
     if not matches.size:
-        print "visualisation.plot_matches: nothing to plot"
+        print("visualisation.plot_matches: nothing to plot")
         return
 
     # read rpcs
@@ -208,7 +207,7 @@ def plot_vectors(p, v, x, y, w, h, f=1, out_file=None):
         out_file = common.tmpfile('.png')
 
     common.run("gnuplot -p -e '%s' > %s" % (gp_string, out_file))
-    print out_file
+    print(out_file)
 
     if out_file is None:
         os.system("v %s &" % out_file)
@@ -251,8 +250,11 @@ def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h,
     q = matches_sift[:, 2:4]
     qq = common.points_apply_homography(A, q)
     ee = pointing_accuracy.error_vectors(np.hstack((p, qq)), F, 'ref')
-    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, None, matches_sift)
-    print pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y, w, h, A, matches_sift)
+    print(pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y,
+                                                        w, h, None,
+                                                        matches_sift))
+    print(pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y,
+                                                        w, h, A, matches_sift))
 
     # plot the vectors: they go from the point x to the line (F.T)x'
     plot_vectors(p, -e, x, y, w, h, f, out_file='%s_before.png' % out_files_pattern)

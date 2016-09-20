@@ -1,8 +1,9 @@
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+
+from __future__ import print_function
 import bs4
 import utm
 import datetime
@@ -19,7 +20,7 @@ def print_distance_between_vectors(u, v, msg):
     print min, max and mean of the coordinates of two vectors difference
     """
     tmp = u - v
-    print 'distance on %s: '%(msg), np.min(tmp), np.max(tmp), np.mean(tmp)
+    print('distance on %s: '%(msg), np.min(tmp), np.max(tmp), np.mean(tmp))
 
 
 def find_corresponding_point(model_a, model_b, x, y, z):
@@ -82,22 +83,22 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
         diagaadot = np.multiply(a[:, 0], a[:, 0]) + np.multiply(a[:, 1], a[:, 1])
         h0_inc = np.divide(diagabdot, diagaadot)
 #        if np.any(np.isnan(h0_inc)):
-#            print x1, y1, x2, y2
-#            print a
+#            print(x1, y1, x2, y2)
+#            print(a)
 #            return h0, h0*0
         # implements:   q = r0 + h0_inc * a
         q = r0 + np.dot(np.diag(h0_inc), a)
         # implements: err = sqrt(dot(q-p2, q-p2))
         tmp = q-p2
         err =  np.sqrt(np.multiply(tmp[:, 0], tmp[:, 0]) + np.multiply(tmp[:, 1], tmp[:, 1]))
-#       print np.arctan2(tmp[:, 1], tmp[:, 0]) # for debug
-#       print err # for debug
+#       print(np.arctan2(tmp[:, 1], tmp[:, 0])) # for debug
+#       print(err) # for debug
         h0 = np.add(h0, h0_inc*HSTEP)
         # implements: if fabs(h0_inc) < 0.0001:
         if np.max(np.fabs(h0_inc)) < 0.001:
             break
 
-    return (h0, err)
+    return h0, err
 
 
 def approximate_rpc_as_projective(rpc_model, col_range, lin_range, alt_range,
@@ -133,7 +134,7 @@ def approximate_rpc_as_projective(rpc_model, col_range, lin_range, alt_range,
             colPROJ[i] = v[0]/v[2]
             linPROJ[i] = v[1]/v[2]
 
-        print 'approximate_rpc_as_projective: (min, max, mean)'
+        print('approximate_rpc_as_projective: (min, max, mean)')
         print_distance_between_vectors(cols, colPROJ, 'cols')
         print_distance_between_vectors(lins, linPROJ, 'rows')
 
@@ -281,7 +282,7 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
 
     # if bounding box is out of srtm domain, return coarse altitude estimation
     if (lat_m < -60 or lat_M > 60 or cfg['disable_srtm']):
-        print "WARNING: returning coarse range from rpc"
+        print("WARNING: returning coarse range from rpc")
         return altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
 
     # sample the bounding box with regular step of 3 arcseconds (srtm
@@ -558,7 +559,7 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     p2 = np.vstack([xx, yy]).T
 
     if A is not None:
-        print "rpc_utils.alt_to_disp: applying pointing error correction"
+        print("rpc_utils.alt_to_disp: applying pointing error correction")
         # correct coordinates of points in im2, according to A
         p2 = common.points_apply_homography(np.linalg.inv(A), p2)
 
@@ -633,10 +634,10 @@ def compute_ms_panchro_offset(dim_pan, dim_ms):
     delta_t = 1000 * (t_ms - t_pan)
     off_row = int(total_seconds(delta_t) / t_e_pan)
 
-    #print "t_e_pan: %f" % t_e_pan
-    #print "t_init_ms:  %s" % t_init_ms
-    #print "t_init_pan: %s" % t_init_pan
-    #print off_col, off_row
+    #print("t_e_pan: %f" % t_e_pan)
+    #print("t_init_ms:  %s" % t_init_ms)
+    #print("t_init_pan: %s" % t_init_pan)
+    #print(off_col, off_row)
 
     return off_col, off_row
 

@@ -1,8 +1,9 @@
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+
+from __future__ import print_function
 import copy
 import numpy as np
 from xml.etree.ElementTree import ElementTree
@@ -173,12 +174,12 @@ class RPCModel:
             if a.text in ['PHR_SENSOR', 'S6_SENSOR', 'S7_SENSOR']:
                 self.read_rpc_pleiades(tree)
             else:
-                print 'unknown sensor type'
+                print('unknown sensor type')
         elif b is not None:
             if b.text == 'WV02' or b.text == 'WV01':
                 self.read_rpc_worldview(tree)
             else:
-                print 'unknown sensor type'
+                print('unknown sensor type')
 
     def parse_coeff(self, element, prefix, indices):
         tab = []
@@ -367,7 +368,7 @@ class RPCModel:
             y2 = apply_rfm(self.inverseLinNum, self.inverseLinDen, lat + EPS, lon, cAlt)
             #n += 1
 
-        #print 'direct_estimate_iterative: %d iterations' % n
+        #print('direct_estimate_iterative: %d iterations' % n)
 
         if return_normalized:
            return lon, lat, cAlt
@@ -570,8 +571,8 @@ if __name__ == '__main__':
     rpc = RPCModel('../pleiades_data/rpc/haiti/rpc01.xml')
     col, lin = 20000, 8000
     alt = 90
-    print 'col={col}, lin={lin}, alt={alt}'.format(col=col, lin=lin, alt=alt)
+    print('col={col}, lin={lin}, alt={alt}'.format(col=col, lin=lin, alt=alt))
     lon, lat, alt = rpc.direct_estimate(col, lin, alt)
-    print 'lon={lon}, lat={lat}, alt={alt}'.format(lon=lon, lat=lat, alt=alt)
+    print('lon={lon}, lat={lat}, alt={alt}'.format(lon=lon, lat=lat, alt=alt))
     col, lin, alt = rpc.inverse_estimate(lon, lat, alt)
-    print 'col={col}, lin={lin}, alt={alt}'.format(col=col, lin=lin, alt=alt)
+    print('col={col}, lin={lin}, alt={alt}'.format(col=col, lin=lin, alt=alt))

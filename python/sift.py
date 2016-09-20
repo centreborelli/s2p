@@ -1,3 +1,9 @@
+# Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
+# Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
+
+
+from __future__ import print_function
 import os
 import numpy as np
 
@@ -121,6 +127,6 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
             break
         thresh_dog /= 2.0
     else:
-        print "WARNING: sift.matches_on_rpc_roi: found no matches."
+        print("WARNING: sift.matches_on_rpc_roi: found no matches.")
         return None
     return matches

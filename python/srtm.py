@@ -1,8 +1,8 @@
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+from __future__ import print_function
 import subprocess
 import zipfile
 import urllib
@@ -38,7 +38,7 @@ def list_srtm_tiles(rpcfile, x, y, w, h):
                                  stdout=subprocess.PIPE)
             out.append(p.stdout.readline().split()[0])
     out = set(out)
-    print "Needed srtm tiles: ", out
+    print("Needed srtm tiles: ", out)
     return out
 
 
@@ -71,7 +71,7 @@ def get_srtm_tile(srtm_tile, out_dir):
         z = zipfile.ZipFile(zip_path, 'r')
         z.extract('%s.tif' % srtm_tile, out_dir)
     else:
-        print "%s not available" % srtm_tile
+        print("%s not available" % srtm_tile)
 
     # remove the zip file
     os.remove(zip_path)

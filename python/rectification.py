@@ -2,6 +2,8 @@
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
+
+from __future__ import print_function
 import sys
 import numpy as np
 
@@ -96,8 +98,8 @@ def register_horizontally_shear(matches, H1, H2):
     y2 = p2[:, 1]
 
     if cfg['debug']:
-        print "Residual vertical disparities: max, min, mean. Should be zero"
-        print np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1)
+        print("Residual vertical disparities: max, min, mean. Should be zero")
+        print(np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1))
 
     # we search the (s, b) vector that minimises \sum (x1 - (x2+s*y2+b))^2
     # it is a least squares minimisation problem
@@ -141,8 +143,8 @@ def register_horizontally_translation(matches, H1, H2, flag='center'):
 
     # for debug, print the vertical disparities. Should be zero.
     if cfg['debug']:
-        print "Residual vertical disparities: max, min, mean. Should be zero"
-        print np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1)
+        print("Residual vertical disparities: max, min, mean. Should be zero")
+        print(np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1))
 
     # compute the disparity offset according to selected option
     t = 0
@@ -229,7 +231,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
                                                          H1, H2, A,
                                                          cfg['disp_range_srtm_high_margin'],
                                                          cfg['disp_range_srtm_low_margin'])
-        print "SRTM disparity range: [%f, %f]" % (srtm_disp[0], srtm_disp[1])
+        print("SRTM disparity range: [%f, %f]" % (srtm_disp[0], srtm_disp[1]))
 
     if cfg['disp_range_method'] == 'srtm' or matches is None or len(matches) < 2:
         return srtm_disp
@@ -237,14 +239,14 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     # sift disparity range
     if matches is not None:
         sift_disp = disparity_range_from_matches(matches, H1, H2, w, h)
-        print "SIFT disparity range: [%f, %f]" % (sift_disp[0], sift_disp[1])
+        print("SIFT disparity range: [%f, %f]" % (sift_disp[0], sift_disp[1]))
         if cfg['disp_range_method'] == 'sift':
             return sift_disp
 
     # expand disparity range with srtm according to cfg params
     if cfg['disp_range_method'] == 'wider_sift_srtm' and (matches is not None):
         disp = min(srtm_disp[0], sift_disp[0]), max(srtm_disp[1], sift_disp[1])
-        print "Final disparity range: [%f, %f]" % (disp[0], disp[1])
+        print("Final disparity range: [%f, %f]" % (disp[0], disp[1]))
         return disp
 
 
@@ -280,8 +282,8 @@ def rectification_homographies(matches, x, y, w, h, hmargin=0, vmargin=0):
         y1 = common.points_apply_homography(S1, matches[:, :2])[:, 1]
         y2 = common.points_apply_homography(S2, matches[:, 2:])[:, 1]
         err = np.abs(y1 - y2)
-        print "max, min, mean rectification error on point matches: ",
-        print np.max(err), np.min(err), np.mean(err)
+        print("max, min, mean rectification error on point matches: ", end=' ')
+        print(np.max(err), np.min(err), np.mean(err))
 
     # pull back top-left corner of the ROI to the origin (plus margin)
     pts = common.points_apply_homography(S1, [[x, y], [x+w, y], [x+w, y+h], [x, y+h]])
@@ -359,7 +361,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
                                                           cfg['epipolar_thresh'])
         if len(sift_matches) < 10:
-            print 'WARNING: no registration with less than 10 matches'
+            print('WARNING: no registration with less than 10 matches')
         else:
             H2 = register_horizontally_translation(sift_matches, H1, H2)
 

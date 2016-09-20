@@ -4,6 +4,7 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 
+from __future__ import print_function
 import os
 import numpy as np
 
@@ -41,7 +42,7 @@ def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
-    print '%d sift matches' % len(matches)
+    print('%d sift matches' % len(matches))
 
     # apply pointing correction matrix, if available
     if A is not None:
@@ -55,8 +56,8 @@ def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
     e = rpc_utils.compute_height(rpc1, rpc2, x1, y1, x2, y2)[1]
     # matches = matches[e < 0.1, :]
     # visualisation.plot_matches_pleiades(im1, im2, matches)
-    print "max, mean, min pointing error, from %d points:" % (len(matches))
-    print np.max(e), np.mean(e), np.min(e)
+    print("max, mean, min pointing error, from %d points:" % (len(matches)))
+    print(np.max(e), np.mean(e), np.min(e))
 
     # return the mean error
     return np.mean(np.abs(e))
@@ -87,7 +88,7 @@ def evaluation_from_estimated_F(im1, im2, rpc1, rpc2, x, y, w, h, A=None,
         matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
     p1 = matches[:, 0:2]
     p2 = matches[:, 2:4]
-    print '%d sift matches' % len(matches)
+    print('%d sift matches' % len(matches))
 
     # apply pointing correction matrix, if available
     if A is not None:
@@ -178,13 +179,13 @@ def cost_function(v, *args):
     if (np.abs(v[0]) > 200*np.pi or
         np.abs(v[1]) > 10000 or
         np.abs(v[2]) > 10000):
-        print 'warning: cost_function is going too far'
-        print v
+        print('warning: cost_function is going too far')
+        print(v)
 
     if (len(v) > 3):
         if (np.abs(v[3]) > 20000):
-            print 'warning: cost_function is going too far'
-            print v
+            print('warning: cost_function is going too far')
+            print(v)
 
     # compute the altitudes from the matches without correction
     x1 = matches[:, 0]
@@ -235,8 +236,8 @@ def cost_function_linear(v, rpc1, rpc2, matches):
         np.abs(v[1]) > 10000 or
         np.abs(v[2]) > 10000 or
         np.abs(v[3]) > 20000):
-        print 'warning: cost_function is going too far'
-        print v
+        print('warning: cost_function is going too far')
+        print(v)
 
     x, y, w, h = common.bounding_box2D(matches[:, 0:2])
     matches_rpc = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
@@ -250,198 +251,6 @@ def cost_function_linear(v, rpc1, rpc2, matches):
     return evaluation.fundamental_matrix_L1(F, np.hstack([matches[:, 0:2], p2]))
 
 
-def filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, flag='automatic',
-        prev1=None, a=1000, x=None, y=None, w=None, h=None, outfile=None, model='fundamental'):
-    """
-    Computes a list of sift matches between two full Pleiades images.
-
-    Args:
-        im1, im2: paths to the two Pleiades images (usually jp2 or tif)
-        rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        flag: 'automatic', 'interactive' or 'load', to decide if the five zones
-            used to search keypoints are queried interactively, chosen
-            automatically, or loaded from the file 'pointing_correction_rois.txt'.
-        prev1 (optional): path to the jpg preview image of im1 (used in case of
-            interactive mode)
-        a: length of the squared tiles used to extract sift points, in the case
-            of automatic mode
-        x, y, w, h (optional): use a big ROI and extract the five tiles from
-            there instead of from the full image.
-        outfile (optional): path to a txt where to save the list of matches.
-        model (optional, default is 'fundamental'): model imposed by RANSAC
-            when searching the set of inliers
-
-    Returns:
-        matches: 2D numpy array containing a list of matches. Each line
-            contains one pair of points, ordered as x1 y1 x2 y2.
-            The coordinate system is that of the big images.
-            If no sift matches are found, then an exception is raised.
-
-    The keypoints are extracted from five zones in the first image. One in the
-    center, and four in the corners. The matches are consistent with an
-    epipolar model in each of the zones.
-    """
-    # if no big ROI is defined, use the full image
-    if x is None:
-        x = 0
-        y = 0
-        w = rpc1.lastCol
-        h = rpc1.lastRow
-
-    # initialize output array
-    out = np.zeros(shape = (1, 4))
-
-    if flag == 'automatic':
-        # if roi size is too big wrt image size, take a smaller roi size
-        if (min(h, w) < 4*a):
-            a = round(min(h, w)/4)
-
-        # central zone
-        x0 = round((w-a)/2) + x
-        y0 = round((h-a)/2) + y
-        try:
-            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
-            out = np.vstack((out, matches))
-        except Exception as e:
-            print "no matches in the central zone"
-            print e
-
-        # corner zones
-        x0 = round((1*w - 2*a)/4) + x
-        y0 = round((1*h - 2*a)/4) + y
-        try:
-            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
-            out = np.vstack((out, matches))
-        except Exception as e:
-            print "no matches in the corner 1"
-            print e
-
-        x0 = round((3*w - 2*a)/4) + x
-        y0 = round((1*h - 2*a)/4) + y
-        try:
-            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
-            out = np.vstack((out, matches))
-        except Exception as e:
-            print "no matches in the corner 2"
-            print e
-
-        x0 = round((1*w - 2*a)/4) + x
-        y0 = round((3*h - 2*a)/4) + y
-        try:
-            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
-            out = np.vstack((out, matches))
-        except Exception as e:
-            print "no matches in the corner 3"
-            print e
-
-        x0 = round((3*w - 2*a)/4) + x
-        y0 = round((3*h - 2*a)/4) + y
-        try:
-            matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x0, y0, a, a)
-            out = np.vstack((out, matches))
-        except Exception as e:
-            print "no matches in the corner 4"
-            print e
-
-    if flag == 'interactive':
-        for i in range(5):
-            x, y, w, h = common.get_roi_coordinates(rpc1, prev1)
-            try:
-                matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
-                out = np.vstack((out, matches))
-            except Exception as e:
-                print "no matches in the selected roi"
-                print e
-
-    if flag == 'load':
-        im = os.path.dirname(im1)
-        fname = os.path.join(im, 'pointing_correction_rois.txt')
-        rois = np.loadtxt(fname)
-        for i in xrange(len(rois)):
-            x, y, w, h = rois[i, :]
-            try:
-                matches = sift.matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h)
-                out = np.vstack((out, matches))
-            except Exception as e:
-                print "no matches in the selected roi"
-                print e
-
-
-    # save and return the full list of matches, only if there are enough
-    if len(out) < 7:
-        raise Exception("not enough matches")
-    else:
-        if outfile is not None:
-            np.savetxt(outfile, out[1:, :])
-        return out[1:, :]
-
-
-def query_rois_save_to_file(im, n=5):
-    """
-    Save coordinates of the ROIs to use for pointing correction of a dataset.
-
-    Args:
-        im: path to the folder containing the Pleiades images. Be careful, the
-            path should not end by a '/'
-        n: number of ROIs to query
-
-    Returns:
-        nothing. It saves the (x, y, w, h) of each ROI in a txt file named
-        pointing_correction_rois.txt, one per line
-    """
-    rpc  = '%s/../rpc/%s/rpc01.xml' % (os.path.dirname(im), os.path.basename(im))
-    prev = os.path.join(im, 'prev01.jpg')
-    filename = os.path.join(im, 'pointing_correction_rois.txt')
-
-    out = np.zeros((n, 4))
-    for i in range(n):
-        x, y, w, h = common.get_roi_coordinates(rpc, prev)
-        out[i, :] = x, y, w, h
-
-    np.savetxt(filename, out, '%d')
-
-
-def query_rois_all_datasets(data):
-    """
-    Run the query_rois_save_to_file function on all the datasets found in data.
-
-    Args:
-        data: path to the folder containing all the Pleiades datasets
-
-    Returns:
-        nothing. For each dataset, it saves the (x, y, w, h) of each ROI in a
-        txt file named dataset/pointing_correction_rois.txt, one per line
-    """
-    for f in os.listdir(data):
-        query_rois_save_to_file(os.path.join(data, f))
-
-
-def save_sift_matches_all_datasets(data):
-    """
-    Run the filtered_sift_matches_full_img function on all the datasets.
-
-    Args:
-        data: path to the folder containing all the Pleiades datasets
-
-    Returns:
-        nothing. For each dataset, it saves the list of sift matches computed
-        between images 1 and 2, according to the ROIs defined in the
-        corresponding file.
-    """
-    for f in os.listdir(data):
-        dataset = os.path.join(data, f)
-        im1  = os.path.join(dataset, 'im01.tif')
-        im2  = os.path.join(dataset, 'im02.tif')
-        rpc1 = '%s/../rpc/%s/rpc01.xml' % (data, f)
-        rpc2 = '%s/../rpc/%s/rpc02.xml' % (data, f)
-        rpc1 = rpc_model.RPCModel(rpc1)
-        rpc2 = rpc_model.RPCModel(rpc2)
-        fname = os.path.join(dataset, 'sift_matches.txt')
-        print fname
-        m = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, 'load', None,
-            1000, None, None, None, None, fname)
-
-
 def print_params(v):
     """
     Display the pointing correction parameters.
@@ -452,8 +261,7 @@ def print_params(v):
     This function is called by the fmin_bfgs optimization function at each
     iteration, to display the current values of the parameters.
     """
-    print 'rotation: %.3e, translation: (%.3e, %.3e), horizontal shear: %.3e' %(v[0],
-        v[1], v[2], v[3])
+    print('rotation: %.3e, translation: (%.3e, %.3e), horizontal shear: %.3e' % v)
 
 
 def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
@@ -485,7 +293,7 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     #     matches = matches[ind.astype(int), :]
 
     from scipy.optimize import fmin_l_bfgs_b
-    print "running optimization using %d matches" % len(matches)
+    print("running optimization using %d matches" % len(matches))
     v0 = np.zeros(4)
     v, min_val, debug = fmin_l_bfgs_b(
             cost_function,
@@ -503,48 +311,13 @@ def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
     # fmin_l_bfgs_b(func, x0, fprime=None, args=(), approx_grad=0, bounds=None,
     # m=10, factr=10000000.0, pgtol=1e-05, epsilon=1e-08, iprint=-1,
     # maxfun=15000, disp=None)
-    print 'theta: %f' % v[0]
-    print 'tx: %f' % v[1]
-    print 'ty: %f' % v[2]
-    print 'shear: %f' % v[3]
-    print 'min cost: %f' % min_val
-    print debug
+    print('theta: %f' % v[0])
+    print('tx: %f' % v[1])
+    print('ty: %f' % v[2])
+    print('shear: %f' % v[3])
+    print('min cost: %f' % min_val)
+    print(debug)
     return euclidean_transform_matrix(v)
-
-
-def optimize_pair_all_datasets(data):
-    """
-    Run the optimize_pair function on all the datasets found in data.
-
-    Args:
-        data: path to the folder containing all the Pleiades datasets
-
-    Returns:
-        nothing. For each dataset, it saves the computed correction matrix in a
-        txt file named dataset/pointing_correction_matrix.txt.
-
-    It uses precomputed matches, stored in dataset/sift_matches.txt. These
-    matches are usually computed with the save_sift_matches_all_datasets
-    function.
-    """
-    for f in os.listdir(data):
-        dataset = os.path.join(data, f)
-        im1  = os.path.join(dataset, 'im01.tif')
-        im2  = os.path.join(dataset, 'im02.tif')
-        rpc1 = '%s/../rpc/%s/rpc01.xml' % (data, f)
-        rpc2 = '%s/../rpc/%s/rpc02.xml' % (data, f)
-        rpc1 = rpc_model.RPCModel(rpc1)
-        rpc2 = rpc_model.RPCModel(rpc2)
-        matches_file = os.path.join(dataset, 'sift_matches.txt')
-        try:
-            with open(matches_file, 'r'):
-                matches = np.loadtxt(matches_file)
-                out = os.path.join(dataset, 'pointing_correction_matrix.txt')
-                print f
-                A = optimize_pair(im1, im2, rpc1, rpc2, None, matches)
-                np.savetxt(out, A)
-        except Exception as e:
-                print e
 
 
 def error_vectors(m, F, ind='ref'):
@@ -581,7 +354,7 @@ def error_vectors(m, F, ind='ref'):
     elif ind == 'ref':
         l = np.dot(xx, F)
     else:
-        print "pointing_accuracy.error_vectors: invalid 'ind' argument"
+        print("pointing_accuracy.error_vectors: invalid 'ind' argument")
 
     # compute the error vectors (going from the projection of x or xx on l to x
     # or xx)
