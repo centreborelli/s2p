@@ -1,6 +1,6 @@
 C99 = $(CC) -std=c99
 CFLAGS = -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN
-CPPFLAGS = -g -O3 -fpermissive
+CPPFLAGS = -g -O3 -fpermissive -DNDEBUG -DDONT_USE_TEST_MAIN
 LDLIBS = -lstdc++
 IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
@@ -8,6 +8,10 @@ FFTLIBS = -lfftw3f -lfftw3
 
 ifeq ($(CC), gcc)
 	CFLAGS += -fopenmp
+endif
+
+ifeq ($(CXX), g++)
+	CPPFLAGS += -fopenmp
 endif
 
 OS := $(shell uname -s)
