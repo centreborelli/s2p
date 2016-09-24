@@ -401,29 +401,16 @@ def plys_to_dsm(tiles):
 
 def lidar_preprocessor(tiles):
     """
-    Produce a single height map, DSM and point cloud for the whole ROI.
-
-    The height maps associated to each pair, as well as the height map obtained
-    by merging all the pairs, are stored as VRT files. The final DSM is obtained
-    by projecting the 3D points from the ply files obtained on each tile. The
-    final point cloud is obtained as the union of all the locally merged point
-    clouds, in the LidarViewer format.
+    Produce a single multiscale point cloud for the whole processed region.
 
     Args:
-        tiles: dictionary providing all the information about the
-            processed tiles
+        tiles: list of tiles dictionaries
     """
-    # whole point cloud (LidarViewer format)
-    if common.which('LidarPreprocessor'):
-        out = os.path.join(cfg['out_dir'], 'cloud.lidar_viewer')
-        plys = []
-        for tile in tiles:
-            plys.append(os.path.join(os.path.abspath(tile['dir']), 'cloud.ply'))
-        common.lidar_preprocessor(out, plys)
-
-    # copy RPC xml files in the output directory
-    for img in cfg['images']:
-        shutil.copy2(img['rpc'], cfg['out_dir'])
+    if common.which('LidarPreprocessor') is None:
+        return
+    plys = [os.path.join(os.path.abspath(t['dir']), 'cloud.ply') for t in tiles]
+    common.lidar_preprocessor(os.path.join(cfg['out_dir'],
+                                           'cloud.lidar_viewer'), plys)
 
 
 def tilewise_wrapper(fun, *args, **kwargs):
@@ -462,6 +449,9 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
         nb_workers: number of calls run simultaneously
         extra_args (optional): tuple containing extra arguments to be passed to
             fun (same value for all calls)
+
+    Return:
+        list of outputs
     """
     results = []
     outputs = []

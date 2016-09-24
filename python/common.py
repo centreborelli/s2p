@@ -919,7 +919,7 @@ def which(program):
             "/bin/ls".
 
     Returns:
-        full path to the binary if it exists, None if it doesn't.
+        full path to the binary if it exists
 
     This function was copied from:
     http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
@@ -934,8 +934,6 @@ def which(program):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
-
-    return None
 
 
 def url_with_authorization_header(from_url):
