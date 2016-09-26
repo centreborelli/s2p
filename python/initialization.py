@@ -138,9 +138,6 @@ def make_dirs():
     common.mkdir_p(cfg['temporary_dir'])
     common.mkdir_p(os.path.join(cfg['temporary_dir'], 'meta'))
 
-    # duplicate stdout and stderr to log file
-    tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
-
     # store a json dump of the config.cfg dictionary
     f = open(os.path.join(cfg['out_dir'], 'config.json'), 'w')
     json.dump(cfg, f, indent=2)

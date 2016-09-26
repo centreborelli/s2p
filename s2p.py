@@ -32,6 +32,7 @@ from osgeo import gdal
 gdal.UseExceptions()
 
 from python.config import cfg
+from python import tee
 from python import common
 from python import initialization
 from python import pointing_accuracy
@@ -505,6 +506,10 @@ def main(config_file):
 
     initialization.build_cfg(config_file)
     initialization.make_dirs()
+
+    # duplicate stdout and stderr to log file
+    log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
+
     tw, th = initialization.adjust_tile_size()
 
     print('\ndiscarding masked tiles...')
@@ -566,6 +571,7 @@ def main(config_file):
     # cleanup
     common.garbage_cleanup()
     print_elapsed_time(since_first_call=True)
+    log.delete()
 
 
 def print_help_and_exit(script_name):
