@@ -498,14 +498,14 @@ def main(config_file):
         config_file: path to a json configuration file
     """
     print_elapsed_time.t0 = datetime.datetime.now()
+    initialization.build_cfg(config_file)
+    initialization.make_dirs()
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
     if cfg['max_nb_threads']:
         nb_workers = min(nb_workers, cfg['max_nb_threads'])
-
-    initialization.build_cfg(config_file)
-    initialization.make_dirs()
+    cfg['max_nb_threads'] = nb_workers
 
     # duplicate stdout and stderr to log file
     log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
