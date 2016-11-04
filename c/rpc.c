@@ -423,7 +423,7 @@ static void eval_nrpc_iterative(double *result,
 static void eval_nrpc(double *result,
 		struct rpc *p, double x, double y, double z)
 {
-	if isfinite(p->numx[0]) {
+	if (isfinite(p->numx[0])) {
 		double numx = eval_pol20(p->numx, x, y, z);
 		double denx = eval_pol20(p->denx, x, y, z);
 		double numy = eval_pol20(p->numy, x, y, z);
