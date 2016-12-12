@@ -1,0 +1,16 @@
+dist: trusty
+sudo: false
+language: python
+python:
+  - "2.7"
+
+# command to install dependencies
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install gdal-bin gettext-base libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev libtiff-tools libxslt1-dev python-gdal
+install: "pip install utm bs4 lxml"
+
+# command to build
+script:
+  - make
+  - make test
