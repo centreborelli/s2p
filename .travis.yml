@@ -8,9 +8,8 @@ python:
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools python-gdal
-install: "pip install utm bs4 lxml"
+install: "pip install utm"
 
 # command to build
 script:
   - make
-  - make test
