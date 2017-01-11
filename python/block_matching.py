@@ -23,7 +23,8 @@ msmw = os.path.join(b, 'iip_stereo_correlation_multi_win2')
 msmw2 = os.path.join(b, 'iip_stereo_correlation_multi_win2_newversion')
 tvl1 = os.path.join(b, 'callTVL1.sh')
 
-def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max, extra_params=''):
+def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min=None,
+                          disp_max=None, extra_params=''):
     """
     Runs a block-matching binary on a pair of stereo-rectified images.
 
@@ -38,8 +39,10 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
         extra_params: optional string with algorithm-dependent parameters
     """
     # round disparity bounds
-    disp_min = int(np.floor(disp_min))
-    disp_max = int(np.ceil(disp_max))
+    if disp_min is not None:
+        disp_min = int(np.floor(disp_min))
+    if disp_max is not None:
+        disp_max = int(np.ceil(disp_max))
 
     # call the block_matching binary
     if (algo == 'hirschmuller02'):
@@ -106,7 +109,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min, disp_max
             disp_max = center + 100
 
         env = os.environ.copy()
-        env['OMP_NUM_THREADS'] = "1" #str(cfg['omp_num_threads'])
+        env['OMP_NUM_THREADS'] = str(cfg['omp_num_threads'])
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = '5'
         env['TSGM'] = '3'
