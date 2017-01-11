@@ -413,7 +413,7 @@ def main(config_file, steps=range(1, 8)):
 
     # omp_num_threads: should not exceed nb_workers when multiplied by the
     # number of tiles
-    cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
+    #cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
 
     # do the job
     if 2 in steps:

@@ -111,7 +111,7 @@ def compute_disparity_map(im1, im2, out_disp, out_mask, algo, disp_min=None,
         env = os.environ.copy()
         env['OMP_NUM_THREADS'] = str(cfg['omp_num_threads'])
         env['MEDIAN'] = '1'
-        env['CENSUS_NCC_WIN'] = '5'
+        env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
         env['TSGM'] = '3'
         common.run("%s -r %d -R %d -s vfit -t census -O 8 %s %s %s" % (mgm,
                                                                        disp_min,

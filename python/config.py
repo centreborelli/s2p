@@ -26,12 +26,14 @@ cfg['clean_tmp'] = True
 cfg['full_img']  = False
 
 # s2p processes the images tile by tile. The tiles are squares cropped from the
-# reference image. The lenght of the tiles is given by this param, in pixels.
+# reference image. The width and height of the tiles are given by this param, in pixels.
 cfg['tile_size']  = 800
 
-# max number of tiles processed in parallel. None means the number of cores of
-# the cpu.
+# max number of tiles processed in parallel. None means the number of available cores
 cfg['max_nb_threads'] = None 
+
+# max number of OMP threads used to process a tile during stereo matching
+cfg['omp_num_threads'] = 1
 
 # debug mode: no parallelisation, and more verbose logs
 cfg['debug'] = False
@@ -73,6 +75,9 @@ cfg['epipolar_thresh'] = 0.5
 # stereo matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
 # hirschmuller08_laplacian', 'sgbm', 'mgm'
 cfg['matching_algorithm'] = 'mgm'
+
+# size of the Census NCC square windows used in mgm
+cfg['census_ncc_win'] = 5
 
 # blur pleiades images before stereo matching
 cfg['use_pleiades_unsharpening'] = True
