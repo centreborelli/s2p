@@ -36,6 +36,6 @@ lr=${11}
 echo "sgbm $a $b $disp $cost $im $iM $SAD_win $P1 $P2 $lr"
 sgbm $a $b $disp $cost $im $iM $SAD_win $P1 $P2 $lr
 
-# create rejection mask. 0 means the pixel is rejected, 255 means the pixel is accepted.
+# create rejection mask. 0 means the pixel is rejected, 1 means the pixel is accepted.
 # the points are either unmatched or not present in the original images $1/$2, we remove these points
-plambda $disp "x 0 join " | backflow - $2 | plambda $disp $1 - "x isnan y isnan z isnan or or 0 255 if" | iion - $mask
+plambda $disp "x 0 join" | backflow - $2 | plambda $disp $1 - "x isfinite y isfinite z isfinite or or" -o $mask

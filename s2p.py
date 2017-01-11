@@ -27,7 +27,8 @@ import datetime
 import traceback
 import numpy as np
 import multiprocessing
-from osgeo import gdal, ogr
+from osgeo import gdal
+
 gdal.UseExceptions()
 
 from python.config import cfg
@@ -148,9 +149,9 @@ def process_tile_pair(tile_info, pair_id):
 
     # rectification
     if (cfg['skip_existing'] and
-        os.path.isfile(os.path.join(out_dir, 'disp_min_max.txt')) and
-        os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and
-        os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif'))):
+            os.path.isfile(os.path.join(out_dir, 'disp_min_max.txt')) and
+            os.path.isfile(os.path.join(out_dir, 'rectified_ref.tif')) and
+            os.path.isfile(os.path.join(out_dir, 'rectified_sec.tif'))):
         print '\trectification on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
         print '\trectifying tile %d %d (pair %d)...' % (col, row, pair_id)
@@ -159,8 +160,8 @@ def process_tile_pair(tile_info, pair_id):
 
     # disparity estimation
     if (cfg['skip_existing'] and
-        os.path.isfile(os.path.join(out_dir, 'rectified_mask.png')) and
-        os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif'))):
+            os.path.isfile(os.path.join(out_dir, 'rectified_mask.png')) and
+            os.path.isfile(os.path.join(out_dir, 'rectified_disp.tif'))):
         print '\tdisparity estimation on tile %d %d (pair %d) already done, skip' % (col, row, pair_id)
     else:
         print '\testimating disparity on tile %d %d (pair %d)...' % (col, row, pair_id)
@@ -168,7 +169,7 @@ def process_tile_pair(tile_info, pair_id):
 
     # triangulation
     height_map = os.path.join(out_dir, 'height_map.tif')
-    if (cfg['skip_existing'] and os.path.isfile(height_map)):
+    if cfg['skip_existing'] and os.path.isfile(height_map):
         print '\tfile %s already there, skip triangulation' % height_map
     else:
         print '\ttriangulating tile %d %d (pair %d)...' % (col, row, pair_id)
@@ -214,7 +215,7 @@ def process_tile(tile_info):
 
     maps = np.empty((h, w, n))
     for i in xrange(n):
-        f = gdal.Open(os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif'))
+        f = gdal.Open(os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif'))
         maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
         f = None  # this is the gdal way of closing files
 
@@ -255,25 +256,24 @@ def tile_fusion_and_ply(tile_info, mean_heights_global):
         print 'tile %s already masked, skip' % tile_dir
         return
 
-    height_maps = [os.path.join(tile_dir, 'pair_%d' % (i+1), 'height_map.tif')
+    height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
                    for i in xrange(nb_pairs)]
     try:
         # remove spurious matches
         if cfg['cargarse_basura']:
             for img in height_maps:
-        	    process.cargarse_basura(img, img)
+                process.cargarse_basura(img, img)
 
         # merge the height maps (applying mean offset to register)
         fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
                        mean_heights_global, averaging=cfg['fusion_operator'],
                        threshold=cfg['fusion_thresh'])
 
-
         # compute ply: H is the homography transforming the coordinates system of
         # the original full size image into the coordinates system of the crop
         x, y, w, h = tile_info['coordinates']
         z = cfg['subsampling_factor']
-        H = np.dot(np.diag([1/z, 1/z, 1]), common.matrix_translation(-x, -y))
+        H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
         process.color_crop_ref(tile_info, clr=cfg['images'][0]['clr'])
         triangulation.compute_point_cloud(os.path.join(tile_dir, 'cloud.ply'),
                                           os.path.join(tile_dir, 'height_map.tif'),
@@ -300,7 +300,7 @@ def compute_dsm():
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
     clouds = ' '.join(glob.glob(os.path.join(cfg['out_dir'], 'tile_*', 'col_*',
                                              'cloud.ply')))
-    if cfg.has_key('utm_bbx'):
+    if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         common.run("ls %s | plyflatten -bb \"%f %f %f %f \" %f %s" % (clouds,
                                                                       bbx[0],
@@ -312,7 +312,7 @@ def compute_dsm():
     else:
         common.run("ls %s | plyflatten %f %s" % (clouds, cfg['dsm_resolution'],
                                                  out_dsm))
-    # ls files | ./bin/plyflatten [-c column] [-bb "xmin xmax ymin ymax"] resolution out.tif
+        # ls files | ./bin/plyflatten [-c column] [-bb "xmin xmax ymin ymax"] resolution out.tif
 
 
 def lidar_preprocessor(tiles_full_info):
@@ -382,7 +382,7 @@ def launch_parallel_calls(fun, list_of_args, nb_workers, extra_args=None):
     return outputs
 
 
-def main(config_file, steps=range(1, 8)):
+def main(config_file, steps=range(1, 9)):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
 
@@ -413,7 +413,7 @@ def main(config_file, steps=range(1, 8)):
 
     # omp_num_threads: should not exceed nb_workers when multiplied by the
     # number of tiles
-    #cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
+    # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_full_info)))
 
     # do the job
     if 2 in steps:
@@ -481,19 +481,13 @@ def print_help_and_exit(script_name):
       All the parameters, paths to input and output files, are defined in
       the json configuration file.
 
-    """ % (script_name, script_name, script_name)
+    """ % script_name
 
 
 if __name__ == '__main__':
-
-    steps=[1,2,3,4,5,6,7]
-
-    if len(sys.argv) < 2:
-        print_help_and_exit(sys.argv[0])
-
     if len(sys.argv) == 2:
         main(sys.argv[1])
-    elif len(sys.argv) == 3 and int(sys.argv[2]) in steps:
+    elif len(sys.argv) == 3 and int(sys.argv[2]) in range(1, 9):
         main(sys.argv[1], int(sys.argv[2]))
     else:
         print_help_and_exit(sys.argv[0])

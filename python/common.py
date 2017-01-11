@@ -20,8 +20,7 @@ from config import cfg
 
 
 # add the bin folder to system path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 bin_dir = os.path.join(parent_dir, 'bin')
 os.environ['PATH'] = bin_dir + os.pathsep + os.environ['PATH']
 os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
@@ -414,7 +413,7 @@ def cropImage(inp, out, x, y, w, h, zoom=1):
             interest
         zoom (default is 1): zoom factor
     """
-    
+
     if zoom == 1:
         image_crop_tif(inp, x, y, w, h, out)
     else:
@@ -422,8 +421,8 @@ def cropImage(inp, out, x, y, w, h, zoom=1):
         # before the zoom out the image may be that big
         tmp = image_crop_tif(inp, x, y, w, h)
         image_zoom_gdal(tmp, zoom, out, w, h)
-    
-    
+
+
 def image_zoom_out_morpho(im, f):
     """
     Image zoom out by morphological operation (median).
@@ -455,8 +454,8 @@ def image_apply_homography(out, im, H, w, h):
         w, h: dimensions (width and height) of the output image
 
     The output image is defined on the domain [0, w] x [0, h]. Its pixels
-    intensities are defined by out(x) = im(H^{-1}(x)). 
-    
+    intensities are defined by out(x) = im(H^{-1}(x)).
+
     This function calls the homography binary, rewritten by Marc Lebrun and
     Carlo de Franchis based on a code of Pascal Monasse refactored by Gabriele
     Facciolo.
@@ -510,31 +509,31 @@ def image_qauto(im, out=None, tilewise=False):
     else:
         run('qauto %s %s' % (im, out))
     return out
-    
-    
+
+
 def image_getminmax(im, out):
     """
     Get min and max intensity
-    
+
     Args :
         im: path to input image
         out: path to file where min/max values will be stored
     """
     run('getminmax %s %s' % (im, out))
-    
-    
+
+
 def image_rescaleintensities(im,out,rmin,rmax):
     """
     rescale the values of an input image im, ranging from rmin to rmax,
     to an output image out with values ranging from 0 to 255 (8-bits image)
-    
+
     Args :
         im: path to input image
         out: path to output image
     """
-    
+
     run('rescaleintensities %s %s %d %d' % (im, out, rmin, rmax))
-    
+
 
 def image_qauto_gdal(im):
     """
