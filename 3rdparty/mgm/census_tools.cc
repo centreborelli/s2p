@@ -83,7 +83,7 @@ static float *malloc_floating_census_joint_channels(float *x, int w, int h, int 
 	uint8_t *y = (uint8_t*) malloc(w * h * nbytes);
 	color_census_transform(y, nbytes, x, w, h, pd, winradius);
 
-	float *fy = (float*) malloc(w * h * nfloats * sizeof*fy);
+	float *fy = (float*) calloc(sizeof*fy, w * h * nfloats);
 	for (int i = 0; i < w*h; i++)
 	{
 		float *to = fy + nfloats * i;
