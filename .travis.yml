@@ -6,10 +6,14 @@ python:
 
 # command to install dependencies
 before_install:
+  - sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
   - sudo apt-get -qq update
-  - sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools python-gdal
-install: "pip install utm"
+  - sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools
+env:
+  - CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
+install: "pip install gdal utm"
 
 # command to build
 script:
   - make
+  - make test
