@@ -172,7 +172,7 @@ $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
 
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/data\""
+	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
 
 $(SRCDIR)/DMS.o: c/DMS.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@

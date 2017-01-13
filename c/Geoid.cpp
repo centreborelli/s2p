@@ -21,7 +21,7 @@
 #endif
 
 #if !defined(GEOID_DEFAULT_NAME)
-#  define GEOID_DEFAULT_NAME "egm96-5"
+#  define GEOID_DEFAULT_NAME "egm96-15"
 #endif
 
 #if defined(_MSC_VER)
