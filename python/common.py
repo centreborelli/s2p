@@ -792,8 +792,8 @@ def image_pleiades_unsharpening_mtf():
     resampled with a factor 1.4x. But in theory it should be adapted depending
     on the RESAMPLING_SPACING stored in the RPC xml files.
     """
-    s2p_dir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
-    return os.path.join(s2p_dir, 'data', 'idata_0009_MTF_89x89.tif')
+    modules_dir = os.path.dirname(os.path.realpath(os.path.abspath(__file__)))
+    return os.path.join(modules_dir, 'idata_0009_MTF_89x89.tif')
 
 
 def run_binary_on_list_of_points(points, binary, option=None, env_var=None):

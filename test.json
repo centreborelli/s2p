@@ -1,10 +1,10 @@
 {
   "out_dir" : "test",
   "images" : [
-    { "img" : "data/test_data_pleiades_reunion/img_01.tif",
-      "rpc" : "data/test_data_pleiades_reunion/rpc_01.xml" },
-    { "img" : "data/test_data_pleiades_reunion/img_02.tif",
-      "rpc" : "data/test_data_pleiades_reunion/rpc_02.xml" }
+    { "img" : "testdata/img_01.tif",
+      "rpc" : "testdata/rpc_01.xml" },
+    { "img" : "testdata/img_02.tif",
+      "rpc" : "testdata/rpc_02.xml" }
     ],
   "roi" : {
       "x" : 150,
