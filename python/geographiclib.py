@@ -87,9 +87,6 @@ def geoid_above_ellipsoid(lat, lon):
     the GeographicLib library:
     http://geographiclib.sourceforge.net/html/intro.html
     """
-    p1 = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(['GeoidEval'], stdin=p1.stdout,
-                                                        stdout=subprocess.PIPE)
-    line = p2.stdout.readline()
-    h = float(line.split()[0])
-    return h
+    p = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
+    q = subprocess.Popen(['GeoidEval'], stdin=p.stdout, stdout=subprocess.PIPE)
+    return float(q.stdout.readline().split()[0])

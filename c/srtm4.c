@@ -269,7 +269,7 @@ static float *produce_tile(int tlon, int tlat, bool tif)
 	if (!t) {
 		char *fname = get_tile_filename(tlon, tlat, tif);
 		if (!file_exists(fname)) {
-            fprintf(stderr, "WARNING: this srtm tile is not available\n");
+            fprintf(stderr, "WARNING: srtm tile %s is not available\n", fname);
             return NULL;
         }
         if (tif) {
@@ -338,9 +338,8 @@ static float nearest_neighbor_interpolation_at(float *x,
 
 double srtm4(double lon, double lat)
 {
-	if (lat > 60 || lat < -60) {
+	if (lat > 60 || lat < -60)
         return NO_DATA;
-    }
 	int tlon, tlat;
 	float xlon, xlat;
 	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
@@ -367,15 +366,7 @@ double srtm4_nn(double lon, double lat)
 
 double srtm4_wrt_ellipsoid(double lon, double lat)
 {
-	if (lat > 60 || lat < -60)
-        return NO_DATA;
-	int tlon, tlat;
-	float xlon, xlat;
-	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
-	float *t = produce_tile(tlon, tlat, true);
-    if (t == NULL)
-        return NO_DATA;
-    double srtm = bilinear_interpolation_at(t, 6000, 6000, xlon, xlat);
+    double srtm = srtm4(lon, lat);
     double geoid = 0;
     geoid_height(&geoid, lat, lon);
     return srtm + geoid;
@@ -383,15 +374,7 @@ double srtm4_wrt_ellipsoid(double lon, double lat)
 
 double srtm4_nn_wrt_ellipsoid(double lon, double lat)
 {
-	if (lat > 60 || lat < -60)
-        return NO_DATA;
-	int tlon, tlat;
-	float xlon, xlat;
-	get_tile_index_and_position(&tlon, &tlat, &xlon, &xlat, lon, lat);
-	float *t = produce_tile(tlon, tlat, true);
-    if (t == NULL)
-        return NO_DATA;
-	double srtm = nearest_neighbor_interpolation_at(t, 6000, 6000, xlon, xlat);
+    double srtm = srtm4_nn(lon, lat);
     double geoid = 0;
     geoid_height(&geoid, lat, lon);
     return srtm + geoid;
