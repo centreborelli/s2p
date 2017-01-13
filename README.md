@@ -62,7 +62,7 @@ Required dependencies (Ubuntu 16.04):
 
 and
 
-    pip install utm
+    pip install utm bs4
 
 `gdal` version must be 1.10 or newer.
 

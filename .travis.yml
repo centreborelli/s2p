@@ -11,7 +11,7 @@ before_install:
   - sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools
 env:
   - CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
-install: "pip install gdal utm"
+install: "pip install gdal utm bs4"
 
 # command to build
 script:
