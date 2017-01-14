@@ -66,7 +66,7 @@ def check_parameters(d):
         sys.exit(1)
 
     # if srtm is disabled set disparity range method to sift
-    if 'disable_srtm' in d:
+    if 'disable_srtm' in d and d['disable_srtm']:
         d['disp_range_method'] = 'sift'
 
     # warn about unknown parameters. The known parameters are those defined in

@@ -29,7 +29,7 @@
   "offset_ply" : false,
   "color_ply" : true,
   "fusion_thresh" : 3,
-  "disable_srtm" : "true",
+  "disable_srtm" : true,
   "disp_range_method" : "sift",
   "disp_range_srtm_high_margin" : 50,
   "disp_range_srtm_low_margin" : -20,
