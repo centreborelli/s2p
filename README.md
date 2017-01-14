@@ -18,6 +18,7 @@ in several small tiles and process them in parallel.
 
 
 ## Docker image
+[![Docker Status](http://dockeri.co/image/carlodef/s2p)](https://hub.docker.com/r/carlodef/s2p/)
 
 A precompiled docker image is available and ready to use:
 
@@ -26,8 +27,8 @@ A precompiled docker image is available and ready to use:
 
 ## Usage
 
-Run the python script `s2p.py` from a shell with a json configuration file as
-unique argument:
+Run the python script `s2p.py` with a json configuration file as unique
+argument:
 
     python s2p.py test.json
 
