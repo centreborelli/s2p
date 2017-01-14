@@ -76,16 +76,16 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         cmd = "%s -f \"%s\"" % (cmd, fij)
     common.run(cmd)
 
-    # filter outliers with ransac
-    if model == 'fundamental':
-        common.run("ransac fmn 1000 .3 7 %s < %s" % (mfile, mfile))
-    if model is 'homography':
-        common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                        mfile))
-    if model is 'hom_fund':
-        common.run("ransac hom 1000 2 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                        mfile))
-        common.run("ransac fmn 1000 .2 7 %s < %s" % (mfile, mfile))
+    if os.stat(mfile).st_size > 0:  # filter outliers with ransac
+        if model == 'fundamental':
+            common.run("ransac fmn 1000 .3 7 %s < %s" % (mfile, mfile))
+        if model is 'homography':
+            common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (mfile,
+                                                                            mfile))
+        if model is 'hom_fund':
+            common.run("ransac hom 1000 2 4 /dev/null /dev/null %s < %s" % (mfile,
+                                                                            mfile))
+            common.run("ransac fmn 1000 .2 7 %s < %s" % (mfile, mfile))
 
     if os.stat(mfile).st_size > 0:  # return numpy array of matches
         return np.loadtxt(mfile)
