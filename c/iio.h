@@ -1,7 +1,7 @@
 #ifndef _IIO_H
 #define _IIO_H
 
-#include <stddef.h>
+//#include <stddef.h>
 #include <stdbool.h>
 
 
@@ -182,13 +182,13 @@ uint16_t *iio_read_image_uint16_vec(const char *fname, int *w, int *h, int *pd);
 //
 
 //
-void *iio_read_image_raw(const char *fname,
-		int *dimension,
-		int sizes[IIO_MAX_DIMENSION],
-		int *pixel_dimension,
-		size_t *sample_integer_size,
-		size_t *sample_float_size,
-		int *metadata_id);
+//void *iio_read_image_raw(const char *fname,
+//		int *dimension,
+//		int sizes[IIO_MAX_DIMENSION],
+//		int *pixel_dimension,
+//		size_t *sample_integer_size,
+//		size_t *sample_float_size,
+//		int *metadata_id);
 
 
 /*
@@ -269,6 +269,7 @@ void iio_save_image_double_vec(char *filename, double *x, int w, int h, int pd);
 void iio_save_image_float(char *filename, float *x, int w, int h);
 void iio_save_image_double(char *filename, double *x, int w, int h);
 void iio_save_image_int(char *filename, int *x, int w, int h);
+void iio_save_image_int_vec(char *filename, int *x, int w, int h, int pd);
 void iio_save_image_uint8_vec(char *filename, uint8_t *x, int w, int h, int pd);
 void iio_save_image_uint16_vec(char *filename, uint16_t *x, int w, int h, int pd);
 void iio_save_image_uint8_matrix_rgb(char *f, unsigned char (**x)[3], int w, int h);
@@ -292,5 +293,10 @@ void iio_save_image_uint8_matrix(char *f, unsigned char **x, int w, int h);
 #define I_CAN_HAS_LIBTIFF
 //#define I_CAN_HAS_LIBEXR
 #define I_CAN_HAS_WGET
+
+#define I_CAN_KEEP_TMP_FILES
+#define I_CAN_HAS_LINUX
+#define I_CAN_POSIX
+
 
 #endif//_IIO_H
