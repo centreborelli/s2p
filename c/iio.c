@@ -1480,7 +1480,7 @@ static int read_whole_tiff(struct iio_image *x, const char *filename)
 			}
 		}
 		xfree(tbuf);
-	} else
+	} else {
 
 	// dump scanline data
 	if (broken && bps < 8) fail("cannot unpack broken scanlines");
@@ -1511,6 +1511,7 @@ static int read_whole_tiff(struct iio_image *x, const char *filename)
 					w, spp, bps/8);
 		}
 	}
+    }
 	TIFFClose(tif);
 
 
