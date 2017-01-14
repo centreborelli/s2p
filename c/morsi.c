@@ -359,7 +359,7 @@ static int *build_Drec(float radius)
 
 #ifdef MORSI_TEST_MAIN
 #include <string.h>
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 int main(int c, char **v)
 {
 	// data for available structuring elements

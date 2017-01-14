@@ -76,7 +76,7 @@ int remove_small_cc(int w, int h, float *in, float *out, int minarea, float inte
 #ifndef SKIP_MAIN
 
 
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 #include "pickopt.c"
 
 

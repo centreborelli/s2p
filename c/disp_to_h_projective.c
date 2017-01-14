@@ -5,7 +5,7 @@
 #include <math.h>
 
 #include "vvector.h"
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 #include "read_matrix.c"
 
 #include "svd.c"

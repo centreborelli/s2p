@@ -118,7 +118,7 @@ void bdint_gen_split(float *x, int w, int h, int pd, accumulator_t *a)
 
 #ifdef USE_BDINT_MAIN
 #include <stdio.h>
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 #include "pickopt.c"
 int main(int c, char *v[])
 {

@@ -1,7 +1,7 @@
 #include <stdio.h> // only for "fprintf"
 #include <stdlib.h> // only for "free"
 #include <stdint.h>
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 
 // read an image in any format from STDIN and write a ppm to STDOUT
 int main(int c, char *v[])

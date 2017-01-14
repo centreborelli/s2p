@@ -7,7 +7,7 @@
 #endif
 
 
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 
 #include "fail.c"
 

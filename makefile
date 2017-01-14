@@ -33,7 +33,7 @@ $(BINDIR):
 
 piio: python/piio/libiio.so
 
-python/piio/libiio.so: python/piio/setup.py python/piio/freemem.c c/iio.c c/iio.h
+python/piio/libiio.so: python/piio/setup.py python/piio/freemem.c 3rdparty/iio/iio.c 3rdparty/iio/iio.h
 	cd python/piio; python setup.py build
 
 geographiclib: $(BINDIR) $(BINDIR)/CartConvert
@@ -105,16 +105,16 @@ SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 
 imscript: $(BINDIR) $(PROGRAMS)
 
-$(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
+$(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c 3rdparty/iio/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS)
 
-$(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
+$(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c 3rdparty/iio/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
 
 plambda_without_fopenmp:
-	$(C99) -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN c/plambda.c c/iio.o -o bin/plambda $(IIOLIBS)
+	$(C99) -g -O3 -DNDEBUG -DDONT_USE_TEST_MAIN c/plambda.c 3rdparty/iio/iio.o -o bin/plambda $(IIOLIBS)
 
-$(SRCDIR)/iio.o: $(SRCDIR)/iio.c $(SRCDIR)/iio.h
+3rdparty/iio/iio.o: 3rdparty/iio/iio.c 3rdparty/iio/iio.h
 	$(C99) $(CFLAGS) -c -DIIO_ABORT_ON_ERROR -Wno-deprecated-declarations $< -o $@
 
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
@@ -139,32 +139,32 @@ $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
 $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
 	$(C99) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -o $@
 
-$(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o\
+$(BINDIR)/watermask: 3rdparty/iio/iio.o $(SRCDIR)/Geoid.o\
 	$(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
 	$(SRCDIR)/xmalloc.c $(SRCDIR)/pickopt.c $(SRCDIR)/rpc.c $(SRCDIR)/srtm4.c\
-	$(SRCDIR)/iio.h $(SRCDIR)/parsenumbers.c
-	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -o $@
+	3rdparty/iio/iio.h $(SRCDIR)/parsenumbers.c
+	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -o $@
 
-$(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/iio.h c/rpc.h c/read_matrix.c
-	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
+$(BINDIR)/disp_to_h: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h 3rdparty/iio/iio.h c/rpc.h c/read_matrix.c
+	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
 
-$(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
-	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/iio.h\
+$(BINDIR)/colormesh: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
+	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c 3rdparty/iio/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
-	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -o $@
+	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -o $@
 
-$(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
-	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c c/iio.h\
+$(BINDIR)/disp2ply: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
+	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c 3rdparty/iio/iio.h\
 	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(C99) $(CFLAGS) $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -o $@
+	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -o $@
 
-$(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
+$(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c 3rdparty/iio/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
-$(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
+$(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c 3rdparty/iio/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
-$(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c $(SRCDIR)/iio.o
+$(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c 3rdparty/iio/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 # GEOGRAPHICLIB STUFF
@@ -220,7 +220,7 @@ clean_asift:
 
 clean_imscript:
 	-rm $(PROGRAMS)
-	-rm $(SRCDIR)/iio.o
+	-rm 3rdparty/iio/iio.o
 	-rm $(SRCDIR)/rpc.o
 	-rm $(BINDIR)/plambda
 	#rm -r $(addsuffix .dSYM, $(PROGRAMS))

@@ -8,7 +8,7 @@
 #include <math.h>
 #include <complex.h>
 #include <fftw3.h>
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 
 
 

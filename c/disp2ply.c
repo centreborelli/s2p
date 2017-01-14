@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 #include "rpc.h"
 #include "fail.c"
 #include "parsenumbers.c"

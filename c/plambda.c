@@ -1991,7 +1991,7 @@ static char *pick_option(int *c, char ***v, char *o, char *d)
 	return d;
 }
 
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 int main_images(int c, char **v)
 {
 	if (c < 2) {

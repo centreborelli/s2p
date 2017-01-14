@@ -278,7 +278,7 @@ static void cloud_mask_homography(struct cloud_mask *m, double *H)
 			apply_homography(2*j+m->t[i].v, H, 2*j+m->t[i].v);
 }
 
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 void clouds_mask_fill(int *img, int w, int h, struct cloud_mask *m)
 {
 	// initialize the image to 0
@@ -343,7 +343,7 @@ void clouds_mask_fill(int *img, int w, int h, struct cloud_mask *m)
 #define CLDMASK_MAIN
 #ifdef CLDMASK_MAIN
 
-#include "iio.h"
+#include "../3rdparty/iio/iio.h"
 #include "pickopt.c"
 int main(int c, char *v[])
 {
