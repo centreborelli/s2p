@@ -547,7 +547,7 @@ def main(config_file):
                                                    nb_workers)
 
         print('computing global pairwise height offsets...')
-        mean_heights_global = np.mean(mean_heights_local, axis=0)
+        mean_heights_global = np.nanmean(mean_heights_local, axis=0)
 
         print('merging height maps...')
         launch_parallel_calls(heights_fusion, tiles, nb_workers,
