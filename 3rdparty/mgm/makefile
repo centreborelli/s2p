@@ -1,10 +1,11 @@
 CC = gcc
 CXX = g++
 
-default:
-	$(CC) -std=c99 -O3 -DNDEBUG -ffast-math -fopenmp -DIIO_ABORT_ON_ERROR -Wno-deprecated-declarations -c iio/iio.c -o iio.o
-	#$(CXX) -O3 -DNDEBUG -ffast-math -fopenmp -Iiio -Icommon -DTEST_MAIN mgm.cc img.cc point.cc iio.o -o mgm -lpng -ltiff -ljpeg
-	$(CXX) -O3 -DNDEBUG -ffast-math -Iiio -Icommon -DTEST_MAIN mgm.cc img.cc point.cc iio.o -o mgm -lpng -ltiff -ljpeg
+default: ../iio/iio.o mgm.cc img.cc point.cc
+	$(CXX) -O3 -DNDEBUG -ffast-math -I../iio -Icommon -DTEST_MAIN $^ -o mgm -lpng -ltiff -ljpeg
+
+../iio/iio.o: ../iio/iio.c ../iio/iio.h
+	$(CC) -std=c99 -O3 -g -fopenmp -DNDEBUG -DDONT_USE_TEST_MAIN -DIIO_ABORT_ON_ERROR -Wno-deprecated-declarations -c $< -o $@
 
 clean:
-	rm -f iio.o mgm
+	-rm -f mgm
