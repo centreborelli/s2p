@@ -86,14 +86,14 @@ def print_elapsed_time(since_first_call=False):
 
 def pointing_correction(tile, i=None):
     """
-    Compute the translation that correct the pointing error on a pair of tiles.
+    Compute the translation that corrects the pointing error on a pair of tiles.
 
     Args:
         tile: dictionary containing the information needed to process the tile
         i: index of the processed pair. If None, there's only one pair.
     """
     x, y, w, h = tile['coordinates']
-    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i) if i else '')
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     img2 = cfg['images'][i]['img'] if i else cfg['images'][1]['img']
@@ -152,7 +152,7 @@ def rectification_pair(tile, i=None):
         tile: dictionary containing the information needed to process a tile.
         i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i) if i else '')
     x, y, w, h = tile['coordinates']
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
@@ -200,7 +200,7 @@ def stereo_matching(tile, i=None):
         tile: dictionary containing the information needed to process a tile.
         i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i)) if i else tile['dir']
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i) if i else '')
     x, y = tile['coordinates'][:2]
 
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
