@@ -290,7 +290,8 @@ def disparity_to_ply(tile):
         hom = np.loadtxt(H_ref)
         roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
         ww, hh = common.bounding_box2D(common.points_apply_homography(hom, roi))[2:]
-        common.image_apply_homography(tmp, cfg['images'][0]['img'], hom,
+        tmp = common.tmpfile('.tif')
+        common.image_apply_homography(tmp, cfg['images'][0]['clr'], hom,
                                       ww + 2*cfg['horizontal_margin'],
                                       hh + 2*cfg['vertical_margin'])
         common.image_qauto(tmp, colors)
@@ -356,13 +357,12 @@ def heights_to_ply(tile):
         tile: a dictionary that provides all you need to process a tile
     """
     out_dir = tile['dir']
+    x, y, w, h = tile['coordinates']
+    z = cfg['subsampling_factor']
     plyfile = os.path.join(out_dir, 'cloud.ply')
     if cfg['skip_existing'] and os.path.isfile(plyfile):
         print('ply file already exists for tile {} {}'.format(x, y))
         return
-
-    x, y, w, h = tile['coordinates']
-    z = cfg['subsampling_factor']
 
     # H is the homography transforming the coordinates system of the original
     # full size image into the coordinates system of the crop
