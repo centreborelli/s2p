@@ -8,6 +8,7 @@ import os
 
 import piio
 import common
+import sift
 import estimation
 import rpc_model
 import rpc_utils
@@ -109,7 +110,8 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
 
     Args:
         im1, im2: paths to full Pleiades images
-        rpc1, rpc2: paths to xml files containing the rpc coefficients
+        rpc1, rpc2: two  instances of the RPCModel class, or paths to xml files
+            containing the rpc coefficients
         matches: 2D numpy array of size 4xN containing a list of matches (a
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2). The coordinates are given in the frame of the full images.
@@ -126,8 +128,9 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
         return
 
     # read rpcs
-    r1 = rpc_model.RPCModel(rpc1)
-    r2 = rpc_model.RPCModel(rpc2)
+    for r in [rpc1, rpc2]:
+        if not isinstance(r, rpc_model.RPCModel):
+            r = rpc_model.RPCModel(r)
 
     # determine regions to crop in im1 and im2
     if x is not None:
@@ -150,7 +153,7 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
     else:
         h1 = np.max(matches[:, 1]) - y1
 
-    x2, y2, w2, h2 = rpc_utils.corresponding_roi(r1, r2, x1, y1, w1, h1)
+    x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x1, y1, w1, h1)
     # x2 = np.min(matches[:, 2])
     # w2 = np.max(matches[:, 2]) - x2
     # y2 = np.min(matches[:, 3])

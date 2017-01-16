@@ -4,6 +4,7 @@
 
 
 from __future__ import print_function
+import os
 import sys
 import numpy as np
 
@@ -13,6 +14,7 @@ import estimation
 import evaluation
 import common
 import sift
+import visualisation
 from config import cfg
 
 
@@ -366,6 +368,12 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
             H2 = register_horizontally_translation(sift_matches, H1, H2)
 
     # compute disparity range
+    if cfg['debug']:
+        out_dir = os.path.dirname(out1)
+        np.savetxt(os.path.join(out_dir, 'sift_matches_disp.txt'),
+                   sift_matches, fmt='%9.3f')
+        visualisation.plot_matches(im1, im2, rpc1, rpc2, sift_matches, x, y, w, h,
+                                   os.path.join(out_dir, 'sift_matches_disp.png'))
     disp_m, disp_M = disparity_range(rpc1, rpc2, x, y, w, h, H1, H2,
                                      sift_matches, A)
 

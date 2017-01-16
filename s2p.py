@@ -119,7 +119,7 @@ def pointing_correction(tile, i=None):
         if cfg['debug']:
             visualisation.plot_matches(img1, img2, rpc1, rpc2, m, x, y, w, h,
                                        os.path.join(out_dir,
-                                                    'sift_matches_plot.png'))
+                                                    'sift_matches_pointing.png'))
 
 
 def global_pointing_correction(tiles):
