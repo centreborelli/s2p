@@ -11,11 +11,11 @@ import json
 import shutil
 import numpy as np
 
-from python import common
-from python import srtm
-from python import tee
-from python import rpc_utils
-from python import masking
+import common
+import srtm
+import tee
+import rpc_utils
+import masking
 from config import cfg
 
 

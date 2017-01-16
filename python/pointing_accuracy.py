@@ -264,28 +264,20 @@ def print_params(v):
     print('rotation: %.3e, translation: (%.3e, %.3e), horizontal shear: %.3e' % v)
 
 
-def optimize_pair(im1, im2, rpc1, rpc2, prev1=None, matches=None):
+def optimize_pair(im1, im2, rpc1, rpc2, matches):
     """
     Runs the pointing correction on a pair of Pleiades images.
 
     Args:
         im1, im2: paths to the two Pleiades images (usually jp2 or tif)
         rpc1, rpc2: two instances of the rpc_model.RPCModel class
-        prev1 (optional): path to the jpg preview image of im1 (used in case of
-            interactive mode in the matches computation)
-        matches (optional): numpy 4xN array containing a list of matches
-            between the two images. If it is not provided the matches are
-            computed.
+        matches: numpy 4xN array containing a list of matches between the two
+            images.
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to im2 in
         order to correct the pointing error.
     """
-
-    if matches is None:
-        matches = filtered_sift_matches_full_img(im1, im2, rpc1, rpc2, 'load',
-                                                 prev1)
-
     # Don't use too many matches to keep the evaluation time of 'cost_function'
     # reasonable
     # if len(matches) > 1000:

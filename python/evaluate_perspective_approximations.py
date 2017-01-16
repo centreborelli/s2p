@@ -68,13 +68,13 @@ def camera_error(rpc, x0, y0, w, h, n_learn, n_test):
     """
 
     # step 1: compute the projective model that best fits this range
-    X, x = rpc_utils.world_to_image_correspondences_from_rpc(rpc,
-                                                        x0, y0, w, h, n_learn)
+    X, x = rpc_utils.world_to_image_correspondences_from_rpc(rpc, x0, y0, w, h,
+                                                             n_learn)
     P = estimation.camera_matrix(X, x)
 
     # step 2: compute the error made by the projective model
-    X, x = rpc_utils.world_to_image_correspondences_from_rpc(rpc,
-                                                        x0, y0, w, h, n_test)
+    X, x = rpc_utils.world_to_image_correspondences_from_rpc(rpc, x0, y0, w, h,
+                                                             n_test)
     err = evaluation.camera_matrix(X, x)
     return err
 

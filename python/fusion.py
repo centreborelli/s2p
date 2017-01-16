@@ -122,7 +122,7 @@ def average_if_close(x, threshold):
         return np.nanmedian(x)
 
 
-def merge_n(output, inputs, offsets, averaging=average_if_close, threshold=1):
+def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
     """
     Merge n images of equal sizes by taking the median/mean/min/max pixelwise.
 
