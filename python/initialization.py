@@ -8,6 +8,7 @@ import os
 import sys
 import utm
 import json
+import copy
 import shutil
 import numpy as np
 
@@ -226,6 +227,13 @@ def tiles_full_info(tw, th):
                 for i in xrange(1, len(cfg['images'])):
                     common.mkdir_p(os.path.join(tile['dir'],
                                                 'pair_{}'.format(i)))
+
+            # save a json dump of the tile configuration
+            tile_cfg = copy.deepcopy(cfg)
+            tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
+            tile_cfg['out_dir'] = tile['dir']
+            with open(os.path.join(tile['dir'], 'config.json'), 'w') as f:
+                json.dump(tile_cfg, f, indent=2)
 
             # keep the mask
             shutil.copy(msk, os.path.join(tile['dir'],
