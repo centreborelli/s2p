@@ -22,7 +22,7 @@ RUN pip install -U pip
 RUN pip install utm bs4 tifffile
 
 # install s2p
-RUN git clone https://github.com/carlodef/s2p.git --branch master --single-branch --depth 1 s2p
+RUN git clone https://github.com/carlodef/s2p.git --branch master --single-branch --depth 1 --recursive
 RUN cd s2p && make
 
 WORKDIR /s2p
