@@ -77,6 +77,11 @@ and
 The `--recursive` option for `git clone` allows to clone all submodules, such
 as the [iio](https://github.com/mnhrdt/iio) library.
 
+If the `--recursive` option wasn't used when cloning, the submodules can now be
+retrieved with
+
+    git submodule update --init
+
 All the python modules are located in the `python` folder. Some python
 functions of these modules rely on external binaries. Most of these binaries
 were written on purpose for the needs of the pipeline, and their source code is
