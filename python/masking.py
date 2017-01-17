@@ -9,28 +9,27 @@ import subprocess
 from config import cfg
 
 
-def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None, wat_msk=None):
+def cloud_water_image_domain(out, rpc, x, y, w, h, roi_gml=None, cld_gml=None,
+                             wat_msk=None):
     """
-    Computes a mask for pixels masked by clouds, water, or out of image domain.
+    Compute a mask for pixels masked by clouds, water, or out of image domain.
 
     Args:
-        out: path to the output image file.
-        w, h: (w, h) are the dimensions of the output image mask.
-        H: 3x3 numpy array representing the homography that transforms the
-            original full image into the rectified tile.
-        rpc: paths to the xml file containing the rpc coefficients of the image.
-            RPC model is used with SRTM data to derive the water mask.
-        roi_gml (optional, default None): path to a gml file containing a mask
+        out: path to the output image file
+        x, y, w, h: image ROI
+        rpc: path to the xml file containing the rpc coefficients of the image
+            RPC model is used with SRTM data to derive the water mask
+        roi_gml (optional): path to a gml file containing a mask
             defining the area contained in the full image
-        cld_gml (optional, default None): path to a gml file containing a mask
+        cld_gml (optional): path to a gml file containing a mask
             defining the areas covered by clouds
-        wat_msk (optional): path to a tiff file containing a water mask.
+        wat_msk (optional): path to a tiff file containing a water mask
 
     Returns:
         True if the tile is completely masked, False otherwise.
     """
-    # put the coefficients of the homography in a string
-    hij = ' '.join(['%f' % x for x in H.flatten()])
+    # coefficients of the translation associated to the crop
+    hij = '1 0 {} 0 1 {} 0 0 1'.format(-x, -y)
 
     # image domain mask
     if roi_gml is None:  # initialize to 255

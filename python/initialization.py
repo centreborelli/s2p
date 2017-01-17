@@ -193,7 +193,7 @@ def tiles_full_info(tw, th):
     roi_msk = cfg['images'][0]['roi']
     cld_msk = cfg['images'][0]['cld']
     wat_msk = cfg['images'][0]['wat']
-    z =  cfg['subsampling_factor']
+    z = cfg['subsampling_factor']
     rx, ry, rw, rh = cfg['roi'].values()  # roi coordinates
 
     # build tile dictionaries and store them in a list
@@ -207,9 +207,9 @@ def tiles_full_info(tw, th):
             x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
             # check if the tile is entirely masked by water, clouds, or img mask
-            H = np.array([[1, 0, -x], [0, 1, -y], [0, 0, 1]])
             msk = common.tmpfile('.png')
-            if masking.cloud_water_image_domain(msk, w, h, H, rpc, roi_msk, cld_msk, wat_msk):
+            if masking.cloud_water_image_domain(msk, rpc, x, y, w, h, roi_msk,
+                                                cld_msk, wat_msk):
                 print('tile {} {} {} {} masked, we skip it'.format(x, y, w, h))
                 continue
 
