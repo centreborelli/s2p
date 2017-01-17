@@ -66,10 +66,6 @@ def check_parameters(d):
         print('ERROR: missing or incomplete roi definition')
         sys.exit(1)
 
-    # if srtm is disabled set disparity range method to sift
-    if 'disable_srtm' in d and d['disable_srtm']:
-        d['disp_range_method'] = 'sift'
-
     # warn about unknown parameters. The known parameters are those defined in
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
     # 'roi_utm'
@@ -119,6 +115,10 @@ def build_cfg(config_file):
     x, y, w, h = common.round_roi_to_nearest_multiple(z, *cfg['roi'].values())
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
+    # if srtm is disabled set disparity range method to sift
+    if 'disable_srtm' in cfg and cfg['disable_srtm']:
+        cfg['disp_range_method'] = 'sift'
+
     # get utm zone
     if cfg.has_key('roi_utm'):
         cfg['utm_zone'] = cfg['roi_utm']['utm_band']
@@ -140,9 +140,8 @@ def make_dirs():
     common.mkdir_p(os.path.join(cfg['temporary_dir'], 'meta'))
 
     # store a json dump of the config.cfg dictionary
-    f = open(os.path.join(cfg['out_dir'], 'config.json'), 'w')
-    json.dump(cfg, f, indent=2)
-    f.close()
+    with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
+        json.dump(cfg, f, indent=2)
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
@@ -181,14 +180,14 @@ def adjust_tile_size():
 
 def tiles_full_info(tw, th):
     """
-    Prepare the entire process.
+    List the tiles to process and prepare their output directories structures.
 
-    Build tiles: a list of dictionaries, one per tile, providing all you need to process a tile
-       * col/row : position of the tile (upper left corner)
-       * tw/th : size of the tile
+    Most of the time is spent discarding tiles that are masked by water
+    (according to SRTM data).
 
     Returns:
-        tiles: list containing dictionaries
+        a list of dictionaries. Each dictionary contains the image coordinates
+        and the output directory path of a tile.
     """
     rpc = cfg['images'][0]['rpc']
     roi_msk = cfg['images'][0]['roi']
