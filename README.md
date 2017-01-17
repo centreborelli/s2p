@@ -70,7 +70,12 @@ and
 
 ## Installation
 
+    git clone https://github.com/carlodef/s2p.git --recursive
+    cd s2p
     make
+
+The `--recursive` option for `git clone` allows to clone all submodules, such
+as the [iio](https://github.com/mnhrdt/iio) library.
 
 All the python modules are located in the `python` folder. Some python
 functions of these modules rely on external binaries. Most of these binaries
