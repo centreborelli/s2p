@@ -1,3 +1,4 @@
 [submodule "3rdparty/iio"]
 	path = 3rdparty/iio
 	url = https://github.com/mnhrdt/iio.git
+	ignore = untracked
