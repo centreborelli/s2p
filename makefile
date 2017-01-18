@@ -21,9 +21,8 @@ endif
 
 BINDIR = bin
 SRCDIR = c
-GEODIR = 3rdparty/GeographicLib-1.32
 
-default: $(BINDIR) geographiclib homography sift imscript mgm piio
+default: $(BINDIR) homography sift imscript mgm piio
 
 all: default msmw3 sgbm tvl1
 
@@ -35,12 +34,6 @@ piio: python/piio/libiio.so
 
 python/piio/libiio.so: python/piio/setup.py python/piio/freemem.c 3rdparty/iio/iio.c 3rdparty/iio/iio.h
 	cd python/piio; python setup.py build
-
-geographiclib: $(BINDIR) $(BINDIR)/CartConvert
-
-$(BINDIR)/CartConvert: $(GEODIR)/tools/CartConvert.cpp $(GEODIR)/src/DMS.cpp\
-	$(GEODIR)/src/Geocentric.cpp $(GEODIR)/src/LocalCartesian.cpp
-	$(CXX) $(CPPFLAGS) -I $(GEODIR)/include -I $(GEODIR)/man $^ -o $@
 
 asift:
 	mkdir -p $(BINDIR)/build_asift
@@ -198,12 +191,8 @@ $(SRCDIR)/Geoid.o: c/Geoid.cpp
 test:
 	python -u s2p_test.py
 
-clean: clean_geographiclib clean_homography clean_asift\
-	clean_sift clean_imscript clean_msmw clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm\
-	clean_mgm
-
-clean_geographiclib:
-	-rm $(BINDIR)/{Cart,Geo}Convert
+clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
+	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm
 
 clean_homography:
 	-rm -r $(BINDIR)/build_homography
@@ -249,6 +238,5 @@ clean_mgm:
 	cd 3rdparty/mgm; $(MAKE) clean
 	-rm $(BINDIR)/mgm
 
-.PHONY: default all geographiclib sift sgbm sgbm_opencv msmw tvl1\
-	imscript clean clean_geographiclib clean_sift\
+.PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
 	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test

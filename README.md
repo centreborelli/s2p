@@ -59,7 +59,7 @@ the example).
 
 Required dependencies (Ubuntu 16.04):
 
-    apt-get install build-essential cmake gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev libtiff-tools python python-gdal python-numpy python-pip
+    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev libtiff-tools python python-gdal python-numpy python-pip
 
 and
 
