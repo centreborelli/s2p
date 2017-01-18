@@ -141,15 +141,11 @@ $(BINDIR)/watermask: 3rdparty/iio/iio.o $(SRCDIR)/Geoid.o\
 $(BINDIR)/disp_to_h: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h 3rdparty/iio/iio.h c/rpc.h c/read_matrix.c
 	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
 
-$(BINDIR)/colormesh: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
-	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c 3rdparty/iio/iio.h\
-	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
-	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -o $@
+$(BINDIR)/colormesh: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c 3rdparty/iio/iio.h c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
+	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
-$(BINDIR)/disp2ply: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o\
-	$(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c 3rdparty/iio/iio.h\
-	c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/DMS.o $(SRCDIR)/GeoCoords.o $(SRCDIR)/MGRS.o $(SRCDIR)/PolarStereographic.o $(SRCDIR)/TransverseMercator.o $(SRCDIR)/UTMUPS.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -o $@
+$(BINDIR)/disp2ply: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c 3rdparty/iio/iio.h c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
+	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c 3rdparty/iio/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
@@ -162,28 +158,10 @@ $(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c 3rdparty/iio/iio.o
 
 # GEOGRAPHICLIB STUFF
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
+	$(CXX) $(CPPFLAGS) -c $^ -o $@
 
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
-
-$(SRCDIR)/DMS.o: c/DMS.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
-
-$(SRCDIR)/GeoCoords.o: c/GeoCoords.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
-
-$(SRCDIR)/MGRS.o: c/MGRS.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
-
-$(SRCDIR)/PolarStereographic.o: c/PolarStereographic.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
-
-$(SRCDIR)/TransverseMercator.o: c/TransverseMercator.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
-
-$(SRCDIR)/UTMUPS.o: c/UTMUPS.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
 
 $(SRCDIR)/Geoid.o: c/Geoid.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
