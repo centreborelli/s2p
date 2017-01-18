@@ -9,7 +9,7 @@ before_install:
   - sudo apt-add-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
   - sudo apt-get -qq update
-  - sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools gcc-4.9 g++-4.9
+  - sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools gcc-4.9 g++-4.9 geographiclib-tools libgeographiclib-dev
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.9
   - git submodule update --init --recursive
 env:

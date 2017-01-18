@@ -7,9 +7,11 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     gdal-bin \
+    geographiclib-tools \
     git \
     libfftw3-dev \
     libgdal-dev \
+    libgeographic-dev \
     libgeotiff-dev \
     libtiff5-dev \
     libtiff-tools \
