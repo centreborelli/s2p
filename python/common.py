@@ -1050,3 +1050,47 @@ def cargarse_basura(inputf, outputf):
     run('plambda %s %s %s "x y - fabs %d > nan z if" -o %s' % (tmp1, tmp2, inputf, 5, tmpM))
     run('remove_small_cc %s %s %d %d' % (tmpM, outputf, 200, 5))
     run('rm -f %s %s %s' % (tmp1, tmp2, tmpM))
+
+
+def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
+    """
+    Run a function several times in parallel with different given inputs.
+
+    Args:
+        fun: function to be called several times in parallel.
+        list_of_args: list of (first positional) arguments passed to fun, one
+            per call
+        nb_workers: number of calls run simultaneously
+        extra_args (optional): tuple containing extra arguments to be passed to
+            fun (same value for all calls)
+
+    Return:
+        list of outputs
+    """
+    results = []
+    outputs = []
+    pool = multiprocessing.Pool(nb_workers)
+    for x in list_of_args:
+        if type(x) == tuple:
+            args = x + extra_args
+        else:
+            args = (x,) + extra_args
+        results.append(pool.apply_async(fun, args=args))
+
+    for r in results:
+        try:
+            outputs.append(r.get(600))  # wait at most 10 min per call
+        except multiprocessing.TimeoutError:
+            print("Timeout while running %s" % str(r))
+            outputs.append(None)
+        except RunFailure as e:
+            print("FAILED call: ", e.args[0]["command"])
+            print("\toutput: ", e.args[0]["output"])
+            outputs.append(None)
+        except KeyboardInterrupt:
+            pool.terminate()
+            sys.exit(1)
+
+    pool.close()
+    pool.join()
+    return outputs

@@ -6,72 +6,72 @@
 import os
 import common
 import subprocess
+import scipy.misc
+import numpy as np
+from osgeo import gdal
+
 from config import cfg
 
 
-def cloud_water_image_domain(out, rpc, x, y, w, h, roi_gml=None, cld_gml=None,
+def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
                              wat_msk=None):
     """
     Compute a mask for pixels masked by clouds, water, or out of image domain.
 
     Args:
-        out: path to the output image file
-        x, y, w, h: image ROI
+        x, y, w, h: coordinates of the ROI
         rpc: path to the xml file containing the rpc coefficients of the image
             RPC model is used with SRTM data to derive the water mask
         roi_gml (optional): path to a gml file containing a mask
             defining the area contained in the full image
         cld_gml (optional): path to a gml file containing a mask
             defining the areas covered by clouds
-        wat_msk (optional): path to a tiff file containing a water mask
+        wat_msk (optional): path to an image file containing a water mask
 
     Returns:
-        True if the tile is completely masked, False otherwise.
+        2D array containing the output binary mask. 0 indicate masked pixels, 1
+        visible pixels.
     """
     # coefficients of the translation associated to the crop
     hij = '1 0 {} 0 1 {} 0 0 1'.format(-x, -y)
 
-    # image domain mask
-    if roi_gml is None:  # initialize to 255
-        subprocess.check_call('plambda zero:%dx%d "x 255 +" -o %s' % (w, h,
-                                                                      out),
-                              shell=True)
-    else:
+    mask = np.ones((w, h), dtype=np.bool)
+
+    if roi_gml is not None:  # image domain mask (polygons)
+        tmp = common.tmpfile('.png')
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
-                                                               roi_gml, out),
+                                                               roi_gml, tmp),
                               shell=True)
-        if common.is_image_black(out):  # if we are already out, return
-            return True
+        mask = np.logical_and(mask, scipy.misc.imread(tmp))
 
-    # cloud mask
-    if cld_gml is not None:
-        cld_msk = common.tmpfile('.png')
-        subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij, cld_gml,
-                                                    cld_msk), shell=True)
-        # cld msk has to be inverted.
-        # TODO: add flag to the cldmask binary, to avoid using read/write the
-        # msk one more time for this
-        subprocess.check_call('plambda %s "255 x -" -o %s' % (cld_msk, cld_msk),
+    if not mask.any():
+        return mask
+
+    if cld_gml is not None:  # cloud mask (polygons)
+        tmp = common.tmpfile('.png')
+        subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
+                                                               cld_gml, tmp),
                               shell=True)
+        mask = np.logical_and(mask, ~scipy.misc.imread(tmp).astype(bool))
 
-        intersection(out, out, cld_msk)
+    if not mask.any():
+        return mask
 
-    if wat_msk is not None:
-        # water mask (tiff)
-        wat_msk_crop = common.tmpfile('.png')
-        common.image_apply_homography(wat_msk_crop, wat_msk, H, w, h)
-        intersection(out, out, wat_msk_crop)
-    elif not cfg['disable_srtm']:
-        # water mask (srtm)
-        water_msk = common.tmpfile('.png')
+    if wat_msk is not None:  # water mask (raster)
+        f = gdal.Open(wat_msk)
+        mask = np.logical_and(mask, f.ReadAsArray(x, y, w, h))
+        f = None  # this is the gdal way of closing files
+
+    elif not cfg['disable_srtm']:  # water mask (srtm)
+        tmp = common.tmpfile('.png')
         env = os.environ.copy()
         env['SRTM4_CACHE'] = cfg['srtm_dir']
         subprocess.check_call('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc,
-                                                                 water_msk),
+                                                                 tmp),
                               shell=True, env=env)
-        intersection(out, out, water_msk)
+        mask = np.logical_and(mask, scipy.misc.imread(tmp))
 
-    return common.is_image_black(out)
+    return mask
 
 
 def intersection(out, in1, in2):
