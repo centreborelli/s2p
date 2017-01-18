@@ -126,17 +126,15 @@ $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/cmphomod.c\
 	c/ransac_cases.c c/parsenumbers.c c/mt/mt.h c/mt/mt.o
 	$(C99) $(CFLAGS) $< $(SRCDIR)/mt/mt.o -lm -o $@
 
-$(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(C99) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -o $@
+$(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o
+	$(C99) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
-$(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o
-	$(C99) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -o $@
+$(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o
+	$(C99) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
-$(BINDIR)/watermask: 3rdparty/iio/iio.o $(SRCDIR)/Geoid.o\
-	$(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
-	$(SRCDIR)/xmalloc.c $(SRCDIR)/pickopt.c $(SRCDIR)/rpc.c $(SRCDIR)/srtm4.c\
-	3rdparty/iio/iio.h $(SRCDIR)/parsenumbers.c
-	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/Geoid.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -o $@
+$(BINDIR)/watermask: 3rdparty/iio/iio.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
+	$(SRCDIR)/xmalloc.c $(SRCDIR)/pickopt.c $(SRCDIR)/rpc.c $(SRCDIR)/srtm4.c 3rdparty/iio/iio.h $(SRCDIR)/parsenumbers.c
+	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/disp_to_h: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h 3rdparty/iio/iio.h c/rpc.h c/read_matrix.c
 	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
@@ -156,15 +154,12 @@ $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c 3rdparty/iio/iio.o
 $(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c 3rdparty/iio/iio.o
 	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
-# GEOGRAPHICLIB STUFF
+# Geographiclib wrappers
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
 	$(CXX) $(CPPFLAGS) -c $^ -o $@
 
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
-
-$(SRCDIR)/Geoid.o: c/Geoid.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -I. -o $@
+	$(CXX) $(CPPFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
 
 test:
 	python -u s2p_test.py

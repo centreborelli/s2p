@@ -1,6 +1,6 @@
 #include <string>
 #include <exception>
-#include "GeographicLib/Geoid.hpp"
+#include <GeographicLib/Geoid.hpp>
 
 extern "C" void geoid_height(double *out, double lat, double lon)
 {
