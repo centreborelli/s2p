@@ -16,7 +16,6 @@
 #include <math.h>
 #include <png.h>
 #include <tiffio.h>
-#include <omp.h>
 
 
 //! Local includes

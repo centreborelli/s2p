@@ -13,7 +13,9 @@
 #include <gdal_priv.h>
 #include <iostream>
 #include <fstream>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <xmmintrin.h>
 #include <x86intrin.h>
 #include <cmath>
