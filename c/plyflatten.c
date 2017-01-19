@@ -227,7 +227,7 @@ static void add_ply_points_to_images(struct images *x,
 	}
 
 	// check that the utm zone is the same as the provided one
-	char utm[3];
+	char utm[5];
 	int isbin=1;
 	struct ply_property t[100];
 	size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, t);
@@ -289,7 +289,7 @@ int main(int c, char *v[])
 
 	// process each filename from stdin to determine x, y extremas and store the
 	// filenames in a list of strings, to be able to open the files again
-	char fname[FILENAME_MAX], utm[3];
+	char fname[FILENAME_MAX], utm[5];
 	struct list *l = NULL;
 	while (fgets(fname, FILENAME_MAX, stdin))
 	{
