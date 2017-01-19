@@ -17,20 +17,6 @@
 #include "xmalloc.c"
 
 
-static void parse_utm_string(int *zone, bool *hem, char *s)
-{
-	char hem_string[FILENAME_MAX];
-	if (2 == sscanf(s, "%02d%s", zone, hem_string)) {
-		// hem_string must be equal to "N" or "S"
-		if (hem_string[1] == '\0')
-			if (hem_string[0] == 'N' || hem_string[0] == 'S') {
-				*hem = (hem_string[0] == 'N');
-				fprintf(stderr, "zone: %d\them: %s\n", *zone, hem_string);
-				return;
-			}
-	}
-}
-
 // convert string like '28N' into a number like 32628, according to:
 // WGS84 / UTM northern hemisphere: 326zz where zz is UTM zone number
 // WGS84 / UTM southern hemisphere: 327zz where zz is UTM zone number
@@ -81,7 +67,7 @@ void set_geotif_header(char *tiff_fname, char *utm_zone, float xoff,
 
 
 struct ply_property {
-	enum {UCHAR,FLOAT,DOUBLE,UNKNOWN} type;
+	enum {UCHAR,FLOAT,DOUBLE} type;
 	char name[0x100];
 	size_t len;
 };
@@ -90,10 +76,11 @@ static bool parse_property_line(struct ply_property *t, char *buf)
 {
 	char typename[0x100];
 	bool r = 2 == sscanf(buf, "property %s %s\n", typename, t->name);
-	t->type = UNKNOWN;
-	if (0 == strcmp(typename, "uchar")) { t->type = UCHAR;  t->len = 1;}
-	if (0 == strcmp(typename, "float")) { t->type = FLOAT;  t->len = 4;}
-	if (0 == strcmp(typename, "double")){ t->type = DOUBLE; t->len = 8;}
+	if (!r) return r;
+	else if (0 == strcmp(typename, "uchar")) { t->type = UCHAR;  t->len = 1;}
+	else if (0 == strcmp(typename, "float")) { t->type = FLOAT;  t->len = 4;}
+	else if (0 == strcmp(typename, "double")){ t->type = DOUBLE; t->len = 8;}
+	else fail("Unknown property type: %s\n", buf);
 	return r;
 }
 
@@ -160,8 +147,8 @@ static void add_height_to_images(struct images *x, int i, int j, float v)
 	x->cnt[k] += 1;
 }
 
-int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *data){
-	int rec = 0;
+size_t get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *data){
+	size_t rec = 0;
 	if(isbin) {
 		for (int i = 0; i < n; i++) {
 			switch(t[i].type) {
@@ -271,7 +258,7 @@ void help(char *s)
 int main(int c, char *v[])
 {
 	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
-	char *bbminmax = pick_option(&c, &v, "bb", "");
+	const char *bbminmax = pick_option(&c, &v, "bb", "");
 
 	// process input arguments
 	if (c != 3) {
