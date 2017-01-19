@@ -105,7 +105,7 @@ static size_t header_get_record_length_and_utm_zone(FILE *f_in, char *utm,
 			if (parse_property_line(t+n, buf))
 				n += 1;
 			else if (0 == strncmp(buf, "comment projection:", 19)) {
-				sscanf(buf, "comment projection: UTM %s", utm);
+				sscanf(buf, "comment projection: UTM %3s\n", utm);
 			}
 		}
 		if (0 == strcmp(buf, "end_header\n"))
