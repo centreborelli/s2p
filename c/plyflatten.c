@@ -154,17 +154,26 @@ size_t get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *
 			switch(t[i].type) {
 				case UCHAR: {
 						    unsigned char X;
-						    rec += fread(&X, 1, 1, f_in);
+							size_t r = fread(&X, 1, 1, f_in);
+							if (r != 1)
+							     return rec;
+							rec += r;
 						    data[i] = X;
 						    break; }
 				case FLOAT: {
 						    float X;
-						    rec += fread(&X, sizeof(float), 1, f_in);
+							size_t r = fread(&X, sizeof(float), 1, f_in);
+							if (r != 1)
+							     return rec;
+							rec += r;
 						    data[i] = X;
 						    break; }
 				case DOUBLE: {
 						     double X;
-						     rec += fread(&X, sizeof(double), 1, f_in);
+							 size_t r = fread(&X, sizeof(double), 1, f_in);
+							 if (r != 1)
+							      return rec;
+							 rec += r;
 						     data[i] = X;
 						     break; }
 			}
