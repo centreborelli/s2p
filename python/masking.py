@@ -35,7 +35,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
     # coefficients of the translation associated to the crop
     hij = '1 0 {} 0 1 {} 0 0 1'.format(-x, -y)
 
-    mask = np.ones((w, h), dtype=np.bool)
+    mask = np.ones((h, w), dtype=np.bool)
 
     if roi_gml is not None:  # image domain mask (polygons)
         tmp = common.tmpfile('.png')
