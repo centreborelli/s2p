@@ -14,6 +14,7 @@ import numpy as np
 from scipy import misc
 
 import common
+import parallel
 import srtm
 import tee
 import rpc_utils
@@ -217,7 +218,7 @@ def tiles_full_info(tw, th):
     tiles_coords = compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z)
 
     # compute all masks in parallel as numpy arrays
-    tiles_masks = common.launch_parallel_calls(masking.cloud_water_image_domain,
+    tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
                                                tiles_coords, 4, rpc, roi_msk,
                                                cld_msk, wat_msk)
 

@@ -33,6 +33,7 @@ gdal.UseExceptions()
 
 from python.config import cfg
 from python import tee
+from python import parallel
 from python import common
 from python import initialization
 from python import pointing_accuracy
@@ -42,46 +43,6 @@ from python import masking
 from python import triangulation
 from python import fusion
 from python import visualisation
-
-
-def show_progress(a):
-    """
-    Print the number of tiles that have been processed.
-
-    Args:
-        a: useless argument, but since this function is used as a callback by
-            apply_async, it has to take one argument.
-    """
-    show_progress.counter += 1
-    status = "done {:{fill}{width}} / {} tiles".format(show_progress.counter,
-                                                       show_progress.total,
-                                                       fill='',
-                                                       width=len(str(show_progress.total)))
-    if show_progress.counter < show_progress.total:
-        status += chr(8) * len(status)
-    else:
-        status += '\n'
-    sys.stdout.write(status)
-    sys.stdout.flush()
-
-
-def print_elapsed_time(since_first_call=False):
-    """
-    Print the elapsed time since the last call or since the first call.
-
-    Args:
-        since_first_call:
-    """
-    t2 = datetime.datetime.now()
-    if since_first_call:
-        print("Total elapsed time:", t2 - print_elapsed_time.t0)
-    else:
-        try:
-            print("Elapsed time:", t2 - print_elapsed_time.t1)
-        except AttributeError:
-            print(t2 - print_elapsed_time.t0)
-    print_elapsed_time.t1 = t2
-    print()
 
 
 def pointing_correction(tile, i=None):
@@ -414,82 +375,6 @@ def lidar_preprocessor(tiles):
                                            'cloud.lidar_viewer'), plys)
 
 
-def tilewise_wrapper(fun, *args, **kwargs):
-    """
-    """
-    if not cfg['debug']:  # redirect stdout and stderr to log file
-        # the last argument '0' disables buffering
-        f = open(kwargs['stdout'], 'a', 0)
-        sys.stdout = f
-        sys.stderr = f
-
-    try:
-        out = fun(*args)
-    except Exception:
-        print("Exception in %s" % fun.__name__)
-        traceback.print_exc()
-        raise
-
-    common.garbage_cleanup()
-    if not cfg['debug']:  # close logs
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        f.close()
-
-    return out
-
-
-def launch_parallel_calls(fun, list_of_args, nb_workers, *extra_args):
-    """
-    Run a function several times in parallel with different given inputs.
-
-    Args:
-        fun: function to be called several times in parallel.
-        list_of_args: list of (first positional) arguments passed to fun, one
-            per call
-        nb_workers: number of calls run simultaneously
-        extra_args (optional): tuple containing extra arguments to be passed to
-            fun (same value for all calls)
-
-    Return:
-        list of outputs
-    """
-    results = []
-    outputs = []
-    show_progress.counter = 0
-    show_progress.total = len(list_of_args)
-    pool = multiprocessing.Pool(nb_workers)
-    for x in list_of_args:
-        if type(x) == tuple:  # we expect x = (tile_dictionary, pair_id)
-            args = (fun,) + x + extra_args
-            log = os.path.join(x[0]['dir'], 'pair_%d' % x[1], 'stdout.log')
-        else:  # we expect x = tile_dictionary
-            args = (fun, x) + extra_args
-            log = os.path.join(x['dir'], 'stdout.log')
-        results.append(pool.apply_async(tilewise_wrapper, args=args,
-                                        kwds={'stdout': log},
-                                        callback=show_progress))
-
-    for r in results:
-        try:
-            outputs.append(r.get(600))  # wait at most 10 min per call
-        except multiprocessing.TimeoutError:
-            print("Timeout while running %s" % str(r))
-            outputs.append(None)
-        except common.RunFailure as e:
-            print("FAILED call: ", e.args[0]["command"])
-            print("\toutput: ", e.args[0]["output"])
-            outputs.append(None)
-        except KeyboardInterrupt:
-            pool.terminate()
-            sys.exit(1)
-
-    pool.close()
-    pool.join()
-    print_elapsed_time()
-    return outputs
-
-
 def main(config_file):
     """
     Launch the entire s2p pipeline with the parameters given in a json file.
@@ -497,7 +382,7 @@ def main(config_file):
     Args:
         config_file: path to a json configuration file
     """
-    print_elapsed_time.t0 = datetime.datetime.now()
+    common.print_elapsed_time.t0 = datetime.datetime.now()
     initialization.build_cfg(config_file)
     initialization.make_dirs()
 
@@ -514,7 +399,7 @@ def main(config_file):
 
     print('\ndiscarding masked tiles...')
     tiles = initialization.tiles_full_info(tw, th)
-    print_elapsed_time()
+    common.print_elapsed_time()
     n = len(cfg['images'])
     if n > 2:
         tiles_pairs = [(t, i) for i in xrange(1, n) for t in tiles]
@@ -526,51 +411,51 @@ def main(config_file):
     # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles)))
 
     print('correcting pointing locally...')
-    launch_parallel_calls(pointing_correction, tiles_pairs, nb_workers)
+    parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers)
 
     print('correcting pointing globally...')
     global_pointing_correction(tiles)
-    print_elapsed_time()
+    common.print_elapsed_time()
 
     print('rectifying tiles...')
-    launch_parallel_calls(rectification_pair, tiles_pairs, nb_workers)
+    parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers)
 
     print('running stereo matching...')
-    launch_parallel_calls(stereo_matching, tiles_pairs, nb_workers)
+    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
 
     if n > 2:
         print('computing height maps...')
-        launch_parallel_calls(disparity_to_height, tiles_pairs, nb_workers)
+        parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
 
         print('registering height maps...')
-        mean_heights_local = launch_parallel_calls(mean_heights, tiles,
+        mean_heights_local = parallel.launch_calls(mean_heights, tiles,
                                                    nb_workers)
 
         print('computing global pairwise height offsets...')
         mean_heights_global = np.nanmean(mean_heights_local, axis=0)
 
         print('merging height maps...')
-        launch_parallel_calls(heights_fusion, tiles, nb_workers,
+        parallel.launch_calls(heights_fusion, tiles, nb_workers,
                               mean_heights_global)
 
         print('computing point clouds...')
-        launch_parallel_calls(heights_to_ply, tiles, nb_workers)
+        parallel.launch_calls(heights_to_ply, tiles, nb_workers)
 
     else:
         print('triangulating tiles...')
-        launch_parallel_calls(disparity_to_ply, tiles, nb_workers)
+        parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
 
     print('computing DSM...')
     plys_to_dsm(tiles)
-    print_elapsed_time()
+    common.print_elapsed_time()
 
     print('lidar preprocessor...')
     lidar_preprocessor(tiles)
-    print_elapsed_time()
+    common.print_elapsed_time()
 
     # cleanup
     common.garbage_cleanup()
-    print_elapsed_time(since_first_call=True)
+    common.print_elapsed_time(since_first_call=True)
     log.delete()
 
 
