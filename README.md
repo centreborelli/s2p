@@ -63,7 +63,7 @@ Required dependencies (Ubuntu 16.04):
 
 and
 
-    pip install utm bs4 tifffile
+    pip install utm bs4 tifffile Pillow scipy
 
 `gdal` version must be 1.10 or newer.
 
