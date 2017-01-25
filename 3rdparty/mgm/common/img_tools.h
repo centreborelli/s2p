@@ -209,7 +209,7 @@ struct Img median_filter(struct Img &u, int radius) {
        for(int j=-radius; j<=radius; j++)
           if(0<=j+y && j+y<u.ny)
              for(int i=-radius; i<=radius; i++)
-                if(0<=i+x && i+x<u.nx)
+                if(0<=i+x && i+x<u.nx && ! isnan(M.val(i+x,j+y,k)) )
                    v[n++] = M.val(i+x,j+y,k);
        std::nth_element(v.begin(), v.begin()+n/2, v.end());
        M.val(x,y,k) = v[n/2];
