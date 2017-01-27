@@ -24,6 +24,7 @@ import tempfile
 import subprocess
 import multiprocessing
 import numpy as np
+from osgeo import gdal
 
 
 from s2plib.config import cfg
@@ -177,7 +178,7 @@ def image_size(im):
     """
     # if tiff, use tiffinfo
     if im.lower().endswith(('.tif', '.tiff')):
-        return image_size_tiffinfo(im)
+        return image_size_gdal(im)
 
     # else use imprintf (slower)
     try:
@@ -200,18 +201,11 @@ def image_size_gdal(im):
     Returns:
         a tuple of size 2, giving width and height
     """
-    try:
-        with open(im):
-            p1 = subprocess.Popen(['gdalinfo', im], stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(['grep', 'Size'], stdin=p1.stdout, stdout=subprocess.PIPE)
-            line = p2.stdout.readline()
-            out = re.findall(r"[\w']+", line)
-            nc = int(out[2])
-            nr = int(out[3])
-            return (nc, nr)
-    except IOError:
-        print("image_size_gdal: the input file %s doesn't exist" % str(im))
-        sys.exit()
+    f = gdal.Open(im)
+    x = f.RasterXSize
+    y = f.RasterYSize
+    f = None
+    return x,y
 
 
 def image_size_tiffinfo(im):
@@ -236,7 +230,7 @@ def image_size_tiffinfo(im):
                     stderr=fnull)
             p2 = subprocess.Popen(['grep', 'Image Width'], stdin=p1.stdout,
                     stdout=subprocess.PIPE)
-            line = p2.stdout.readline()
+            line = str(p2.stdout.readline())
             out = re.findall(r"[\w']+", line)
             nc = int(out[2])
             nr = int(out[5])
@@ -412,7 +406,7 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
     tmp = tmpfile('.tif')
 
     if w is None or h is None:
-        sz = image_size_tiffinfo(im)
+        sz = image_size_gdal(im)
         w = sz[0]
         h = sz[1]
 

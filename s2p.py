@@ -419,7 +419,7 @@ def tilewise_wrapper(fun, *args, **kwargs):
     """
     if not cfg['debug']:  # redirect stdout and stderr to log file
         # the last argument '0' disables buffering
-        f = open(kwargs['stdout'], 'a', 0)
+        f = open(kwargs['stdout'], 'a', 1)
         sys.stdout = f
         sys.stderr = f
 
@@ -508,7 +508,7 @@ def main(config_file):
     cfg['max_nb_threads'] = nb_workers
 
     # duplicate stdout and stderr to log file
-    log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'wb')
+    log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
 
     tw, th = initialization.adjust_tile_size()
 

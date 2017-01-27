@@ -45,7 +45,7 @@ def check_parameters(d):
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:
-        sz = common.image_size_tiffinfo(d['images'][0]['img'])
+        sz = common.image_size_gdal(d['images'][0]['img'])
         d['roi'] = {'x': 0, 'y': 0, 'w': sz[0], 'h': sz[1]}
     elif 'roi' in d and dict_has_keys(d['roi'], ['x', 'y', 'w', 'h']):
         pass
@@ -112,7 +112,11 @@ def build_cfg(config_file):
 
     # ensure that the coordinates of the ROI are multiples of the zoom factor,
     # to avoid bad registration of tiles due to rounding problems.
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, *cfg['roi'].values())
+    x = cfg['roi']['x']
+    y = cfg['roi']['y']
+    w = cfg['roi']['w']
+    h = cfg['roi']['h']
+    x, y, w, h = common.round_roi_to_nearest_multiple(z, x,y, w, h)
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
     # if srtm is disabled set disparity range method to sift
@@ -149,8 +153,11 @@ def make_dirs():
 
     # download needed srtm tiles
     if not cfg['disable_srtm']:
-        for s in srtm.list_srtm_tiles(cfg['images'][0]['rpc'],
-                                      *cfg['roi'].values()):
+        x = cfg['roi']['x']
+        y = cfg['roi']['y']
+        w = cfg['roi']['w']
+        h = cfg['roi']['h']
+        for s in srtm.list_srtm_tiles(cfg['images'][0]['rpc'], x, y, w, h):
             srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
@@ -194,7 +201,10 @@ def tiles_full_info(tw, th):
     cld_msk = cfg['images'][0]['cld']
     wat_msk = cfg['images'][0]['wat']
     z =  cfg['subsampling_factor']
-    rx, ry, rw, rh = cfg['roi'].values()  # roi coordinates
+    rx = cfg['roi']['x']
+    ry = cfg['roi']['y']
+    rw = cfg['roi']['w']
+    rh = cfg['roi']['h']
 
     # build tile dictionaries and store them in a list
     tiles = list()
