@@ -127,7 +127,7 @@ def camera_matrix(X, x):
     # Zissermann, chapter 7, for more details.
 
     A = np.zeros((len(x)*2, 12))
-    for i in xrange(len(x)):
+    for i in range(len(x)):
         A[2*i+0, 4:8] = -1*np.array([X[i, 0], X[i, 1], X[i, 2], 1])
         A[2*i+0, 8:12] = x[i, 1]*np.array([X[i, 0], X[i, 1], X[i, 2], 1])
         A[2*i+1, 0:4] = np.array([X[i, 0], X[i, 1], X[i, 2], 1])
@@ -168,7 +168,7 @@ def fundamental_matrix(matches):
 
     # build the matrix, given by eq 11.3 (p279) in Hartley & Zisserman
     A = np.zeros((len(matches), 9))
-    for i in xrange(len(matches)):
+    for i in range(len(matches)):
         A[i, 0:3] = np.array([pts1[i, 0], pts1[i, 1], 1]) * pts2[i, 0]
         A[i, 3:6] = np.array([pts1[i, 0], pts1[i, 1], 1]) * pts2[i, 1]
         A[i, 6:9] = np.array([pts1[i, 0], pts1[i, 1], 1])

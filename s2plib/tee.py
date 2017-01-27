@@ -27,5 +27,5 @@ class Tee(object):
         self.file.close()
 
     def write(self, data):
-        self.file.write(data)
-        self.stdout.write(data)
+        self.file.write(str.encode(data))
+        self.stdout.write(str.encode(data))

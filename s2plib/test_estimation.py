@@ -52,7 +52,7 @@ def test_affine_transformation():
     similarities = []
     affinities = []
 
-    for i in xrange(100):
+    for i in range(100):
         translations.append(T)
         isometries.append(I)
         similarities.append(S)

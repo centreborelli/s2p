@@ -506,7 +506,7 @@ def median_filter(im, w, n):
     """
     out = tmpfile('.tif')
     run('cp %s %s' % (im, out))
-    for i in xrange(n):
+    for i in range(n):
         run('morphoop %s median %d %s' % (out, w, out))
     return out
 
@@ -737,8 +737,8 @@ def bounding_box2D(pts):
     bounding box for the points pts
     """
     dim = len(pts[0])  # should be 2
-    bb_min = [min([t[i] for t in pts]) for i in xrange(dim)]
-    bb_max = [max([t[i] for t in pts]) for i in xrange(dim)]
+    bb_min = [min([t[i] for t in pts]) for i in range(dim)]
+    bb_max = [max([t[i] for t in pts]) for i in range(dim)]
     return bb_min[0], bb_min[1], bb_max[0] - bb_min[0], bb_max[1] - bb_min[1]
 
 
@@ -835,7 +835,7 @@ def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
 
     # recover output values
     out = []
-    for i in xrange(len(points)):
+    for i in range(len(points)):
         out.append([float(x) for x in p2.stdout.readline().split()])
 
     return np.array(out)

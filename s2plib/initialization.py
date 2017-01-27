@@ -223,7 +223,7 @@ def tiles_full_info(tw, th):
             # make the directories
             common.mkdir_p(tile['dir'])
             if len(cfg['images']) > 2:
-                for i in xrange(1, len(cfg['images'])):
+                for i in range(1, len(cfg['images'])):
                     common.mkdir_p(os.path.join(tile['dir'],
                                                 'pair_{}'.format(i)))
 

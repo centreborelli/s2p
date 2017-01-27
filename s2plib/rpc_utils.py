@@ -129,7 +129,7 @@ def approximate_rpc_as_projective(rpc_model, col_range, lin_range, alt_range,
         # used learning points
         colPROJ = np.zeros(len(x))
         linPROJ = np.zeros(len(x))
-        for i in xrange(len(x)):
+        for i in range(len(x)):
             v = np.dot(P, [[x[i]],[y[i]],[z[i]],[1]])
             colPROJ[i] = v[0]/v[2]
             linPROJ[i] = v[1]/v[2]
@@ -212,8 +212,8 @@ def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
     # put all the samples in an array. There should be a more pythonic way to
     # do this
     out = np.zeros((len(lons)*len(lats), 2))
-    for i in xrange(len(lons)):
-        for j in xrange(len(lats)):
+    for i in range(len(lons)):
+        for j in range(len(lats)):
             out[i*len(lats)+j, 0] = lons[i]
             out[i*len(lats)+j, 1] = lats[j]
 
