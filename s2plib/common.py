@@ -5,13 +5,20 @@
 
 
 from __future__ import print_function
+try:
+    from urllib.parse import urlparse, urlencode
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError
+except ImportError:
+    from urlparse import urlparse
+    from urllib import urlencode
+    from urllib2 import urlopen, Request, HTTPError
+
 import os
 import re
 import sys
 import errno
-import urllib2
 import base64
-import urlparse
 import datetime
 import tempfile
 import subprocess
