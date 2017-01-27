@@ -11,8 +11,8 @@ import numpy as np
 from osgeo import gdal
 gdal.UseExceptions()
 
-import common
-import piio
+from s2plib import common
+from s2plib import piio
 
 def register_heights(im1, im2):
     """

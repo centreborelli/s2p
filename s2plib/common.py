@@ -5,21 +5,29 @@
 
 
 from __future__ import print_function
+try:
+    from urllib.parse import urlparse, urlencode
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError
+except ImportError:
+    from urlparse import urlparse
+    from urllib import urlencode
+    from urllib2 import urlopen, Request, HTTPError
+
 import os
 import re
 import sys
 import errno
-import urllib2
 import base64
-import urlparse
 import datetime
 import tempfile
 import subprocess
 import multiprocessing
 import numpy as np
+from osgeo import gdal
 
 
-from config import cfg
+from s2plib.config import cfg
 
 
 # add the bin folder to system path
@@ -170,7 +178,7 @@ def image_size(im):
     """
     # if tiff, use tiffinfo
     if im.lower().endswith(('.tif', '.tiff')):
-        return image_size_tiffinfo(im)
+        return image_size_gdal(im)
 
     # else use imprintf (slower)
     try:
@@ -193,18 +201,11 @@ def image_size_gdal(im):
     Returns:
         a tuple of size 2, giving width and height
     """
-    try:
-        with open(im):
-            p1 = subprocess.Popen(['gdalinfo', im], stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(['grep', 'Size'], stdin=p1.stdout, stdout=subprocess.PIPE)
-            line = p2.stdout.readline()
-            out = re.findall(r"[\w']+", line)
-            nc = int(out[2])
-            nr = int(out[3])
-            return (nc, nr)
-    except IOError:
-        print("image_size_gdal: the input file %s doesn't exist" % str(im))
-        sys.exit()
+    f = gdal.Open(im)
+    x = f.RasterXSize
+    y = f.RasterYSize
+    f = None
+    return x,y
 
 
 def image_size_tiffinfo(im):
@@ -229,7 +230,7 @@ def image_size_tiffinfo(im):
                     stderr=fnull)
             p2 = subprocess.Popen(['grep', 'Image Width'], stdin=p1.stdout,
                     stdout=subprocess.PIPE)
-            line = p2.stdout.readline()
+            line = str(p2.stdout.readline())
             out = re.findall(r"[\w']+", line)
             nc = int(out[2])
             nr = int(out[5])
@@ -405,7 +406,7 @@ def image_zoom_gdal(im, f, out=None, w=None, h=None):
     tmp = tmpfile('.tif')
 
     if w is None or h is None:
-        sz = image_size_tiffinfo(im)
+        sz = image_size_gdal(im)
         w = sz[0]
         h = sz[1]
 
@@ -499,7 +500,7 @@ def median_filter(im, w, n):
     """
     out = tmpfile('.tif')
     run('cp %s %s' % (im, out))
-    for i in xrange(n):
+    for i in range(n):
         run('morphoop %s median %d %s' % (out, w, out))
     return out
 
@@ -730,8 +731,8 @@ def bounding_box2D(pts):
     bounding box for the points pts
     """
     dim = len(pts[0])  # should be 2
-    bb_min = [min([t[i] for t in pts]) for i in xrange(dim)]
-    bb_max = [max([t[i] for t in pts]) for i in xrange(dim)]
+    bb_min = [min([t[i] for t in pts]) for i in range(dim)]
+    bb_max = [max([t[i] for t in pts]) for i in range(dim)]
     return bb_min[0], bb_min[1], bb_max[0] - bb_min[0], bb_max[1] - bb_min[1]
 
 
@@ -828,7 +829,7 @@ def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
 
     # recover output values
     out = []
-    for i in xrange(len(points)):
+    for i in range(len(points)):
         out.append([float(x) for x in p2.stdout.readline().split()])
 
     return np.array(out)

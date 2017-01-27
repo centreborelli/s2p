@@ -5,7 +5,7 @@
 
 import subprocess
 import numpy as np
-import common
+from s2plib import common
 
 def geodetic_to_geocentric(lat, lon, alt):
     """

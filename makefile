@@ -30,10 +30,10 @@ all: default msmw3 sgbm tvl1
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-piio: python/piio/libiio.so
+piio: s2plib/piio/libiio.so
 
-python/piio/libiio.so: python/piio/setup.py python/piio/freemem.c 3rdparty/iio/iio.c 3rdparty/iio/iio.h
-	cd python/piio; python setup.py build
+s2plib/piio/libiio.so: s2plib/piio/setup.py s2plib/piio/freemem.c 3rdparty/iio/iio.c 3rdparty/iio/iio.h
+	cd s2plib/piio; python setup.py build
 
 asift:
 	mkdir -p $(BINDIR)/build_asift

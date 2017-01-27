@@ -3,15 +3,23 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
 from __future__ import print_function
+try:
+    from urllib.parse import urlparse, urlencode
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError
+except ImportError:
+    from urlparse import urlparse
+    from urllib import urlencode
+    from urllib2 import urlopen, Request, HTTPError
+
 import subprocess
 import zipfile
-import urllib
 import os
 
-import common
-import rpc_model
-import rpc_utils
-from config import cfg
+from s2plib import common
+from s2plib import rpc_model
+from s2plib import rpc_utils
+from s2plib.config import cfg
 
 
 def list_srtm_tiles(rpcfile, x, y, w, h):

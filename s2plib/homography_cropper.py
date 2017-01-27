@@ -4,8 +4,8 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import numpy as np
-import common
-from config import cfg
+from s2plib import common
+from s2plib.config import cfg
 
 def image_apply_pleiades_unsharpening_filter(im):
     """

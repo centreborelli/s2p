@@ -13,7 +13,7 @@ import sys
 class Tee(object):
 
     def __init__(self, name, mode):
-        self.file = open(name, mode, 0)  # '0' is for no buffering
+        self.file = open(name, mode, 1)  # '0' is for no buffering
         self.fileno = self.file.fileno
         self.flush = self.file.flush
         self.stdout = sys.stdout

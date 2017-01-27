@@ -8,14 +8,14 @@ import os
 import sys
 import numpy as np
 
-import rpc_model
-import rpc_utils
-import estimation
-import evaluation
-import common
-import sift
-import visualisation
-from config import cfg
+from s2plib import rpc_model
+from s2plib import rpc_utils
+from s2plib import estimation
+from s2plib import evaluation
+from s2plib import common
+from s2plib import sift
+from s2plib import visualisation
+from s2plib.config import cfg
 
 
 def center_2d_points(pts):

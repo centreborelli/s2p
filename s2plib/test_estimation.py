@@ -5,8 +5,9 @@
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-import estimation
-import common
+
+from s2plib import estimation
+from s2plib import common
 
 def rotation_matrix(t):
     R = np.eye(3)
@@ -51,7 +52,7 @@ def test_affine_transformation():
     similarities = []
     affinities = []
 
-    for i in xrange(100):
+    for i in range(100):
         translations.append(T)
         isometries.append(I)
         similarities.append(S)

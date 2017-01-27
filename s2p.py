@@ -31,18 +31,18 @@ from osgeo import gdal
 
 gdal.UseExceptions()
 
-from python.config import cfg
-from python import tee
-from python import parallel
-from python import common
-from python import initialization
-from python import pointing_accuracy
-from python import rectification
-from python import block_matching
-from python import masking
-from python import triangulation
-from python import fusion
-from python import visualisation
+from s2plib.config import cfg
+from s2plib import tee
+from s2plib import common
+from s2plib import parallel
+from s2plib import initialization
+from s2plib import pointing_accuracy
+from s2plib import rectification
+from s2plib import block_matching
+from s2plib import masking
+from s2plib import triangulation
+from s2plib import fusion
+from s2plib import visualisation
 
 
 def pointing_correction(tile, i=None):

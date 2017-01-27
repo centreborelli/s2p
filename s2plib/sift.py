@@ -7,10 +7,10 @@ from __future__ import print_function
 import os
 import numpy as np
 
-import common
-import rpc_utils
-import estimation
-from config import cfg
+from s2plib import common
+from s2plib import rpc_utils
+from s2plib import estimation
+from s2plib.config import cfg
 
 
 def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):

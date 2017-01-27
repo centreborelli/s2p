@@ -4,13 +4,13 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import os
-import common
 import subprocess
 import scipy.misc
 import numpy as np
 from osgeo import gdal
 
-from config import cfg
+from s2plib import common
+from s2plib.config import cfg
 
 
 def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,

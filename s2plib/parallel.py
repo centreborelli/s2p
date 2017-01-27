@@ -6,8 +6,8 @@ import sys
 import traceback
 import multiprocessing
 
-import common
-from config import cfg
+from s2plib import common
+from s2plib.config import cfg
 
 
 def show_progress(a):
@@ -35,8 +35,7 @@ def tilewise_wrapper(fun, *args, **kwargs):
     """
     """
     if not cfg['debug']:  # redirect stdout and stderr to log file
-        # the last argument '0' disables buffering
-        f = open(kwargs['stdout'], 'a', 0)
+        f = open(kwargs['stdout'], 'a')
         sys.stdout = f
         sys.stderr = f
 

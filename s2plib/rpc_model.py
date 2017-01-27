@@ -190,18 +190,18 @@ class RPCModel:
     def read_rpc_pleiades(self, tree):
         # direct model
         d = tree.find('Rational_Function_Model/Global_RFM/Direct_Model')
-        self.directLonNum = self.parse_coeff(d, "SAMP_NUM_COEFF", xrange(1, 21))
-        self.directLonDen = self.parse_coeff(d, "SAMP_DEN_COEFF", xrange(1, 21))
-        self.directLatNum = self.parse_coeff(d, "LINE_NUM_COEFF", xrange(1, 21))
-        self.directLatDen = self.parse_coeff(d, "LINE_DEN_COEFF", xrange(1, 21))
+        self.directLonNum = self.parse_coeff(d, "SAMP_NUM_COEFF", range(1, 21))
+        self.directLonDen = self.parse_coeff(d, "SAMP_DEN_COEFF", range(1, 21))
+        self.directLatNum = self.parse_coeff(d, "LINE_NUM_COEFF", range(1, 21))
+        self.directLatDen = self.parse_coeff(d, "LINE_DEN_COEFF", range(1, 21))
         self.directBias = self.parse_coeff(d, "ERR_BIAS", ['X', 'Y'])
         
         # inverse model
         i = tree.find('Rational_Function_Model/Global_RFM/Inverse_Model')
-        self.inverseColNum = self.parse_coeff(i, "SAMP_NUM_COEFF", xrange(1, 21))
-        self.inverseColDen = self.parse_coeff(i, "SAMP_DEN_COEFF", xrange(1, 21))
-        self.inverseLinNum = self.parse_coeff(i, "LINE_NUM_COEFF", xrange(1, 21))
-        self.inverseLinDen = self.parse_coeff(i, "LINE_DEN_COEFF", xrange(1, 21))
+        self.inverseColNum = self.parse_coeff(i, "SAMP_NUM_COEFF", range(1, 21))
+        self.inverseColDen = self.parse_coeff(i, "SAMP_DEN_COEFF", range(1, 21))
+        self.inverseLinNum = self.parse_coeff(i, "LINE_NUM_COEFF", range(1, 21))
+        self.inverseLinDen = self.parse_coeff(i, "LINE_DEN_COEFF", range(1, 21))
         self.inverseBias = self.parse_coeff(i, "ERR_BIAS", ['ROW', 'COL'])
         
         # validity domains
