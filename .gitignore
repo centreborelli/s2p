@@ -1,34 +1,23 @@
 *.pyc
 *.o
 *.a
-python/piio/libiio.so
+*.so
+*~
 
 bin
 build
 .srtm
 experiments
-3rdparty/GeographicLib-1.32/tools
 3rdparty/sgbm/sgbm
 3rdparty/mgm/mgm
 3rdparty/tvl1flow_3/backflow
 3rdparty/tvl1flow_3/tvl1flow
 3rdparty/stereo_hirschmuller_2008/testdata
-3rdparty/tiff-4.0.4beta/include
-3rdparty/tiff-4.0.4beta/lib
-3rdparty/tiff-4.0.4beta/share
 
 .DS_Store
 ipynb
 
-python/iterate.dat
 iterate.dat
 
-data/pleiades/*/*
-snapshots
-to_debug
-licence_examples
-
-
 test/
-*~
 .idea
