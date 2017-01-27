@@ -3,15 +3,6 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
 from __future__ import print_function
-try:
-    from urllib.parse import urlparse, urlencode
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError
-except ImportError:
-    from urlparse import urlparse
-    from urllib import urlencode
-    from urllib2 import urlopen, Request, HTTPError
-
 import subprocess
 import zipfile
 import os
@@ -44,7 +35,7 @@ def list_srtm_tiles(rpcfile, x, y, w, h):
         for lat in [lat_min, lat_max]:
             p = subprocess.Popen(['srtm4_which_tile', str(lon), str(lat)],
                                  stdout=subprocess.PIPE)
-            out.append(p.stdout.readline().split()[0])
+            out.append(p.stdout.readline().split()[0].decode())
     out = set(out)
     print("Needed srtm tiles: ", out)
     return out
@@ -68,10 +59,6 @@ def get_srtm_tile(srtm_tile, out_dir):
     # download the zip file
     srtm_tile_url = '%s/%s.zip' % (cfg['srtm_url'], srtm_tile)
     zip_path = os.path.join(out_dir, '%s.zip' % srtm_tile)
-
-    # add authorization header
-    srtm_tile_url = common.url_with_authorization_header(srtm_tile_url)
-
     common.download(zip_path, srtm_tile_url)
 
     # extract the tif file

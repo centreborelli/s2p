@@ -5,21 +5,13 @@
 
 
 from __future__ import print_function
-try:
-    from urllib.parse import urlparse, urlencode
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError
-except ImportError:
-    from urlparse import urlparse
-    from urllib import urlencode
-    from urllib2 import urlopen, Request, HTTPError
-
 import os
 import re
 import sys
 import errno
 import base64
 import datetime
+import requests
 import tempfile
 import subprocess
 import multiprocessing
@@ -937,32 +929,6 @@ def which(program):
                 return exe_file
 
 
-def url_with_authorization_header(from_url):
-    """
-    Add authorization header
-
-    Args:
-        from_url: url of the file to download
-    """
-    scheme, netloc, path, param, query = urlparse.urlsplit(from_url)
-    if "@" in netloc:
-        userinfo = netloc.rsplit("@",1)[0]
-        if ":" in userinfo:
-            username = userinfo.rsplit(":",1)[0]
-            password = userinfo.rsplit(":",1)[1]
-            netloc = netloc.rsplit("@",1)[1]
-
-            from_url = urlparse.urlunsplit((scheme, netloc, path, param, query))
-
-            if username != None and password != None:
-                request = urllib2.Request(from_url)
-                base64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
-                request.add_header("Authorization", "Basic %s" % base64string)
-                from_url = request
-
-    return from_url
-
-
 def download(to_file, from_url):
     """
     Download a file from the internet.
@@ -971,31 +937,19 @@ def download(to_file, from_url):
         to_file: path where to store the downloaded file
         from_url: url of the file to download
     """
-    f = open(to_file, 'wb')
-    file_size_dl = 0
-    block_sz = 8192
+    r = requests.get(from_url, stream=True)
+    file_size = int(r.headers['content-length'])
+    print("Downloading: %s Bytes: %s" % (to_file, file_size))
 
-    try:
-        u = urllib2.urlopen(from_url)
-        meta = u.info()
-        file_size = int(meta.getheaders("Content-Length")[0])
-        print("Downloading: %s Bytes: %s" % (to_file, file_size))
-
-        while True:
-            buffer = u.read(block_sz)
-            if not buffer:
-                break
-
-            file_size_dl += len(buffer)
-            f.write(buffer)
-            status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
-            status = status + chr(8)*(len(status)+1)
-            print(status, end=" ")
-
-    except urllib2.URLError as e:
-        print("Download failed: ", e)
-
-    f.close()
+    downloaded = 0
+    with open(to_file, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+                downloaded += len(chunk)
+                status = r"%10d  [%3.2f%%]" % (downloaded, downloaded * 100. / file_size)
+                status = status + chr(8)*(len(status)+1)
+                print(status, end=" ")
 
 
 def round_roi_to_nearest_multiple(n, x, y, w, h):
