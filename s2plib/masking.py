@@ -4,9 +4,10 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import os
-import common
 import subprocess
-from config import cfg
+
+from s2plib import common
+from s2plib.config import cfg
 
 
 def cloud_water_image_domain(out, w, h, H, rpc, roi_gml=None, cld_gml=None, wat_msk=None):

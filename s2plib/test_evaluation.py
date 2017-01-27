@@ -6,7 +6,7 @@
 import numpy as np
 from nose.tools import assert_equals
 from nose.tools import assert_almost_equals
-import evaluation
+from s2plib import evaluation
 
 def test_finite_distances():
     x = np.array([1, 1, 1])

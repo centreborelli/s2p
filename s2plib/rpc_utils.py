@@ -9,11 +9,11 @@ import utm
 import datetime
 import numpy as np
 
-import estimation
-import geographiclib
-import common
-import rpc_model
-from config import cfg
+from s2plib import estimation
+from s2plib import geographiclib
+from s2plib import common
+from s2plib import rpc_model
+from s2plib.config import cfg
 
 def print_distance_between_vectors(u, v, msg):
     """

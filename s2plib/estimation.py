@@ -5,7 +5,8 @@
 
 from __future__ import print_function
 import numpy as np
-import common
+
+from s2plib import common
 
 
 def normalize_2d_points(pts):

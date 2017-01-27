@@ -6,13 +6,13 @@ from __future__ import print_function
 import numpy as np
 import os
 
-import piio
-import common
-import sift
-import estimation
-import rpc_model
-import rpc_utils
-import pointing_accuracy
+from s2plib import piio
+from s2plib import common
+from s2plib import sift
+from s2plib import estimation
+from s2plib import rpc_model
+from s2plib import rpc_utils
+from s2plib import pointing_accuracy
 
 def plot_line(im, x1, y1, x2, y2, colour):
     """

@@ -12,12 +12,12 @@ import copy
 import shutil
 import numpy as np
 
-import common
-import srtm
-import tee
-import rpc_utils
-import masking
-from config import cfg
+from s2plib import common
+from s2plib import srtm
+from s2plib import tee
+from s2plib import rpc_utils
+from s2plib import masking
+from s2plib.config import cfg
 
 
 def dict_has_keys(d, l):

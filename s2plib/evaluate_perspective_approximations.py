@@ -9,10 +9,11 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-import rpc_model
-import rpc_utils
-import estimation
-import evaluation
+
+from s2plib import rpc_model
+from s2plib import rpc_utils
+from s2plib import estimation
+from s2plib import evaluation
 
 
 def single_reprojection_error(rpc, proj, col, row, h):

@@ -5,8 +5,8 @@
 import os
 import numpy as np
 
-import common
-from config import cfg
+from s2plib import common
+from s2plib.config import cfg
 
 
 def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):

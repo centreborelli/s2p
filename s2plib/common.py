@@ -26,7 +26,7 @@ import multiprocessing
 import numpy as np
 
 
-from config import cfg
+from s2plib.config import cfg
 
 
 # add the bin folder to system path

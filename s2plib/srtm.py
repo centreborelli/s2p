@@ -16,10 +16,10 @@ import subprocess
 import zipfile
 import os
 
-import common
-import rpc_model
-import rpc_utils
-from config import cfg
+from s2plib import common
+from s2plib import rpc_model
+from s2plib import rpc_utils
+from s2plib.config import cfg
 
 
 def list_srtm_tiles(rpcfile, x, y, w, h):

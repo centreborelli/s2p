@@ -4,10 +4,10 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import os
-import common
 import numpy as np
 
-from config import cfg
+from s2plib import common
+from s2plib.config import cfg
 
 
 def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,

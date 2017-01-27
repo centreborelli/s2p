@@ -4,7 +4,7 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import numpy as np
-import geographiclib
+from s2plib import geographiclib
 
 
 class ProjModel:
