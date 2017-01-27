@@ -12,7 +12,7 @@ before_install:
   - sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools geographiclib-tools libgeographiclib-dev
 env:
   - CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
-install: "pip install gdal utm bs4 tifffile Pillow scipy"
+install: "pip install gdal utm bs4 tifffile Pillow scipy requests"
 
 # command to build
 script:
