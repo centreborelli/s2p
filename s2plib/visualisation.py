@@ -12,7 +12,7 @@ from s2plib import sift
 from s2plib import estimation
 from s2plib import rpc_model
 from s2plib import rpc_utils
-from s2plib import pointing_accuracy
+import s2plib.pointing_accuracy
 
 def plot_line(im, x1, y1, x2, y2, colour):
     """
@@ -246,18 +246,17 @@ def plot_pointing_error_tile(im1, im2, rpc1, rpc2, x, y, w, h,
     F = estimation.affine_fundamental_matrix(matches_rpc)
 
     # compute error vectors
-    e = pointing_accuracy.error_vectors(matches_sift, F, 'ref')
+    e = s2plib.pointing_accuracy.error_vectors(matches_sift, F, 'ref')
 
-    A = pointing_accuracy.local_translation(r1, r2, x, y, w, h, matches_sift)
+    A = s2plib.pointing_accuracy.local_translation(r1,r2, x,y,w,h, matches_sift)
     p = matches_sift[:, 0:2]
     q = matches_sift[:, 2:4]
     qq = common.points_apply_homography(A, q)
-    ee = pointing_accuracy.error_vectors(np.hstack((p, qq)), F, 'ref')
-    print(pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y,
-                                                        w, h, None,
-                                                        matches_sift))
-    print(pointing_accuracy.evaluation_from_estimated_F(im1, im2, r1, r2, x, y,
-                                                        w, h, A, matches_sift))
+    ee = s2plib.pointing_accuracy.error_vectors(np.hstack((p, qq)), F, 'ref')
+    print(s2plib.pointing_accuracy.evaluation_from_estimated_F(im1, im2,
+        r1, r2, x, y, w, h, None, matches_sift))
+    print(s2plib.pointing_accuracy.evaluation_from_estimated_F(im1, im2,
+        r1, r2, x, y, w, h, A, matches_sift))
 
     # plot the vectors: they go from the point x to the line (F.T)x'
     plot_vectors(p, -e, x, y, w, h, f, out_file='%s_before.png' % out_files_pattern)
