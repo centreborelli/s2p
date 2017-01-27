@@ -21,7 +21,7 @@ libiiofile= os.path.join(here, 'libiio'+lib_ext)
 try:
    os.stat(libiiofile)
 except OSError:
-   print 'BUILDING PIIO...'
+   print('BUILDING PIIO...')
    os.system('cd %s; python setup.py build'%here)
 
 libiio   = ctypes.CDLL(libiiofile)

@@ -508,7 +508,7 @@ def main(config_file):
     cfg['max_nb_threads'] = nb_workers
 
     # duplicate stdout and stderr to log file
-    log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
+    log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'wb')
 
     tw, th = initialization.adjust_tile_size()
 
