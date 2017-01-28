@@ -27,17 +27,17 @@ cfg['full_img']  = False
 
 # s2p processes the images tile by tile. The tiles are squares cropped from the
 # reference image. The width and height of the tiles are given by this param, in pixels.
-cfg['tile_size']  = 800
+cfg['tile_size'] = 800
 
 # margins used to increase the footprint of the rectified tiles, to
 # account for poor disparity estimation close to the borders
 cfg['horizontal_margin'] = 50  # for regularity and occlusions
 cfg['vertical_margin'] = 10  # for regularity
 
-# max number of tiles processed in parallel. None means the number of available cores
-cfg['max_nb_threads'] = None 
+# max number of processes launched in parallel. None means the number of available cores
+cfg['max_processes'] = None
 
-# max number of OMP threads used to process a tile during stereo matching
+# max number of OMP threads used by programs compiled with openMP
 cfg['omp_num_threads'] = 1
 
 # debug mode: no parallelisation, and more verbose logs

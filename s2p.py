@@ -388,9 +388,9 @@ def main(config_file):
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
-    if cfg['max_nb_threads']:
-        nb_workers = min(nb_workers, cfg['max_nb_threads'])
-    cfg['max_nb_threads'] = nb_workers
+    if cfg['max_processes']:
+        nb_workers = min(nb_workers, cfg['max_processes'])
+    cfg['max_processes'] = nb_workers
 
     # duplicate stdout and stderr to log file
     log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
@@ -406,9 +406,8 @@ def main(config_file):
     else:
         tiles_pairs = tiles
 
-    # omp_num_threads: should not exceed nb_workers when multiplied by the
-    # number of tiles
-    # cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles)))
+    # omp_num_threads should not exceed nb_workers when multiplied by len(tiles)
+    cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_pairs)))
 
     print('correcting pointing locally...')
     parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers)
