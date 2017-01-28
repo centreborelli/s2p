@@ -330,9 +330,9 @@ def heights_to_ply(tile):
     H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
     colors = os.path.join(out_dir, 'ref.png')
     if cfg['images'][0]['clr']:
-        common.image_crop_tif(cfg['images'][0]['clr'], x, y, w, h, colors)
+        common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
     else:
-        common.image_qauto(common.image_crop_tif(cfg['images'][0]['img'], x, y,
+        common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
     triangulation.height_map_to_point_cloud(plyfile, os.path.join(out_dir,
                                                                   'height_map.tif'),

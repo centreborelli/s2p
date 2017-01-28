@@ -675,9 +675,9 @@ def crop_corresponding_areas(out_dir, images, roi, zoom=1):
         x, y, w, h = corresponding_roi(rpc_ref, image['rpc'], roi['x'],
                                        roi['y'], roi['w'], roi['h'])
         if zoom == 1:
-            common.image_crop_tif(image['img'], x, y, w, h, '%s/roi_sec_%d.tif' % (out_dir, i))
+            common.image_crop_gdal(image['img'], x, y, w, h, '%s/roi_sec_%d.tif' % (out_dir, i))
         else:
             # gdal is used for the zoom because it handles BigTIFF files, and
             # before the zoom out the image may be that big
-            tmp = common.image_crop_tif(image['img'], x, y, w, h)
+            tmp = common.image_crop_gdal(image['img'], x, y, w, h)
             common.image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir, i), w, h)

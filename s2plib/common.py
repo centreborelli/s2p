@@ -137,10 +137,8 @@ def matrix_read(filename, size=None):
     Returns:
         numpy array
     """
-    f = open(filename, 'r')
-    m = matrix_read_from_string(f.read(), size)
-    f.close()
-    return m
+    with open(filename, 'r') as f:
+        return matrix_read_from_string(f.read(), size)
 
 
 def matrix_read_from_string(s, size=None):
@@ -159,77 +157,22 @@ def matrix_translation(x, y):
     return t
 
 
-def image_size(im):
-    """
-    Reads the width and height of an image.
-
-    Args:
-        im: path to the input image file
-    Returns:
-        a tuple of size 2, giving width and height
-    """
-    # if tiff, use tiffinfo
-    if im.lower().endswith(('.tif', '.tiff')):
-        return image_size_gdal(im)
-
-    # else use imprintf (slower)
-    try:
-        with open(im):
-            out = tmpfile('.txt')
-            run('imprintf "%%w %%h" %s > %s' % (shellquote(im), out));
-            (nc, nr) = map(int, open(out).read().split())
-            return (nc, nr)
-    except IOError:
-        print("image_size: the input file %s doesn't exist" % str(im))
-        sys.exit()
-
-
 def image_size_gdal(im):
     """
-    Reads the width and height of an image, using gdal.
+    Read the width, height and pixel dimension of an image using gdal.
 
     Args:
         im: path to the input image file
+
     Returns:
-        a tuple of size 2, giving width and height
+        w, h, pd: a tuple of length 3
     """
     f = gdal.Open(im)
     x = f.RasterXSize
     y = f.RasterYSize
+    pd = f.RasterCount
     f = None
-    return x,y
-
-
-def image_size_tiffinfo(im):
-    """
-    Reads the width and height of an image, using tiffinfo.
-
-    Args:
-        im: path to the input tif image file
-    Returns:
-        a tuple of size 2, giving width and height
-    """
-    if not im.lower().endswith(('.tif', '.tiff')):
-        print("image_size_tiffinfo function works only with TIF files")
-        print("use image_size_gdal or image_size instead")
-        sys.exit()
-    try:
-        with open(im):
-            # redirect stderr to /dev/null on tiffinfo call to discard noisy
-            # msg about unknown field with tag 42112
-            fnull = open(os.devnull, "w")
-            p1 = subprocess.Popen(['tiffinfo', im], stdout=subprocess.PIPE,
-                    stderr=fnull)
-            p2 = subprocess.Popen(['grep', 'Image Width'], stdin=p1.stdout,
-                    stdout=subprocess.PIPE)
-            line = str(p2.stdout.readline())
-            out = re.findall(r"[\w']+", line)
-            nc = int(out[2])
-            nr = int(out[5])
-            return (nc, nr)
-    except IOError:
-        print("image_size_tiffinfo: the input file %s doesn't exist" % str(im))
-        sys.exit()
+    return x, y, pd
 
 
 def grep_xml(xml_file, tag):
@@ -263,72 +206,6 @@ def grep_xml(xml_file, tag):
     except IOError:
         print("grep_xml: the input file %s doesn't exist" % xml_file)
         sys.exit()
-
-
-
-def image_pix_dim(im):
-    """
-    Reads the number of channels of an image.
-
-    Args:
-        im: path to the input image file
-
-    Returns:
-        number of channels of the image
-    """
-    # if tiff, use tiffinfo
-    if im.lower().endswith(('.tif', '.tiff')):
-        return image_pix_dim_tiffinfo(im)
-
-    # else use imprintf (slower)
-    try:
-        with open(im):
-            out = tmpfile('.txt')
-            run('imprintf "%%c" %s > %s' % (shellquote(im), out));
-            dim = open(out).readline().split()[0]
-            return int(dim)
-    except IOError:
-        print("image_pix_dim: the input file doesn't exist")
-        sys.exit()
-
-
-def image_pix_dim_tiffinfo(im):
-    """
-    Reads the number of channels of an image, using tiffinfo
-
-    Args:
-        im: path to the input tif image file
-
-    Returns:
-        number of channels of the image
-    """
-    if not im.lower().endswith('.tif'):
-        print("image_pix_dim_tiffinfo function works only with TIF files")
-        print("use image_pix_dim instead")
-        sys.exit()
-    try:
-        with open(im):
-            # redirect stderr to /dev/null on tiffinfo call to discard noisy
-            # msg about unknown field with tag 42112
-            fnull = open(os.devnull, "w")
-            p1 = subprocess.Popen(['tiffinfo', im], stdout=subprocess.PIPE,
-                    stderr=fnull)
-            p2 = subprocess.Popen(['grep', 'Samples/Pixel'], stdin=p1.stdout,
-                    stdout=subprocess.PIPE)
-            line = p2.stdout.readline()
-            out = re.findall(r"[\w']+", line)
-            n = int(out[2])
-            return n
-    except IOError:
-        print("image_pix_dim_tiffinfo: file %s doesn't exist" % str(im))
-        sys.exit()
-
-
-def image_crop(im, x, y, w, h, out=None):
-    if (out == None):
-        out = tmpfile('.tif')
-    run('crop %s %s %d %d %d %d' % (im, out, x, y, w, h));
-    return out
 
 
 def image_fftconvolve(im, mtf):
@@ -370,7 +247,7 @@ def image_safe_zoom_fft(im, f, out=None):
     if out is None:
         out = tmpfile('.tif')
 
-    sz = image_size(im)
+    sz = image_size_gdal(im)
     # FFT doesn't play nice with infinite values, so we remove them
     run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
     return out
@@ -426,11 +303,11 @@ def cropImage(inp, out, x, y, w, h, zoom=1):
     """
 
     if zoom == 1:
-        image_crop_tif(inp, x, y, w, h, out)
+        image_crop_gdal(inp, x, y, w, h, out)
     else:
         # gdal is used for the zoom because it handles BigTIFF files, and
         # before the zoom out the image may be that big
-        tmp = image_crop_tif(inp, x, y, w, h)
+        tmp = image_crop_gdal(inp, x, y, w, h)
         image_zoom_gdal(tmp, zoom, out, w, h)
 
 
@@ -516,30 +393,6 @@ def image_qauto(im, out=None):
     return out
 
 
-def image_getminmax(im, out):
-    """
-    Get min and max intensity
-
-    Args :
-        im: path to input image
-        out: path to file where min/max values will be stored
-    """
-    run('getminmax %s %s' % (im, out))
-
-
-def image_rescaleintensities(im,out,rmin,rmax):
-    """
-    rescale the values of an input image im, ranging from rmin to rmax,
-    to an output image out with values ranging from 0 to 255 (8-bits image)
-
-    Args :
-        im: path to input image
-        out: path to output image
-    """
-
-    run('rescaleintensities %s %s %d %d' % (im, out, rmin, rmax))
-
-
 def image_qauto_gdal(im):
     """
     Uniform requantization between min and max intensity.
@@ -597,11 +450,8 @@ def image_qeasy(im, black, white, out=None):
         path of requantized image, saved as png
     """
     if out is None:
-        extension = '.tif' if tilewise else '.png'
-        out = tmpfile(extension)
-        out = tmpfile(extension)
-    else:
-        run('qeasy %d %d %s %s' % (black, white, im, out))
+        out = tmpfile('.png')
+    run('qeasy %d %d %s %s' % (black, white, im, out))
     return out
 
 
@@ -704,12 +554,12 @@ def bounding_box2D(pts):
     return bb_min[0], bb_min[1], bb_max[0] - bb_min[0], bb_max[1] - bb_min[1]
 
 
-def image_crop_tif(im, x, y, w, h, out=None):
+def image_crop_gdal(im, x, y, w, h, out=None):
     """
-    Crops tif images.
+    Crop an image using gdal_translate.
 
     Args:
-        im: path to a tif image, or to a tile map file (*.til)
+        im: path to an image file
         x, y, w, h: four integers definig the rectangular crop in the image.
             (x, y) is the top-left corner, and (w, h) are the dimensions of the
             rectangle.
@@ -717,12 +567,9 @@ def image_crop_tif(im, x, y, w, h, out=None):
 
     Returns:
         path to cropped tif image
-
-    The crop is made with the gdal_translate binary, from gdal library. We
-    tried to use tiffcrop but it fails.
     """
-    if (int(x) != x or int(y) != y):
-        print('Warning: image_crop_tif will round the coordinates of your crop')
+    if int(x) != x or int(y) != y:
+        print('WARNING: image_crop_gdal will round the coordinates of your crop')
 
     if out is None:
         out = tmpfile('.tif')
@@ -733,23 +580,11 @@ def image_crop_tif(im, x, y, w, h, out=None):
             run(('gdal_translate -ot Float32 -co TILED=YES -co BIGTIFF=IF_NEEDED '
                  '-srcwin %d %d %d %d %s %s') % (x, y, w, h, shellquote(im),
                                                  shellquote(out)))
-
     except IOError:
-        print("""image_crop_tif: input image %s not found! Verify your paths to
-                 Pleiades full images"""%shellquote(im))
+        print("image_crop_gdal: input image %s not found" % shellquote(im))
         sys.exit()
 
     return out
-
-
-def image_crop_LARGE(im, x, y, w, h):
-    if (int(x) != x or int(y) != y):
-        print('Warning: image_crop_LARGE will round the coordinates of your crop')
-    if im.lower().endswith(('tif', 'tiff', 'til')):
-       return image_crop_tif(im, x, y, w, h)
-    else:
-       print("image_crop_LARGE: the input image must be tif, tiff or til")
-       return image_crop(im, x, y, w, h)
 
 
 def image_pleiades_unsharpening_mtf():
@@ -816,9 +651,8 @@ def get_rectangle_coordinates(im):
             rectangle.
     """
     points_file = tmpfile('.txt')
-    current_dir = os.path.dirname(os.path.abspath(__file__))
     run('python viewGL.py %s > %s' % (shellquote(im), points_file))
-    (x1, y1, x2, y2) = map(int, open(points_file).read().split())
+    x1, y1, x2, y2 = map(int, open(points_file).read().split())
     # viewGL.py returns the coordinates of two corners defining the rectangle.
     # We can's make any assumption on the ordering of these coordinates.
 
@@ -831,24 +665,22 @@ def get_rectangle_coordinates(im):
 
 def get_roi_coordinates(img, preview):
     """
-    Get the coordinates of a desired ROI in a Pleiades image from user's clicks.
+    Coordinates of a rectangle in a large image from user clicks on a preview.
 
     Args:
-        img: path to the full image file
+        img: path to the large image file
         preview: path to the preview image file
 
     Returns:
-        x, y, w, h: coordinates of the ROI selected by the user, in the
-            full image frame. x, y are the coordinates of the top-left corner,
+        x, y, w, h: coordinates of the rectangle selected by the user, in the
+            large image frame. x, y are the coordinates of the top-left corner,
             while (w, h) is the size of the rectangle.
 
-    A preview image is displayed, on which the user selects a rectangular
-    region.
+    A preview image is displayed, on which the user selects a rectangle.
     """
-
     # read preview/full images dimensions
-    nc, nr = image_size_gdal(img)
-    nc_preview, nr_preview = image_size_gdal(preview)
+    nc, nr = image_size_gdal(img)[:2]
+    nc_preview, nr_preview = image_size_gdal(preview)[:2]
 
     # get the rectangle coordinates
     x, y, w, h = get_rectangle_coordinates(preview)
@@ -859,20 +691,6 @@ def get_roi_coordinates(img, preview):
     w = int(w*nc/nc_preview)
     h = int(h*nr/nr_preview)
     return x, y, w, h
-
-
-def is_image_black(img):
-    """
-    Returns True if all the pixels of the image are 0.
-    """
-    try:
-        with open(img):
-            p = subprocess.Popen(['imprintf', '%e\n', img], stdout=subprocess.PIPE)
-            out = p.stdout.readline()
-            return (out == '0\n')
-    except IOError:
-        print("is_image_black: the input file %s doesn't exist" % str(img))
-        sys.exit()
 
 
 def is_exe(fpath):

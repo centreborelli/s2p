@@ -29,7 +29,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
     """
     # limit disparity bounds
     if disp_min is not None and disp_max is not None:
-        w = common.image_size(im1)[0]
+        w = common.image_size_gdal(im1)[0]
         if disp_max - disp_min > w:
             center = 0.5 * (disp_min + disp_max)
             disp_min = int(center - 0.5 * w)

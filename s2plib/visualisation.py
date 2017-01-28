@@ -159,7 +159,7 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
     # y2 = np.min(matches[:, 3])
     # h2 = np.max(matches[:, 3]) - y2
 
-    # # add 20 pixels offset and round. The image_crop_tif function will round
+    # # add 20 pixels offset and round. The image_crop_gdal function will round
     # # off the coordinates before it does the crops.
     # x1 -= 20; x1 = np.round(x1)
     # y1 -= 20; y1 = np.round(y1)
@@ -171,8 +171,8 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
     # h2 += 40; h2 = np.round(h2)
 
     # do the crops
-    crop1 = common.image_qauto(common.image_crop_tif(im1, x1, y1, w1, h1))
-    crop2 = common.image_qauto(common.image_crop_tif(im2, x2, y2, w2, h2))
+    crop1 = common.image_qauto(common.image_crop_gdal(im1, x1, y1, w1, h1))
+    crop2 = common.image_qauto(common.image_crop_gdal(im2, x2, y2, w2, h2))
 
     # compute matches coordinates in the cropped images
     pts1 = matches[:, 0:2] - [x1, y1]
