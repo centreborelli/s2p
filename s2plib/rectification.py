@@ -382,6 +382,17 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     disp_m = min(-3, disp_m)
     disp_M = max(3, disp_M)
 
+    #  if subsampling_factor'] the homographies are altered to reflect the zoom
+    z = cfg['subsampling_factor']
+    if z != 1:
+        Z = np.diag((1/z, 1/z, 1))
+        H1 = np.dot(Z, H1)
+        H2 = np.dot(Z, H2)
+        disp_m = np.floor(disp_m / z)
+        disp_M = np.ceil(disp_M / z)
+        hmargin = int(np.floor(hmargin / z))
+        vmargin = int(np.floor(vmargin / z))
+
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
     pts1 = common.points_apply_homography(H1, roi)
@@ -389,20 +400,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     # check that the first homography maps the ROI in the positive quadrant
     np.testing.assert_allclose(np.round([x0, y0]), [hmargin, vmargin], atol=.01)
 
-    # apply homographies and do the crops TODO XXX FIXME cleanup here
-    #homography_cropper.crop_and_apply_homography(out1, im1, H1, w0, h0, cfg['subsampling_factor'], True)
-    #homography_cropper.crop_and_apply_homography(out2, im2, H2, w0, h0, cfg['subsampling_factor'], True)
+    # apply homographies and do the crops
     common.image_apply_homography(out1, im1, H1, w0 + 2*hmargin, h0 + 2*vmargin)
     common.image_apply_homography(out2, im2, H2, w0 + 2*hmargin, h0 + 2*vmargin)
-
-    #  if subsampling_factor'] the homographies are altered to reflect the zoom
-    if cfg['subsampling_factor'] != 1:
-        Z = np.eye(3)
-        Z[0, 0] = Z[1, 1] = 1.0 / cfg['subsampling_factor']
-
-        H1 = np.dot(Z, H1)
-        H2 = np.dot(Z, H2)
-        disp_m = np.floor(disp_m / cfg['subsampling_factor'])
-        disp_M = np.ceil(disp_M / cfg['subsampling_factor'])
 
     return H1, H2, disp_m, disp_M

@@ -272,8 +272,9 @@ def mean_heights(tile):
     """
     """
     w, h = tile['coordinates'][2:]
+    z = cfg['subsampling_factor']
     n = len(cfg['images']) - 1
-    maps = np.empty((h, w, n))
+    maps = np.empty((int(h/z), int(w/z), n))
     for i in xrange(n):
         f = gdal.Open(os.path.join(tile['dir'], 'pair_%d' % (i + 1),
                                    'height_map.tif'))
@@ -334,6 +335,7 @@ def heights_to_ply(tile):
     else:
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
+    common.image_safe_zoom_fft(colors, z, colors)
     triangulation.height_map_to_point_cloud(plyfile, os.path.join(out_dir,
                                                                   'height_map.tif'),
                                             cfg['images'][0]['rpc'], H, colors,
