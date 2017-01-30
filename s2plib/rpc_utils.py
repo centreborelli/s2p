@@ -364,10 +364,9 @@ def kml_roi_process(rpc, kml):
     """
     """
     # extract lon lat from kml
-    f = open(kml, 'r')
-    a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
-    f.close()
-    ll_bbx = np.array([map(float, x.split(',')) for x in a])[:4, :2]
+    with open(kml, 'r') as f:
+        a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
+    ll_bbx = np.array([list(map(float, x.split(','))) for x in a])[:4, :2]
 
     # save lon lat bounding box to cfg dictionary
     lon_min = min(ll_bbx[:, 0])

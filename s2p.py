@@ -97,7 +97,7 @@ def global_pointing_correction(tiles):
                                                                 for t in tiles),
                        fmt='%12.6f')
     else:
-        for i in xrange(1, len(cfg['images'])):
+        for i in range(1, len(cfg['images'])):
             out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
             if not (os.path.isfile(out) and cfg['skip_existing']):
                 l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
@@ -275,7 +275,7 @@ def mean_heights(tile):
     z = cfg['subsampling_factor']
     n = len(cfg['images']) - 1
     maps = np.empty((int(h/z), int(w/z), n))
-    for i in xrange(n):
+    for i in range(n):
         f = gdal.Open(os.path.join(tile['dir'], 'pair_%d' % (i + 1),
                                    'height_map.tif'))
         maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
@@ -298,7 +298,7 @@ def heights_fusion(tile, mean_heights_global):
     tile_dir = tile['dir']
     nb_pairs = len(mean_heights_global)
     height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
-                   for i in xrange(nb_pairs)]
+                   for i in range(nb_pairs)]
 
     # remove spurious matches
     if cfg['cargarse_basura']:
@@ -404,7 +404,7 @@ def main(config_file):
     common.print_elapsed_time()
     n = len(cfg['images'])
     if n > 2:
-        tiles_pairs = [(t, i) for i in xrange(1, n) for t in tiles]
+        tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
     else:
         tiles_pairs = tiles
 
