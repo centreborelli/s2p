@@ -14,10 +14,10 @@ ifeq ($(CXX), g++)
 	CPPFLAGS += -fopenmp
 endif
 
-#OS := $(shell uname -s)
-#ifeq ($(OS), Linux)
-#	LDLIBS += -lrt
-#endif
+OS := $(shell uname -s)
+ifeq ($(OS), Linux)
+	LDLIBS += -lrt
+endif
 
 BINDIR = bin
 SRCDIR = c
