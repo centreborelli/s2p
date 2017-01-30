@@ -202,21 +202,22 @@ int find_affinity_by_ransac(bool *out_mask, float affinity[6],
 //
 // TODO: homograpy, fundamental matrix
 
-// utility function homographic map
+#include "homographies.c"
 
 // instance of "ransac_error_evaluation_function"
 static float homographic_match_error(float *hom, float *pair, void *usr)
 {
 	double p[2] = {pair[0], pair[1]};
 	double q[2] = {pair[2], pair[3]};
-	const double H[3][3] = {{hom[0], hom[1], hom[2]},
+	double H[3][3] = {{hom[0], hom[1], hom[2]},
 		{hom[3], hom[4], hom[5]},
 		{hom[6], hom[7], hom[8]}};
 	double Hp[2];
-	homography_transform(p, H, Hp);
+	apply_homography(Hp, H, p);
 	double r = hypot(Hp[0] - q[0], Hp[1] - q[1]);
 	return r;
 }
+
 
 // instance of "ransac_model_generating_function"
 int homography_from_four(float *hom, float *pairs, void *usr)
@@ -230,7 +231,7 @@ int homography_from_four(float *hom, float *pairs, void *usr)
 	double d[2] = {pairs[12], pairs[13]};
 	double w[2] = {pairs[14], pairs[15]};
 	double R[3][3], *RR=R[0];
-	homography_from_4corresp(a, b, c, d, x, y, z, w, R);
+	homography_from_eight_points(R, a, b, c, d, x, y, z, w);
 	int r = 1;
 	for (int i = 0; i < 9; i++)
 		if (isfinite(RR[i]))
@@ -239,6 +240,27 @@ int homography_from_four(float *hom, float *pairs, void *usr)
 			r = 0;
 	return r;
 }
+
+//// instance of "ransac_model_accepting_function"
+//bool homography_is_resaonable(float *hom, void *usr)
+//{
+//	// 0 1 2     a b p
+//	// 3 4 5     c d q
+//	// 6 7 8     r s t
+//	if (fabs(t) < 1e-15) return false;
+//	float a = hom[0];
+//	float b = aff[1];
+//	float c = aff[3];
+//	float d = aff[4];
+//	float det = a*d - b*c;
+//	if (det < 0) return false;
+//	if (fabs(det) > 100) return false;
+//	if (fabs(det) < 0.01) return false;
+//	double n = a*a + b*b + c*c + d*d;
+//	if (n > 10) return false;
+//	if (n < 0.1) return false;
+//	return true;
+//}
 
 
 // ************************************
@@ -255,7 +277,7 @@ int homography_from_four(float *hom, float *pairs, void *usr)
 static float fnorm(float *a, int n)
 {
 	if (n == 1)
-		return fabsf(*a);
+		return fabs(*a);
 	if (n == 2)
 		return hypot(a[0], a[1]);
 	else
@@ -325,6 +347,19 @@ static float epipolar_euclidean_error(float *fm, float *pair, void *usr)
 	return fabs(pfq);
 }
 
+// instance of "ransac_error_evaluation_function"
+static float epipolar_euclidean_error_sym(float *fm, float *pair, void *usr)
+{
+	float Tfm[9] = {fm[0], fm[3], fm[6],
+		        fm[1], fm[4], fm[7],
+		        fm[2], fm[5], fm[8]};
+	float Tpair[4] = {pair[2], pair[3], pair[0], pair[1]};
+	float e1 = epipolar_euclidean_error(fm, pair, usr);
+	float e2 = epipolar_euclidean_error(Tfm, Tpair, usr);
+	return fmax(e1, e2);
+}
+
+
 //// instance of "ransac_error_evaluation_function"
 //static float epipolar_symmetric_euclidean_error(float *fm, float *pair, void *u)
 //{
@@ -339,7 +374,9 @@ static float epipolar_euclidean_error(float *fm, float *pair, void *usr)
 static float epipolar_error(float *fm, float *pair, void *usr)
 {
 	ransac_error_evaluation_function *f;
+	//f = epipolar_algebraic_error;
 	f = epipolar_euclidean_error;
+	//f = epipolar_euclidean_error_sym;
 	return f(fm, pair, usr);
 }
 

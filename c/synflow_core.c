@@ -249,7 +249,7 @@ static void affinity_from_3corresp(double a[2], double b[2], double c[2],
 
 #include "vvector.h"
 
-static void invert_homography(double invH[9], double H[9])
+static void invert_homography9(double invH[9], double H[9])
 {
 	double h[3][3] = { {H[0], H[1], H[2]},
 			{H[3], H[4], H[5]},
@@ -259,7 +259,7 @@ static void invert_homography(double invH[9], double H[9])
 	FORI(9) invH[i] = ih[i/3][i%3];
 }
 
-#include "cmphomod.c"
+#include "homographies.c"
 
 static double produce_homography(double H[9], int w, int h,
 		char *homtype, double *v)
@@ -267,9 +267,9 @@ static double produce_homography(double H[9], int w, int h,
 	if (0 == strcmp(homtype, "hom")) { // actual parameters
 		FORI(9) H[i] = v[i];
 	} else if (0 == strcmp(homtype, "homi")) {
-		invert_homography(H, v);
+		invert_homography9(H, v);
 	} else if (0 == strcmp(homtype, "shomi")) {
-		invert_homography(H, 1+v);
+		invert_homography9(H, 1+v);
 		H[2] *= *v;
 		H[5] *= *v;
 		H[6] /= *v;
@@ -284,9 +284,9 @@ static double produce_homography(double H[9], int w, int h,
 			{w + v[6], h + v[7]}
 		};
 		double R[3][3];
-		homography_from_4corresp(
+		homography_from_eight_points(R,
 				corner[0], corner[1], corner[2], corner[3],
-				other[0], other[1], other[2], other[3], R);
+				other[0], other[1], other[2], other[3]);
 		FORI(9) H[i] = R[i/3][i%3];
 	} else if (0 == strcmp(homtype, "hom4pr")) {
 		// absolute displacement of the image corners
@@ -298,9 +298,9 @@ static double produce_homography(double H[9], int w, int h,
 			{w + w*v[6], h + h*v[7]}
 		};
 		double R[3][3];
-		homography_from_4corresp(
+		homography_from_eight_points(R,
 				corner[0], corner[1], corner[2], corner[3],
-				other[0], other[1], other[2], other[3], R);
+				other[0], other[1], other[2], other[3]);
 		FORI(9) H[i] = R[i/3][i%3];
 	} else if (0 == strcmp(homtype, "hom4prc")) {
 		// percentual relative displacement of the image corners
@@ -312,9 +312,9 @@ static double produce_homography(double H[9], int w, int h,
 			{w + w*v[6]/100, h + h*v[7]/100}
 		};
 		double R[3][3];
-		homography_from_4corresp(
+		homography_from_eight_points(R,
 				corner[0], corner[1], corner[2], corner[3],
-				other[0], other[1], other[2], other[3], R);
+				other[0], other[1], other[2], other[3]);
 		FORI(9) H[i] = R[i/3][i%3];
 	} else if (0 == strcmp(homtype, "hom16")) {
 		// absolute coordinates of 4 point pairs
@@ -325,8 +325,8 @@ static double produce_homography(double H[9], int w, int h,
 			{v[8],v[9]},{v[10],v[11]},{v[12],v[13]},{v[14],v[15]}
 		};
 		double R[3][3];
-		homography_from_4corresp( a[0], a[1], a[2], a[3],
-				b[0], b[1], b[2], b[3], R);
+		homography_from_eight_points(R, a[0], a[1], a[2], a[3],
+				b[0], b[1], b[2], b[3]);
 		FORI(9) H[i] = R[i/3][i%3];
 	} else if (0 == strcmp(homtype, "hom16r")) {
 		// relative coordinates of 4 point pairs
@@ -343,8 +343,8 @@ static double produce_homography(double H[9], int w, int h,
 			{w*v[14],h*v[15]}
 		};
 		double R[3][3];
-		homography_from_4corresp( a[0], a[1], a[2], a[3],
-				b[0], b[1], b[2], b[3], R);
+		homography_from_eight_points(R, a[0], a[1], a[2], a[3],
+				b[0], b[1], b[2], b[3]);
 		FORI(9) H[i] = R[i/3][i%3];
 	} else if (0 == strcmp(homtype, "hom16rc")) {
 		// percentual relative coordinates of 4 point pairs
@@ -361,8 +361,8 @@ static double produce_homography(double H[9], int w, int h,
 			{w*v[14]/100,h*v[15]/100}
 		};
 		double R[3][3];
-		homography_from_4corresp( a[0], a[1], a[2], a[3],
-				b[0], b[1], b[2], b[3], R);
+		homography_from_eight_points(R, a[0], a[1], a[2], a[3],
+				b[0], b[1], b[2], b[3]);
 		FORI(9) H[i] = R[i/3][i%3];
 	} else error("unrecognized homography type \"%s\"", homtype);
 	return 0;
@@ -371,25 +371,27 @@ static double produce_homography(double H[9], int w, int h,
 static double produce_affinity(double A[6], int w, int h,
 		char *afftype, double *v)
 {
+	int W = w - 1;
+	int H = h - 1;
 	if (0 == strcmp(afftype, "aff")) { // actual parameters
 		FORI(6) A[i] = v[i];
 	} else if (0 == strcmp(afftype, "aff3p")) {
 		// absolute displacement of the image corners
-		double corner[3][2] = {{0,0}, {w,0}, {0,h}};
+		double corner[3][2] = {{0,0}, {W,0}, {0,H}};
 		double other[3][2] = {
 			{0 + v[0], 0 + v[1]},
-			{w + v[2], 0 + v[3]},
-			{0 + v[4], h + v[5]}
+			{W + v[2], 0 + v[3]},
+			{0 + v[4], H + v[5]}
 		};
 		affinity_from_3corresp(corner[0], corner[1], corner[2],
 					other[0], other[1], other[2], A);
 	} else if (0 == strcmp(afftype, "aff3pr")) {
 		// relative displacement of the image corners
-		double corner[3][2] = {{0,0}, {w,0}, {0,h}};
+		double corner[3][2] = {{0,0}, {W,0}, {0,H}};
 		double other[3][2] = {
-			{0 + w*v[0], 0 + h*v[1]},
-			{w + w*v[2], 0 + h*v[3]},
-			{0 + w*v[4], h + h*v[5]}
+			{0 + W*v[0], 0 + H*v[1]},
+			{W + W*v[2], 0 + H*v[3]},
+			{0 + W*v[4], H + H*v[5]}
 		};
 		affinity_from_3corresp(corner[0], corner[1], corner[2],
 					other[0], other[1], other[2], A);
@@ -397,9 +399,9 @@ static double produce_affinity(double A[6], int w, int h,
 		// percentual relative displacement of the image corners
 		double corner[3][2] = {{0,0}, {w,0}, {0,h}};
 		double other[3][2] = {
-			{0 + w*v[0]/100, 0 + h*v[1]/100},
-			{w + w*v[2]/100, 0 + h*v[3]/100},
-			{0 + w*v[4]/100, h + h*v[5]/100}
+			{0 + W*v[0]/100, 0 + H*v[1]/100},
+			{W + W*v[2]/100, 0 + H*v[3]/100},
+			{0 + W*v[4]/100, H + H*v[5]/100}
 		};
 		affinity_from_3corresp(corner[0], corner[1], corner[2],
 					other[0], other[1], other[2], A);
@@ -411,34 +413,34 @@ static double produce_affinity(double A[6], int w, int h,
 	} else if (0 == strcmp(afftype, "aff12r")) {
 		// relative coordinates of 3 point pairs
 		double a[3][2] = {
-			{w*v[0],h*v[1]},
-			{w*v[2],h*v[3]},
-			{w*v[4],h*v[5]}
+			{W*v[0],H*v[1]},
+			{W*v[2],H*v[3]},
+			{W*v[4],H*v[5]}
 		};
 		double b[3][2] = {
-			{w*v[6], h*v[7]},
-			{w*v[8], h*v[9]},
-			{w*v[10],h*v[11]}
+			{W*v[6], H*v[7]},
+			{W*v[8], H*v[9]},
+			{W*v[10],H*v[11]}
 		};
 		affinity_from_3corresp(a[0], a[1], a[2], b[0], b[1], b[2], A);
 	} else if (0 == strcmp(afftype, "aff12rc")) {
 		// percentual relative coordinates of 3 point pairs
 		double a[3][2] = {
-			{w*v[0]/100,h*v[1]/100},
-			{w*v[2]/100,h*v[3]/100},
-			{w*v[4]/100,h*v[5]/100}
+			{W*v[0]/100,H*v[1]/100},
+			{W*v[2]/100,H*v[3]/100},
+			{W*v[4]/100,H*v[5]/100}
 		};
 		double b[3][2] = {
-			{w*v[6] /100,h*v[7] /100},
-			{w*v[8] /100,h*v[9] /100},
-			{w*v[10]/100,h*v[11]/100}
+			{W*v[6] /100,H*v[7] /100},
+			{W*v[8] /100,H*v[9] /100},
+			{W*v[10]/100,H*v[11]/100}
 		};
 		affinity_from_3corresp(a[0], a[1], a[2], b[0], b[1], b[2], A);
 	} else if (0 == strcmp(afftype, "traslation")) {
 		double R[6] = {1, 0, v[0], 0, 1, v[1]};
 		FORI(6) A[i] = R[i];
 	} else if (0 == strcmp(afftype, "traslation_rc")) {
-		double R[6] = {1, 0, w*v[0]/100, 0, 1, h*v[1]/100};
+		double R[6] = {1, 0, W*v[0]/100, 0, 1, H*v[1]/100};
 		FORI(6) A[i] = R[i];
 	} else if (0 == strcmp(afftype, "euclidean")) {
 		double theta = v[0];
@@ -447,12 +449,12 @@ static double produce_affinity(double A[6], int w, int h,
 		FORI(6) A[i] = R[i];
 	} else if (0 == strcmp(afftype, "euclidean_rc")) {
 		double theta = M_PI*v[0]/180;
-		double c[2] = {w/2.0, h/2.0}, rc[2];
+		double c[2] = {W/2.0, H/2.0}, rc[2];
 		double R[6] = {cos(theta), sin(theta), 0,
 			-sin(theta), cos(theta), 0};
 		affine_map(rc, R, c);
-		R[2] = w*v[1]/100 - rc[0] + c[0];
-		R[5] = h*v[2]/100 - rc[1] + c[1];
+		R[2] = W*v[1]/100 - rc[0] + c[0];
+		R[5] = H*v[2]/100 - rc[1] + c[1];
 		FORI(6) A[i] = R[i];
 	} else if (0 == strcmp(afftype, "similar")) {
 		double theta = v[0];
@@ -463,20 +465,20 @@ static double produce_affinity(double A[6], int w, int h,
 	} else if (0 == strcmp(afftype, "similar_rc")) {
 		double theta = M_PI*v[0]/180;
 		double rho = v[1];
-		double c[2] = {w/2.0, h/2.0}, rc[2];
+		double c[2] = {W/2.0, H/2.0}, rc[2];
 		double R[6] = {rho*cos(theta), rho*sin(theta), 0,
 			-rho*sin(theta), rho*cos(theta), 0};
 		affine_map(rc, R, c);
-		R[2] = w*v[2]/100 - rc[0] + c[0];
-		R[5] = h*v[3]/100 - rc[1] + c[1];
+		R[2] = W*v[2]/100 - rc[0] + c[0];
+		R[5] = H*v[3]/100 - rc[1] + c[1];
 		FORI(6) A[i] = R[i];
 	} else if (0 == strcmp(afftype, "colorwheel")) {
 		double disp = v[0];
 		double scale = 1 + disp/100.0;
 		fprintf(stderr, "scale = %g\n", scale);
 		double R[6] = {
-			scale, 0, (1-scale)*w/2.0,
-			0, scale, (1-scale)*h/2.0
+			scale, 0, (1-scale)*W/2.0,
+			0, scale, (1-scale)*H/2.0
 		};
 		FORI(6) A[i] = R[i];
 	} else error("unrecognized affinity type \"%s\"", afftype);
@@ -554,9 +556,9 @@ static double produce_combi2_model(double H[15], int w, int h,
 			{w + w*v[9]/100, h + h*v[10]/100}
 		};
 		double R[3][3];
-		homography_from_4corresp(
+		homography_from_eight_points(R,
 				corner[0], corner[1], corner[2], corner[3],
-				other[0], other[1], other[2], other[3], R);
+				other[0], other[1], other[2], other[3]);
 		FORI(2) H[i] = c[0][i];
 		H[2] = a[0];
 		FORI(9) H[i+3] = R[i/3][i%3];
@@ -665,6 +667,9 @@ static int parse_flow_name(int *vp, int *hidden_id, char *model_name)
 	//return 0;
 }
 
+//#include "smapa.h"
+//SMART_PARAMETER_SILENT(SYNFLOW_VERBOSE,0)
+
 //static void invert_combi2(double H[15], 
 
 // "API"
@@ -688,7 +693,7 @@ static void produce_flow_model(struct flow_model *f,
 		assert(f->nh == 9);
 		double H[9], invH[9];
 		produce_homography(H, w, h, f->model_name, f->p);
-		invert_homography(invH, H);
+		invert_homography9(invH, H);
 		FORI(9) f->H[i] = H[i];
 		FORI(9) f->iH[i] = invH[i];
 	} else if (f->hidden_id == FLOWMODEL_HIDDEN_AFFINE) {
@@ -714,7 +719,7 @@ static void produce_flow_model(struct flow_model *f,
 		assert(f->nh == 15);
 		double H[15], invH[9];
 		produce_combi2_model(H, w, h, f->model_name, f->p);
-		invert_homography(invH, H+3);
+		invert_homography9(invH, H+3);
 		FORI(15) f->H[i] = H[i];
 		FORI(9) f->iH[i] = invH[i];
 	//} else if (f->hidden_id == FLOWMODEL_HIDDEN_ICOMBI2) {
@@ -725,9 +730,11 @@ static void produce_flow_model(struct flow_model *f,
 	//	FORI(15) f->iH[i] = invH[i];
 	} else error("flow model \"%s\" not yet implemented", name);
 
-	//FORI(np) fprintf(stderr, "pfm p[%d] = %g\n", i, f->p[i]);
-	//FORI(f->nh) fprintf(stderr, "H[%d] = %g\n", i, f->H[i]);
-	//FORI(f->nh) fprintf(stderr, "invH[%d] = %g\n", i, f->iH[i]);
+	//if (SYNFLOW_VERBOSE()) {
+	//	FORI(np) fprintf(stderr, "pfm p[%d] = %g\n", i, f->p[i]);
+	//	FORI(f->nh) fprintf(stderr, "H[%d] = %g\n", i, f->H[i]);
+	//	FORI(f->nh) fprintf(stderr, "invH[%d] = %g\n", i, f->iH[i]);
+	//}
 }
 
 static void apply_flowmodel_affine(float y[2], float x[2], double A[6])

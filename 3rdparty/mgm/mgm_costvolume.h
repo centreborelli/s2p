@@ -403,7 +403,7 @@ struct costvolume_t allocate_and_fill_sgm_costvolume (struct Img &in_u, // sourc
          e = __min(e, truncDist * u.nch);
          // 4.3 store it in the costvolume
          CC[pidx].set_nolock(o, e); // pragma omp critic is inside set
-         if(isfinite(e)) allinvalid=0;
+         if(std::isfinite(e)) allinvalid=0;
       }
       // SAFETY MEASURE: If there are no valid hypotheses for this pixel 
       // (ie all hypotheses fall outside the target image or are invalid in some way)

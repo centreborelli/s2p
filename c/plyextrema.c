@@ -7,10 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <geotiff/xtiffio.h>
-#include <geotiff/geotiffio.h>
-#include <geotiff/geo_tiffp.h>
-
 #include "../3rdparty/iio/iio.h"
 #include "lists.c"
 #include "fail.c"
@@ -88,6 +84,7 @@ int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *dat
 						     rec += fread(&X, sizeof(double), 1, f_in);
 						     data[i] = X;
 						     break; }
+				default: break;
 			}
 		}
 	} else {

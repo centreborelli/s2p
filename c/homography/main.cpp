@@ -11,6 +11,9 @@
 #include <ctime>
 #include <stdio.h>
 
+//! Gdal includes
+#include <gdal/gdal_priv.h>
+#include <gdal/cpl_conv.h>
 
 //! Local includes
 #include "LibImages/LibImages.h"
@@ -19,15 +22,8 @@
 #include "Utilities/Parameters.h"
 #include "LibHomography/Homography.h"
 
-//! Gdal includes
-#include "gdal_priv.h"
-#include "cpl_conv.h"
-
-extern "C" {
-    #include "linalg.h"
-    #include "pickopt.h"
-}
-
+#include "linalg.c"
+#include "pickopt.c"
 
 static void int_bounding_box(int output[4], double input[4][2])
 {

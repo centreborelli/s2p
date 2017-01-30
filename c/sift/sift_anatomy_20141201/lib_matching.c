@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "../linalg.h"
 #include "lib_keypoint.h"
 #include "lib_matching.h"
 #include "lib_util.h"

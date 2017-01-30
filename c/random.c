@@ -73,15 +73,6 @@ static double random_normal(void)
 	return y;
 }
 
-int randombounds(int a, int b)
-{
-	if (b < a)
-		return randombounds(b, a);
-	if (b == a)
-		return b;
-	return a + lcg_knuth_rand() % (b - a + 1);
-}
-
 static double random_laplace(void)
 {
 	double x = random_uniform();

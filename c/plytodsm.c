@@ -7,9 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <geotiff/xtiffio.h>
-#include <geotiff/geotiffio.h>
-#include <geotiff/geo_tiffp.h>
+#include <xtiffio.h>
+#include <geo_tiffp.h>
 
 #include "../3rdparty/iio/iio.h"
 #include "lists.c"
@@ -238,6 +237,7 @@ int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *dat
                              rec += fread(&X, sizeof(double), 1, f_in);
                              data[i] = X;
                              break; }
+                default: break;
             }
         }
     } else {
@@ -357,7 +357,7 @@ int main(int c, char *v[])
             // specified by [local_xmin local_xmax local_ymin local_ymax]
             ply_extrema_file = fopen(ply_extrema, "r");
             if (ply_extrema_file) {
-                fscanf(ply_extrema_file, "%f %f %f %f", &local_xmin, &local_xmax, &local_ymin, &local_ymax);
+                int r = fscanf(ply_extrema_file, "%f %f %f %f", &local_xmin, &local_xmax, &local_ymin, &local_ymax);
                 fclose(ply_extrema_file);
 
                 // Only add ply files that intersect the extent specified by [xmin xmax ymin ymax]

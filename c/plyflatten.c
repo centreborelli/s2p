@@ -7,9 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <geotiff/xtiffio.h>
-#include <geotiff/geotiffio.h>
-#include <geotiff/geo_tiffp.h>
+#include <xtiffio.h>
+#include <geo_tiffp.h>
 
 #include "../3rdparty/iio/iio.h"
 #include "lists.c"

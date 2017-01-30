@@ -1900,9 +1900,6 @@ static int run_program_vectorially(float *out, int pdmax,
 		struct plambda_program *p,
 		float **val, int w, int h, int *pd)
 {
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
 	FORJ(h) FORI(w) {
 		float result[pdmax];
 		int r = run_program_vectorially_at(result, p,val, w,h,pd, i,j);

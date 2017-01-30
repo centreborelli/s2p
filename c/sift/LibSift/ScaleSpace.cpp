@@ -91,7 +91,7 @@ void ScaleSpace::init(
       //! Sigmas initialization.
       float* sn = (float*) memalloc(16, (p_nbScales + 2) * sizeof(float));
       for (size_t s = 0; s < p_nbScales + 2; s++) {
-        sn[s] = dn / p_delta * p_sigma * pow(2.0, float(s) / float(p_nbScales));
+        sn[s] = dn / p_delta * p_sigma * pow(2, float(s) / float(p_nbScales));
       }
 
       //! Create a new octave
@@ -119,7 +119,7 @@ void ScaleSpace::init(
       //! 1 for DoG computation and 2 for 3D discrete extrema definition.
       float* sn = (float*) memalloc(16, (p_nbScales + 3) * sizeof(float));
       for (size_t s = 0; s < p_nbScales + 3; s++) {
-        sn[s] = dn / p_delta * p_sigma * pow(2.0, float(s) / float(p_nbScales));
+        sn[s] = dn / p_delta * p_sigma * pow(2, float(s) / float(p_nbScales));
       }
 
       //! Create a new octave

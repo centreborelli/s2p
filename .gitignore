@@ -13,6 +13,9 @@ experiments
 3rdparty/tvl1flow_3/backflow
 3rdparty/tvl1flow_3/tvl1flow
 3rdparty/stereo_hirschmuller_2008/testdata
+c/sift/sift_roi
+c/sift/matching
+c/homography/homography
 
 .DS_Store
 ipynb

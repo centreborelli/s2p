@@ -110,6 +110,7 @@ int main(int c, char *v[])
 				if( fread(&X, sizeof(double), 1, f_in))
 					fprintf(f_out, "%a", X);
 				break; }
+			default: break;
 			}
 			fprintf(f_out, "%c", i==nproperties-1?'\n':' ');
 		}

@@ -261,6 +261,7 @@ def tiles_full_info(tw, th):
             json.dump(tile_cfg, f, indent=2)
 
         # save the mask
+        # NOTE: the following line requires PILLOW installed
         misc.imsave(os.path.join(tile['dir'],
                                  'cloud_water_image_domain_mask.png'),
                     tile['mask'].astype(np.uint8))

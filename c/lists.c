@@ -8,8 +8,6 @@ struct list {
     struct list *next;
 };
 
-char *strdup(const char *s);
-
 struct list *push(struct list *l, char *s)
 {
     if (l == NULL) {

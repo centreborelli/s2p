@@ -20,6 +20,6 @@ libcv_imgproc.a: $(CV_IMGPROC_OBJS)
 iio.o:
 		$(CC) $(CFLAGS) -c iio.c -o iio.o -Wno-deprecated-declarations
 clean:
-		-rm *.o
-		-rm *.a
-		-rm sgbm
+		$(RM) *.o
+		$(RM) *.a
+		$(RM) sgbm

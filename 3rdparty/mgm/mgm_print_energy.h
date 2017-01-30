@@ -2,6 +2,7 @@
 #define MGM_PRINT_ENERGY_H_
 /******************** PRINT ENERGY ********************/
 
+#include <cmath>
 #include "img.h"
 #include "img_tools.h"
 #include "point.h"
@@ -56,8 +57,8 @@ float evaluate_energy_4connected(const struct Img &u, std::vector<float > &outdi
          if (!check_inside_image(pq ,u)) continue;
          int pridx = (pr.x+pr.y*nx);
          int pqidx = (pq.x+pq.y*nx);
-         int oor   = outdisp[pridx];
-         int ooq   = outdisp[pqidx];
+         float oor   = outdisp[pridx];
+         float ooq   = outdisp[pqidx];
 
          G   += fabs(oor - o)/N;
 

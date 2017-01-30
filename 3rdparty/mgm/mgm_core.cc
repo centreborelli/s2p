@@ -593,7 +593,7 @@ struct costvolume_t mgm(struct costvolume_t CC, const struct Img &in_w,
          if (SGM_FIX_OVERCOUNT==1)
             S[i].set_nolock(o, S[i][o] - (NDIR -1) * CC[i][o]);
 
-         if(isfinite(S[i][o]))
+         if(std::isfinite(S[i][o]))
          if(minL > S[i][o]) {
             minL = S[i][o];
             minP = o;
@@ -809,7 +809,7 @@ struct costvolume_t mgm2(struct costvolume_t CC, const struct Img &in_w,
          if (SGM_FIX_OVERCOUNT==1)
             S[i].set_nolock(o, S[i][o] - (NDIR -1) * CC[i][o]);
 
-         if(isfinite(S[i][o]))
+         if(std::isfinite(S[i][o]))
          if(minL > S[i][o]) {
             minL = S[i][o];
             minP = o;

@@ -654,7 +654,7 @@ static int main_rpcpair(int c, char *v[])
 	return 0;
 }
 
-#ifndef DONT_USE_TEST_MAIN
+#ifdef RPC_USE_TEST_MAIN
 int main(int c, char *v[])
 {
 	return main_trial(c, v);

@@ -1,17 +1,15 @@
 #include <ctime>
 #include <stdlib.h>
 
+#include <gdal/gdal.h>
+#include <gdal/cpl_conv.h>
+
 #include "Utilities/Time.h"
 #include "Utilities/Parameters.h"
 #include "LibImages/LibImages.h"
 #include "LibSift/LibSift.h"
 
-#include "gdal.h"
-#include "cpl_conv.h"
-
-extern "C" {
-    #include "pickopt.h"
-}
+#include "pickopt.c"
 
 
 static void print_help(char *v[])
@@ -87,7 +85,7 @@ int main(int c, char *v[]) {
     // read roi
     GDALRasterBandH hBand = GDALGetRasterBand(hDataset, 1);
     float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
-    GDALRasterIO(hBand, GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
+    CPLErr ee = GDALRasterIO(hBand, GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
     GDALClose(hDataset);
     if (verbose) time.get_time("read roi", 35);
     Image im(roi, (const size_t) w, (const size_t) h, 1);

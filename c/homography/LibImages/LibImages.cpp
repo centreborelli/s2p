@@ -8,9 +8,8 @@
 //! Global includes
 #include <limits.h>
 #include <inttypes.h>
-#include <complex.h> // Must be included BEFORE fftw
 #include <fftw3.h>
-#include <gdal_priv.h>
+#include <gdal/gdal_priv.h>
 #include <iostream>
 #include <fstream>
 #ifdef _OPENMP
@@ -365,7 +364,7 @@ void Image::writeGDAL(
         for (size_t j = 0; j < m_width; j++)
           line[j] = iI[j];
 
-      poBand->RasterIO(GF_Write, 0, i, w, 1, line, w, 1, GDT_Float32, 0, 0);
+      CPLErr ee = poBand->RasterIO(GF_Write, 0, i, w, 1, line, w, 1, GDT_Float32, 0, 0);
     }
   }
 

@@ -14,11 +14,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "timing.h"
-#include "linalg.h"
-#include "pickopt.h"
-#include "sift_anatomy_20141201/lib_keypoint.h"
-#include "sift_anatomy_20141201/lib_matching.h"
+#ifdef USE_TIMING
+#  include "timing.c"
+#endif//USE_TIMING
+#include "linalg.c"
+#include "pickopt.c"
+#include "sift_anatomy_20141201/lib_util.c"
+#include "sift_anatomy_20141201/lib_keypoint.c"
+#include "sift_anatomy_20141201/lib_matching.c"
 
 
 void print_help(char *v[])
@@ -63,26 +66,35 @@ int main(int c, char *v[])
         return EXIT_FAILURE;
     }
 
+#ifdef USE_TIMING
     // initialise timer
     struct timespec ts; portable_gettime(&ts);
+#endif//USE_TIMING
 
     // Read input keypoint ASCII files
     struct sift_keypoints* k1 = sift_malloc_keypoints();
     struct sift_keypoints* k2 = sift_malloc_keypoints();
     sift_read_keypoints(k1, v[1], n_hist, n_ori, n_bins, 1);
     sift_read_keypoints(k2, v[2], n_hist, n_ori, n_bins, 1);
+#ifdef USE_TIMING
     if (verbose) print_elapsed_time(&ts, "read input keypoints:", 35);
+#endif//USE_TIMING
 
     // matching
     struct sift_keypoints* out_k1 = sift_malloc_keypoints();
     struct sift_keypoints* out_k2 = sift_malloc_keypoints();
     matching(k1, k2, out_k1, out_k2, sift_thresh, meth_flag, fund_mat,
              epi_thresh);
+#ifdef USE_TIMING
     if (verbose) print_elapsed_time(&ts, "compute matches:", 35);
+#endif//USE_TIMING
 
     // print
     fprintf_pairs(output_file, out_k1, out_k2);
+
+#ifdef USE_TIMING
     if (verbose) print_elapsed_time(&ts, "print output:", 35);
+#endif//USE_TIMING
     fprintf(stderr, "%d matches\n", out_k1->size);
 
     // cleanup

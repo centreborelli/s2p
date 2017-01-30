@@ -5,9 +5,7 @@
 #include "fail.c"
 #include "xmalloc.c"
 #include "xfopen.c"
-
-#include "cmphomod.c"
-#include "mt/mt.h"
+#include "random.c"
 
 // generic function
 // evaluate the error of a datapoint according to a model
@@ -75,7 +73,7 @@ int ransac_trial(
 // utility function: return a random number in the interval [a, b)
 static int random_index(int a, int b)
 {
-	int r = a + mt_drand53()*(b - a);
+	int r = a + lcg_knuth_rand()%(b - a);
 	assert(r >= a);
 	assert(r < b);
 	return r;
@@ -106,10 +104,7 @@ static int randombounds(int a, int b)
 		fail("the interval [%d, %d] is empty!", a, b);
 	if (b == a)
 		return b;
-	int r = a + mt_drand53()*(b - a + 1);
-	assert(r >= a);
-	assert(r <= b);
-	return r;
+	return a + lcg_knuth_rand()%(b - a + 1);
 }
 
 static void swap(void *a, void *b, size_t s)
@@ -158,7 +153,7 @@ static void fill_random_shuffle(int *idx, int n, int a, int b)
 // generate a set of n different ints between a and b
 static void fill_random_indices(int *idx, int n, int a, int b)
 {
-	if (b-a==n) {for(int i=0;i<n;i++)idx[i]=a+i;}
+	if (b-a==n) {for(int i=0;i<n;i++)idx[i]=a+i;return;}
 	if (5*n > (b-a)) {fill_random_shuffle(idx, n, a, b);return;}
 	// TODO fisher yates shuffle and traverse it by blocks of length nfit
 	int safecount = 0;
@@ -226,8 +221,6 @@ int ransac(
 
 	if (n < nfit)
 	  return 0;
-	
-	mt_init((unsigned long int) 0);  // fix seed for the Mersenne Twister PRNG
 	int best_ninliers = 0;
 	float best_model[modeldim];
 	bool *best_mask = xmalloc(n * sizeof*best_mask);

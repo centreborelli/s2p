@@ -4,6 +4,7 @@
 
 #include "img.h"
 #include <algorithm>
+#include <cmath>
 #include "point.h"
 extern "C" {
 #include "iio.h"
@@ -33,7 +34,7 @@ void iio_write_vector_split(char *nm, struct Img &out)
 void remove_nonfinite_values_Img(struct Img &u, float newval) 
 {
    for(int i=0;i<u.npix*u.nch;i++) 
-      if (!isfinite(u[i])) u[i] = newval; 
+      if (!std::isfinite(u[i])) u[i] = newval; 
 }
 
 
@@ -186,7 +187,7 @@ std::pair<float, float> image_minmax(struct Img &u){
    for (int j=0;j<ny;j++)
    for (int i=0;i<nx;i++) {
       float v = val(u,Point(i,j), c);
-      if (isfinite(v)) { 
+      if (std::isfinite(v)) { 
          if (v < gmin) gmin = v;   
          if (v > gmax) gmax = v;
       }

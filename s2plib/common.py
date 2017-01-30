@@ -497,15 +497,13 @@ def median_filter(im, w, n):
     return out
 
 
-def image_qauto(im, out=None, tilewise=False):
+def image_qauto(im, out=None):
     """
     Uniform requantization between min and max intensity.
 
     Args:
         im: path to input image
         out (optional, default is None): path to output image
-        tilewise (optional, default is False): boolean telling wether or not
-            use 'tiffu meta'. If True, the output file has to be a *.tif
 
     Returns:
         path of requantized image, saved as png
@@ -513,9 +511,6 @@ def image_qauto(im, out=None, tilewise=False):
     if out is None:
         extension = '.tif' if tilewise else '.png'
         out = tmpfile(extension)
-    if tilewise:
-        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
-        run('tiffu meta \"qauto ^ @\" %s -- %s' % (im, out))
     else:
         run('qauto %s %s' % (im, out))
     return out
@@ -588,7 +583,7 @@ def image_qauto_otb(img_out, img_in, ram=128, gamma=1.5, intensity_cut_high=.1,
     run(cmd)
 
 
-def image_qeasy(im, black, white, out=None, tilewise=False):
+def image_qeasy(im, black, white, out=None):
     """
     Uniform requantization between user-specified min and max levels.
 
@@ -597,8 +592,6 @@ def image_qeasy(im, black, white, out=None, tilewise=False):
         black: lower threshold. Values lower or equal are mapped to 0
         white: upper threshold. Values greater or equal are mapped to 255
         out (optional, default is None): path to output image
-        tilewise (optional, default is False): boolean telling wether or not
-            use 'tiffu meta'
 
     Returns:
         path of requantized image, saved as png
@@ -607,23 +600,18 @@ def image_qeasy(im, black, white, out=None, tilewise=False):
         extension = '.tif' if tilewise else '.png'
         out = tmpfile(extension)
         out = tmpfile(extension)
-    if tilewise:
-        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
-        run('tiffu meta \"qeasy %d %d ^ @\" %s -- %s' % (black, white, im, out))
     else:
         run('qeasy %d %d %s %s' % (black, white, im, out))
     return out
 
 
-def pansharpened_to_panchro(im, out=None, tilewise=False):
+def pansharpened_to_panchro(im, out=None):
     """
     Converts a RGBI pansharpened image to a graylevel image.
 
     Args:
         im: path to the input image
         out (optional): path to the output image
-        tilewise (optional, default is False): boolean telling wether or not
-            use 'tiffu meta'
 
     Returns:
         path to the output image
@@ -632,26 +620,19 @@ def pansharpened_to_panchro(im, out=None, tilewise=False):
         out = tmpfile('.tif')
     pcmd = "x[0] x[1] x[2] x[3] + + + 4 /"
 
-    if tilewise:
-        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
-        cmd = 'tiffu meta \"plambda ^ \\\"%s\\\" -o @\" %s -- %s' % (pcmd, im,
-                                                                     out)
-    else:
-        cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
+    cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
 
     run(cmd)
     return out
 
 
-def rgbi_to_rgb(im, out=None, tilewise=False):
+def rgbi_to_rgb(im, out=None):
     """
     Converts a 4-channel RGBI (I for infrared) image to rgb, with iio
 
     Args:
         im: path to the input image
         out (optional): path to the output image
-        tilewise (optional, default is False): boolean telling wether or not
-            use 'tiffu meta'
 
     Returns:
         output rgb image
@@ -662,12 +643,7 @@ def rgbi_to_rgb(im, out=None, tilewise=False):
         out = tmpfile(extension)
     pcmd = "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3"
 
-    if tilewise:
-        os.environ['TMPDIR'] = os.path.join(cfg['temporary_dir'], 'meta/')
-        cmd = 'tiffu meta \"plambda ^ \\\"%s\\\" -o @\" %s -- %s' % (pcmd, im,
-                                                                     out)
-    else:
-        cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
+    cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
 
     run(cmd)
     return out
