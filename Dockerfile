@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
     python-numpy \
     python-pip
 RUN pip install -U pip
-RUN pip install utm bs4 tifffile Pillow scipy requests
+RUN pip install utm bs4 requests tifffile
 
 # install s2p
 RUN git clone https://github.com/carlodef/s2p.git --branch master --single-branch --depth 1 --recursive

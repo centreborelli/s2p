@@ -212,7 +212,7 @@ def disparity_to_height(tile, i):
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-    out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
+    out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.tif')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
     triangulation.height_map(height_map, x, y, w, h, cfg['subsampling_factor'],
@@ -243,7 +243,7 @@ def disparity_to_ply(tile):
     pointing = os.path.join(cfg['out_dir'], 'global_pointing.txt')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask_rect = os.path.join(out_dir, 'rectified_mask.png')
-    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.tif')
 
     # prepare the image needed to colorize point cloud
     colors = os.path.join(out_dir, 'rectified_ref.png')

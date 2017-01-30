@@ -5,7 +5,6 @@
 
 import os
 import subprocess
-import scipy.misc
 import numpy as np
 from osgeo import gdal
 
@@ -45,7 +44,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                roi_gml, tmp),
                               shell=True)
-        mask = np.logical_and(mask, scipy.misc.imread(tmp))
+        mask = np.logical_and(mask, gdal.Open(tmp).ReadAsArray())
 
     if not mask.any():
         return mask
@@ -55,7 +54,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                cld_gml, tmp),
                               shell=True)
-        mask = np.logical_and(mask, ~scipy.misc.imread(tmp).astype(bool))
+        mask = np.logical_and(mask, ~gdal.Open(tmp).ReadAsArray().astype(bool))
 
     if not mask.any():
         return mask
@@ -72,7 +71,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc,
                                                                  tmp),
                               shell=True, env=env)
-        mask = np.logical_and(mask, scipy.misc.imread(tmp))
+        mask = np.logical_and(mask, gdal.Open(tmp).ReadAsArray())
 
     return mask
 
