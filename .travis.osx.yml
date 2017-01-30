@@ -1,0 +1,16 @@
+os: osx
+sudo: required
+language: generic
+
+# script to install dependencies
+install:
+  - wget http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.1.dmg
+  - X=$(echo `hdiutil mount GDAL_Complete-2.1.dmg | tail -1 | awk '{$1=$2=""; print $0}'` | xargs -0 echo) && sudo installer -pkg "${X}/"GDAL\ Complete.pkg -target /
+  - brew install geographiclib fftw
+  - pip install utm bs4 tifffile Pillow scipy requests
+
+# script to build and test
+script:
+  - export PATH=/Library/Frameworks/GDAL.framework/Versions/2.1/unix/bin:$PATH
+  - make
+  - make test

@@ -1,0 +1,31 @@
+matrix:
+  include:
+    - os: linux
+      sudo: required
+      python: 2.7
+      env: CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
+    - os: osx
+      sudo: required
+      language: generic
+      env: PATH=/Library/Frameworks/GDAL.framework/Versions/2.1/unix/bin:$PATH
+
+#    - os: linux
+#      sudo: required
+#      python: 3.5
+#      env: CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
+
+# scripts to install dependencies
+install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev libtiff-tools geographiclib-tools libgeographiclib-dev ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo pip install numpy gdal utm bs4 tifffile Pillow scipy requests ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.1.dmg ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then X=$(echo `hdiutil mount GDAL_Complete-2.1.dmg | tail -1 | awk '{$1=$2=""; print $0}'` | xargs -0 echo) && sudo installer -pkg "${X}/"GDAL\ Complete.pkg -target / ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install geographiclib fftw libgeotiff ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip install --quiet utm bs4 tifffile Pillow scipy requests ; fi
+
+# script to build and test
+script:
+  - make
+  - make test
