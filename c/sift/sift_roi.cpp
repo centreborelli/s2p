@@ -1,8 +1,8 @@
 #include <ctime>
 #include <stdlib.h>
 
-#include <gdal/gdal.h>
-#include <gdal/cpl_conv.h>
+#include <gdal.h>
+#include <cpl_conv.h>
 
 #include "Utilities/Time.h"
 #include "Utilities/Parameters.h"

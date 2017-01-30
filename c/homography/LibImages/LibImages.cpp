@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <inttypes.h>
 #include <fftw3.h>
-#include <gdal/gdal_priv.h>
+#include <gdal_priv.h>
 #include <iostream>
 #include <fstream>
 #ifdef _OPENMP
