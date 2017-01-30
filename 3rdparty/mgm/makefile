@@ -1,6 +1,3 @@
-CC = gcc
-CXX = g++
-
 mgm: ../iio/iio.o mgm.cc img.cc point.cc
 	$(CXX) -O3 -DNDEBUG -ffast-math -I../iio -Icommon -DTEST_MAIN $^ -o mgm -lpng -ltiff -ljpeg
 
