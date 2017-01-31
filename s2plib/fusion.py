@@ -149,8 +149,9 @@ def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
         f = gdal.Open(img)
         x[:, :, i] = f.GetRasterBand(1).ReadAsArray() - offsets[i]
         f = None
-        piio.write('%s_registered.tif' % os.path.splitext(img)[0],
-                   x[:, :, i] + np.mean(offsets))
+        if cfg['debug']:
+            piio.write('{}_registered.tif'.format(os.path.splitext(img)[0]),
+                       x[:, :, i] + np.mean(offsets))
 
     # apply the averaging operator
     if averaging.startswith(('np.', 'numpy.')):
