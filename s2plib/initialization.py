@@ -10,9 +10,9 @@ import utm
 import json
 import copy
 import shutil
-import tifffile
 import numpy as np
 
+from s2plib import piio
 from s2plib import common
 from s2plib import srtm
 from s2plib import tee
@@ -254,8 +254,8 @@ def tiles_full_info(tw, th):
             json.dump(tile_cfg, f, indent=2)
 
         # save the mask
-        tifffile.imsave(os.path.join(tile['dir'],
-                                     'cloud_water_image_domain_mask.tif'),
-                        tile['mask'].astype(np.uint8))
+        piio.write(os.path.join(tile['dir'],
+                                'cloud_water_image_domain_mask.png'),
+                   tile['mask'].astype(np.uint8))
 
     return tiles

@@ -59,11 +59,11 @@ the example).
 
 Required dependencies (Ubuntu 16.04):
 
-    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev libtiff-tools python python-gdal python-numpy python-pip
+    apt-get install build-essential gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-gdal python-numpy python-pip
 
 and
 
-    pip install utm bs4 requests tifffile
+    pip install utm bs4 requests
 
 `gdal` version must be 1.10 or newer.
 
