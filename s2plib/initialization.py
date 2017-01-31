@@ -126,15 +126,7 @@ def build_cfg(config_file):
         cfg['disp_range_method'] = 'sift'
 
     # get utm zone
-    if 'roi_utm' in cfg:
-        cfg['utm_zone'] = cfg['roi_utm']['utm_band']
-    elif 'roi_kml' in cfg:
-        lon = (cfg['ll_bbx'][0] + cfg['ll_bbx'][1]) * .5
-        lat = (cfg['ll_bbx'][2] + cfg['ll_bbx'][3]) * .5
-        z = utm.conversion.latlon_to_zone_number(lat, lon)
-        cfg['utm_zone'] = '%dS' % z if lat < 0 else '%dN' % z
-    else:
-        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
+    cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
 
 
 def make_dirs():
