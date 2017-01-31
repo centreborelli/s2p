@@ -15,7 +15,6 @@ import numpy as np
 from s2plib import piio
 from s2plib import common
 from s2plib import srtm
-from s2plib import tee
 from s2plib import rpc_utils
 from s2plib import masking
 from s2plib import parallel

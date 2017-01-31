@@ -32,7 +32,6 @@ from osgeo import gdal
 gdal.UseExceptions()
 
 from s2plib.config import cfg
-from s2plib import tee
 from s2plib import common
 from s2plib import parallel
 from s2plib import initialization
@@ -394,12 +393,8 @@ def main(config_file):
         nb_workers = min(nb_workers, cfg['max_processes'])
     cfg['max_processes'] = nb_workers
 
-    # duplicate stdout and stderr to log file
-    log = tee.Tee(os.path.join(cfg['out_dir'], 'stdout.log'), 'w')
-
-    tw, th = initialization.adjust_tile_size()
-
     print('\ndiscarding masked tiles...')
+    tw, th = initialization.adjust_tile_size()
     tiles = initialization.tiles_full_info(tw, th)
     common.print_elapsed_time()
     n = len(cfg['images'])
@@ -457,7 +452,6 @@ def main(config_file):
     # cleanup
     common.garbage_cleanup()
     common.print_elapsed_time(since_first_call=True)
-    log.delete()
 
 
 def print_help_and_exit(script_name):
