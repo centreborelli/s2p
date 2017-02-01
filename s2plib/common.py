@@ -817,6 +817,6 @@ def print_elapsed_time(since_first_call=False):
         try:
             print("Elapsed time:", t2 - print_elapsed_time.t1)
         except AttributeError:
-            print(t2 - print_elapsed_time.t0)
+            print("Elapsed time:", t2 - print_elapsed_time.t0)
     print_elapsed_time.t1 = t2
     print()

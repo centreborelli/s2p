@@ -375,12 +375,18 @@ def lidar_preprocessor(tiles):
                                            'cloud.lidar_viewer'), plys)
 
 
-def main(config_file):
+ALL_STEPS = ['local-pointing', 'global-pointing', 'rectification', 'matching',
+             'triangulation', 'dsm-rasterization', 'lidar-preprocessor']
+
+
+def main(config_file, steps=ALL_STEPS):
     """
-    Launch the entire s2p pipeline with the parameters given in a json file.
+    Launch the s2p pipeline with the parameters given in a json file.
 
     Args:
         config_file: path to a json configuration file
+        steps: either a string (single step) or a list of strings (several
+            steps)
     """
     common.print_elapsed_time.t0 = datetime.datetime.now()
     initialization.build_cfg(config_file)
@@ -395,7 +401,6 @@ def main(config_file):
     print('\ndiscarding masked tiles...')
     tw, th = initialization.adjust_tile_size()
     tiles = initialization.tiles_full_info(tw, th)
-    common.print_elapsed_time()
     n = len(cfg['images'])
     if n > 2:
         tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
@@ -405,48 +410,55 @@ def main(config_file):
     # omp_num_threads should not exceed nb_workers when multiplied by len(tiles)
     cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_pairs)))
 
-    print('correcting pointing locally...')
-    parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers)
+    if 'local-pointing' in steps:
+        print('correcting pointing locally...')
+        parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers)
 
-    print('correcting pointing globally...')
-    global_pointing_correction(tiles)
-    common.print_elapsed_time()
+    if 'global-pointing' in steps:
+        print('correcting pointing globally...')
+        global_pointing_correction(tiles)
+        common.print_elapsed_time()
 
-    print('rectifying tiles...')
-    parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers)
+    if 'rectification' in steps:
+        print('rectifying tiles...')
+        parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers)
 
-    print('running stereo matching...')
-    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
+    if 'matching' in steps:
+        print('running stereo matching...')
+        parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
 
-    if n > 2:
-        print('computing height maps...')
-        parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
+    if 'triangulation' in steps:
+        if n > 2:
+            print('computing height maps...')
+            parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
 
-        print('registering height maps...')
-        mean_heights_local = parallel.launch_calls(mean_heights, tiles,
-                                                   nb_workers)
+            print('registering height maps...')
+            mean_heights_local = parallel.launch_calls(mean_heights, tiles,
+                                                       nb_workers)
 
-        print('computing global pairwise height offsets...')
-        mean_heights_global = np.nanmean(mean_heights_local, axis=0)
+            print('computing global pairwise height offsets...')
+            mean_heights_global = np.nanmean(mean_heights_local, axis=0)
 
-        print('merging height maps...')
-        parallel.launch_calls(heights_fusion, tiles, nb_workers,
-                              mean_heights_global)
+            print('merging height maps...')
+            parallel.launch_calls(heights_fusion, tiles, nb_workers,
+                                  mean_heights_global)
 
-        print('computing point clouds...')
-        parallel.launch_calls(heights_to_ply, tiles, nb_workers)
+            print('computing point clouds...')
+            parallel.launch_calls(heights_to_ply, tiles, nb_workers)
 
-    else:
-        print('triangulating tiles...')
-        parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
+        else:
+            print('triangulating tiles...')
+            parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
 
-    print('computing DSM...')
-    plys_to_dsm(tiles)
-    common.print_elapsed_time()
+    if 'dsm-rasterization' in steps:
+        print('computing DSM...')
+        plys_to_dsm(tiles)
+        common.print_elapsed_time()
 
-    print('lidar preprocessor...')
-    lidar_preprocessor(tiles)
-    common.print_elapsed_time()
+    if 'lidar-preprocessor' in steps:
+        print('lidar preprocessor...')
+        lidar_preprocessor(tiles)
+        common.print_elapsed_time()
 
     # cleanup
     common.garbage_cleanup()
@@ -460,5 +472,7 @@ if __name__ == '__main__':
                         help=('path to a json file containing the paths to '
                               'input and output files and the algorithm '
                               'parameters'))
+    parser.add_argument('--step', type=str, choices=ALL_STEPS,
+                        default=ALL_STEPS)
     args = parser.parse_args()
-    main(args.config)
+    main(args.config, args.step)
