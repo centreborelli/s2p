@@ -400,8 +400,8 @@ def main(config_file, steps=ALL_STEPS):
         nb_workers = min(nb_workers, cfg['max_processes'])
     cfg['max_processes'] = nb_workers
 
-    print('\ndiscarding masked tiles...')
     tw, th = initialization.adjust_tile_size()
+    print('\ndiscarding masked tiles...')
     tiles = initialization.tiles_full_info(tw, th)
     n = len(cfg['images'])
     if n > 2:

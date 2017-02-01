@@ -13,6 +13,7 @@ gdal.UseExceptions()
 
 from s2plib import common
 from s2plib import piio
+from s2plib.config import cfg
 
 def register_heights(im1, im2):
     """
