@@ -375,8 +375,9 @@ def lidar_preprocessor(tiles):
                                            'cloud.lidar_viewer'), plys)
 
 
-ALL_STEPS = ['local-pointing', 'global-pointing', 'rectification', 'matching',
-             'triangulation', 'dsm-rasterization', 'lidar-preprocessor']
+ALL_STEPS = ['initialisation', 'local-pointing', 'global-pointing',
+             'rectification', 'matching', 'triangulation', 'dsm-rasterization',
+             'lidar-preprocessor']
 
 
 def main(config_file, steps=ALL_STEPS):
@@ -390,7 +391,8 @@ def main(config_file, steps=ALL_STEPS):
     """
     common.print_elapsed_time.t0 = datetime.datetime.now()
     initialization.build_cfg(config_file)
-    initialization.make_dirs()
+    if 'initialisation' in steps:
+        initialization.make_dirs()
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores

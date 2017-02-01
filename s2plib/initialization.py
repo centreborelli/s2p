@@ -71,7 +71,7 @@ def check_parameters(d):
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
     # 'roi_utm'
     for k in d.keys():
-        if k not in ['images', 'roi', 'roi_kml', 'roi_utm']:
+        if k not in ['images', 'roi', 'roi_kml', 'roi_utm', 'utm_zone']:
             if k not in cfg:
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
@@ -249,7 +249,8 @@ def tiles_full_info(tw, th):
         tile_cfg = copy.deepcopy(cfg)
         x, y, w, h = tile['coordinates']
         tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
-        tile_cfg['out_dir'] = tile['dir']
+        tile_cfg['max_processes'] = 1
+        tile_cfg['omp_num_threads'] = 1
         with open(os.path.join(tile['dir'], 'config.json'), 'w') as f:
             json.dump(tile_cfg, f, indent=2)
 
