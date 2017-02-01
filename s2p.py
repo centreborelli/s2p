@@ -21,10 +21,9 @@
 
 from __future__ import print_function
 import sys
-import shutil
 import os.path
 import datetime
-import traceback
+import argparse
 import numpy as np
 import multiprocessing
 from osgeo import gdal
@@ -454,23 +453,12 @@ def main(config_file):
     common.print_elapsed_time(since_first_call=True)
 
 
-def print_help_and_exit(script_name):
-    """
-    """
-    print("""
-    Incorrect syntax, use:
-      > %s config.json
-        Launches the s2p pipeline.
-
-      All the parameters, paths to input and output files, are defined in
-      the json configuration file.
-
-    """ % script_name)
-    sys.exit()
-
-
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        main(sys.argv[1])
-    else:
-        print_help_and_exit(sys.argv[0])
+    parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
+                                                  'Pipeline'))
+    parser.add_argument('config', metavar='config.json',
+                        help=('path to a json file containing the paths to '
+                              'input and output files and the algorithm '
+                              'parameters'))
+    args = parser.parse_args()
+    main(args.config)
