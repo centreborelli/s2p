@@ -158,7 +158,7 @@ test:
 	python -u s2p_test.py
 
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
-	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm
+	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio
 
 clean_homography:
 	$(MAKE) -C c/homography clean
@@ -203,5 +203,9 @@ clean_mgm:
 	$(MAKE) -C 3rdparty/mgm clean
 	$(RM) $(BINDIR)/mgm
 
+clean_piio:
+	$(RM) s2plib/piio/libiio.so
+	$(RM) -r s2plib/piio/build
+
 .PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_piio test
