@@ -230,6 +230,21 @@ def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
     return out
 
 
+def image_apply_pleiades_unsharpening_filter(im):
+    """
+    Convolve the image by the unsharpening MTF idata_0009_MTF_89x89.tif.
+
+    This filter specifically undoes the sharpening applied to the sensor perfect
+    Pleiades images. It has been pre-computed for processing Pleiades sensor
+    perfect images resampled with a factor 1.4x. But in theory it should be
+    adapted depending on the RESAMPLING_SPACING stored in the RPC xml files.
+    """
+    mtf = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       'idata_0009_MTF_89x89.tif')
+    mtf_large = image_zeropadding_from_image_with_target_size(mtf, im)
+    return image_fftconvolve(im, mtf_large)
+
+
 def image_safe_zoom_fft(im, f, out=None):
     """
     zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out. It
@@ -585,19 +600,6 @@ def image_crop_gdal(im, x, y, w, h, out=None):
         sys.exit()
 
     return out
-
-
-def image_pleiades_unsharpening_mtf():
-    """
-    Returns the filename (with path) of a precomputed unsharpening MTF fror
-    sensor perfect pleiades images.
-
-    This filter has been pre-computed for processing sensor perfect images
-    resampled with a factor 1.4x. But in theory it should be adapted depending
-    on the RESAMPLING_SPACING stored in the RPC xml files.
-    """
-    modules_dir = os.path.dirname(os.path.realpath(os.path.abspath(__file__)))
-    return os.path.join(modules_dir, 'idata_0009_MTF_89x89.tif')
 
 
 def run_binary_on_list_of_points(points, binary, option=None, env_var=None):

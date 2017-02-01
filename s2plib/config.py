@@ -84,9 +84,6 @@ cfg['matching_algorithm'] = 'mgm'
 # size of the Census NCC square windows used in mgm
 cfg['census_ncc_win'] = 5
 
-# blur pleiades images before stereo matching
-cfg['use_pleiades_unsharpening'] = True
-
 # this param is used only if the tiles are bigger than 2MPix, to save time on
 # sift calls
 cfg['pointing_correction_rois_mode'] = 'automatic'
