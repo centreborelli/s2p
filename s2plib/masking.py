@@ -13,7 +13,7 @@ from s2plib.config import cfg
 
 
 def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
-                             wat_msk=None):
+                             wat_msk=None, use_srtm_for_water=False):
     """
     Compute a mask for pixels masked by clouds, water, or out of image domain.
 
@@ -44,7 +44,10 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                roi_gml, tmp),
                               shell=True)
-        mask = np.logical_and(mask, gdal.Open(tmp).ReadAsArray())
+
+        f = gdal.Open(tmp)
+        mask = np.logical_and(mask, f.ReadAsArray())
+        f = None  # this is the gdal way of closing files
 
     if not mask.any():
         return mask
@@ -54,7 +57,9 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                cld_gml, tmp),
                               shell=True)
-        mask = np.logical_and(mask, ~gdal.Open(tmp).ReadAsArray().astype(bool))
+        f = gdal.Open(tmp)
+        mask = np.logical_and(mask, ~f.ReadAsArray().astype(bool))
+        f = None  # this is the gdal way of closing files
 
     if not mask.any():
         return mask
@@ -64,33 +69,18 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         mask = np.logical_and(mask, f.ReadAsArray(x, y, w, h))
         f = None  # this is the gdal way of closing files
 
-    elif not cfg['disable_srtm']:  # water mask (srtm)
+    elif use_srtm_for_water:  # water mask (srtm)
         tmp = common.tmpfile('.png')
         env = os.environ.copy()
         env['SRTM4_CACHE'] = cfg['srtm_dir']
         subprocess.check_call('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc,
                                                                  tmp),
                               shell=True, env=env)
-        mask = np.logical_and(mask, gdal.Open(tmp).ReadAsArray())
+        f = gdal.Open(tmp)
+        mask = np.logical_and(mask, f.ReadAsArray())
+        f = None  # this is the gdal way of closing files
 
     return mask
-
-
-def intersection(out, in1, in2):
-    """
-    Computes the intersection between two mask files
-
-    Args:
-        out: path to the ouput mask image file
-        in1, in2: paths to the input mask image files
-
-    The masks are binary. Pixels may have value 0 or 255, 0 being the rejection
-    value. The output mask rejects any pixel that is rejected in one input mask,
-    or in both input masks. As 0 is the rejection value, the intersection is
-    equivalent to a pixelwise product.
-    """
-    subprocess.check_call('plambda %s %s "x y 255 / *" -o %s' % (in1, in2, out),
-                          shell=True)
 
 
 def erosion(out, msk, radius):

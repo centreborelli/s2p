@@ -222,7 +222,8 @@ def tiles_full_info(tw, th):
     tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
                                                tiles_coords,
                                                cfg['max_processes'], rpc,
-                                               roi_msk, cld_msk, wat_msk)
+                                               roi_msk, cld_msk, wat_msk,
+                                               cfg['use_srtm_for_water'])
 
     # build a tile dictionary for all non-masked tiles and store them in a list
     tiles = []

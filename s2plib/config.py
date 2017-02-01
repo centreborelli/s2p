@@ -135,3 +135,6 @@ cfg['cargarse_basura'] = True
 
 # longitude/latitude bounding box
 cfg['ll_bbx'] = ("-inf", "inf", "-inf", "inf")
+
+# use srtm to generate a watermask
+cfg['use_srtm_for_water'] = False
