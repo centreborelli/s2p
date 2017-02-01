@@ -14,16 +14,16 @@ import os.path
 cfg = {}
 
 # path to output directory
-cfg['out_dir'] = "output"
+cfg['out_dir'] = "s2p_output"
 
 # path to directory where (many) temporary files will be stored
-cfg['temporary_dir'] = "/tmp"
+cfg['temporary_dir'] = "s2p_tmp"
 
 # temporary files are erased when s2p terminates. Switch to False to keep them
 cfg['clean_tmp'] = True
 
 # switch to True if you want to process the whole image
-cfg['full_img']  = False
+cfg['full_img'] = False
 
 # s2p processes the images tile by tile. The tiles are squares cropped from the
 # reference image. The width and height of the tiles are given by this param, in pixels.
@@ -40,24 +40,14 @@ cfg['max_processes'] = None
 # max number of OMP threads used by programs compiled with openMP
 cfg['omp_num_threads'] = 1
 
-# debug mode: no parallelisation, and more verbose logs
+# debug mode (more verbose logs and intermediate results saved)
 cfg['debug'] = False
 
-# skip tiles for which a file "rectified_disp.tif" already exists
+# don't rerun when the output file is already there
 cfg['skip_existing'] = False
-
-# switch to True to translate the planar coordinates of the output point cloud
-# around (0, 0)
-cfg['offset_ply'] = False
-
-# switch to False to disable cloud colorization
-cfg['color_ply'] = True
 
 # resolution of the output digital surface model, in meters per pixel
 cfg['dsm_resolution'] = 4
-
-# number of tiles of the output digital surface model
-cfg['dsm_nb_tiles'] = 5
 
 # zoom out applied to input images
 cfg['subsampling_factor'] = 1
@@ -84,10 +74,6 @@ cfg['matching_algorithm'] = 'mgm'
 # size of the Census NCC square windows used in mgm
 cfg['census_ncc_win'] = 5
 
-# this param is used only if the tiles are bigger than 2MPix, to save time on
-# sift calls
-cfg['pointing_correction_rois_mode'] = 'automatic'
-
 # set these params if you want to impose the disparity range manually
 cfg['disp_min'] = None
 cfg['disp_max'] = None
@@ -100,11 +86,6 @@ cfg['fusion_operator'] = 'average_if_close'
 # threshold (in meters) used for the fusion of two dems in triplet processing
 # It should be adapted to the zoom factor
 cfg['fusion_thresh'] = 3
-
-# set to True to keep only the pixels were the two height maps have a valid
-# height. If False, pixels with a valid height in only one of the two maps will
-# be kept.
-cfg['fusion_conservative'] = False
 
 cfg['disable_srtm'] = False
 cfg['rpc_alt_range_scale_factor'] = 1
@@ -123,9 +104,6 @@ cfg['srtm_url'] = 'http://data_public:GDdci@data.cgiar-csi.org/srtm/tiles/GeoTIF
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 cfg['srtm_dir'] = os.path.join(parent_dir, '.srtm')
-
-# DSM options
-cfg['dsm_option'] = 'median'
 
 # clean height maps outliers
 cfg['cargarse_basura'] = True
