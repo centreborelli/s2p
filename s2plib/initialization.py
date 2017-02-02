@@ -239,6 +239,10 @@ def tiles_full_info(tw, th):
             tiles.append(tile)
 
     # make tiles directories and store json configuration dumps
+
+    # Store the list config.json for all tiles  
+    json_list = []
+    
     for tile in tiles:
         common.mkdir_p(tile['dir'])
         if len(cfg['images']) > 2:
@@ -251,7 +255,11 @@ def tiles_full_info(tw, th):
         tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
         tile_cfg['max_processes'] = 1
         tile_cfg['omp_num_threads'] = 1
-        with open(os.path.join(tile['dir'], 'config.json'), 'w') as f:
+
+        tile_json = os.path.join(tile['dir'], 'config.json') 
+        json_list.append(tile_json)
+        
+        with open(tile_json, 'w') as f:
             json.dump(tile_cfg, f, indent=2)
 
         # save the mask
@@ -259,4 +267,9 @@ def tiles_full_info(tw, th):
                                 'cloud_water_image_domain_mask.png'),
                    tile['mask'].astype(np.uint8))
 
+        # Write the list of json files to outdir/tiles.txt
+        with open(os.path.join(cfg['out_dir'],'tiles.txt'),'w') as f:
+            for line in json_list:
+                f.write(line+os.linesep)
+            
     return tiles
