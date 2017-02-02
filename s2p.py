@@ -395,6 +395,13 @@ def main(config_file, steps=ALL_STEPS):
     tw, th = initialization.adjust_tile_size()
     print('\ndiscarding masked tiles...')
     tiles = initialization.tiles_full_info(tw, th)
+
+    if 'initialisation' in steps:
+        # Write the list of json files to outdir/tiles.txt
+        with open(os.path.join(cfg['out_dir'],'tiles.txt'),'w') as f:
+            for t in tiles:
+                f.write(t['json']+os.linesep)
+
     n = len(cfg['images'])
     tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
 
