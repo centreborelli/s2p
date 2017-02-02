@@ -43,7 +43,7 @@ from s2plib import fusion
 from s2plib import visualisation
 
 
-def pointing_correction(tile, i=None):
+def pointing_correction(tile, i):
     """
     Compute the translation that corrects the pointing error on a pair of tiles.
 
@@ -52,7 +52,7 @@ def pointing_correction(tile, i=None):
         i: index of the processed pair. If None, there's only one pair.
     """
     x, y, w, h = tile['coordinates']
-    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i) if i else '')
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     img2 = cfg['images'][i]['img'] if i else cfg['images'][1]['img']
@@ -61,12 +61,12 @@ def pointing_correction(tile, i=None):
     if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
                                                             'pointing.txt')):
         print('pointing correction done on tile {} {}'.format(x, y), end=' ')
-        print('pair {}'.format(i) if i else '')
+        print('pair {}'.format(i))
         return
 
     # correct pointing error
     print('correcting pointing on tile {} {}'.format(x, y), end=' ')
-    print('pair {}...'.format(i) if i else '...')
+    print('pair {}...'.format(i))
     A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
 
     if A is not None:  # A is the correction matrix
@@ -88,22 +88,15 @@ def global_pointing_correction(tiles):
     Args:
         tiles: list of tile dictionaries
     """
-    if len(cfg['images']) == 2:
-        out = os.path.join(cfg['out_dir'], 'global_pointing.txt')
+    for i in range(1, len(cfg['images'])):
+        out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
         if not (os.path.isfile(out) and cfg['skip_existing']):
-            np.savetxt(out, pointing_accuracy.global_from_local(t['dir']
-                                                                for t in tiles),
+            l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
+            np.savetxt(out, pointing_accuracy.global_from_local(l),
                        fmt='%12.6f')
-    else:
-        for i in range(1, len(cfg['images'])):
-            out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
-            if not (os.path.isfile(out) and cfg['skip_existing']):
-                l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
-                np.savetxt(out, pointing_accuracy.global_from_local(l),
-                           fmt='%12.6f')
 
 
-def rectification_pair(tile, i=None):
+def rectification_pair(tile, i):
     """
     Rectify a pair of images on a given tile.
 
@@ -111,25 +104,24 @@ def rectification_pair(tile, i=None):
         tile: dictionary containing the information needed to process a tile.
         i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i) if i else '')
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     x, y, w, h = tile['coordinates']
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
     img2 = cfg['images'][i]['img'] if i else cfg['images'][1]['img']
     rpc2 = cfg['images'][i]['rpc'] if i else cfg['images'][1]['rpc']
     pointing = os.path.join(cfg['out_dir'],
-                            'global_pointing_pair_{}.txt'.format(i) if i else
-                            'global_pointing.txt')
+                            'global_pointing_pair_{}.txt'.format(i))
 
     outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
         print('rectification done on tile {} {}'.format(x, y), end=' ')
-        print('pair {}'.format(i) if i else '')
+        print('pair {}'.format(i))
         return
 
     print('rectifying tile {} {}'.format(x, y), end=' ')
-    print('pair {}...'.format(i) if i else '...')
+    print('pair {}...'.format(i))
     try:
         A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
     except IOError:
@@ -151,7 +143,7 @@ def rectification_pair(tile, i=None):
                             fmt='%3.1f')
 
 
-def stereo_matching(tile, i=None):
+def stereo_matching(tile,i):
     """
     Compute the disparity of a pair of images on a given tile.
 
@@ -159,18 +151,18 @@ def stereo_matching(tile, i=None):
         tile: dictionary containing the information needed to process a tile.
         i: index of the processed pair. If None, there's only one pair.
     """
-    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i) if i else '')
+    out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     x, y = tile['coordinates'][:2]
 
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
         print('disparity estimation done on tile {} {}'.format(x, y), end=' ')
-        print('pair {}'.format(i) if i else '')
+        print('pair {}'.format(i))
         return
 
     print('estimating disparity on tile {} {}'.format(x, y), end=' ')
-    print('pair {}...'.format(i) if i else '...')
+    print('pair {}...'.format(i))
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
@@ -404,10 +396,7 @@ def main(config_file, steps=ALL_STEPS):
     print('\ndiscarding masked tiles...')
     tiles = initialization.tiles_full_info(tw, th)
     n = len(cfg['images'])
-    if n > 2:
-        tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
-    else:
-        tiles_pairs = tiles
+    tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
 
     # omp_num_threads should not exceed nb_workers when multiplied by len(tiles)
     cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_pairs)))

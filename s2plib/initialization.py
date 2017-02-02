@@ -245,9 +245,8 @@ def tiles_full_info(tw, th):
     
     for tile in tiles:
         common.mkdir_p(tile['dir'])
-        if len(cfg['images']) > 2:
-            for i in range(1, len(cfg['images'])):
-                common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
+        for i in range(1, len(cfg['images'])):
+            common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
 
         # save a json dump of the tile configuration
         tile_cfg = copy.deepcopy(cfg)
