@@ -217,7 +217,7 @@ def disparity_to_ply(tile):
     Args:
         tile: dictionary containing the information needed to process a tile.
     """
-    out_dir = tile['dir']
+    out_dir = os.path.join(tile['dir'])
     ply_file = os.path.join(out_dir, 'cloud.ply')
     x, y, w, h = tile['coordinates']
 
@@ -228,11 +228,12 @@ def disparity_to_ply(tile):
     print('triangulating tile {} {}...'.format(x, y))
     rpc1 = cfg['images'][0]['rpc']
     rpc2 = cfg['images'][1]['rpc']
-    H_ref = os.path.join(out_dir, 'H_ref.txt')
-    H_sec = os.path.join(out_dir, 'H_sec.txt')
-    pointing = os.path.join(cfg['out_dir'], 'global_pointing.txt')
-    disp = os.path.join(out_dir, 'rectified_disp.tif')
-    mask_rect = os.path.join(out_dir, 'rectified_mask.png')
+    # This function is only called when there is a single pair (pair_1)
+    H_ref = os.path.join(out_dir,'pair_1', 'H_ref.txt')
+    H_sec = os.path.join(out_dir,'pair_1', 'H_sec.txt')
+    pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_1.txt')
+    disp = os.path.join(out_dir,'pair_1', 'rectified_disp.tif')
+    mask_rect = os.path.join(out_dir,'pair_1', 'rectified_mask.png')
     mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
 
     # prepare the image needed to colorize point cloud
@@ -247,7 +248,7 @@ def disparity_to_ply(tile):
                                       hh + 2*cfg['vertical_margin'])
         common.image_qauto(tmp, colors)
     else:
-        common.image_qauto(os.path.join(out_dir, 'rectified_ref.tif'), colors)
+        common.image_qauto(os.path.join(out_dir,'pair_1', 'rectified_ref.tif'), colors)
 
     # compute the point cloud
     triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
