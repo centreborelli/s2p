@@ -239,7 +239,6 @@ def tiles_full_info(tw, th):
             tiles.append(tile)
 
     # make tiles directories and store json configuration dumps
-    
     for tile in tiles:
         common.mkdir_p(tile['dir'])
         for i in range(1, len(cfg['images'])):
@@ -252,9 +251,9 @@ def tiles_full_info(tw, th):
         tile_cfg['max_processes'] = 1
         tile_cfg['omp_num_threads'] = 1
 
-        tile_json = os.path.join(tile['dir'], 'config.json') 
-        tile['json']=tile_json
-        
+        tile_json = os.path.join(tile['dir'], 'config.json')
+        tile['json'] = tile_json
+
         with open(tile_json, 'w') as f:
             json.dump(tile_cfg, f, indent=2)
 
@@ -262,5 +261,5 @@ def tiles_full_info(tw, th):
         piio.write(os.path.join(tile['dir'],
                                 'cloud_water_image_domain_mask.png'),
                    tile['mask'].astype(np.uint8))
-            
+
     return tiles
