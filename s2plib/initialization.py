@@ -241,9 +241,8 @@ def tiles_full_info(tw, th):
     # make tiles directories and store json configuration dumps
     for tile in tiles:
         common.mkdir_p(tile['dir'])
-        if len(cfg['images']) > 2:
-            for i in range(1, len(cfg['images'])):
-                common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
+        for i in range(1, len(cfg['images'])):
+            common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
 
         # save a json dump of the tile configuration
         tile_cfg = copy.deepcopy(cfg)
@@ -251,7 +250,11 @@ def tiles_full_info(tw, th):
         tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
         tile_cfg['max_processes'] = 1
         tile_cfg['omp_num_threads'] = 1
-        with open(os.path.join(tile['dir'], 'config.json'), 'w') as f:
+
+        tile_json = os.path.join(tile['dir'], 'config.json')
+        tile['json'] = tile_json
+
+        with open(tile_json, 'w') as f:
             json.dump(tile_cfg, f, indent=2)
 
         # save the mask
