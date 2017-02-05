@@ -1,6 +1,6 @@
 # S2P - Satellite Stereo Pipeline
 
-[![Build Status](https://travis-ci.org/carlodef/s2p.svg?branch=master)](https://travis-ci.org/carlodef/s2p)
+[![Build Status](https://travis-ci.org/MISS3D/s2p.svg?branch=master)](https://travis-ci.org/MISS3D/s2p)
 
 This code implements a stereo pipeline which produces elevation models from
 images taken by high resolution optical satellites such as Pléiades, WorldView,
