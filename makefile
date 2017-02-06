@@ -24,7 +24,7 @@ $(BINDIR):
 piio: s2plib/piio/libiio.so
 
 s2plib/piio/libiio.so: s2plib/piio/setup.py s2plib/piio/freemem.c s2plib/piio/iio.c s2plib/piio/iio.h
-	cd s2plib/piio; python setup.py build
+	$(MAKE) -C s2plib/piio
 
 asift:
 	mkdir -p $(BINDIR)/build_asift
@@ -195,8 +195,7 @@ clean_mgm:
 	$(RM) $(BINDIR)/mgm
 
 clean_piio:
-	$(RM) s2plib/piio/libiio.so
-	$(RM) -r s2plib/piio/build
+	$(MAKE) -C s2plib/piio clean
 
 .PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
 	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_piio test
