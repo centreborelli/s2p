@@ -71,7 +71,7 @@ void print_help(char *v)
 #define WATERMASK_MAIN
 #ifdef WATERMASK_MAIN
 
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 #include "pickopt.c"
 int main(int c, char *v[])
 {

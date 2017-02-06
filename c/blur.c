@@ -391,7 +391,7 @@ static int print_help(void)
 	return 0;
 }
 
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 #include "parsenumbers.c"
 int main(int c, char *v[])
 {

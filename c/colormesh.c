@@ -12,7 +12,7 @@
 #define m_pi 3.14159265358979323846264338328
 #endif
 
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 #include "fail.c"
 #include "rpc.h"
 #include "parsenumbers.c"

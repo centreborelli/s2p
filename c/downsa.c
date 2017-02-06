@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 
 
 #ifndef M_PI

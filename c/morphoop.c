@@ -20,7 +20,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 
 
 // dct type II symmetry at the boundary

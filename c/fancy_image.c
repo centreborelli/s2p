@@ -8,7 +8,7 @@
 
 #include "fancy_image.h"
 
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 #include "tiff_octaves_rw.c"
 
 // the following struct is an implementation detail,

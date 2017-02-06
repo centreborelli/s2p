@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 
 int main (int argc, char **argv)
 {
