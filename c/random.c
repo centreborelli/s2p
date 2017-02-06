@@ -18,16 +18,16 @@
 
 static uint64_t lcg_knuth_seed = 0;
 
-void lcg_knuth_srand(unsigned int x)
+void lcg_knuth_srand(uint32_t x)
 {
 	lcg_knuth_seed = x;
 }
 
-unsigned int lcg_knuth_rand(void)
+uint32_t lcg_knuth_rand(void)
 {
 	lcg_knuth_seed *= 6364136223846793005;
 	lcg_knuth_seed += 1442695040888963407;
-	return lcg_knuth_seed;
+	return lcg_knuth_seed >> 32;
 }
 
 
