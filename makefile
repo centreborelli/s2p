@@ -1,6 +1,6 @@
-C99 = $(CC) -std=gnu99
-CFLAGS = -g -O3 -DNDEBUG
-CPPFLAGS = -g -O3 -DNDEBUG
+export CFLAGS = -std=gnu99 -march=native -O3 -DNDEBUG
+export CXXFLAGS = -march=native -O3 -DNDEBUG
+
 LDLIBS = -lstdc++
 IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
@@ -11,7 +11,7 @@ ifeq ($(CC), gcc)
 endif
 
 ifeq ($(CXX), g++)
-	CPPFLAGS += -fopenmp
+	CXXFLAGS += -fopenmp
 endif
 
 OS := $(shell uname -s)
@@ -98,61 +98,61 @@ SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 imscript: $(BINDIR) $(PROGRAMS)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c 3rdparty/iio/iio.o
-	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS)
+	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
 
 $(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c 3rdparty/iio/iio.o
-	$(C99) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
+	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
 
 3rdparty/iio/iio.o: 3rdparty/iio/iio.c 3rdparty/iio/iio.h
-	$(C99) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
-	$(C99) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BINDIR)/bin2asc: c/bin2asc.c
-	$(C99) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 $(BINDIR)/siftu: c/siftu.c c/siftie.c
-	$(C99) $(CFLAGS) $< -lm -o $@
+	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/homographies.c\
 	c/ransac_cases.c c/parsenumbers.c c/random.c
-	$(C99) $(CFLAGS) $< -lm -o $@
+	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o
-	$(C99) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o
-	$(C99) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
+	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/watermask: 3rdparty/iio/iio.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
 	$(SRCDIR)/xmalloc.c $(SRCDIR)/pickopt.c $(SRCDIR)/rpc.c $(SRCDIR)/srtm4.c 3rdparty/iio/iio.h $(SRCDIR)/parsenumbers.c
-	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
+	$(CC) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/disp_to_h: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h 3rdparty/iio/iio.h c/rpc.h c/read_matrix.c
-	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
+	$(CC) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
 
 $(BINDIR)/colormesh: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c 3rdparty/iio/iio.h c/fail.c c/rpc.h c/read_matrix.c c/smapa.h c/timing.c c/timing.h
-	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
+	$(CC) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c c/timing.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/disp2ply: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c 3rdparty/iio/iio.h c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(C99) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
+	$(CC) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c 3rdparty/iio/iio.o
-	$(C99) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
+	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
 
 $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c 3rdparty/iio/iio.o
-	$(C99) $(CFLAGS) -I/usr/include/geotiff $^ -o $@ $(IIOLIBS) $(GEOLIBS)
+	$(CC) $(CFLAGS) -I/usr/include/geotiff $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 $(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c 3rdparty/iio/iio.o
-	$(C99) $(CFLAGS) -I/usr/include/geotiff $^ -o $@ $(IIOLIBS) $(GEOLIBS)
+	$(CC) $(CFLAGS) -I/usr/include/geotiff $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 # Geographiclib wrappers
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
-	$(CXX) $(CPPFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
+	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
 
 test:
 	python -u s2p_test.py
