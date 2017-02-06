@@ -287,7 +287,9 @@ int main(int c, char *v[])
     if (there_is_color)
         point_size += 3*sizeof(uint8_t);
 
+#ifdef _OPENMP
     # pragma omp parallel for
+#endif
     for (uint64_t pix = 0; pix < (uint64_t) w*h; pix++) {
         if (!isnan(height[pix])) {
 
@@ -298,7 +300,9 @@ int main(int c, char *v[])
             #endif
             if (buf[i] + buf_size - ptr[i] < point_size) {
                 int nbytes = ptr[i] - buf[i];
+#ifdef _OPENMP
                 # pragma omp critical
+#endif
                     fwrite(buf[i], sizeof(char), nbytes, ply_file);
                 ptr[i] = buf[i];
             }

@@ -6,14 +6,6 @@ IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
-ifeq ($(CC), gcc)
-	CFLAGS += -fopenmp
-endif
-
-ifeq ($(CXX), g++)
-	CXXFLAGS += -fopenmp
-endif
-
 OS := $(shell uname -s)
 ifeq ($(OS), Linux)
 	LDLIBS += -lrt
@@ -25,7 +17,6 @@ SRCDIR = c
 default: $(BINDIR) homography sift imscript mgm piio
 
 all: default msmw3 sgbm tvl1
-
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
