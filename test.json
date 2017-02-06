@@ -25,6 +25,7 @@
   "temporary_dir" : "/tmp",
   "tile_size" : 300,
   "clean_tmp" : true,
+  "clean_intermediate" : false,
   "fusion_thresh" : 3,
   "disable_srtm" : true,
   "disp_range_method" : "sift",

@@ -22,6 +22,9 @@ cfg['temporary_dir'] = "s2p_tmp"
 # temporary files are erased when s2p terminates. Switch to False to keep them
 cfg['clean_tmp'] = True
 
+# remove all generated files except from ply point clouds and tif raster dsm
+cfg['clean_intermediate'] = False
+
 # switch to True if you want to process the whole image
 cfg['full_img'] = False
 

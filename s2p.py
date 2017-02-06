@@ -55,8 +55,8 @@ def pointing_correction(tile, i):
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     img1 = cfg['images'][0]['img']
     rpc1 = cfg['images'][0]['rpc']
-    img2 = cfg['images'][i]['img'] if i else cfg['images'][1]['img']
-    rpc2 = cfg['images'][i]['rpc'] if i else cfg['images'][1]['rpc']
+    img2 = cfg['images'][i]['img']
+    rpc2 = cfg['images'][i]['rpc']
 
     if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
                                                             'pointing.txt')):
@@ -92,6 +92,9 @@ def global_pointing_correction(tiles):
             l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
             np.savetxt(out, pointing_accuracy.global_from_local(l),
                        fmt='%12.6f')
+            if cfg['clean_intermediate']:
+                for d in l:
+                    common.remove(os.path.join(d, 'center_keypts_sec.txt'))
 
 
 def rectification_pair(tile, i):
@@ -138,6 +141,10 @@ def rectification_pair(tile, i):
     np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
                             fmt='%3.1f')
 
+    if cfg['clean_intermediate']:
+        common.remove(os.path.join(out_dir,'pointing.txt'))
+        common.remove(os.path.join(out_dir,'sift_matches.txt'))
+
 
 def stereo_matching(tile,i):
     """
@@ -171,6 +178,12 @@ def stereo_matching(tile,i):
     # add margin around masked pixels
     masking.erosion(mask, mask, cfg['msk_erosion'])
 
+    if cfg['clean_intermediate']:
+        if len(cfg['images']) > 2:
+            common.remove(rect1)
+        common.remove(rect2)
+        common.remove(os.path.join(out_dir,'disp_min_max.txt'))
+
 
 def disparity_to_height(tile, i):
     """
@@ -203,6 +216,13 @@ def disparity_to_height(tile, i):
                              rpc1, rpc2, H_ref, H_sec, disp, mask, rpc_err,
                              out_mask, pointing)
 
+    if cfg['clean_intermediate']:
+        common.remove(H_ref)
+        common.remove(H_sec)
+        common.remove(disp)
+        common.remove(mask)
+        common.remove(rpc_err)
+
 
 def disparity_to_ply(tile):
     """
@@ -214,20 +234,20 @@ def disparity_to_ply(tile):
     out_dir = os.path.join(tile['dir'])
     ply_file = os.path.join(out_dir, 'cloud.ply')
     x, y, w, h = tile['coordinates']
+    rpc1 = cfg['images'][0]['rpc']
+    rpc2 = cfg['images'][1]['rpc']
 
     if cfg['skip_existing'] and os.path.isfile(ply_file):
         print('triangulation done on tile {} {}'.format(x, y))
         return
 
     print('triangulating tile {} {}...'.format(x, y))
-    rpc1 = cfg['images'][0]['rpc']
-    rpc2 = cfg['images'][1]['rpc']
     # This function is only called when there is a single pair (pair_1)
-    H_ref = os.path.join(out_dir,'pair_1', 'H_ref.txt')
-    H_sec = os.path.join(out_dir,'pair_1', 'H_sec.txt')
+    H_ref = os.path.join(out_dir, 'pair_1', 'H_ref.txt')
+    H_sec = os.path.join(out_dir, 'pair_1', 'H_sec.txt')
     pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_1.txt')
-    disp = os.path.join(out_dir,'pair_1', 'rectified_disp.tif')
-    mask_rect = os.path.join(out_dir,'pair_1', 'rectified_mask.png')
+    disp = os.path.join(out_dir, 'pair_1', 'rectified_disp.tif')
+    mask_rect = os.path.join(out_dir, 'pair_1', 'rectified_mask.png')
     mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
 
     # prepare the image needed to colorize point cloud
@@ -242,7 +262,7 @@ def disparity_to_ply(tile):
                                       hh + 2*cfg['vertical_margin'])
         common.image_qauto(tmp, colors)
     else:
-        common.image_qauto(os.path.join(out_dir,'pair_1', 'rectified_ref.tif'), colors)
+        common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)
 
     # compute the point cloud
     triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
@@ -251,6 +271,15 @@ def disparity_to_ply(tile):
                                           llbbx=tuple(cfg['ll_bbx']),
                                           xybbx=(x, x+w, y, y+h),
                                           xymsk=mask_orig)
+
+    if cfg['clean_intermediate']:
+        common.remove(H_ref)
+        common.remove(H_sec)
+        common.remove(disp)
+        common.remove(mask_rect)
+        common.remove(mask_orig)
+        common.remove(colors)
+        common.remove(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'))
 
 
 def mean_heights(tile):
@@ -295,6 +324,10 @@ def heights_fusion(tile, mean_heights_global):
                    mean_heights_global, averaging=cfg['fusion_operator'],
                    threshold=cfg['fusion_thresh'])
 
+    if cfg['clean_intermediate']:
+        for f in height_maps:
+            common.remove(f)
+
 
 def heights_to_ply(tile):
     """
@@ -307,6 +340,7 @@ def heights_to_ply(tile):
     x, y, w, h = tile['coordinates']
     z = cfg['subsampling_factor']
     plyfile = os.path.join(out_dir, 'cloud.ply')
+    height_map = os.path.join(out_dir, 'height_map.tif')
     if cfg['skip_existing'] and os.path.isfile(plyfile):
         print('ply file already exists for tile {} {}'.format(x, y))
         return
@@ -321,11 +355,16 @@ def heights_to_ply(tile):
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
     common.image_safe_zoom_fft(colors, z, colors)
-    triangulation.height_map_to_point_cloud(plyfile, os.path.join(out_dir,
-                                                                  'height_map.tif'),
+    triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpc'], H, colors,
                                             utm_zone=cfg['utm_zone'],
                                             llbbx=tuple(cfg['ll_bbx']))
+
+    if cfg['clean_intermediate']:
+        common.remove(height_map)
+        common.remove(colors)
+        common.remove(os.path.join(out_dir,
+                                   'cloud_water_image_domain_mask.png'))
 
 
 def plys_to_dsm(tiles):
