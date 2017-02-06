@@ -34,7 +34,7 @@ argument:
 
 All the parameters of the algorithm, paths to input and output data are stored
 in the json file. See the provided `test.json` file for an example, and the
-comments in the file `python/config.py` for some explanations about the roles
+comments in the file `s2plib/config.py` for some explanations about the roles
 of these parameters.
 
 Notice that each input image must be accompanied by an `xml` file containing rpc
@@ -82,7 +82,7 @@ retrieved with
 
     git submodule update --init
 
-All the python modules are located in the `python` folder. Some python
+All the python modules are located in the `s2plib` folder. Some python
 functions of these modules rely on external binaries. Most of these binaries
 were written on purpose for the needs of the pipeline, and their source code is
 provided here in the `c` folder. For the other binaries, the source code is
