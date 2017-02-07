@@ -17,10 +17,7 @@
 #define FORL(n) for(int l=0;l<(n);l++)
 
 
-
-#include "fragments.c"
-
-
+#include "xmalloc.c"
 #include "synflow_core.c"
 
 
