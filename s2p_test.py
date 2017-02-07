@@ -23,10 +23,10 @@ def unit_image_keypoints():
     ref_kpts  = np.loadtxt('testdata/expected_output/units/unit_image_keypoints.txt')
 
     # Check that the number of keypoints is the same
-    np.testing.assert_equal(test_kpts.shape[0],ref_kpts.shape[0])
+    np.testing.assert_equal(test_kpts.shape[0],ref_kpts.shape[0],verbose=True)
     
     # Check that all keypoints are the same
-    np.testing.assert_allclose(test_kpts, ref_kpts, rtol=.01, atol=1)
+    np.testing.assert_allclose(test_kpts, ref_kpts, rtol=.01, atol=1,verbose=True)
 
 def unit_matching():
     try:
@@ -37,10 +37,10 @@ def unit_matching():
     expected_matches = np.loadtxt('testdata/expected_output/units/unit_keypoints_match.txt')
 
     # Check that numbers of matches are the same
-    np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0])
-
+    np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0],verbose=True)
+    
     # Check that all matches are the same
-    np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1)
+    np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
     
     
 def end2end_pair():
@@ -49,11 +49,11 @@ def end2end_pair():
     expected = gdal.Open('testdata/expected_output/pair/dsm.tif').ReadAsArray()
     
     # compare shapes
-    np.testing.assert_equal(computed.shape, expected.shape)
+    np.testing.assert_equal(computed.shape, expected.shape,verbose=True)
     # compare number of valid pixels
     n_computed = np.count_nonzero(np.isfinite(computed))
     n_expected = np.count_nonzero(np.isfinite(expected))
-    np.testing.assert_allclose(n_computed, n_expected, rtol=.01, atol=100)
+    np.testing.assert_allclose(n_computed, n_expected, rtol=.01, atol=100,verbose=True)
     
     # check largest difference
     print('99th percentile abs difference', 
@@ -66,11 +66,11 @@ def end2end_triplet():
     expected = gdal.Open('testdata/expected_output/triplet/dsm.tif').ReadAsArray()
     
     # compare shapes
-    np.testing.assert_equal(computed.shape, expected.shape)
+    np.testing.assert_equal(computed.shape, expected.shape,verbose=True)
     # compare number of valid pixels
     n_computed = np.count_nonzero(np.isfinite(computed))
     n_expected = np.count_nonzero(np.isfinite(expected))
-    np.testing.assert_allclose(n_computed, n_expected, rtol=.01, atol=100)
+    np.testing.assert_allclose(n_computed, n_expected, rtol=.01, atol=100,verbose=True)
     
     # check largest difference
     print('99th percentile abs difference', 
