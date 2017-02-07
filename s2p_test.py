@@ -10,6 +10,23 @@ import argparse
 import os
 
 import s2p
+import s2plib
+
+def unit_image_keypoints():
+    try:
+        os.mkdir('s2p_tmp')
+    except:
+        pass
+    kpts = s2plib.sift.image_keypoints('testdata/input_triplet/img_01.tif',100,100,200,200)
+
+    test_kpts = np.loadtxt(kpts)
+    ref_kpts  = np.loadtxt('testdata/expected_output/units/unit_image_keypoints.txt')
+
+    # Check that the number of keypoints is the same
+    np.testing.assert_equal(test_kpts.shape[0],ref_kpts.shape[0])
+
+    # Check that all keypoints are the same
+    np.testing.assert_allclose(test_kpts, ref_kpts, rtol=.01, atol=1)
 
 def end2end_pair():
     s2p.main('testdata/input_pair/config.json')
@@ -46,7 +63,8 @@ def end2end_triplet():
     assert(np.nanpercentile(np.abs(computed - expected), 99) < 1)
 
 # Register tests
-registered_tests = { 'end2end_pair' : (end2end_pair, []),
+registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
+                     'end2end_pair' : (end2end_pair, []),
                      'end2end_triplet' : (end2end_triplet, [])}
 
 if __name__ == '__main__':
