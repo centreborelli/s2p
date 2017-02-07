@@ -17,7 +17,7 @@ def unit_image_keypoints():
         os.mkdir('s2p_tmp')
     except:
         pass
-    kpts = s2plib.sift.image_keypoints('testdata/input_triplet/img_01.tif',100,100,200,200)
+    kpts = s2plib.sift.image_keypoints('testdata/input_triplet/img_02.tif',100,100,200,200)
 
     test_kpts = np.loadtxt(kpts)
     ref_kpts  = np.loadtxt('testdata/expected_output/units/unit_image_keypoints.txt')
@@ -28,6 +28,21 @@ def unit_image_keypoints():
     # Check that all keypoints are the same
     np.testing.assert_allclose(test_kpts, ref_kpts, rtol=.01, atol=1)
 
+def unit_matching():
+    try:
+        os.mkdir('s2p_tmp')
+    except:
+        pass
+    test_matches = s2plib.sift.keypoints_match('testdata/units/sift1.txt','testdata/units/sift2.txt')
+    expected_matches = np.loadtxt('testdata/expected_output/units/unit_keypoints_match.txt')
+
+    # Check that numbers of matches are the same
+    np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0])
+
+    # Check that all matches are the same
+    np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1)
+    
+    
 def end2end_pair():
     s2p.main('testdata/input_pair/config.json')
     computed = gdal.Open('test_pair/dsm.tif').ReadAsArray()
@@ -64,6 +79,7 @@ def end2end_triplet():
 
 # Register tests
 registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
+                     'unit_matching' : (unit_matching,[]),
                      'end2end_pair' : (end2end_pair, []),
                      'end2end_triplet' : (end2end_triplet, [])}
 
