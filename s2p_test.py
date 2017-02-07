@@ -42,7 +42,21 @@ def unit_matching():
     # Check that all matches are the same
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
     
-    
+def unit_matches_from_rpc():
+    try:
+        os.mkdir('s2p_tmp')
+    except:
+        pass
+        
+    rpc1 = s2plib.rpc_model.RPCModel('testdata/input_pair/rpc_01.xml')
+    rpc2 = s2plib.rpc_model.RPCModel('testdata/input_pair/rpc_02.xml')
+
+    test_matches = s2plib.rpc_utils.matches_from_rpc(rpc1,rpc2,100,100,200,200,5)
+    expected_matches = np.loadtxt('testdata/expected_output/units/unit_matches_from_rpc.txt')
+
+    np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
+    np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
+
 def end2end_pair():
     s2p.main('testdata/input_pair/config.json')
     computed = gdal.Open('test_pair/dsm.tif').ReadAsArray()
@@ -80,6 +94,7 @@ def end2end_triplet():
 # Register tests
 registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
                      'unit_matching' : (unit_matching,[]),
+                     'unit_matches_from_rpc' : (unit_matches_from_rpc,[]),
                      'end2end_pair' : (end2end_pair, []),
                      'end2end_triplet' : (end2end_triplet, [])}
 
