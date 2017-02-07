@@ -80,5 +80,8 @@ if __name__ == '__main__':
             command,args = registered_tests[test]
             command(*args)
             print('Success.'+os.linesep)
+        else:
+            print('Test '+test+' not found')
+            exit(1)
     exit(0)
             
