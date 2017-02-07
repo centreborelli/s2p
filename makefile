@@ -8,9 +8,14 @@ IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
-# configuration hacks:
-# TODO, write conditional statement to prepend "-std=gnu99" to CFLAGS
-# when the compiler is gcc 4.9 or older
+# The following conditional statement appends "-std=gnu99" to CFLAGS when the
+# compiler does not define __STDC_VERSION__.  The idea is that many older
+# compilers are able to compile standard C when given that option.
+# This hack seems to work for all versions of gcc, clang and icc.
+CVERSION = $(shell $(CC) -dM -E - < /dev/null | grep __STDC_VERSION__)
+ifeq ($(CVERSION),)
+CFLAGS := $(CFLAGS) -std=gnu99
+endif
 
 # names of source and destination directories
 SRCDIR = c
