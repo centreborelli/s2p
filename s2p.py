@@ -290,10 +290,13 @@ def mean_heights(tile):
     n = len(cfg['images']) - 1
     maps = np.empty((int(h/z), int(w/z), n))
     for i in range(n):
-        f = gdal.Open(os.path.join(tile['dir'], 'pair_%d' % (i + 1),
-                                   'height_map.tif'))
-        maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
-        f = None  # this is the gdal way of closing files
+        try:
+            f = gdal.Open(os.path.join(tile['dir'], 'pair_{}'.format(i + 1),
+                                       'height_map.tif'))
+            maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
+            f = None  # this is the gdal way of closing files
+        except RuntimeError:  # the file is not there
+            maps[:, :, i] *= np.nan
 
     validity_mask = maps.sum(axis=2)  # sum to propagate nan values
     validity_mask += 1 - validity_mask  # 1 on valid pixels, and nan on invalid
