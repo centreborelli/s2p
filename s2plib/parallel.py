@@ -99,6 +99,8 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args):
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
+        except Exception as e:
+            outputs.append(None)
 
     pool.close()
     pool.join()
