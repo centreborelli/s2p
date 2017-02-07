@@ -176,10 +176,21 @@ $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
 
+# automatic dependency generation
+-include makefile.dep
+ALL_SOURCES=`ls c/*.c c/*.cc c/*.cpp`
+.PHONY:
+depend:
+	$(CC) -MM $(ALL_SOURCES) | sed '/^[^ ]/s/^/c\//' > makefile.dep
+
 
 # rules for cleaning, nothing interesting below this point
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
-	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio
+	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio\
+	clean_depend
+
+clean_depend:
+	$(RM) makefile.dep
 
 clean_homography:
 	$(MAKE) -C c/homography clean
