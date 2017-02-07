@@ -24,7 +24,7 @@ def unit_image_keypoints():
 
     # Check that the number of keypoints is the same
     np.testing.assert_equal(test_kpts.shape[0],ref_kpts.shape[0])
-
+    
     # Check that all keypoints are the same
     np.testing.assert_allclose(test_kpts, ref_kpts, rtol=.01, atol=1)
 
@@ -91,15 +91,27 @@ if __name__ == '__main__':
         tests_to_run = registered_tests.keys()
 
     print('The following tests will be run: '+str(tests_to_run))
-        
+
+    failed = []
+    
     for test in tests_to_run:
         if test in registered_tests:
             print('Running test '+test+'...'+os.linesep)
             command,args = registered_tests[test]
-            command(*args)
-            print('Success.'+os.linesep)
+            try:
+                command(*args)
+                print('Success.'+os.linesep)
+            except:
+                print('Failure.'+os.linesep)
+                failed.append(test)
         else:
             print('Test '+test+' not found')
-            exit(1)
-    exit(0)
-            
+    
+    if len(failed)==0:
+        print('All tests passes')
+        exit(0)
+    else:
+        print('The following tests failed:')
+        for test in failed:
+            print('\t'+test)
+        exit(1)
