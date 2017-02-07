@@ -18,7 +18,7 @@
 #include "parsenumbers.c"
 #include "pickopt.c"
 
-#define USE_TIMING
+#undef USE_TIMING
 #include "timing.h"
 
 
