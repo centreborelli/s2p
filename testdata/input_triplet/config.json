@@ -1,10 +1,12 @@
 {
-  "out_dir" : "test",
+  "out_dir" : "test_triplet",
   "images" : [
-    { "img" : "testdata/img_01.tif",
-      "rpc" : "testdata/rpc_01.xml" },
-    { "img" : "testdata/img_02.tif",
-      "rpc" : "testdata/rpc_02.xml" }
+    { "img" : "testdata/input_triplet/img_02.tif",
+      "rpc" : "testdata/input_triplet/rpc_02.xml" },
+    { "img" : "testdata/input_triplet/img_01.tif",
+      "rpc" : "testdata/input_triplet/rpc_01.xml" },
+    { "img" : "testdata/input_triplet/img_03.tif",
+      "rpc" : "testdata/input_triplet/rpc_03.xml"}
     ],
   "roi" : {
       "x" : 150,
