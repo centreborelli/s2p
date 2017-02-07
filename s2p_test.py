@@ -117,7 +117,8 @@ if __name__ == '__main__':
             try:
                 command(*args)
                 print('Success.'+os.linesep)
-            except:
+            except AssertionError as e:
+                print(e)
                 print('Failure.'+os.linesep)
                 failed.append(test)
         else:
