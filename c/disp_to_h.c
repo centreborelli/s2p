@@ -5,7 +5,7 @@
 #include <math.h>
 
 #include "vvector.h"
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 #include "rpc.h"
 #include "read_matrix.c"
 

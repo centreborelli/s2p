@@ -51,7 +51,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 
 #define xmalloc malloc
 

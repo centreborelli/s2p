@@ -3,7 +3,7 @@
 #include <math.h>
 #include <complex.h>
 #include <fftw3.h>
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327

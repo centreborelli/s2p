@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <complex.h>
 #include <fftw3.h>
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 
 #define FORI(n) for (int i=0; i<(n); i++)
 

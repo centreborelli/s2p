@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../3rdparty/iio/iio.h"
+#include "iio.h"
 #include "lists.c"
 #include "fail.c"
 #include "xmalloc.c"
