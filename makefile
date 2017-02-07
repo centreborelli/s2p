@@ -29,8 +29,7 @@ all: default msmw3 sgbm tvl1
 
 # test for the default configuration
 test: default
-	python -u s2p_test.py
-
+	python -u s2p_test.py --all
 
 # make sure that the destination directory is built
 $(BINDIR):
@@ -175,7 +174,6 @@ $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
 
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
-
 
 # rules for cleaning, nothing interesting below this point
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
