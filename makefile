@@ -1,30 +1,39 @@
-export CFLAGS = -std=gnu99 -march=native -O3 -DNDEBUG
-export CXXFLAGS = -march=native -O3 -DNDEBUG
+# the following two options are used to control all C and C++ compilations
+export CFLAGS =   -march=native -O3
+export CXXFLAGS = -march=native -O3
 
+# these options are only used for the programs directly inside "./c/"
 LDLIBS = -lstdc++
 IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
 
-BINDIR = bin
-SRCDIR = c
+# configuration hacks:
+# TODO, write conditional statement to prepend "-std=gnu99" to CFLAGS
+# when the compiler is gcc 4.9 or older
 
+# names of source and destination directories
+SRCDIR = c
+BINDIR = bin
+
+# default rule builds only the programs necessary for the test
 default: $(BINDIR) homography sift imscript mgm piio
 
+# the "all" rule builds three further correlators
 all: default msmw3 sgbm tvl1
 
+# test for the default configuration
+test: default
+	python -u s2p_test.py
+
+
+# make sure that the destination directory is built
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-piio: s2plib/piio/libiio.so
-
-s2plib/piio/libiio.so: s2plib/piio/setup.py s2plib/piio/freemem.c s2plib/piio/iio.c s2plib/piio/iio.h
-	$(MAKE) -C s2plib/piio
-
-asift:
-	mkdir -p $(BINDIR)/build_asift
-	cd $(BINDIR)/build_asift; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/demo_ASIFT_src; $(MAKE)
-	cp $(BINDIR)/build_asift/demo_ASIFT $(BINDIR)
+#
+# three standard "modules": homography, sift, and mgm
+#
 
 homography: $(BINDIR)
 	$(MAKE) -j -C c/homography
@@ -38,6 +47,22 @@ sift: $(BINDIR)
 mgm:
 	$(MAKE) -C 3rdparty/mgm
 	cp 3rdparty/mgm/mgm $(BINDIR)
+
+# piio: a required python extension
+piio: s2plib/piio/libiio.so
+
+s2plib/piio/libiio.so: s2plib/piio/setup.py s2plib/piio/freemem.c s2plib/piio/iio.c s2plib/piio/iio.h
+	$(MAKE) -C s2plib/piio
+
+
+#
+# rules for optional "modules": msmw, asift, sgbm, tvl1, etc
+#
+
+asift:
+	mkdir -p $(BINDIR)/build_asift
+	cd $(BINDIR)/build_asift; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/demo_ASIFT_src; $(MAKE)
+	cp $(BINDIR)/build_asift/demo_ASIFT $(BINDIR)
 
 sgbm:
 	$(MAKE) -C 3rdparty/sgbm
@@ -71,6 +96,12 @@ tvl1:
 	$(MAKE) -C 3rdparty/tvl1flow_3
 	cp 3rdparty/tvl1flow_3/tvl1flow $(BINDIR)
 	cp 3rdparty/tvl1flow_3/callTVL1.sh $(BINDIR)
+
+
+
+#
+# rules to build the programs under the source directory
+#
 
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
@@ -140,9 +171,8 @@ $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
 
-test:
-	python -u s2p_test.py
 
+# rules for cleaning, nothing interesting below this point
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
 	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio
 

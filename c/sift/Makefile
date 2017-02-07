@@ -1,8 +1,7 @@
-CXXFLAGS = -march=native -O3 `gdal-config --cflags`
-CXXLIBS = `gdal-config --libs`
-
-CFLAGS = -std=gnu99 -march=native -O3
-LDLIBS = -lm
+CXXFLAGS ?= -march=native -O3
+override CXXFLAGS := $(CXXFLAGS) `gdal-config --cflags`
+override CXXLIBS  := $(CXXLIBS)  `gdal-config --libs`
+override LDLIBS   := $(LDLIBS) -lm
 
 OBJ = sift_roi.o \
       LibImages/LibImages.o \
