@@ -120,11 +120,9 @@ static void update_min_max(float *min, float *max, float x)
 }
 
 // re-scale a float between 0 and w
-static int rescale_float_to_int(double x, double min, double max, int w)
+static int rescale_float_to_int(double x, double min, double resolution)
 {
-	int r = w * (x - min)/(max - min);
-	if (r < 0) r = 0;
-	if (r >= w) r = w -1;
+        int r = (int) (round((x-min)/resolution));
 	return r;
 }
 
@@ -212,8 +210,8 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 
 // open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
-		float xmin, float xmax, float ymin, float ymax,
-		char utm_zone[3], char *fname, int col_idx)
+				     float xmin, float xmax, float ymin, float ymax, float resolution,
+				     char utm_zone[3], char *fname, int col_idx)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -236,16 +234,19 @@ static void add_ply_points_to_images(struct images *x,
 	double data[n];
 	while ( n == get_record(f, isbin, t, n, data) ) {
 
-		int i = rescale_float_to_int(data[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(-data[1], -ymax, -ymin, x->h);
-		if (col_idx == 2) {
-			add_height_to_images(x, i, j, data[2]);
-			assert(isfinite(data[2]));
-		}
-		else
-		{
-			unsigned int rgb = data[col_idx];
-			add_height_to_images(x, i, j, rgb);
+		int i = rescale_float_to_int(data[0], xmin, resolution);
+		int j = rescale_float_to_int(-data[1], -ymax, resolution);
+
+		if ((0 <= i) && (i < x->w) && (0 <= j) && (j < x->h)) {
+		  if (col_idx == 2) {
+		    add_height_to_images(x, i, j, data[2]);
+		    assert(isfinite(data[2]));
+		  }
+		  else
+		    {
+		      unsigned int rgb = data[col_idx];
+		      add_height_to_images(x, i, j, rgb);
+		    }
 		}
 
 	}
@@ -321,7 +322,7 @@ int main(int c, char *v[])
 	while (l != NULL)
 	{
 		// printf("FILENAME: \"%s\"\n", l->current);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx);
+	        add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, resolution, utm, l->current, col_idx);
 		l = l->next;
 	}
 
