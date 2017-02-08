@@ -123,6 +123,9 @@ if __name__ == '__main__':
 
     print('The following tests will be run: '+str(tests_to_run))
 
+    # First, export the default config to start each test from a clean config
+    test_default_cfg = s2plib.config.cfg
+    
     failed = []
     
     for test in tests_to_run:
@@ -130,6 +133,8 @@ if __name__ == '__main__':
             print('Running test '+test+'...'+os.linesep)
             command,args = registered_tests[test]
             try:
+                # Ensure each test starts from the default cfg
+                s2plib.config.cfg = test_default_cfg
                 command(*args)
                 print('Success.'+os.linesep)
             except AssertionError as e:
