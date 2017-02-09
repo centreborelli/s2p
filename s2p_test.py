@@ -96,27 +96,17 @@ def unit_matches_from_rpc():
     np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
 
-def end2end_pair():
-    s2p.main('testdata/input_pair/config.json')
-    computed = gdal.Open('test_pair/dsm.tif').ReadAsArray()
-    expected = gdal.Open('testdata/expected_output/pair/dsm.tif').ReadAsArray()
-    
-    # compare shapes
-    np.testing.assert_equal(computed.shape, expected.shape,verbose=True)
-    # compare number of valid pixels
-    n_computed = np.count_nonzero(np.isfinite(computed))
-    n_expected = np.count_nonzero(np.isfinite(expected))
-    np.testing.assert_allclose(n_computed, n_expected, rtol=.01, atol=100,verbose=True)
-    
-    # check largest difference
-    print('99th percentile abs difference', 
-          np.nanpercentile(np.abs(computed - expected), 99))
-    assert(np.nanpercentile(np.abs(computed - expected), 99) < 1)
+def end2end(config,ref_dsm,absmean_tol,percentile_tol):
 
-def end2end_triplet():
-    s2p.main('testdata/input_triplet/config.json')
-    computed = gdal.Open('test_triplet/dsm.tif').ReadAsArray()
-    expected = gdal.Open('testdata/expected_output/triplet/dsm.tif').ReadAsArray()
+    print('Configuration file: ',config)
+    print('Reference DSM:',ref_dsm,os.linesep)
+    
+    s2p.main(config)
+
+    outdir = s2plib.config.cfg['out_dir']
+    
+    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
+    expected = gdal.Open(ref_dsm).ReadAsArray()
     
     # compare shapes
     np.testing.assert_equal(computed.shape, expected.shape,verbose=True)
@@ -132,20 +122,21 @@ def end2end_triplet():
     diff = diff[np.where(np.isfinite(diff))]
     
     # check mean difference
-    print('mean-difference:',np.mean(diff))
-    assert(np.abs(np.mean(diff))<0.05)
+    meandiff = np.mean(diff)
+    print('mean-difference:',meandiff,'(abs. tolerance='+str(absmean_tol)+')')
+    assert(np.abs(meandiff)<absmean_tol)
     
     # check largest difference
-    print('99th percentile abs difference', 
-          np.nanpercentile(np.abs(diff), 99))
-    assert(np.nanpercentile(np.abs(diff), 99) < 2)
+    percentile = np.nanpercentile(np.abs(diff), 99)
+    print('99th percentile abs difference',percentile,'(tolerance='+str(percentile_tol)+')')
+    assert(percentile < percentile_tol)
 
 # Register tests
 registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
                      'unit_matching' : (unit_matching,[]),
                      'unit_matches_from_rpc' : (unit_matches_from_rpc,[]),
-                     'end2end_pair' : (end2end_pair, []),
-                     'end2end_triplet' : (end2end_triplet, [])}
+                     'end2end_pair' : (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1]),
+                     'end2end_triplet' : (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
