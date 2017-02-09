@@ -123,12 +123,22 @@ def end2end_triplet():
     # compare number of valid pixels
     n_computed = np.count_nonzero(np.isfinite(computed))
     n_expected = np.count_nonzero(np.isfinite(expected))
+    
     np.testing.assert_allclose(n_computed, n_expected, rtol=.01, atol=100,verbose=True)
+
+    diff = computed-expected
+
+    # Strip nan from diff
+    diff = diff[np.where(np.isfinite(diff))]
+    
+    # check mean difference
+    print('mean-difference:',np.mean(diff))
+    assert(np.abs(np.mean(diff))<0.05)
     
     # check largest difference
     print('99th percentile abs difference', 
-          np.nanpercentile(np.abs(computed - expected), 99))
-    assert(np.nanpercentile(np.abs(computed - expected), 99) < 1)
+          np.nanpercentile(np.abs(diff), 99))
+    assert(np.nanpercentile(np.abs(diff), 99) < 2)
 
 # Register tests
 registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
