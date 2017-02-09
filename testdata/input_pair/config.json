@@ -33,5 +33,6 @@
   "disp_range_srtm_low_margin" : -20,
   "skip_existing" : false,
   "msk_erosion": 0,
-  "dsm_resolution": 0.5
+  "dsm_resolution": 0.5,
+    "utm_bbx" : [359746.062, 360105.562,7651554.000,7651923.000]
 }
