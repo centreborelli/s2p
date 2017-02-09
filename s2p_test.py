@@ -22,12 +22,48 @@ def unit_image_keypoints():
     test_kpts = np.loadtxt(kpts)
     ref_kpts  = np.loadtxt('testdata/expected_output/units/unit_image_keypoints.txt')
 
-    # Check that the number of keypoints is the same
-    np.testing.assert_equal(test_kpts.shape[0],ref_kpts.shape[0],verbose=True)
-    
-    # Check that all keypoints are the same
-    np.testing.assert_allclose(test_kpts, ref_kpts, rtol=.01, atol=1,verbose=True)
+    test_set = set(map(tuple,test_kpts[:,0:2]))
+    ref_set = set(map(tuple,ref_kpts[:,0:2]))
 
+    print(str(test_kpts.shape[0]-len(test_set))+" duplicate kpts found in test")
+    print(str(ref_kpts.shape[0]-len(ref_set))+" duplicate kpts found in ref")
+
+    common_set = test_set.intersection(ref_set)
+
+    print(str(len(test_set)-len(common_set))+" kpts found in test but not in ref")
+    print(str(len(ref_set)-len(common_set))+" kpts found in ref but not in test")
+
+    dist_tol = 0.01
+    
+    nb_test_not_in_ref = 0
+    for i in xrange(test_kpts.shape[0]):
+        found = False
+        for j in xrange(ref_kpts.shape[0]):
+            dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
+            if dist<dist_tol:
+                found = True
+        if not found:
+            print("KeyPoint not found: "+str((test_kpts[i,0:1])))
+            nb_test_not_in_ref+=1
+
+    print(str(nb_test_not_in_ref)+" test kpts have no spatially close match in ref")
+
+    nb_ref_not_in_test = 0
+    for i in xrange(test_kpts.shape[0]):
+        found = False
+        for j in xrange(ref_kpts.shape[0]):
+            dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
+            if dist<dist_tol:
+                found = True
+        if not found:
+            print("KeyPoint not found: "+str((test_kpts[i,0:1])))
+            nb_ref_not_in_test+=1
+
+    print(str(nb_ref_not_in_test)+" ref kpts have no spatially close match in test")
+
+    np.testing.assert_equal(nb_ref_not_in_test,0)
+    np.testing.assert_equal(nb_test_not_in_ref,0)
+    
 def unit_matching():
     try:
         os.mkdir('s2p_tmp')
