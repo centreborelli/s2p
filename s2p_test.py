@@ -39,7 +39,7 @@ def unit_image_keypoints():
     nb_test_not_in_ref = 0
     for i in range(test_kpts.shape[0]):
         found = False
-        for j in xrange(ref_kpts.shape[0]):
+        for j in range(ref_kpts.shape[0]):
             dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
             if dist<dist_tol:
                 found = True
@@ -52,7 +52,7 @@ def unit_image_keypoints():
     nb_ref_not_in_test = 0
     for i in range(test_kpts.shape[0]):
         found = False
-        for j in xrange(ref_kpts.shape[0]):
+        for j in range(ref_kpts.shape[0]):
             dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
             if dist<dist_tol:
                 found = True
