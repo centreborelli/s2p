@@ -13,11 +13,11 @@ import os
 import s2p
 import s2plib
 
+
+############### Tests functions  #######################
+
 def unit_image_keypoints():
-    try:
-        os.mkdir('s2p_tmp')
-    except:
-        pass
+
     kpts = s2plib.sift.image_keypoints('testdata/input_triplet/img_02.tif',100,100,200,200)
 
     test_kpts = np.loadtxt(kpts)
@@ -64,12 +64,10 @@ def unit_image_keypoints():
 
     np.testing.assert_equal(nb_ref_not_in_test,0)
     np.testing.assert_equal(nb_test_not_in_ref,0)
+
     
 def unit_matching():
-    try:
-        os.mkdir('s2p_tmp')
-    except:
-        pass
+    
     test_matches = s2plib.sift.keypoints_match('testdata/units/sift1.txt','testdata/units/sift2.txt')
     expected_matches = np.loadtxt('testdata/expected_output/units/unit_keypoints_match.txt')
 
@@ -78,12 +76,10 @@ def unit_matching():
     
     # Check that all matches are the same
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
+
+
     
 def unit_matches_from_rpc():
-    try:
-        os.mkdir('s2p_tmp')
-    except:
-        pass
 
     s2plib.config.cfg['disable_srtm'] = True
     rpc1 = s2plib.rpc_model.RPCModel('testdata/input_pair/rpc_01.xml')
@@ -96,7 +92,9 @@ def unit_matches_from_rpc():
     np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
 
-def end2end(config,ref_dsm,absmean_tol,percentile_tol):
+
+
+def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
     print('Configuration file: ',config)
     print('Reference DSM:',ref_dsm,os.linesep)
@@ -131,12 +129,17 @@ def end2end(config,ref_dsm,absmean_tol,percentile_tol):
     print('99th percentile abs difference',percentile,'(tolerance='+str(percentile_tol)+')')
     assert(percentile < percentile_tol)
 
-# Register tests
+############### Registered tests #######################
+    
 registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
                      'unit_matching' : (unit_matching,[]),
                      'unit_matches_from_rpc' : (unit_matches_from_rpc,[]),
                      'end2end_pair' : (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1]),
                      'end2end_triplet' : (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])}
+
+
+
+############### Tests main  #######################
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
@@ -165,6 +168,10 @@ if __name__ == '__main__':
 
     # First, export the default config to start each test from a clean config
     test_default_cfg = s2plib.config.cfg
+
+    # Ensure default temporary dir exists
+    if not os.path.isdir(test_default_cfg['temporary_dir']):
+        os.mkdir(test_default_cfg['temporary_dir'])
     
     failed = []
     
