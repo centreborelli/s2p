@@ -4,6 +4,7 @@
 # Copyright (C) 2017, Carlo de Franchis <carlo.de-franchis@polytechnique.org>
 
 from __future__ import print_function
+
 import numpy as np
 from osgeo import gdal
 import argparse
@@ -36,7 +37,7 @@ def unit_image_keypoints():
     dist_tol = 0.01
     
     nb_test_not_in_ref = 0
-    for i in xrange(test_kpts.shape[0]):
+    for i in range(test_kpts.shape[0]):
         found = False
         for j in xrange(ref_kpts.shape[0]):
             dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
@@ -49,7 +50,7 @@ def unit_image_keypoints():
     print(str(nb_test_not_in_ref)+" test kpts have no spatially close match in ref")
 
     nb_ref_not_in_test = 0
-    for i in xrange(test_kpts.shape[0]):
+    for i in range(test_kpts.shape[0]):
         found = False
         for j in xrange(ref_kpts.shape[0]):
             dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
