@@ -64,7 +64,7 @@ void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
 
     fprintf(f, "comment created by S2P\n");
     if (zone >= 0)
-        fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
+        fprintf(f, "comment projection: UTM %02d%s\n", zone, (hem ? "N" : "S"));
     fprintf(f, "element vertex %d\n", npoints);
     fprintf(f, "property double x\n");
     fprintf(f, "property double y\n");

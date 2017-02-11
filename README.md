@@ -8,6 +8,9 @@ QuickBird, Spot or Ikonos. It generates 3D point clouds and digital surface
 models from stereo pairs (two images) or tri-stereo sets (three images) in a
 complete automatic fashion.
 
+A wide variety of stereo correlation algorithms are supported, including several 
+flavors of semi-global matching (SGM), TV-L1 optical flow, etc. 
+
 The main language is Python, although several operations are handled by
 binaries written in C.
 
