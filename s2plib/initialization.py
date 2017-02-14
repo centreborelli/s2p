@@ -248,6 +248,7 @@ def tiles_full_info(tw, th):
         tile_cfg = copy.deepcopy(cfg)
         x, y, w, h = tile['coordinates']
         tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
+        tile_cfg['full_img'] = False
         tile_cfg['max_processes'] = 1
         tile_cfg['omp_num_threads'] = 1
 
