@@ -38,7 +38,7 @@ float march_regular(float a, float b, float c, float d, float x, float y)
 	assert(x0 >= 0); assert(x0 <= 1); assert(x0 <= x);
 	assert(x1 >= 0); assert(x1 <= 1); assert(x1 >= x);
 	float ix = ((x - x0)*c + (x1 - x)*b)/(x1 - x0);
-	assert(ix >= a); assert(ix <= c);
+	//assert(ix >= a); assert(ix <= c);
 
 	return 1*ix;
 }
@@ -54,7 +54,7 @@ float march_cyclic(float a, float b, float c, float d, float x, float y)
 		float ix = a;
 		if (alpha > 0) {
 			float y0=(x+alpha*y)/alpha;
-			assert(y0 >= 0); assert(y0 <= 1);
+			//assert(y0 >= 0); assert(y0 <= 1);
 			ix = b*y0 + a*(1 - y0);
 		}
 		return ix;
@@ -66,7 +66,7 @@ float march_cyclic(float a, float b, float c, float d, float x, float y)
 		float ix = c;
 		if (beta < 1) {
 			float y0=(1-x+(1-beta)*y)/(1-beta);
-			assert(y0 >= 0); assert(y0 <= 1);
+			//assert(y0 >= 0); assert(y0 <= 1);
 			ix = d*y0 + c*(1 - y0);
 		}
 		return ix;
@@ -165,18 +165,18 @@ float march_singular_raw(float a, float b, float c, float d, float x, float y)
 	//return 0;
 }
 
-#include <stdlib.h>
+//#include <stdlib.h>
 // read an environment variable to switch singularity treatment
 static int MARCH_SADDLES(void)
 {
 	static int reat = 0;
 	static int value = 3;
-	if (!reat) {
-		reat = 1;
-		char *s = getenv("MARCH_SADDLES");
-		if (s)
-			value = atoi(s);
-	}
+	//if (!reat) {
+	//	reat = 1;
+	//	char *s = getenv("MARCH_SADDLES");
+	//	if (s)
+	//		value = atoi(s);
+	//}
 	return value;
 }
 
@@ -241,4 +241,25 @@ float marchi(float a, float b, float c, float d, float x, float y)
 	else
 		assert(0);
 	return 0;
+}
+
+static float getpix(float *x, int w, int h, int i, int j)
+{
+	if (i < 0) i = 0;
+	if (j < 0) j = 0;
+	if (i >= w) i = w-1;
+	if (j >= h) j = h-1;
+	return x[j*w+i];
+}
+
+static float marching_interpolation_at(float *x, int w, int h, float p, float q)
+{
+	int ip = p;
+	int iq = q;
+	float a = getpix(x, w, h, ip  , iq  );
+	float b = getpix(x, w, h, ip  , iq+1);
+	float c = getpix(x, w, h, ip+1, iq  );
+	float d = getpix(x, w, h, ip+1, iq+1);
+	float r = marchi(a, b, c, d, p-ip, q-iq);
+	return r;
 }

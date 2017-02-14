@@ -112,7 +112,7 @@ PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop bdint morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective\
-	remove_small_cc plambda
+	remove_small_cc plambda homwarp
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten plyextrema plytodsm
