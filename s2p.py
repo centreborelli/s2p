@@ -377,17 +377,19 @@ def plys_to_dsm(tiles):
     clouds = ' '.join(os.path.join(t['dir'], 'cloud.ply') for t in tiles)
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
-        common.run("ls %s | plyflatten -bb \"%f %f %f %f \" %f %s" % (clouds,
-                                                                      bbx[0],
-                                                                      bbx[1],
-                                                                      bbx[2],
-                                                                      bbx[3],
-                                                                      cfg['dsm_resolution'],
-                                                                      out_dsm))
+        xoff = bbx[0]
+        yoff = bbx[3]
+        xsize = int(np.ceil((bbx[1]-bbx[0]) / cfg['dsm_resolution']))
+        ysize = int(np.ceil((bbx[3]-bbx[2]) / cfg['dsm_resolution']))
+
+        common.run("ls %s | plyflatten -srcwin \"%f %f %d %d \" %f %s" % (clouds,
+                                                                          xoff, yoff, xsize, ysize,
+                                                                          cfg['dsm_resolution'],
+                                                                          out_dsm))
     else:
         common.run("ls %s | plyflatten %f %s" % (clouds, cfg['dsm_resolution'],
                                                  out_dsm))
-        # ls files | ./bin/plyflatten [-c column] [-bb "xmin xmax ymin ymax"] resolution out.tif
+        # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
 
 
 def lidar_preprocessor(tiles):
