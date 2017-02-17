@@ -1,5 +1,6 @@
-CXXFLAGS = -march=native -O3 `gdal-config --cflags`
-CXXLIBS = `gdal-config --libs`
+CXXFLAGS ?= -march=native -O3
+override CXXFLAGS := $(CXXFLAGS) `gdal-config --cflags`
+override CXXLIBS  := $(CXXLIBS) `gdal-config --libs`
 
 OBJ = main.o \
       LibImages/LibImages.o \

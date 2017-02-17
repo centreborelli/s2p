@@ -18,7 +18,7 @@
 #include "parsenumbers.c"
 #include "pickopt.c"
 
-#define USE_TIMING
+#undef USE_TIMING
 #include "timing.h"
 
 
@@ -101,7 +101,7 @@ void write_ply_header(FILE* f, uint64_t npoints, int zone,
     fprintf(f, "format binary_little_endian 1.0\n");
     fprintf(f, "comment created by S2P\n");
     if (zone >= 0)
-        fprintf(f, "comment projection: UTM %i%s\n", zone, (hem ? "N" : "S"));
+        fprintf(f, "comment projection: UTM %02d%s\n", zone, (hem ? "N" : "S"));
     fprintf(f, "element vertex %" PRIu64 "\n", npoints);
     fprintf(f, "property double x\n");
     fprintf(f, "property double y\n");

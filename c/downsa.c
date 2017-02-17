@@ -17,7 +17,8 @@
 #define EVENP(x) (!((x)&1))
 #endif
 
-#include "fragments.c"
+#include "fail.c"
+#include "xmalloc.c"
 
 struct statistics_float {
 	float min, max, median, average, sample, variance, middle, laverage;
@@ -38,6 +39,13 @@ int randombounds(int a, int b)
 	return a + rand()%(b - a + 1);
 }
 
+int compare_floats(const void *a, const void *b)
+{
+	const float *da = (const float *) a;
+	const float *db = (const float *) b;
+	return (*da > *db) - (*da < *db);
+}
+
 static void statistics_getf_spoilable(struct statistics_float *s, float *f,
 		int n)
 {
@@ -49,7 +57,7 @@ static void statistics_getf_spoilable(struct statistics_float *s, float *f,
 		case -1: break;
 		case 0: s->middle += f[n/2]; s->middle /=2; break;
 		case 1: s->middle = f[n/2]; break;
-		default: error("bad STATISTIC_MEDIAN_BIAS %d", mt);
+		default: fail("bad STATISTIC_MEDIAN_BIAS %d", mt);
 	}
 	//
 	qsort(f, n, sizeof*f, compare_floats);
@@ -64,7 +72,7 @@ static void statistics_getf_spoilable(struct statistics_float *s, float *f,
 			case -1: break;
 			case 0: s->median += f[n/2]; s->median /=2; break;
 			case 1: s->median = f[n/2]; break;
-			default: error("bad STATISTIC_MEDIAN_BIAS %d", mtype);
+			default: fail("bad STATISTIC_MEDIAN_BIAS %d", mtype);
 		}
 	}
 	s->average = 0;
@@ -132,7 +140,7 @@ static void downsa2d(float *oy, float *ox, int w, int h, int pd, int n, int ty)
 		case 'V': g = s.laverage; break;
 		case 'r': g = s.sample;   break;
 		case 'f': g = vv[0];      break;
-		default:  error("downsa type %c not implemented", ty);
+		default:  fail("downsa type %c not implemented", ty);
 		}
 		y[j][i][l] = g;
 	}

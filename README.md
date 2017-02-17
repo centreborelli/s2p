@@ -2,11 +2,16 @@
 
 [![Build Status](https://travis-ci.org/MISS3D/s2p.svg?branch=master)](https://travis-ci.org/MISS3D/s2p)
 
-This code implements a stereo pipeline which produces elevation models from
+This software implements a stereo pipeline which produces elevation models from
 images taken by high resolution optical satellites such as Pléiades, WorldView,
 QuickBird, Spot or Ikonos. It generates 3D point clouds and digital surface
 models from stereo pairs (two images) or tri-stereo sets (three images) in a
-complete automatic fashion.
+completely automatic fashion.
+
+S2P was used to win the 2016 [IARPA Multi-View Stereo 3D Mapping Challenge](https://www.iarpa.gov/challenges/3dchallenge.html). 
+
+A wide variety of stereo correlation algorithms are supported, including several 
+flavors of semi-global matching (SGM), TV-L1 optical flow, etc. 
 
 The main language is Python, although several operations are handled by
 binaries written in C.

@@ -1,7 +1,7 @@
 // this is common code for the "synflow" and "paraflow" programs
 
 
-
+#include "fail.c"
 #include "getpixel.c"
 #include "marching_interpolation.c"
 
@@ -19,7 +19,6 @@ static float interpolate_bilinear(float a, float b, float c, float d,
 static float interpolate_nearest(float a, float b, float c, float d,
 					float x, float y)
 {
-	// return a;
 	if (x<0.5) return y<0.5 ? a : b;
 	else return y<0.5 ? c : d;
 }
@@ -27,14 +26,12 @@ static float interpolate_nearest(float a, float b, float c, float d,
 static float interpolate_cell(float a, float b, float c, float d,
 					float x, float y, int method)
 {
-	//fprintf(stderr, "icell %g %g %g %g (%g %g)\n", a,b,c,d,x,y);
 	switch(method) {
 	case 0: return interpolate_nearest(a, b, c, d, x, y);
 	case 1: return marchi(a, b, c, d, x, y);
 	case 2: return interpolate_bilinear(a, b, c, d, x, y);
-	default: error("caca de vaca");
+	default: fail("caca de vaca");
 	}
-	//return -1;
 }
 
 static void general_interpolate(float *result,
@@ -42,25 +39,16 @@ static void general_interpolate(float *result,
 		int m) // method
 {
 	getsample_operator P = get_sample_operator(getsample_0);
-	//if (p < 0 || q < 0 || p+1 >= w || q+1 >= h) {
-	//	FORL(pd) result[l] = 0;
-	//} else {
-		int ip = floor(p);
-		int iq = floor(q);
-		FORL(pd) {
-			float a = P(x, w, h, pd, ip  , iq  , l);
-			float b = P(x, w, h, pd, ip  , iq+1, l);
-			float c = P(x, w, h, pd, ip+1, iq  , l);
-			float d = P(x, w, h, pd, ip+1, iq+1, l);
-			//float a = x[iq][ip][l];
-			//float b = x[iq+1][ip][l];
-			//float c = x[iq][ip+1][l];
-			//float d = x[iq+1][ip+1][l];
-			float v = interpolate_cell(a, b, c, d, p-ip, q-iq, m);
-			//fprintf(stderr, "p%g q%g ip%d iq%d a%g b%g c%g d%g l%d v%g\n", p, q, ip, iq, a, b, c, d, l, v);
-			result[l] = v;
-		}
-	//}
+	int ip = floor(p);
+	int iq = floor(q);
+	FORL(pd) {
+		float a = P(x, w, h, pd, ip  , iq  , l);
+		float b = P(x, w, h, pd, ip  , iq+1, l);
+		float c = P(x, w, h, pd, ip+1, iq  , l);
+		float d = P(x, w, h, pd, ip+1, iq+1, l);
+		float v = interpolate_cell(a, b, c, d, p-ip, q-iq, m);
+		result[l] = v;
+	}
 }
 
 static void affine_map(double y[2], double A[6], double x[2])
@@ -69,41 +57,12 @@ static void affine_map(double y[2], double A[6], double x[2])
 	y[1] = A[3]*x[0] + A[4]*x[1] + A[5];
 }
 
-//static void apply_affinity(float *py, float *x, int w, int h, int pd,
-//		double A[6])
-//{
-//	float (*y)[w][pd] = (void*)py;
-//	FORJ(h) FORI(w) {
-//		double p[2] = {i, j}, q[2];
-//		affine_map(q, A, p);
-//		float val[pd];
-//		general_interpolate(val, x, w, h, pd, q[0], q[1], 2);
-//		FORL(pd)
-//			y[j][i][l] = val[l];
-//	}
-//}
-
 static void projective_map(double y[2], double H[9], double x[2])
 {
 	double z = H[6]*x[0] + H[7]*x[1] + H[8];
 	y[0] = (H[0]*x[0] + H[1]*x[1] + H[2])/z;
 	y[1] = (H[3]*x[0] + H[4]*x[1] + H[5])/z;
 }
-
-//static void apply_homography(float *py, float *x, int w, int h, int pd,
-//			double H[9])
-//{
-//	float (*y)[w][pd] = (void*)py;
-//	FORJ(h) FORI(w) {
-//		double p[2] = {i, j}, q[2];
-//		projective_map(q, H, p);
-//		float val[pd];
-//		general_interpolate(val, x, w, h, pd, q[0], q[1], 2);
-//		FORL(pd)
-//			y[j][i][l] = val[l];
-//	}
-//}
-
 
 // (x,y) |-> (x+(a*R^2), y+(a*R^2))
 // R^2 = x*x + y*y
@@ -115,32 +74,11 @@ static void projective_map(double y[2], double H[9], double x[2])
 static double solvecubicspecial(double a, double b)
 {
 	if (fabs(a) < 1e-29) {
-		//error("significant errors introduced for a=%g", a);
 		return b;
 	}
 	long double x;
 	long double r;
 	if (a < 0) {
-		//double complex aa;
-		//((double *)&aa)[0] = a;
-		//((double *)&aa)[1] = 0;
-		//double complex bb;
-		//((double *)&bb)[0] = b;
-		//((double *)&bb)[1] = 0;
-		//printf("aa = %g + %g __I__\n", creal(aa), cimag(aa));
-		//printf("bb = %g + %g __I__\n", creal(bb), cimag(bb));
-		//double complex xx, rr;
-		//xx = cpow(csqrt((27*aa*bb*bb+4)/aa)/(2*sqrt(27)*aa)+bb/(2*aa),1.0/3);
-		//printf("xx = %g + %g __I__\n", creal(xx), cimag(xx));
-		//rr = xx-1/(3*aa*xx);
-		//printf("rr = %g + %g __I__\n", creal(rr), cimag(rr));
-		//return creal(rr);
-
-		//error("not yet inverted");
-		// the case a<0 corresponds to a cubic having three real roots,
-		// and Cardano's formula involves complex numbers.  To avoid
-		// complex numbers, the trigonometric representation of
-		// solutions should be used instead.
 // a*X*X*X + X - X' = 0
 // X*X*X + (1/a)*X - X'/a = 0
 // p = 1/a, q=b/a;
@@ -174,32 +112,6 @@ static double parabolicdistortion(double a, double x)
 {
 	return x + a*x*x*x;
 }
-
-//static void apply_radialpol(float *py, float *x, int w, int h, int pd,
-//		double *param)
-//{
-//	float (*y)[w][pd] = (void*)py;
-//	double c[2] = {param[0], param[1]};
-//	double a = param[2];
-//	fprintf(stderr, "radialpol (%g,%g)[%g]\n", c[0], c[1], a);
-//	FORJ(h) FORI(w) {
-//		double p[2] = {i, j}, q[2];
-//		double r = hypot(p[0]-c[0], p[1]-c[1]);
-//		double R = parabolicdistortion(a, r);
-//		if (r > 0) {
-//			q[0] = c[0] + (R/r)*(i - c[0]);
-//			q[1] = c[1] + (R/r)*(j - c[1]);
-//		} else {
-//			q[0] = 0;
-//			q[1] = 0;
-//		}
-//		float val[pd];
-//		general_interpolate(val, x, w, h, pd, q[0], q[1], 2);
-//		FORL(pd) {
-//			y[j][i][l] = val[l];
-//		}
-//	}
-//}
 
 static void invert_affinity(double invA[6], double A[6])
 {
@@ -364,7 +276,7 @@ static double produce_homography(double H[9], int w, int h,
 		homography_from_eight_points(R, a[0], a[1], a[2], a[3],
 				b[0], b[1], b[2], b[3]);
 		FORI(9) H[i] = R[i/3][i%3];
-	} else error("unrecognized homography type \"%s\"", homtype);
+	} else fail("unrecognized homography type \"%s\"", homtype);
 	return 0;
 }
 
@@ -481,7 +393,7 @@ static double produce_affinity(double A[6], int w, int h,
 			0, scale, (1-scale)*H/2.0
 		};
 		FORI(6) A[i] = R[i];
-	} else error("unrecognized affinity type \"%s\"", afftype);
+	} else fail("unrecognized affinity type \"%s\"", afftype);
 	return 0;
 }
 
@@ -501,7 +413,7 @@ static double produce_radial_model(double A[3], double iA[3], int w, int h,
 		double p = v[2];
 		double a = p*w/100.0;
 		A[2] = (8*a)/(1.0*w*w*w);
-	} else error("non-raw radial model not yet supported");
+	} else fail("non-raw radial model not yet supported");
 	if (A[2] < 0) {
 		// TODO: some more fine-grained warnings about warping
 		double a = -A[2];
@@ -532,7 +444,7 @@ static double produce_iradial_model(double A[3], double iA[3], int w, int h,
 		double p = v[2];
 		double a = p*w/100.0;
 		A[2] = (8*a)/(1.0*w*w*w);
-	} else error("non-raw radial model not yet supported");
+	} else fail("non-raw radial model not yet supported");
 	return 0;
 }
 
@@ -663,14 +575,9 @@ static int parse_flow_name(int *vp, int *hidden_id, char *model_name)
 		}
 		i = i + 1;
 	}
-	error("unrecognized transform name %s", model_name);
+	fail("unrecognized transform name %s", model_name);
 	//return 0;
 }
-
-//#include "smapa.h"
-//SMART_PARAMETER_SILENT(SYNFLOW_VERBOSE,0)
-
-//static void invert_combi2(double H[15], 
 
 // "API"
 // fills H, iH and other fields
@@ -681,7 +588,7 @@ static void produce_flow_model(struct flow_model *f,
 	int vp;
 	f->nh = parse_flow_name(&vp, &f->hidden_id, name);
 	if (vp != np)
-		error("flow model \"%s\" expects %d parameters but got %d",
+		fail("flow model \"%s\" expects %d parameters but got %d",
 				name, vp, np);
 	f->model_name = name;
 	f->w = w;
@@ -722,13 +629,7 @@ static void produce_flow_model(struct flow_model *f,
 		invert_homography9(invH, H+3);
 		FORI(15) f->H[i] = H[i];
 		FORI(9) f->iH[i] = invH[i];
-	//} else if (f->hidden_id == FLOWMODEL_HIDDEN_ICOMBI2) {
-	//	assert(f->nh == 15);
-	//	double H[15], invH[15];
-	//	produce_icombi2_model(H, invH, w, h, f->model_name, f->p);
-	//	FORI(15) f->H[i] = H[i];
-	//	FORI(15) f->iH[i] = invH[i];
-	} else error("flow model \"%s\" not yet implemented", name);
+	} else fail("flow model \"%s\" not yet implemented", name);
 
 	//if (SYNFLOW_VERBOSE()) {
 	//	FORI(np) fprintf(stderr, "pfm p[%d] = %g\n", i, f->p[i]);
@@ -808,14 +709,9 @@ static void apply_flow(float y[2], struct flow_model *f, float x[2], bool inv)
 		apply_flowmodel_pradial(y, tmp2, f->H + 12, !inv);
 		break;
 				      }
-	default: error("bizarre");
+	default: fail("bizarre");
 	}
 }
-
-//// evaluate the inverse flow vector at one given target point
-//static void apply_invflow(float y[2], struct flow_model *f, float x[2])
-//{
-//}
 
 // "API"
 // fill a image with the vector field of the given flow
@@ -865,82 +761,3 @@ static void transform_forward(float *yy, struct flow_model *f, float *xx,
 			y[j][i][l] = val[l];
 	}
 }
-
-
-//static void apply_parametric_invflow(float *y, float *x, int w, int h, int pd,
-//		char *model_id, double *param, int nparam)
-//{
-//	FORI(w*h*pd) y[i] = -42;
-//	if (false) { ;
-//	} else if (0 == strcmp(model_id, "traslation")) {
-//		assert(nparam == 2);
-//		double a[6] = {1, 0, param[0], 0, 1, param[1]};
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "traslation_s")) {
-//		assert(nparam == 2);
-//		double a[6] = {1, 0, w*param[0], 0, 1, h*param[1]};
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "euclidean")) {
-//		assert(nparam == 3);
-//		double a[6] = {cos(param[2]), sin(param[2]), param[0],
-//			-sin(param[2]), cos(param[2]), param[1]};
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "euclidean_s")) {
-//		assert(nparam == 3);
-//		double a[6] = {cos(param[2]), sin(param[2]), w*param[0],
-//			-sin(param[2]), cos(param[2]), h*param[1]};
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "similar")) {
-//		assert(nparam == 4);
-//		double r = param[3];
-//		double a[6] = {r*cos(param[2]), r*sin(param[2]), param[0],
-//			-r*sin(param[2]), r*cos(param[2]), param[1]};
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "similar_s")) {
-//		assert(nparam == 4);
-//		double r = param[3]/w;
-//		double a[6] = {r*cos(param[2]), r*sin(param[2]), w*param[0],
-//			-r*sin(param[2]), r*cos(param[2]), h*param[1]};
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "affine")) {
-//		assert(nparam == 6);
-//		double a[6]; FORI(6) a[i] = param[i];
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "affine_s")) {
-//		error("not implemented");
-//		assert(nparam == 6);
-//		double a[6];
-//		apply_affinity(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "projective")) {
-//		assert(nparam == 8);
-//		double a[9]; FORI(8) a[i] = param[i];
-//		a[8] = 1;
-//		apply_homography(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "projective_s")) {
-//		error("not implemented");
-//		assert(nparam == 8);
-//		double a[9];
-//		a[8] = 1;
-//		apply_homography(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "cparabolic")) {
-//		assert(nparam == 1);
-//		double a[3] = {w/2.0, h/2.0, param[0]};
-//		apply_radialpol(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "cparabolic_s")) {
-//		assert(nparam == 1);
-//		double a[3] = {w/2.0, h/2.0, w*param[0]};
-//		apply_radialpol(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "parabolic")) {
-//		assert(nparam == 3);
-//		double a[3] = {param[0], param[1], param[2]};
-//		apply_radialpol(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "parabolic_s")) {
-//		assert(nparam == 3);
-//		double a[3] = {w*param[0], h*param[1], w*param[2]};
-//		apply_radialpol(y, x, w, h, pd, a);
-//	} else if (0 == strcmp(model_id, "real1")) {
-//		error("not yet implemented");
-//	} else if (0 == strcmp(model_id, "real2")) {
-//		error("not yet implemented");
-//	} else error("unrecognized flow model %s", model_id);
-//}
