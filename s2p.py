@@ -323,31 +323,50 @@ def mean_heights(tile):
 
     validity_mask = maps.sum(axis=2)  # sum to propagate nan values
     validity_mask += 1 - validity_mask  # 1 on valid pixels, and nan on invalid
-    return [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)]
+
+    # save the n mean height values to a txt file in the tile directory
+    np.savetxt(os.path.join(tile['dir'], 'local_mean_heights.txt'),
+               [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)])
 
 
-def heights_fusion(tile, mean_heights_global):
+def global_mean_heights(tiles):
+    """
+    """
+    local_mean_heights = [np.loadtxt(os.path.join(t['dir'], 'local_mean_heights.txt'))
+                          for t in tiles]
+    global_mean_heights = np.nanmean(local_mean_heights, axis=0)
+    for i in range(len(cfg['images']) - 1):
+        np.savetxt(os.path.join(cfg['out_dir'],
+                                'global_mean_height_pair_{}.txt'.format(i+1)),
+                   [global_mean_heights[i]])
+
+
+def heights_fusion(tile):
     """
     Merge the height maps computed for each image pair and generate a ply cloud.
 
     Args:
         tile: a dictionary that provides all you need to process a tile
-        mean_heights_global: list containing the means of all the global height
-            maps
     """
     tile_dir = tile['dir']
-    nb_pairs = len(mean_heights_global)
     height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
-                   for i in range(nb_pairs)]
+                   for i in range(len(cfg['images']) - 1)]
 
     # remove spurious matches
     if cfg['cargarse_basura']:
         for img in height_maps:
             common.cargarse_basura(img, img)
 
+    # load global mean heights
+    global_mean_heights = []
+    for i in range(len(cfg['images']) - 1):
+        x = np.loadtxt(os.path.join(cfg['out_dir'],
+                                    'global_mean_height_pair_{}.txt'.format(i+1)))
+        global_mean_heights.append(x)
+
     # merge the height maps (applying mean offset to register)
     fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
-                   mean_heights_global, averaging=cfg['fusion_operator'],
+                   global_mean_heights, averaging=cfg['fusion_operator'],
                    threshold=cfg['fusion_thresh'])
 
     if cfg['clean_intermediate']:
@@ -362,6 +381,10 @@ def heights_to_ply(tile):
     Args:
         tile: a dictionary that provides all you need to process a tile
     """
+    # merge the n-1 height maps of the tile (n = nb of images)
+    heights_fusion(tile)
+
+    # compute a ply from the merged height map
     out_dir = tile['dir']
     x, y, w, h = tile['coordinates']
     z = cfg['subsampling_factor']
@@ -429,8 +452,9 @@ def lidar_preprocessor(tiles):
 
 
 ALL_STEPS = ['initialisation', 'local-pointing', 'global-pointing',
-             'rectification', 'matching', 'triangulation', 'dsm-rasterization',
-             'lidar-preprocessor']
+             'rectification', 'matching', 'triangulation',
+             'disparity-to-height', 'global-mean-heights', 'heights-to-ply',
+             'dsm-rasterization', 'lidar-preprocessor']
 
 
 def main(config_file, steps=ALL_STEPS):
@@ -486,26 +510,24 @@ def main(config_file, steps=ALL_STEPS):
         print('running stereo matching...')
         parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
 
-    if 'triangulation' in steps:
-        if n > 2:
+    if n > 2:
+        if 'disparity-to-height' in steps:
             print('computing height maps...')
             parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
 
-            print('registering height maps...')
-            mean_heights_local = parallel.launch_calls(mean_heights, tiles,
-                                                       nb_workers)
+            print('computing local pairwise height offsets...')
+            parallel.launch_calls(mean_heights, tiles, nb_workers)
 
+        if 'global-mean-heights' in steps:
             print('computing global pairwise height offsets...')
-            mean_heights_global = np.nanmean(mean_heights_local, axis=0)
+            global_mean_heights(tiles)
 
-            print('merging height maps...')
-            parallel.launch_calls(heights_fusion, tiles, nb_workers,
-                                  mean_heights_global)
-
-            print('computing point clouds...')
+        if 'heights-to-ply' in steps:
+            print('merging height maps and computing point clouds...')
             parallel.launch_calls(heights_to_ply, tiles, nb_workers)
 
-        else:
+    else:
+        if 'triangulation' in steps:
             print('triangulating tiles...')
             parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
 
