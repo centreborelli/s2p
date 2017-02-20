@@ -26,8 +26,8 @@ def unit_image_keypoints():
     test_set = set(map(tuple,test_kpts[:,0:2]))
     ref_set = set(map(tuple,ref_kpts[:,0:2]))
 
-    print(str(test_kpts.shape[0]-len(test_set))+" duplicate kpts found in test")
-    print(str(ref_kpts.shape[0]-len(ref_set))+" duplicate kpts found in ref")
+    print(str(test_kpts.shape[0]-len(test_set))+" spatially redundant kpts found in test")
+    print(str(ref_kpts.shape[0]-len(ref_set))+" spatially redundant kpts found in ref")
 
     common_set = test_set.intersection(ref_set)
 
