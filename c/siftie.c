@@ -15,12 +15,6 @@
 #define FORI(n) for(int i=0;i<(n);i++)
 #define FORJ(n) for(int j=0;j<(n);j++)
 
-#ifndef BAD_MIN
-#define BAD_MIN(a,b)  (((a)<(b))? (a) : (b))
-#endif
-#ifndef BAD_MAX
-#define BAD_MAX(a,b)  (((a)<(b))? (b) : (a))
-#endif
 
 
 #if USE_KDTREE
@@ -914,8 +908,8 @@ int siftsplit(struct sift_keypoint *p, int n,
 {
 	FORI(n) mask[i][0] = 0;
 	FORI(n) FORJ(4) mask[i][1+j] = -1;
-	float maxx = -INFINITY; FORI(n) maxx = BAD_MAX(maxx,p[i].pos[0]);
-	float maxy = -INFINITY; FORI(n) maxy = BAD_MAX(maxy,p[i].pos[1]);
+	float maxx = -INFINITY; FORI(n) maxx = fmax(maxx,p[i].pos[0]);
+	float maxy = -INFINITY; FORI(n) maxy = fmax(maxy,p[i].pos[1]);
 	//int w = calcula_amplada(...);
 	//int r = calcula_nombre_de_rectangles(rx,ry,ox,oy,maxx,maxy);
 	int w = 1+(int)(maxx/(rx-ox));
