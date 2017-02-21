@@ -304,8 +304,8 @@ int main(int c, char *v[])
 		sscanf(srcwin, "%lf %lf %d %d", &xoff, &yoff, &xsize, &ysize);
 	}
 	else {
-		xsize = 1 + ceil((xmax - xmin) / resolution);
-		ysize = 1 + ceil((ymax - ymin) / resolution);
+		xsize = 1 + floor((xmax - xmin) / resolution);
+		ysize = 1 + floor((ymax - ymin) / resolution);
 		xoff = (xmax + xmin - resolution * xsize) / 2;
 		yoff = (ymax + ymin + resolution * ysize) / 2;
 	}
