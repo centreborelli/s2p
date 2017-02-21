@@ -67,7 +67,7 @@ __m128 computePatchDistance4(
   }
 
   //! Return the normalized result
-  return dist / float(i_im1.channels());
+  return dist / _mm_set1_ps(float(i_im1.channels()));
 }
 
 
