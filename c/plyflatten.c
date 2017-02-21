@@ -34,8 +34,8 @@ static int get_utm_zone_index_for_geotiff(char *utm_zone)
 	return out;
 }
 
-void set_geotif_header(char *tiff_fname, char *utm_zone, float xoff,
-		float yoff, float scale)
+void set_geotif_header(char *tiff_fname, char *utm_zone, double xoff,
+		double yoff, double scale)
 {
 	// open tiff file
 	TIFF *tif = XTIFFOpen(tiff_fname, "r+");
@@ -113,18 +113,18 @@ static size_t header_get_record_length_and_utm_zone(FILE *f_in, char *utm,
 	return n;
 }
 
-static void update_min_max(float *min, float *max, float x)
+static void update_min_max(double *min, double *max, double x)
 {
 	if (x < *min) *min = x;
 	if (x > *max) *max = x;
 }
 
-// re-scale a float between 0 and w
-static int rescale_float_to_int(double x, double min, double max, int w)
+// rescale a double :
+// min : start of interval
+// resolution : spacing between values
+static int rescale_double_to_int(double x, double min, double resolution)
 {
-	int r = w * (x - min)/(max - min);
-	if (r < 0) r = 0;
-	if (r >= w) r = w -1;
+        int r = (int) (floor((x-min)/resolution));
 	return r;
 }
 
@@ -137,7 +137,7 @@ struct images {
 };
 
 // update the output images with a new height
-static void add_height_to_images(struct images *x, int i, int j, float v)
+static void add_height_to_images(struct images *x, int i, int j, double v)
 {
 	uint64_t k = (uint64_t) x->w * j + i;
 	x->min[k] = fmin(x->min[k], v);
@@ -187,8 +187,8 @@ size_t get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *
 }
 
 // open a ply file, read utm zone in the header, and update the known extrema
-static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
-		float *ymax, char *utm, char *fname)
+static void parse_ply_points_for_extrema(double *xmin, double *xmax, double *ymin,
+		double *ymax, char *utm, char *fname)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -212,7 +212,7 @@ static void parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 
 // open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
-		float xmin, float xmax, float ymin, float ymax,
+		double xmin, double ymax, double resolution,
 		char utm_zone[3], char *fname, int col_idx)
 {
 	FILE *f = fopen(fname, "r");
@@ -236,16 +236,19 @@ static void add_ply_points_to_images(struct images *x,
 	double data[n];
 	while ( n == get_record(f, isbin, t, n, data) ) {
 
-		int i = rescale_float_to_int(data[0], xmin, xmax, x->w);
-		int j = rescale_float_to_int(-data[1], -ymax, -ymin, x->h);
-		if (col_idx == 2) {
-			add_height_to_images(x, i, j, data[2]);
-			assert(isfinite(data[2]));
-		}
-		else
-		{
-			unsigned int rgb = data[col_idx];
-			add_height_to_images(x, i, j, rgb);
+		int i = rescale_double_to_int(data[0], xmin, resolution);
+		int j = rescale_double_to_int(-data[1], -ymax, resolution);
+
+		if ((0 <= i) && (i < x->w) && (0 <= j) && (j < x->h)) {
+		  if (col_idx == 2) {
+		    add_height_to_images(x, i, j, data[2]);
+		    assert(isfinite(data[2]));
+		  }
+		  else
+		    {
+		      unsigned int rgb = data[col_idx];
+		      add_height_to_images(x, i, j, rgb);
+		    }
 		}
 
 	}
@@ -257,7 +260,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"ls files | %s [-c column] [-bb \"xmin xmax ymin ymax\"] resolution out.tif\n", s);
+			"ls files | %s [-c column] [-srcwin \"xoff yoff xsize ysize\"] resolution out.tif\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -266,21 +269,25 @@ void help(char *s)
 int main(int c, char *v[])
 {
 	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
-	const char *bbminmax = pick_option(&c, &v, "bb", "");
+	const char *srcwin = pick_option(&c, &v, "srcwin", "");
 
 	// process input arguments
 	if (c != 3) {
 		help(*v);
 		return 1;
 	}
-	float resolution = atof(v[1]);
+	double resolution = atof(v[1]);
 	char *filename_out = v[2];
 
 	// initialize x, y extrema values
-	float xmin = INFINITY;
-	float xmax = -INFINITY;
-	float ymin = INFINITY;
-	float ymax = -INFINITY;
+	double xmin = INFINITY;
+	double xmax = -INFINITY;
+	double ymin = INFINITY;
+	double ymax = -INFINITY;
+
+	// Subwindow from the source
+	double xoff, yoff;
+	int xsize, ysize;
 
 	// process each filename from stdin to determine x, y extremas and store the
 	// filenames in a list of strings, to be able to open the files again
@@ -292,24 +299,28 @@ int main(int c, char *v[])
 		l = push(l, fname);
 		parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, fname);
 	}
-	if (0 != strcmp(bbminmax, "") ) {
-		sscanf(bbminmax, "%f %f %f %f", &xmin, &xmax, &ymin, &ymax);
-	}
-	fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n", xmin, xmax, ymin, ymax);
 
-	// compute output image dimensions
-	int w = 1 + (xmax - xmin) / resolution;
-	int h = 1 + (ymax - ymin) / resolution;
+	if (0 != strcmp(srcwin, "") ) {
+		sscanf(srcwin, "%lf %lf %d %d", &xoff, &yoff, &xsize, &ysize);
+	}
+	else {
+		xsize = 1 + floor((xmax - xmin) / resolution);
+		ysize = 1 + floor((ymax - ymin) / resolution);
+		xoff = (xmax + xmin - resolution * xsize) / 2;
+		yoff = (ymax + ymin + resolution * ysize) / 2;
+	}
+	fprintf(stderr, "xmin: %lf, xmax: %lf, ymin: %lf, ymax: %lf\n", xmin, xmax, ymin, ymax);
+	fprintf(stderr, "xoff: %lf, yoff: %lf, xsize: %d, ysize: %d\n", xoff, yoff, xsize, ysize);
 
 	// allocate and initialize output images
 	struct images x;
-	x.w = w;
-	x.h = h;
-	x.min = xmalloc(w*h*sizeof(float));
-	x.max = xmalloc(w*h*sizeof(float));
-	x.cnt = xmalloc(w*h*sizeof(float));
-	x.avg = xmalloc(w*h*sizeof(float));
-	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+	x.w = xsize;
+	x.h = ysize;
+	x.min = xmalloc(xsize*ysize*sizeof(float));
+	x.max = xmalloc(xsize*ysize*sizeof(float));
+	x.cnt = xmalloc(xsize*ysize*sizeof(float));
+	x.avg = xmalloc(xsize*ysize*sizeof(float));
+	for (uint64_t i = 0; i < (uint64_t) xsize*ysize; i++)
 	{
 		x.min[i] = INFINITY;
 		x.max[i] = -INFINITY;
@@ -321,18 +332,18 @@ int main(int c, char *v[])
 	while (l != NULL)
 	{
 		// printf("FILENAME: \"%s\"\n", l->current);
-		add_ply_points_to_images(&x, xmin, xmax, ymin, ymax, utm, l->current, col_idx);
+	        add_ply_points_to_images(&x, xoff, yoff, resolution, utm, l->current, col_idx);
 		l = l->next;
 	}
 
 	// set unknown values to NAN
-	for (uint64_t i = 0; i < (uint64_t) w*h; i++)
+	for (uint64_t i = 0; i < (uint64_t) xsize*ysize; i++)
 		if (!x.cnt[i])
 			x.avg[i] = NAN;
 
 	// save output image
-	iio_save_image_float(filename_out, x.avg, w, h);
-	set_geotif_header(filename_out, utm, xmin, ymax, resolution);
+	iio_save_image_float(filename_out, x.avg, xsize, ysize);
+	set_geotif_header(filename_out, utm, xoff, yoff, resolution);
 
 	// cleanup and exit
 	free(x.min);
