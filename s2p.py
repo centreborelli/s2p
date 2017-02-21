@@ -129,6 +129,28 @@ def rectification_pair(tile, i):
         m = np.loadtxt(os.path.join(out_dir, 'sift_matches.txt'))
     except IOError:
         m = None
+
+    x, y, w, h = tile['coordinates']
+
+    for n in tile['neighborhood_dirs']:
+        if n != tile['dir']:
+            nei_dir = os.path.join(n, 'pair_{}'.format(i))
+            sift_from_neighborhood = os.path.join(nei_dir, 'sift_matches.txt')
+            try:
+                m_n = np.loadtxt(sift_from_neighborhood)
+                # added sifts in the ellipse of semi axes : (3*w/4, 3*h/4)
+                m_n = m_n[np.where(np.linalg.norm([(m_n[:,0]-(x+w/2))/w,
+                                                   (m_n[:,1]-(y+h/2))/h],
+                                                  axis=0) < 3.0/4)]
+
+                if m is None:
+                    m = m_n
+                else:
+                    m = np.concatenate((m, m_n))
+            except IOError:
+                print('%s does not exist' % sift_from_neighborhood)
+                pass
+
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
@@ -377,17 +399,19 @@ def plys_to_dsm(tiles):
     clouds = ' '.join(os.path.join(t['dir'], 'cloud.ply') for t in tiles)
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
-        common.run("ls %s | plyflatten -bb \"%f %f %f %f \" %f %s" % (clouds,
-                                                                      bbx[0],
-                                                                      bbx[1],
-                                                                      bbx[2],
-                                                                      bbx[3],
-                                                                      cfg['dsm_resolution'],
-                                                                      out_dsm))
+        xoff = bbx[0]
+        yoff = bbx[3]
+        xsize = int(np.ceil((bbx[1]-bbx[0]) / cfg['dsm_resolution']))
+        ysize = int(np.ceil((bbx[3]-bbx[2]) / cfg['dsm_resolution']))
+
+        common.run("ls %s | plyflatten -srcwin \"%f %f %d %d \" %f %s" % (clouds,
+                                                                          xoff, yoff, xsize, ysize,
+                                                                          cfg['dsm_resolution'],
+                                                                          out_dsm))
     else:
         common.run("ls %s | plyflatten %f %s" % (clouds, cfg['dsm_resolution'],
                                                  out_dsm))
-        # ls files | ./bin/plyflatten [-c column] [-bb "xmin xmax ymin ymax"] resolution out.tif
+        # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
 
 
 def lidar_preprocessor(tiles):
