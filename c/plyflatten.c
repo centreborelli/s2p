@@ -129,10 +129,10 @@ static int rescale_double_to_int(double x, double min, double resolution)
 }
 
 struct images {
-	double *min;
-	double *max;
-	double *cnt;
-	double *avg;
+	float *min;
+	float *max;
+	float *cnt;
+	float *avg;
 	int w, h;
 };
 
@@ -304,8 +304,6 @@ int main(int c, char *v[])
 		sscanf(srcwin, "%lf %lf %d %d", &xoff, &yoff, &xsize, &ysize);
 	}
 	else {
-	        double xmiddle = (xmax + xmin) / 2.0;
-		double ymiddle = (ymax + ymin) / 2.0;
 		xsize = 1 + ceil((xmax - xmin) / resolution);
 		ysize = 1 + ceil((ymax - ymin) / resolution);
 		xoff = (xmax + xmin - resolution * xsize) / 2;
@@ -318,10 +316,10 @@ int main(int c, char *v[])
 	struct images x;
 	x.w = xsize;
 	x.h = ysize;
-	x.min = xmalloc(xsize*ysize*sizeof(double));
-	x.max = xmalloc(xsize*ysize*sizeof(double));
-	x.cnt = xmalloc(xsize*ysize*sizeof(double));
-	x.avg = xmalloc(xsize*ysize*sizeof(double));
+	x.min = xmalloc(xsize*ysize*sizeof(float));
+	x.max = xmalloc(xsize*ysize*sizeof(float));
+	x.cnt = xmalloc(xsize*ysize*sizeof(float));
+	x.avg = xmalloc(xsize*ysize*sizeof(float));
 	for (uint64_t i = 0; i < (uint64_t) xsize*ysize; i++)
 	{
 		x.min[i] = INFINITY;
@@ -344,7 +342,7 @@ int main(int c, char *v[])
 			x.avg[i] = NAN;
 
 	// save output image
-	iio_save_image_double(filename_out, x.avg, xsize, ysize);
+	iio_save_image_float(filename_out, x.avg, xsize, ysize);
 	set_geotif_header(filename_out, utm, xoff, yoff, resolution);
 
 	// cleanup and exit
