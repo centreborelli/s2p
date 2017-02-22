@@ -29,8 +29,7 @@ all: default msmw3 sgbm tvl1
 
 # test for the default configuration
 test: default
-	python -u s2p_test.py
-
+	python -u s2p_test.py --all
 
 # make sure that the destination directory is built
 $(BINDIR):
