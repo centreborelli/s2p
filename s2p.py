@@ -25,6 +25,7 @@ import os.path
 import datetime
 import argparse
 import numpy as np
+import subprocess
 import multiprocessing
 from osgeo import gdal
 
@@ -396,22 +397,21 @@ def plys_to_dsm(tiles):
     """
     """
     out_dsm = os.path.join(cfg['out_dir'], 'dsm.tif')
-    clouds = ' '.join(os.path.join(t['dir'], 'cloud.ply') for t in tiles)
+    clouds = '\n'.join(os.path.join(t['dir'], 'cloud.ply') for t in tiles)
+    cmd = ['plyflatten', str(cfg['dsm_resolution']), out_dsm]
+
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         xoff = bbx[0]
         yoff = bbx[3]
         xsize = int(np.ceil((bbx[1]-bbx[0]) / cfg['dsm_resolution']))
         ysize = int(np.ceil((bbx[3]-bbx[2]) / cfg['dsm_resolution']))
+        cmd += ['-srcwin', '"{} {} {} {}"'.format(xoff, yoff, xsize, ysize)]
 
-        common.run("ls %s | plyflatten -srcwin \"%f %f %d %d \" %f %s" % (clouds,
-                                                                          xoff, yoff, xsize, ysize,
-                                                                          cfg['dsm_resolution'],
-                                                                          out_dsm))
-    else:
-        common.run("ls %s | plyflatten %f %s" % (clouds, cfg['dsm_resolution'],
-                                                 out_dsm))
-        # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         stdin=subprocess.PIPE)
+    q = p.communicate(input=clouds.encode())
+    # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
 
 
 def lidar_preprocessor(tiles):
