@@ -406,7 +406,7 @@ def plys_to_dsm(tiles):
         yoff = bbx[3]
         xsize = int(np.ceil((bbx[1]-bbx[0]) / cfg['dsm_resolution']))
         ysize = int(np.ceil((bbx[3]-bbx[2]) / cfg['dsm_resolution']))
-        cmd += ['-srcwin', '"{} {} {} {}"'.format(xoff, yoff, xsize, ysize)]
+        cmd += ['-srcwin', '{} {} {} {}'.format(xoff, yoff, xsize, ysize)]
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                          stdin=subprocess.PIPE)
