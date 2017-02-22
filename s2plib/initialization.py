@@ -181,6 +181,8 @@ def compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z=1):
     """
     """
     out = []
+    neighborhood_dict = dict()
+
     for y in np.arange(ry, ry + rh, th):
         h = min(th, ry + rh - y)
         for x in np.arange(rx, rx + rw, tw):
@@ -190,7 +192,30 @@ def compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z=1):
             x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
             out.append((x, y, w, h))
-    return out
+
+            # get coordinates of tiles from neighborhood
+            out2 = []
+            for y2 in [y - th, y, y + th]:
+                h2 = min(th, ry + rh - y2)
+                for x2 in [x - tw, x, x + tw]:
+                    w2 = min(tw, rx + rw - x2)
+                    if rx + rw > x2 >= rx:
+                        if ry + rh > y2 >= ry:
+                            x2, y2, w2, h2 = common.round_roi_to_nearest_multiple(z, x2, y2, w2, h2)
+                            out2.append((x2, y2, w2, h2))
+
+            neighborhood_dict[str((x, y, w, h))] = out2
+
+    return out, neighborhood_dict
+
+
+def get_tile_dir(x, y, w, h):
+    """
+    Get the name of a tile directory
+    """
+    return os.path.join(cfg['out_dir'],
+                        'tiles_row_{}_height_{}'.format(y, h),
+                        'col_{}_width_{}'.format(x, w))
 
 
 def tiles_full_info(tw, th):
@@ -215,7 +240,7 @@ def tiles_full_info(tw, th):
     rh = cfg['roi']['h']
 
     # list tiles coordinates
-    tiles_coords = compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z)
+    tiles_coords, neighborhood_coords_dict = compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z)
 
     # compute all masks in parallel as numpy arrays
     tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
@@ -226,15 +251,24 @@ def tiles_full_info(tw, th):
 
     # build a tile dictionary for all non-masked tiles and store them in a list
     tiles = []
-    for coords, mask in zip(tiles_coords, tiles_masks):
+    for coords, mask in zip(tiles_coords,
+                            tiles_masks):
         if mask.any():  # there's at least one non-masked pixel in the tile
             tile = {}
             x, y, w, h = coords
-            tile['dir'] = os.path.join(cfg['out_dir'],
-                                       'tiles_row_{}_height_{}'.format(y, h),
-                                       'col_{}_width_{}'.format(x, w))
+            tile['dir'] = get_tile_dir(x, y, w, h)
             tile['coordinates'] = coords
             tile['mask'] = mask
+            tile['neighborhood_dirs'] = list()
+            key = str((x, y, w, h))
+
+            if key in neighborhood_coords_dict:
+                for coords2 in neighborhood_coords_dict[key]:
+                    x2, y2, w2, h2 = coords2
+                    tile['neighborhood_dirs'].append(get_tile_dir(x2,
+                                                                  y2,
+                                                                  w2,
+                                                                  h2))
             tiles.append(tile)
 
     # make tiles directories and store json configuration dumps
