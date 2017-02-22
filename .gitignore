@@ -22,5 +22,6 @@ ipynb
 
 iterate.dat
 
-test/
+test_pair
+test_triplet
 .idea
