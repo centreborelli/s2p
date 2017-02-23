@@ -520,7 +520,7 @@ def main(config_file, steps=ALL_STEPS):
             lidar_preprocessor(tiles)
             common.print_elapsed_time()
         else:
-            print("LidarPreprocessor explictly disabled in config.json")
+            print("LidarPreprocessor explicitly disabled in config.json")
 
     # cleanup
     common.garbage_cleanup()
