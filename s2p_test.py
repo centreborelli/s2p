@@ -166,16 +166,19 @@ def end2end_cluster(config):
     for tile in tiles:
         s2p.main(tile,['local-pointing'])
     
-    # for tile in tiles:
-    #     s2p.main(tile,['local-pointing'])
-
     print('Running global pointing ...')
     s2p.main(config,['global-pointing'])
 
-    print('Running rectification, matching and triangulation on each tile ...')
-
+    print('Running rectification, matching and disparity-to-height on each tile ...')
     for tile in tiles:
-        s2p.main(tile,['rectification','matching','triangulation'])
+        s2p.main(tile,['rectification','matching','disparity-to-height'])
+
+    print('Running global-mean-heights...')
+    s2p.main(config,['global-mean-heights'])
+
+    print('Running heights-to-ply on each tile ...')
+    for tile in tiles:
+        s2p.main(tile,['heights-to-ply'])
 
     print('Running dsm-rasterization ...')
     s2p.main(config, ['dsm-rasterization'])
