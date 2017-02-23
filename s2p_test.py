@@ -157,7 +157,7 @@ def end2end_cluster(config):
         tiles = f.readlines()
 
     # Strip trailing \n
-    tiles = map(str.strip,tiles)
+    tiles = list(map(str.strip,tiles))
         
     print('Found '+str(len(tiles))+' tiles to process')
         
