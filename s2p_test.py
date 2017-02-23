@@ -91,20 +91,7 @@ def unit_matches_from_rpc():
     np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
 
-
-
-def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
-
-    print('Configuration file: ',config)
-    print('Reference DSM:',ref_dsm,os.linesep)
-    
-    s2p.main(config)
-
-    outdir = s2plib.config.cfg['out_dir']
-    
-    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
-    expected = gdal.Open(ref_dsm).ReadAsArray()
-    
+def end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol):
     # compare shapes
     np.testing.assert_equal(computed.shape, expected.shape,verbose=True)
     # compare number of valid pixels
@@ -127,6 +114,22 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
     percentile = np.nanpercentile(np.abs(diff), 99)
     print('99th percentile abs difference',percentile,'(tolerance='+str(percentile_tol)+')')
     assert(percentile < percentile_tol)
+    
+
+def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
+
+    print('Configuration file: ',config)
+    print('Reference DSM:',ref_dsm,os.linesep)
+    
+    s2p.main(config)
+
+    outdir = s2plib.config.cfg['out_dir']
+    
+    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
+    expected = gdal.Open(ref_dsm).ReadAsArray()
+
+    end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
+    
 
 ############### Registered tests #######################
     
