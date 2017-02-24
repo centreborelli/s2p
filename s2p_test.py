@@ -110,12 +110,12 @@ def end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol):
     # check mean difference
     meandiff = np.mean(diff)
     print('mean-difference:',meandiff,'(abs. tolerance='+str(absmean_tol)+')')
-    assert(np.abs(meandiff)<absmean_tol)
+    assert(np.abs(meandiff) <= absmean_tol)
     
     # check largest difference
     percentile = np.nanpercentile(np.abs(diff), 99)
     print('99th percentile abs difference',percentile,'(tolerance='+str(percentile_tol)+')')
-    assert(percentile < percentile_tol)
+    assert(percentile <= percentile_tol)
     
 
 def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
@@ -143,7 +143,7 @@ def end2end_cluster(config):
     outdir = s2plib.config.cfg['out_dir']
     
     expected = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
-    shutil.rmtree(outdir)
+    shutil.move(outdir, '{}_ref'.format(outdir))
     
     print("Running initialisation step ...")
     s2p.main(config,["initialisation"])
