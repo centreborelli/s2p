@@ -515,9 +515,12 @@ def main(config_file, steps=ALL_STEPS):
         common.print_elapsed_time()
 
     if 'lidar-preprocessor' in steps:
-        print('lidar preprocessor...')
-        lidar_preprocessor(tiles)
-        common.print_elapsed_time()
+        if cfg['run_lidar_preprocessor']:
+            print('lidar preprocessor...')
+            lidar_preprocessor(tiles)
+            common.print_elapsed_time()
+        else:
+            print("LidarPreprocessor explicitly disabled in config.json")
 
     # cleanup
     common.garbage_cleanup()
