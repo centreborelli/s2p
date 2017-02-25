@@ -133,8 +133,7 @@ def make_dirs():
     Create directories needed to run s2p.
     """
     common.mkdir_p(cfg['out_dir'])
-    common.mkdir_p(cfg['temporary_dir'])
-    common.mkdir_p(os.path.join(cfg['temporary_dir'], 'meta'))
+    common.mkdir_p(os.path.expandvars(cfg['temporary_dir']))
 
     # store a json dump of the config.cfg dictionary
     with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
