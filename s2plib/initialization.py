@@ -262,7 +262,9 @@ def tiles_full_info(tw, th):
             tile['neighborhood_dirs'] = list()
             key = str((x, y, w, h))
 
-            if key in neighborhood_coords_dict:
+            if 'neighborhood_dirs' in cfg:
+                tile['neighborhood_dirs'] = cfg['neighborhood_dirs']
+            elif key in neighborhood_coords_dict:
                 for coords2 in neighborhood_coords_dict[key]:
                     x2, y2, w2, h2 = coords2
                     tile['neighborhood_dirs'].append(get_tile_dir(x2,
@@ -284,6 +286,7 @@ def tiles_full_info(tw, th):
         tile_cfg['full_img'] = False
         tile_cfg['max_processes'] = 1
         tile_cfg['omp_num_threads'] = 1
+        tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
 
         tile_json = os.path.join(tile['dir'], 'config.json')
         tile['json'] = tile_json
