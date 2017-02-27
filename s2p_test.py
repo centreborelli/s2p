@@ -9,6 +9,8 @@ import numpy as np
 from osgeo import gdal
 import argparse
 import os
+import shutil
+import multiprocessing
 
 import s2p
 import s2plib
@@ -91,20 +93,7 @@ def unit_matches_from_rpc():
     np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
 
-
-
-def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
-
-    print('Configuration file: ',config)
-    print('Reference DSM:',ref_dsm,os.linesep)
-    
-    s2p.main(config)
-
-    outdir = s2plib.config.cfg['out_dir']
-    
-    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
-    expected = gdal.Open(ref_dsm).ReadAsArray()
-    
+def end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol):
     # compare shapes
     np.testing.assert_equal(computed.shape, expected.shape,verbose=True)
     # compare number of valid pixels
@@ -121,20 +110,92 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
     # check mean difference
     meandiff = np.mean(diff)
     print('mean-difference:',meandiff,'(abs. tolerance='+str(absmean_tol)+')')
-    assert(np.abs(meandiff)<absmean_tol)
+    assert(np.abs(meandiff) <= absmean_tol)
     
     # check largest difference
     percentile = np.nanpercentile(np.abs(diff), 99)
     print('99th percentile abs difference',percentile,'(tolerance='+str(percentile_tol)+')')
-    assert(percentile < percentile_tol)
+    assert(percentile <= percentile_tol)
+    
 
+def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
+
+    print('Configuration file: ',config)
+    print('Reference DSM:',ref_dsm,os.linesep)
+    
+    s2p.main(config)
+
+    outdir = s2plib.config.cfg['out_dir']
+    
+    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
+    expected = gdal.Open(ref_dsm).ReadAsArray()
+
+    end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
+
+
+def end2end_cluster(config):
+    print('Configuration file: ',config)
+
+    print('Running end2end in sequential mode to get reference DSM ...')
+    
+    s2p.main(config)
+
+    outdir = s2plib.config.cfg['out_dir']
+    
+    expected = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
+    shutil.move(outdir, '{}_ref'.format(outdir))
+    
+    print("Running initialisation step ...")
+    s2p.main(config,["initialisation"])
+    
+    # Retrieve tiles list
+    tiles_file = os.path.join(outdir,'tiles.txt')
+
+    tiles = []
+    
+    with open(tiles_file) as f:
+        tiles = f.readlines()
+
+    # Strip trailing \n
+    tiles = list(map(str.strip,tiles))
+        
+    print('Found '+str(len(tiles))+' tiles to process')
+        
+    print('Running local-pointing on each tile ...')
+
+    for tile in tiles:
+        s2p.main(tile,['local-pointing'])
+    
+    print('Running global pointing ...')
+    s2p.main(config,['global-pointing'])
+
+    print('Running rectification, matching and disparity-to-height on each tile ...')
+    for tile in tiles:
+        s2p.main(tile,['rectification','matching','disparity-to-height'])
+
+    print('Running global-mean-heights...')
+    s2p.main(config,['global-mean-heights'])
+
+    print('Running heights-to-ply on each tile ...')
+    for tile in tiles:
+        s2p.main(tile,['heights-to-ply'])
+
+    print('Running dsm-rasterization ...')
+    s2p.main(config, ['dsm-rasterization'])
+             
+    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
+    
+    end2end_compare_dsm(computed,expected,0,0)
+             
+    
 ############### Registered tests #######################
     
 registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
                      'unit_matching' : (unit_matching,[]),
                      'unit_matches_from_rpc' : (unit_matches_from_rpc,[]),
                      'end2end_pair' : (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1]),
-                     'end2end_triplet' : (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])}
+                     'end2end_triplet' : (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2]),
+                     'end2end_cluster' : (end2end_cluster, ['testdata/input_triplet/config.json'])}
 
 
 
