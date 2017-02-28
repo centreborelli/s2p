@@ -13,6 +13,7 @@ import shutil
 import multiprocessing
 
 import s2p
+import s2p_mosaic
 import s2plib
 
 
@@ -132,7 +133,6 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
-
 def end2end_cluster(config):
     print('Configuration file: ',config)
 
@@ -173,7 +173,23 @@ def end2end_cluster(config):
     computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
     
     end2end_compare_dsm(computed,expected,0,0)
-             
+  
+def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
+
+    s2p.main(config)
+
+    outdir = s2plib.config.cfg['out_dir']
+
+    tiles_file = os.path.join(outdir,'tiles.txt')
+    global_height_map = os.path.join(outdir,'height_map.tif')
+
+    s2p_mosaic.main(tiles_file,global_height_map,'pair_1/height_map.tif')
+
+    computed = gdal.Open(global_height_map).ReadAsArray()
+    expected = gdal.Open(ref_height_map).ReadAsArray()
+    
+    end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
+    
     
 ############### Registered tests #######################
     
@@ -182,7 +198,8 @@ registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
                      'unit_matches_from_rpc' : (unit_matches_from_rpc,[]),
                      'end2end_pair' : (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1]),
                      'end2end_triplet' : (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2]),
-                     'end2end_cluster' : (end2end_cluster, ['testdata/input_triplet/config.json'])}
+                     'end2end_cluster' : (end2end_cluster, ['testdata/input_triplet/config.json']),
+                     'end2end_mosaic'  : (end2end_mosaic, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.025,1])}
 
 
 
