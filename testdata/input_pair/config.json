@@ -1,5 +1,5 @@
 {
-  "out_dir" : "test_pair",
+  "out_dir" : "testoutput/output_pair",
   "images" : [
     { "img" : "testdata/input_pair/img_01.tif",
       "rpc" : "testdata/input_pair/rpc_01.xml" },
@@ -34,5 +34,5 @@
   "skip_existing" : false,
   "msk_erosion": 0,
   "dsm_resolution": 0.5,
-    "utm_bbx" : [359746.062, 360105.562,7651554.000,7651923.000]
+  "utm_bbx" : [359746.062, 360105.562,7651554.000,7651923.000]
 }
