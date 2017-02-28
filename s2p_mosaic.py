@@ -91,14 +91,14 @@ def read_tiles(tiles_file):
 
     return tiles
 
-def write_row_vrts(tiles,sub_img,base_vrt_name,min_x,max_x):
+def write_row_vrts(tiles,sub_img,vrt_basename,min_x,max_x):
     """
     Write intermediate vrts (one per row)
     
     Args:
         tiles: list of config files loaded from json files
         sub_img: Relative path of the sub-image to mosaic (for instance height_map.tif)
-        base_vrt_name: basename of the output vrt 
+        vrt_basename: basename of the output vrt 
         min_x, max_x: col extent of the raster
     Returns:
         A dictionnary of vrt files with sections vrt_body, th and vrt_dir
@@ -119,11 +119,11 @@ def write_row_vrts(tiles,sub_img,base_vrt_name,min_x,max_x):
             tile_dir = os.path.dirname(tile)
             row_vrt_dir = os.path.join(*tile_dir.split('/')[:-1])
             tile_sub_img_dir = os.path.join(*tile_dir.split('/')[-1:])
-            
+
             vrt_row.setdefault(y,{'vrt_body' : "", 'vrt_dir' : row_vrt_dir, "th" : h})
             
             tile_sub_img = os.path.join(tile_sub_img_dir,sub_img)
-            
+
             # Check if source image exists
             if not os.path.exists(os.path.join(row_vrt_dir,tile_sub_img)):
                 print('Warning: '+tile_sub_img+' does not exist, skipping ...')
@@ -133,7 +133,7 @@ def write_row_vrts(tiles,sub_img,base_vrt_name,min_x,max_x):
 
     # Second loop, write all row vrts
     for y,vrt_data in vrt_row.iteritems():
-        row_vrt_filename = os.path.join(vrt_data['vrt_dir'],base_vrt_name)
+        row_vrt_filename = os.path.join(vrt_data['vrt_dir'],vrt_basename)
         
         with  open(row_vrt_filename,'w') as row_vrt_file:
             # Write vrt header
@@ -156,14 +156,16 @@ def write_main_vrt(vrt_row,vrt_name,min_x,max_x,min_y,max_y):
         vrt_name: The output vrt_name
         min_x,max_x,min_y,max_y: Extent of the raster 
     """
-    base_vrt_name = os.path.basename(vrt_name)
+    vrt_basename = os.path.basename(vrt_name)
+    vrt_dirname = os.path.dirname(vrt_name)
     
     with open(vrt_name,'w') as main_vrt_file:
     
         main_vrt_file.write(vrt_header(max_x-min_x,max_y-min_y))
     
         for y,vrt_data in vrt_row.iteritems():
-            row_vrt_filename = os.path.join(vrt_data['vrt_dir'],base_vrt_name)
+            relative_vrt_dir = os.path.relpath(vrt_data['vrt_dir'],vrt_dirname)
+            row_vrt_filename = os.path.join(relative_vrt_dir,vrt_basename)
 
             main_vrt_file.write(vrt_body_source(row_vrt_filename,1,0,0,max_x-min_x,vrt_data['th'],0,y-min_y,max_x-min_x,vrt_data['th']))
                 
@@ -172,21 +174,23 @@ def write_main_vrt(vrt_row,vrt_name,min_x,max_x,min_y,max_y):
             
 def main(tiles_file,outfile,sub_img):
 
-    base_outfile_name = os.path.basename(outfile)
-    output_format = base_outfile_name[-3:]
+    outfile_basename = os.path.basename(outfile)
+    outfile_dirname  = os.path.dirname(outfile)
+    
+    output_format = outfile_basename[-3:]
 
     print('Ouptut format is '+output_format)
 
     # If output format is tif, we need to generate a temporary vrt with the same name
-    base_vrt_name = base_outfile_name
+    vrt_basename = outfile_basename
     
     if output_format == 'tif':
-        base_vrt_name = base_vrt_name[:-3]+'vrt'
+        vrt_basename = vrt_basename[:-3]+'vrt'
     elif output_format !='vrt':
         print('Error: only vrt or tif extension is allowed for output image.')
         return
     
-    vrt_name = os.path.join(os.path.dirname(outfile),base_vrt_name)
+    vrt_name = os.path.join(outfile_dirname,vrt_basename)
     
     # Read the tiles file
     tiles = read_tiles(tiles_file)
@@ -199,8 +203,8 @@ def main(tiles_file,outfile,sub_img):
     print('Global extent: [%i,%i]x[%i,%i]'%(min_x,max_x,min_y,max_y))
 
     # Now, write all row vrts
-    print("Writing row vrt files "+base_vrt_name)
-    vrt_row = write_row_vrts(tiles,sub_img,base_vrt_name,min_x,max_x)
+    print("Writing row vrt files "+vrt_basename)
+    vrt_row = write_row_vrts(tiles,sub_img,vrt_basename,min_x,max_x)
     
     # Finally, write main vrt
     print('Writing '+vrt_name)
@@ -213,7 +217,7 @@ def main(tiles_file,outfile,sub_img):
 
         print('Removing temporary vrt files')
         for y,vrt_data in vrt_row.iteritems():
-            row_vrt_filename = os.path.join(vrt_data['vrt_dir'],base_vrt_name)
+            row_vrt_filename = os.path.join(vrt_data['vrt_dir'],vrt_basename)
             try:
                 os.remove(row_vrt_filename)
             except OSError:
