@@ -76,7 +76,7 @@ def check_parameters(d):
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
 
-def build_cfg(config_file):
+def build_cfg(user_cfg):
     """
     Populate a dictionary containing the s2p parameters from a user config file.
 
@@ -84,13 +84,8 @@ def build_cfg(config_file):
     module.
 
     Args:
-        config_file: path to a json configuration file
+        user_cfg: user config dictionary
     """
-    # read the json configuration file
-    f = open(config_file)
-    user_cfg = json.load(f)
-    f.close()
-
     # check that all the mandatory arguments are defined
     check_parameters(user_cfg)
 
