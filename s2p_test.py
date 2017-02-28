@@ -11,6 +11,7 @@ import argparse
 import os
 import shutil
 import multiprocessing
+import collections
 
 import s2p
 import s2p_mosaic
@@ -192,15 +193,15 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
     
     
 ############### Registered tests #######################
-    
-registered_tests = { 'unit_image_keypoints' : (unit_image_keypoints,[]),
-                     'unit_matching' : (unit_matching,[]),
-                     'unit_matches_from_rpc' : (unit_matches_from_rpc,[]),
-                     'end2end_pair' : (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1]),
-                     'end2end_triplet' : (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2]),
-                     'end2end_cluster' : (end2end_cluster, ['testdata/input_triplet/config.json']),
-                     'end2end_mosaic'  : (end2end_mosaic, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.025,1])}
 
+registered_tests = [('unit_image_keypoints', (unit_image_keypoints,[])),
+                    ('unit_matching', (unit_matching,[])),
+                    ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
+                    ('end2end_pair', (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1])),
+                    ('end2end_triplet', (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])),
+                    ('end2end_cluster', (end2end_cluster, ['testdata/input_triplet/config.json'])),
+                    ('end2end_mosaic', (end2end_mosaic, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.025,1]))]
+registered_tests = collections.OrderedDict(registered_tests)
 
 
 ############### Tests main  #######################
