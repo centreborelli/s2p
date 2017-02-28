@@ -160,28 +160,15 @@ def end2end_cluster(config):
     tiles = list(map(str.strip,tiles))
         
     print('Found '+str(len(tiles))+' tiles to process')
-        
-    print('Running local-pointing on each tile ...')
 
-    for tile in tiles:
-        s2p.main(tile,['local-pointing'])
-    
-    print('Running global pointing ...')
-    s2p.main(config,['global-pointing'])
-
-    print('Running rectification, matching and disparity-to-height on each tile ...')
-    for tile in tiles:
-        s2p.main(tile,['rectification','matching','disparity-to-height'])
-
-    print('Running global-mean-heights...')
-    s2p.main(config,['global-mean-heights'])
-
-    print('Running heights-to-ply on each tile ...')
-    for tile in tiles:
-        s2p.main(tile,['heights-to-ply'])
-
-    print('Running dsm-rasterization ...')
-    s2p.main(config, ['dsm-rasterization'])
+    for step in s2p.ALL_STEPS:
+        if s2p.ALL_STEPS[step] is True:
+            print('Running %s on each tile...' % step)
+            for tile in tiles:
+                s2p.main(tile, [step])
+        else:
+            print('Running %s...' % step)
+            s2p.main(config, [step])
              
     computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
     

@@ -28,6 +28,7 @@ import numpy as np
 import subprocess
 import multiprocessing
 from osgeo import gdal
+import collections
 
 gdal.UseExceptions()
 
@@ -451,10 +452,20 @@ def lidar_preprocessor(tiles):
                                            'cloud.lidar_viewer'), plys)
 
 
-ALL_STEPS = ['initialisation', 'local-pointing', 'global-pointing',
-             'rectification', 'matching', 'triangulation',
-             'disparity-to-height', 'global-mean-heights', 'heights-to-ply',
-             'dsm-rasterization', 'lidar-preprocessor']
+# ALL_STEPS is a ordonned dictionary : key = 'stepname' : value = is_distributed (True/False)
+# initialization : pass in a sequence of tuples
+ALL_STEPS = [('initialisation', False),
+             ('local-pointing', True),
+             ('global-pointing', False),
+             ('rectification', True),
+             ('matching', True),
+             ('triangulation', True),
+             ('disparity-to-height', True),
+             ('global-mean-heights', False),
+             ('heights-to-ply', True),
+             ('dsm-rasterization', False),
+             ('lidar-preprocessor', False)]
+ALL_STEPS = collections.OrderedDict(ALL_STEPS)
 
 
 def main(config_file, steps=ALL_STEPS):
