@@ -6,7 +6,6 @@
 from __future__ import print_function
 
 import numpy as np
-from osgeo import gdal
 import argparse
 import os
 import json
