@@ -118,24 +118,6 @@ def end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol):
     percentile = np.nanpercentile(np.abs(diff), 99)
     print('99th percentile abs difference',percentile,'(tolerance='+str(percentile_tol)+')')
     assert(percentile <= percentile_tol)
-
-
-def gdal_open(image):
-    raster = gdal.Open(image)
-    array = raster.ReadAsArray()
-
-    # replace gdal NoDataValue with np.nan for the np.isfinite counting
-    noDataValues = [raster.GetRasterBand(b+1).GetNoDataValue() for b in range(raster.RasterCount)]
-    if len(noDataValues) == 1:
-        if noDataValues[0] is not None:
-            array[array == noDataValues[0]] = np.nan
-    else:
-        for b in range(raster.RasterCount):
-            if noDataValues[b] is not None:
-                array_band = array[b, :, :]
-                array_band[array_band == noDataValues[b]] = np.nan
-
-    return array
     
 
 def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
@@ -149,8 +131,8 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
     outdir = test_cfg['out_dir']
     
-    computed = gdal_open(os.path.join(outdir,'dsm.tif'))
-    expected = gdal_open(ref_dsm)
+    computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+    expected = s2plib.common.gdal_read_as_array_with_nans(ref_dsm)
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
@@ -166,7 +148,7 @@ def end2end_cluster(config):
         s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
-    expected = gdal_open(os.path.join(outdir,'dsm.tif'))
+    expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
     print('Running end2end in cluster mode ...')
     test_cfg_cluster = dict()
     test_cfg_cluster.update(test_cfg)
@@ -203,7 +185,7 @@ def end2end_cluster(config):
             print('test_cfg_cluster : %s' % test_cfg_cluster)
             s2p.main(test_cfg_cluster, [step])
              
-    computed = gdal_open(os.path.join(outdir,'dsm.tif'))
+    computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
 
     end2end_compare_dsm(computed,expected,0,0)
              
