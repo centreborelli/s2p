@@ -1,5 +1,6 @@
 import argparse, json, os
 from s2plib import common
+import six
 
 def vrt_body_source(filename,band,src_x,src_y,src_w,src_h,dst_x,dst_y,dst_w,dst_h):
     """
@@ -132,7 +133,7 @@ def write_row_vrts(tiles,sub_img,vrt_basename,min_x,max_x):
             vrt_row[y]['vrt_body']+=vrt_body_source(tile_sub_img,1,0,0,w,h,x-min_x,0,w,h)
 
     # Second loop, write all row vrts
-    for y,vrt_data in vrt_row.iteritems():
+    for y,vrt_data in six.iteritems(vrt_row):
         row_vrt_filename = os.path.join(vrt_data['vrt_dir'],vrt_basename)
         
         with  open(row_vrt_filename,'w') as row_vrt_file:
