@@ -192,9 +192,12 @@ def end2end_cluster(config):
   
 def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
-    s2p.main(config)
+    with open(config, 'r') as f:
+        test_cfg = json.load(f)
+        test_cfg['skip_existing'] = True
+        s2p.main(test_cfg)
 
-    outdir = s2plib.config.cfg['out_dir']
+    outdir = test_cfg['out_dir']
 
     tiles_file = os.path.join(outdir,'tiles.txt')
     global_height_map = os.path.join(outdir,'height_map.tif')
