@@ -22,6 +22,7 @@
 from __future__ import print_function
 import sys
 import os.path
+import json
 import datetime
 import argparse
 import numpy as np
@@ -468,17 +469,17 @@ ALL_STEPS = [('initialisation', False),
 ALL_STEPS = collections.OrderedDict(ALL_STEPS)
 
 
-def main(config_file, steps=ALL_STEPS):
+def main(user_cfg, steps=ALL_STEPS):
     """
     Launch the s2p pipeline with the parameters given in a json file.
 
     Args:
-        config_file: path to a json configuration file
+        user_cfg: user config dictionary
         steps: either a string (single step) or a list of strings (several
             steps)
     """
     common.print_elapsed_time.t0 = datetime.datetime.now()
-    initialization.build_cfg(config_file)
+    initialization.build_cfg(user_cfg)
     if 'initialisation' in steps:
         initialization.make_dirs()
 
@@ -570,4 +571,9 @@ if __name__ == '__main__':
     parser.add_argument('--step', type=str, choices=ALL_STEPS,
                         default=ALL_STEPS)
     args = parser.parse_args()
-    main(args.config, args.step)
+
+    # read the json configuration file
+    with open(args.config, 'r') as f:
+        user_cfg = json.load(f)
+
+    main(user_cfg, args.step)
