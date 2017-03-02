@@ -202,8 +202,8 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
     s2p_mosaic.main(tiles_file,global_height_map,'pair_1/height_map.tif')
 
-    computed = gdal.Open(global_height_map).ReadAsArray()
-    expected = gdal.Open(ref_height_map).ReadAsArray()
+    computed = s2plib.common.gdal_read_as_array_with_nans(global_height_map)
+    expected = s2plib.common.gdal_read_as_array_with_nans(ref_height_map)
     
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
     
