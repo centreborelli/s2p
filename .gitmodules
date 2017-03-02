@@ -2,3 +2,7 @@
 	path = 3rdparty/iio
 	url = https://github.com/mnhrdt/iio.git
 	ignore = untracked
+[submodule "3rdparty/mgm"]
+	path = 3rdparty/mgm
+	url = https://github.com/gfacciol/mgm.git
+	ignore = untracked
