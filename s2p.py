@@ -136,8 +136,8 @@ def rectification_pair(tile, i):
     x, y, w, h = tile['coordinates']
 
     for n in tile['neighborhood_dirs']:
-        if n != tile['dir']:
-            nei_dir = os.path.join(n, 'pair_{}'.format(i))
+        nei_dir = os.path.join(tile['dir'],n, 'pair_{}'.format(i))
+        if not os.path.samefile(os.path.join(tile['dir'],'pair_{}'.format(i)),nei_dir):
             sift_from_neighborhood = os.path.join(nei_dir, 'sift_matches.txt')
             try:
                 m_n = np.loadtxt(sift_from_neighborhood)
@@ -561,6 +561,23 @@ def main(user_cfg, steps=ALL_STEPS):
     common.print_elapsed_time(since_first_call=True)
 
 
+def read_config_file(config_file):
+    # read the json configuration file
+    with open(config_file, 'r') as f:
+        user_cfg = json.load(f)
+
+    # Check if out_dir is a relative path
+    # In this case the relative path is relative to the config.json location,
+    # and not to the cwd
+    if not os.path.isabs(user_cfg['out_dir']):
+        print('WARNING: Output directory is a relative path, it will be interpreted with respect to config.json location, and not cwd')
+        json_abs_path = os.path.abspath(os.path.dirname(config_file))
+        user_cfg['out_dir'] = os.path.join(json_abs_path,user_cfg['out_dir'])
+        print('Output directory will be: '+user_cfg['out_dir'])
+
+    return user_cfg
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
                                                   'Pipeline'))
@@ -572,8 +589,6 @@ if __name__ == '__main__':
                         default=ALL_STEPS)
     args = parser.parse_args()
 
-    # read the json configuration file
-    with open(args.config, 'r') as f:
-        user_cfg = json.load(f)
+    user_cfg = read_config_file(args.config)
 
     main(user_cfg, args.step)

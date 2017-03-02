@@ -20,7 +20,6 @@ from s2plib import masking
 from s2plib import parallel
 from s2plib.config import cfg
 
-
 def dict_has_keys(d, l):
     """
     Return True if the dict d contains all the keys of the input list l.
@@ -102,6 +101,12 @@ def build_cfg(user_cfg):
     cfg['images'][0].setdefault('roi')
     cfg['images'][0].setdefault('wat')
 
+    # Make sure that input data have absolute paths
+    for i in range(0,len(cfg['images'])):
+        for d in ['clr','cld','roi','wat','img','rpc']:
+            if d in cfg['images'][i] and cfg['images'][i][d] is not None:
+                cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
+
     # check the zoom factor
     z = cfg['subsampling_factor']
     assert(z > 0 and z == np.floor(z))
@@ -132,7 +137,9 @@ def make_dirs():
 
     # store a json dump of the config.cfg dictionary
     with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
-        json.dump(cfg, f, indent=2)
+        cfg_copy = copy.deepcopy(cfg)
+        cfg_copy['out_dir']='.'
+        json.dump(cfg_copy, f, indent=2)
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
@@ -208,8 +215,7 @@ def get_tile_dir(x, y, w, h):
     """
     Get the name of a tile directory
     """
-    return os.path.join(cfg['out_dir'],
-                        'tiles_row_{}_height_{}'.format(y, h),
+    return os.path.join('tiles_row_{}_height_{}'.format(y, h),
                         'col_{}_width_{}'.format(x, w))
 
 
@@ -251,7 +257,7 @@ def tiles_full_info(tw, th):
         if mask.any():  # there's at least one non-masked pixel in the tile
             tile = {}
             x, y, w, h = coords
-            tile['dir'] = get_tile_dir(x, y, w, h)
+            tile['dir'] = os.path.join(cfg['out_dir'],get_tile_dir(x, y, w, h))
             tile['coordinates'] = coords
             tile['mask'] = mask
             tile['neighborhood_dirs'] = list()
@@ -262,10 +268,10 @@ def tiles_full_info(tw, th):
             elif key in neighborhood_coords_dict:
                 for coords2 in neighborhood_coords_dict[key]:
                     x2, y2, w2, h2 = coords2
-                    tile['neighborhood_dirs'].append(get_tile_dir(x2,
+                    tile['neighborhood_dirs'].append(os.path.join('../..',get_tile_dir(x2,
                                                                   y2,
                                                                   w2,
-                                                                  h2))
+                                                                  h2)))
             tiles.append(tile)
 
     # make tiles directories and store json configuration dumps
@@ -282,11 +288,12 @@ def tiles_full_info(tw, th):
         tile_cfg['max_processes'] = 1
         tile_cfg['omp_num_threads'] = 1
         tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
+        tile_cfg['out_dir']='../..'
 
-        tile_json = os.path.join(tile['dir'], 'config.json')
+        tile_json = os.path.join(get_tile_dir(x,y,w,h),'config.json')
         tile['json'] = tile_json
 
-        with open(tile_json, 'w') as f:
+        with open(os.path.join(cfg['out_dir'],tile_json), 'w') as f:
             json.dump(tile_cfg, f, indent=2)
 
         # save the mask

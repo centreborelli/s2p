@@ -1,5 +1,5 @@
 {
-  "out_dir" : "testoutput/output_pair",
+  "out_dir" : "../../testoutput/output_pair",
   "images" : [
     { "img" : "testdata/input_pair/img_01.tif",
       "rpc" : "testdata/input_pair/rpc_01.xml" },

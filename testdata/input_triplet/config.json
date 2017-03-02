@@ -1,5 +1,5 @@
 {
-  "out_dir" : "testoutput/output_triplet",
+  "out_dir" : "../../testoutput/output_triplet",
   "images" : [
     { "img" : "testdata/input_triplet/img_02.tif",
       "rpc" : "testdata/input_triplet/rpc_02.xml" },
