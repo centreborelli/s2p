@@ -177,6 +177,33 @@ def image_size_gdal(im):
     return x, y, pd
 
 
+def gdal_read_as_array_with_nans(im):
+    """
+    Read an image replacing gdal NoDataValue with np.nan
+
+    Args:
+        im: path to the input image file
+
+    Returns:
+        array: raster as numpy array
+    """
+    raster = gdal.Open(im)
+    array = raster.ReadAsArray()
+
+    # replace gdal NoDataValue with np.nan for the np.isfinite counting
+    noDataValues = [raster.GetRasterBand(b+1).GetNoDataValue() for b in range(raster.RasterCount)]
+    if len(noDataValues) == 1:
+        if noDataValues[0] is not None:
+            array[array == noDataValues[0]] = np.nan
+    else:
+        for b in range(raster.RasterCount):
+            if noDataValues[b] is not None:
+                array_band = array[b, :, :]
+                array_band[array_band == noDataValues[b]] = np.nan
+
+    return array
+
+
 def grep_xml(xml_file, tag):
     """
     Reads the value of an element in an xml file.
