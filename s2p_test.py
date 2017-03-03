@@ -216,7 +216,7 @@ if __name__ == '__main__':
         parser.print_help()
         
         print(os.linesep+'available tests:')
-        for test,commands in registered_tests.iteritems():
+        for test in registered_tests:
             print('\t'+test)
         exit(1)
 
