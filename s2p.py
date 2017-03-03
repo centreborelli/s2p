@@ -504,8 +504,8 @@ def global_dsm(tiles):
     out_dsm_vrt = os.path.join(cfg['out_dir'], 'dsm.vrt')
     out_dsm_tif = os.path.join(cfg['out_dir'], 'dsm.tif')
 
-    common.run("gdalbuildvrt -vrtnodata -32768  %s %s" % (out_dsm_vrt,
-                                                          " ".join(dsm_list)))
+    common.run("gdalbuildvrt -vrtnodata nan  %s %s" % (out_dsm_vrt,
+                                                       " ".join(dsm_list)))
 
     global_srcwin = np.loadtxt(os.path.join(cfg['out_dir'],
                                             "global_srcwin.txt"))
