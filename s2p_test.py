@@ -121,15 +121,11 @@ def unit_distributed_plyflatten(config):
         global_yoff = bbx[3]
         global_xsize = int(np.ceil((bbx[1]-bbx[0]) / test_cfg['dsm_resolution']))
         global_ysize = int(np.ceil((bbx[3]-bbx[2]) / test_cfg['dsm_resolution']))
-        cmd += ['-srcwin', '{} {} {} {}'.format(global_xoff, global_yoff,
-                                                global_xsize, global_ysize)]
+        cmd += ['-srcwin', '"{} {} {} {}"'.format(global_xoff, global_yoff,
+                                                  global_xsize, global_ysize)]
 
     run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-    print(run_cmd)
-
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                         stdin=subprocess.PIPE)
-    q = p.communicate(input=clouds.encode())
+    s2plib.common.run(run_cmd)
 
     expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm_ref.tif'))
 
