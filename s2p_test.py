@@ -12,6 +12,8 @@ import json
 import shutil
 import multiprocessing
 import collections
+import subprocess
+import glob
 
 import s2p
 import s2plib
@@ -93,6 +95,46 @@ def unit_matches_from_rpc():
     
     np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
+
+
+def unit_distributed_plyflatten(config):
+    print('Configuration file: ',config)
+
+    print('Running end2end with distributed plyflatten dsm ...')
+
+    with open(config, 'r') as f:
+        test_cfg = json.load(f)
+        test_cfg['skip_existing'] = True
+        s2p.main(test_cfg)
+
+    outdir = test_cfg['out_dir']
+    computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+
+    print('Running plyflatten dsm reference ...')
+
+    clouds = '\n'.join(glob.glob(os.path.join(outdir, "*", "*", "cloud.ply")))
+    out_dsm = os.path.join(outdir, "dsm_ref.tif")
+    cmd = ['plyflatten', str(test_cfg['dsm_resolution']), out_dsm]
+    if 'utm_bbx' in test_cfg:
+        bbx = test_cfg['utm_bbx']
+        global_xoff = bbx[0]
+        global_yoff = bbx[3]
+        global_xsize = int(np.ceil((bbx[1]-bbx[0]) / test_cfg['dsm_resolution']))
+        global_ysize = int(np.ceil((bbx[3]-bbx[2]) / test_cfg['dsm_resolution']))
+        cmd += ['-srcwin', '{} {} {} {}'.format(global_xoff, global_yoff,
+                                                global_xsize, global_ysize)]
+
+    run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
+    print(run_cmd)
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         stdin=subprocess.PIPE)
+    q = p.communicate(input=clouds.encode())
+
+    expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm_ref.tif'))
+
+    end2end_compare_dsm(computed,expected,0,0)
+
 
 def end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol):
     # compare shapes
@@ -196,7 +238,8 @@ registered_tests = [('unit_image_keypoints', (unit_image_keypoints,[])),
                     ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
                     ('end2end_pair', (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1])),
                     ('end2end_triplet', (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])),
-                    ('end2end_cluster', (end2end_cluster, ['testdata/input_triplet/config.json']))]
+                    ('end2end_cluster', (end2end_cluster, ['testdata/input_triplet/config.json'])),
+                    ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['testdata/input_triplet/config.json']))]
 registered_tests = collections.OrderedDict(registered_tests)
 
 
