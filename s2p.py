@@ -561,6 +561,11 @@ def main(user_cfg, steps=ALL_STEPS):
     common.print_elapsed_time(since_first_call=True)
 
 
+def make_path_relative_to_json_file(path,json_file):
+    json_abs_path = os.path.abspath(os.path.dirname(json_file))
+    out_path = os.path.join(json_abs_path,path)
+    return out_path
+
 def read_config_file(config_file):
     # read the json configuration file
     with open(config_file, 'r') as f:
@@ -571,10 +576,15 @@ def read_config_file(config_file):
     # and not to the cwd
     if not os.path.isabs(user_cfg['out_dir']):
         print('WARNING: Output directory is a relative path, it will be interpreted with respect to config.json location, and not cwd')
-        json_abs_path = os.path.abspath(os.path.dirname(config_file))
-        user_cfg['out_dir'] = os.path.join(json_abs_path,user_cfg['out_dir'])
+        user_cfg['out_dir'] = make_path_relative_to_json_file(user_cfg['out_dir'],config_file)
         print('Output directory will be: '+user_cfg['out_dir'])
 
+    for i in range(0,len(user_cfg['images'])):
+        for d in ['clr','cld','roi','wat','img','rpc']:
+            if d in user_cfg['images'][i]:
+                if not os.path.isabs(user_cfg['images'][i][d]):
+                    user_cfg['images'][i][d]=make_path_relative_to_json_file(user_cfg['images'][i][d],config_file)
+        
     return user_cfg
 
 
