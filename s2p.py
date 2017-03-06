@@ -581,9 +581,8 @@ def read_config_file(config_file):
 
     for i in range(0,len(user_cfg['images'])):
         for d in ['clr','cld','roi','wat','img','rpc']:
-            if d in user_cfg['images'][i]:
-                if not os.path.isabs(user_cfg['images'][i][d]):
-                    user_cfg['images'][i][d]=make_path_relative_to_json_file(user_cfg['images'][i][d],config_file)
+            if d in user_cfg['images'][i] and user_cfg['images'][i][d] is not None and not os.path.isabs(user_cfg['images'][i][d]):
+                user_cfg['images'][i][d]=make_path_relative_to_json_file(user_cfg['images'][i][d],config_file)
         
     return user_cfg
 
