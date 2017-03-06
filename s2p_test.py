@@ -6,7 +6,6 @@
 from __future__ import print_function
 
 import numpy as np
-from osgeo import gdal
 import argparse
 import os
 import json
@@ -130,8 +129,8 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
     outdir = test_cfg['out_dir']
     
-    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
-    expected = gdal.Open(ref_dsm).ReadAsArray()
+    computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+    expected = s2plib.common.gdal_read_as_array_with_nans(ref_dsm)
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
@@ -146,8 +145,7 @@ def end2end_cluster(config):
     s2p.main(test_cfg)
     
     outdir = test_cfg['out_dir']
-    expected = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
-    
+    expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
     print('Running end2end in cluster mode ...')
     test_cfg_cluster = dict()
     test_cfg_cluster.update(test_cfg)
@@ -183,8 +181,8 @@ def end2end_cluster(config):
             print('test_cfg_cluster : %s' % test_cfg_cluster)
             s2p.main(test_cfg_cluster, [step])
              
-    computed = gdal.Open(os.path.join(outdir,'dsm.tif')).ReadAsArray()
-    
+    computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+
     end2end_compare_dsm(computed,expected,0,0)
              
     
@@ -215,7 +213,7 @@ if __name__ == '__main__':
         parser.print_help()
         
         print(os.linesep+'available tests:')
-        for test,commands in registered_tests.iteritems():
+        for test in registered_tests:
             print('\t'+test)
         exit(1)
 
