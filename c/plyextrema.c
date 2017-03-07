@@ -58,7 +58,7 @@ static size_t header_get_record_length_and_utm_zone(FILE *f_in, char *utm,
 	return n;
 }
 
-static void update_min_max(float *min, float *max, float x)
+static void update_min_max(double *min, double *max, double x)
 {
 	if (x < *min) *min = x;
 	if (x > *max) *max = x;
@@ -97,8 +97,8 @@ int get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *dat
 }
 
 // open a ply file, read utm zone in the header, and update the known extrema
-static bool parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
-		float *ymax, char *utm, char *fname)
+static bool parse_ply_points_for_extrema(double *xmin, double *xmax, double *ymin,
+		double *ymax, char *utm, char *fname)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -109,8 +109,6 @@ static bool parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 	int isbin=0;
 	struct ply_property t[100];
 	size_t n = header_get_record_length_and_utm_zone(f, utm, &isbin, t);
-	//fprintf(stderr, "%d\n", n);
-	//fprintf(stderr, "%s\n", utm);
 
     if (n > 0) {
 	    double data[n];
@@ -130,16 +128,13 @@ static bool parse_ply_points_for_extrema(float *xmin, float *xmax, float *ymin,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"%s [-c column] tile_dir out_dir\n", s);
-	fprintf(stderr, "\t the resolution is in meters per pixel\n");
+		"%s cloud.ply plyextrema.txt\n", s);
 }
 
 #include "pickopt.c"
 
 int main(int c, char *v[])
 {
-	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
-
 	// process input arguments
 	if (c != 3) {
 		help(*v);
@@ -147,35 +142,30 @@ int main(int c, char *v[])
 	}
 
 	// initialize x, y extrema values
-	float xmin = INFINITY;
-	float xmax = -INFINITY;
-	float ymin = INFINITY;
-	float ymax = -INFINITY;
+	double xmin = INFINITY;
+	double xmax = -INFINITY;
+	double ymin = INFINITY;
+	double ymax = -INFINITY;
 
 	char utm[3];
 	
-	char *tile_dir = v[1];
-	char ply_file[1000];
-	char extrema_file[1000];
-	
-	strtok(tile_dir, "\n");
-	sprintf(ply_file,"%s/cloud.ply",tile_dir);
-	sprintf(extrema_file,"%s/extrema.txt",tile_dir);
+	char *ply_file = v[1];
+	char *plyextrema_file = v[2];
 	
 	if (parse_ply_points_for_extrema(&xmin, &xmax, &ymin, &ymax, utm, ply_file))
-        fprintf(stderr, "xmin: %20f, xmax: %20f, ymin: %20f, ymax: %20f\n",
-                xmin, xmax, ymin, ymax);
-    else {
-	    fprintf(stderr, "plyextrema: empty input ply file\n");
-        return EXIT_FAILURE;
-    }
+	  fprintf(stderr, "xmin: %lf, xmax: %lf, ymin: %lf, ymax: %lf\n",
+		  xmin, xmax, ymin, ymax);
+	else {
+	  fprintf(stderr, "plyextrema: empty input ply file\n");
+	  return EXIT_FAILURE;
+	}
 
 
 	FILE* out_extrema = NULL;
-	out_extrema = fopen(v[2], "w");
+	out_extrema = fopen(plyextrema_file, "w");
 	if (out_extrema != NULL)
 	{
-            fprintf(out_extrema, "%f %f %f %f", xmin, xmax, ymin, ymax);
+            fprintf(out_extrema, "%lf %lf %lf %lf", xmin, xmax, ymin, ymax);
 	    fclose(out_extrema);
 	}
 	else

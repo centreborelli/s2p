@@ -22,10 +22,10 @@ SRCDIR = c
 BINDIR = bin
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) homography sift imscript mgm piio
+default: $(BINDIR) homography sift imscript mgm piio tvl1
 
 # the "all" rule builds three further correlators
-all: default msmw3 sgbm tvl1
+all: default msmw3 sgbm
 
 # test for the default configuration
 test: default
@@ -97,9 +97,9 @@ msmw3:
 	cp $(BINDIR)/build_msmw3/msmw $(BINDIR)
 
 tvl1:
-	$(MAKE) -C 3rdparty/tvl1flow_3
-	cp 3rdparty/tvl1flow_3/tvl1flow $(BINDIR)
-	cp 3rdparty/tvl1flow_3/callTVL1.sh $(BINDIR)
+	$(MAKE) -C 3rdparty/tvl1flow
+	cp 3rdparty/tvl1flow/tvl1flow $(BINDIR)
+	cp 3rdparty/tvl1flow/callTVL1.sh $(BINDIR)
 
 
 
@@ -222,7 +222,7 @@ clean_msmw3:
 	$(RM) $(BINDIR)/msmw
 
 clean_tvl1:
-	$(MAKE) -C 3rdparty/tvl1flow_3 clean
+	$(MAKE) -C 3rdparty/tvl1flow clean
 	$(RM) $(BINDIR)/tvl1flow
 	$(RM) $(BINDIR)/callTVL1.sh
 
