@@ -1,33 +1,33 @@
 // PLAMBDA(1)                  imscript                  PLAMBDA(1)        {{{1
 //
 // NAME                                                                    {{{2
-// 	plambda - a RPN calculator for image pixels
+//	plambda - a RPN calculator for image pixels
 //
 // SYNOPSIS                                                                {{{2
-// 	plambda a.pnb b.png c.png ... "lambda expression" > output
-// 	plambda a.pnb b.png c.png ... "lambda expression" -o output.png
-// 	plambda -c num1 num2 ... "lambda expression"
+//	plambda a.pnb b.png c.png ... "lambda expression" > output
+//	plambda a.pnb b.png c.png ... "lambda expression" -o output.png
+//	plambda -c num1 num2 ... "lambda expression"
 //
 // DESCRIPTION                                                             {{{2
-// 	Plambda applies an expression to all the pixels of a collection of
-// 	images, and produces a single output image.  Each input image
-// 	corresponds to one of the variables of the expression (in alphabetical
-// 	order).  There are modifiers to the variables that allow access to the
-// 	values of neighboring pixels, or to particular components of a pixel.
+//	Plambda applies an expression to all the pixels of a collection of
+//	images, and produces a single output image.  Each input image
+//	corresponds to one of the variables of the expression (in alphabetical
+//	order).  There are modifiers to the variables that allow access to the
+//	values of neighboring pixels, or to particular components of a pixel.
 //
 // LANGUAGE                                                                {{{2
-// 	A "plambda" program is a sequence of tokens.  Tokens may be constants,
-// 	variables, or operators.  Constants and variables get their value
-// 	computed and pushed to the stack.  Operators pop values from the stack,
-// 	apply a function to them, and push back the results.
+//	A "plambda" program is a sequence of tokens.  Tokens may be constants,
+//	variables, or operators.  Constants and variables get their value
+//	computed and pushed to the stack.  Operators pop values from the stack,
+//	apply a function to them, and push back the results.
 //
-// 	CONSTANTS: numeric constants written in scientific notation, and "pi"
-// 	OPERATORS: +, -, *, ^, /, and all the functions from math.h
-// 	VARIABLES: anything not recognized as a constant or operator.  There
-// 	must be as many variables as input images, and they are assigned to
-// 	images in alphabetical order.
+//	CONSTANTS: numeric constants written in scientific notation, and "pi"
+//	OPERATORS: +, -, *, ^, /, and all the functions from math.h
+//	VARIABLES: anything not recognized as a constant or operator.  There
+//	must be as many variables as input images, and they are assigned to
+//	images in alphabetical order.
 //
-// 	All operators (unary, binary and ternary) are vectorializable.
+//	All operators (unary, binary and ternary) are vectorializable.
 //
 //	Some "sugar" is added to the language:
 //
@@ -120,14 +120,22 @@
 //		mtrans	transpose of a matrix
 //		mtrace	trace of a matrix
 //		minv	inverse of a matrix
+//		vavg	average value of a vector
+//		vsum	sum of the components of a vector
+//		vmul	product of the components of a vector
+//		vmax	max component of a vector
+//		vmin	min component of a vector
+//		vnorm	euclidean norm of a vector
+//		vdim	length of a vector
+//
 //
 // OPTIONS                                                                 {{{2
-//      -o file     save output to named file
-//      -c          act as a symbolic calculator
-//      -h          print short help message
-//      --help      print longer help message
-//      --man       print manpage (requires help2man)
-//      --version   print program version
+//	-o file		save output to named file
+//	-c		act as a symbolic calculator
+//	-h		print short help message
+//	--help		print longer help message
+//	--man		print manpage (requires help2man)
+//	--version	print program version
 //
 // EXAMPLES                                                                {{{2
 // 	Sum two images:
@@ -190,25 +198,25 @@
 //		plambda zero:WxH "randn randn randn randn  4 njoin $GRAINSIZE * pi sqrt * 2 *"|blur g $GRAINSIZE|plambda - "x[0] x[1] * x[2] x[3] * - 2 sqrt /"
 //
 //	Periodic component of an image
-//		  cat image|fftper|fft|plambda - "x :I :I * :J :J * + *"|ifft|crop 0 0 `imprintf "%w %h" image`|fft|plambda - "x :I :I * :J :J * + / 4 /"|ifft >pcomponent
+//		  cat image|fftsym|fft|plambda - "x :I :I * :J :J * + *"|ifft|crop 0 0 `imprintf "%w %h" image`|fft|plambda - "x :I :I * :J :J * + / 4 /"|ifft >pcomponent
 //
 //
 //
 // AUTHOR                                                                  {{{2
 //
-//      Written by Enric Meinhardt-Llopis
+//	Written by Enric Meinhardt-Llopis
 //
 //
 // REPORTING BUGS                                                          {{{2
 //
-//      Download last version from https://github.com/mnhrdt
-//      Report bugs to <enric.meinhardt@cmla.ens-cachan.fr>
+//	Download last version from https://github.com/mnhrdt
+//	Report bugs to <enric.meinhardt@cmla.ens-cachan.fr>
 //
 // TODO LIST                                                               {{{2
 //
-//      * implement shunting-yard algorithm to admit infix notation
-//      * handle 3D and nD images
-//      * merge colonvars and magicvars (the only difficulty lies in naming)
+//	* implement shunting-yard algorithm to admit infix notation
+//	* handle 3D and nD images
+//	* merge colonvars and magicvars (the only difficulty lies in naming)
 
 
 // #includes {{{1
@@ -221,13 +229,19 @@
 #include <string.h>
 #include <math.h>
 
+
+//#define __STDC_IEC_559_COMPLEX__ 1
+#ifdef __STDC_IEC_559_COMPLEX__
+#include <complex.h>
+#endif
+
 #include "smapa.h"
 
 #include "fail.c"
 #include "xmalloc.c"
 #include "random.c"
 #include "parsenumbers.c"
-#include "colorcoords.c"
+#include "colorcoordsf.c"
 
 
 // #defines {{{1
@@ -260,6 +274,39 @@
 #define PLAMBDA_STACKOP 5  // stack operator
 #define PLAMBDA_VARDEF 6   // register variable definition (hacky)
 #define PLAMBDA_MAGIC 7    // "magic" modifier (requiring cached global data)
+#define PLAMBDA_IMAGEOP 8    // comma-modified variable
+
+#define IMAGEOP_IDENTITY 0
+#define IMAGEOP_X 1
+#define IMAGEOP_Y 2
+#define IMAGEOP_XX 3
+#define IMAGEOP_XY 4
+#define IMAGEOP_YX 5
+#define IMAGEOP_YY 6
+#define IMAGEOP_NGRAD 8
+#define IMAGEOP_LAP 9
+#define IMAGEOP_CURV 10
+#define IMAGEOP_ILAP 12
+#define IMAGEOP_HESS 1001
+#define IMAGEOP_GRAD 1002
+#define IMAGEOP_DIV 1003
+#define IMAGEOP_SHADOW 1004
+
+#define SCHEME_FORWARD 0
+#define SCHEME_BACKWARD 1
+#define SCHEME_CENTERED 2
+#define SCHEME_CONSISTENT 3
+#define SCHEME_PRATT 4
+#define SCHEME_SOBEL 5
+#define SCHEME_PREWITT 6
+#define SCHEME_SCHARR 7
+#define SCHEME_MORPHO5_FORWARD 8
+#define SCHEME_MORPHO5_BACKWARD 9
+#define SCHEME_MORPHO5_CENTERED 10
+#define SCHEME_MORPHO9_FORWARD 11
+#define SCHEME_MORPHO9_BACKWARD 12
+#define SCHEME_MORPHO9_CENTERED 13
+
 
 // local functions {{{1
 
@@ -336,6 +383,39 @@ static void complex_product(float *xy, float *x, float *y)
 	xy[1] = x[0]*y[1] + x[1]*y[0];
 }
 
+static void complex_exp(float *y, float *x)
+{
+#ifdef __STDC_IEC_559_COMPLEX__
+	*(complex float *)y = cexp(*(complex float *)x);
+#else
+	y[0] = exp(x[0]) * cos(x[1]);
+	y[1] = exp(x[0]) * sin(x[1]);
+#endif
+}
+
+#ifdef __STDC_IEC_559_COMPLEX__
+#define REGISTERC(f) static void complex_ ## f(float *y, float *x) {\
+	*(complex float *)y = f(*(complex float *)x); }
+REGISTERC(cacos)
+REGISTERC(cacosh)
+REGISTERC(casin)
+REGISTERC(casinh)
+REGISTERC(catan)
+REGISTERC(catanh)
+REGISTERC(ccos)
+REGISTERC(ccosh)
+REGISTERC(cexp)
+REGISTERC(clog)
+REGISTERC(conj)
+REGISTERC(cproj)
+REGISTERC(csin)
+REGISTERC(csinh)
+REGISTERC(csqrt)
+REGISTERC(ctan)
+REGISTERC(ctanh)
+#endif
+
+
 static void matrix_product_clean(
 		float *ab, int *ab_nrows, int *ab_ncols,
 		float *a, int a_nrows, int a_ncols,
@@ -366,6 +446,8 @@ static int matrix_product(float *ab, float *a, float *b, int na, int nb)
 		a_nrows = a_ncols = b_nrows = b_ncols = 2;
 	} else if (na == 9 && nb == 9) {
 		a_nrows = a_ncols = b_nrows = b_ncols = 3;
+	} else if (na == 16 && nb == 16) {
+		a_nrows = a_ncols = b_nrows = b_ncols = 4;
 	} else if (na == 9 && nb == 3) {
 		a_nrows = a_ncols = b_nrows = 3;
 		b_ncols = 1;
@@ -479,6 +561,29 @@ static int matrix_trace(float *r, float *a, int nn)
 }
 
 // instance of "univector_function"
+static int matrix_3x3to12x9(float *r, float *a, int n)
+{
+	if (n != 9)
+		fail("mto12x9 needs a 3x3 matrix");
+	if (108 > PLAMBDA_MAX_PIXELDIM)
+		fail("MAX_PIXELDIM needs to be at least 108");
+	for (int i = 0; i < 108; i++)
+		r[i] = 0;
+	r[0] = r[39] = r[78] = a[0];
+	r[1] = r[40] = r[79] = a[1];
+	r[2] = r[41] = r[80] = a[2];
+	r[12] = r[51] = r[90] = a[3];
+	r[13] = r[52] = r[91] = a[4];
+	r[14] = r[53] = r[92] = a[5];
+	r[24] = r[63] = r[102] = a[6];
+	r[25] = r[64] = r[103] = a[7];
+	r[26] = r[65] = r[104] = a[8];
+	r[21] = r[34] = r[71] = 1;
+	r[45] = r[82] = r[95] = -1;
+	return 108;
+}
+
+// instance of "univector_function"
 static int matrix_transpose(float *r, float *a, int nn)
 {
 	int n;
@@ -495,9 +600,98 @@ static int matrix_transpose(float *r, float *a, int nn)
 	return nn;
 }
 
+// instances of "univector_function"
+static int xyz2rgb(float *y, float *x, int n)
+	{ assert(n == 3); xyz_to_rgb_floats(y, x); return 3; }
+static int rgb2xyz(float *y, float *x, int n)
+	{ assert(n == 3); rgb_to_xyz_floats(y, x); return 3; }
+static int hsv2rgb(float *y, float *x, int n)
+	{ assert(n == 3); hsv_to_rgb_floats(y, x); return 3; }
+static int rgb2hsv(float *y, float *x, int n)
+	{ assert(n == 3); rgb_to_hsv_floats(y, x); return 3; }
+
+// instance of "univector_function"
+static int vector_avg(float *r, float *a, int n)
+{
+	*r = 0;
+	for (int i = 0; i < n; i++)
+		*r += a[i]/n;
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_sum(float *r, float *a, int n)
+{
+	*r = 0;
+	for (int i = 0; i < n; i++)
+		*r += a[i];
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_min(float *r, float *a, int n)
+{
+	*r = *a;
+	for (int i = 1; i < n; i++)
+		*r = fmin(*r, a[i]);
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_max(float *r, float *a, int n)
+{
+	*r = *a;
+	for (int i = 1; i < n; i++)
+		*r = fmax(*r, a[i]);
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_mul(float *r, float *a, int n)
+{
+	*r = 1;
+	for (int i = 0; i < n; i++)
+		*r *= a[i];
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_norm(float *r, float *a, int n)
+{
+	*r = 0;
+	for (int i = 0; i < n; i++)
+		*r = hypot(*r, a[i]);
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_dimension(float *r, float *a, int n)
+{
+	(void)a;
+	*r = n;
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_rgb2gray(float *r, float *a, int n)
+{
+	if (n != 3) fail("vgray needs a 3-vector");
+	*r = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2];
+	return 1;
+}
+
+// instance of "univector_function"
+static int vector_colorsign(float *r, float *a, int n)
+{
+	if (n != 1) fail("vcolorsign needs a scalar");
+	r[0] = fabs(*a) * (*a < 0);
+	r[1] = fabs(*a) * (*a > 0);
+	r[2] = 0;
+	return 3;
+}
 
 // table of all functions (local and from math.h) {{{1
-struct predefined_function {
+static struct predefined_function {
 	void (*f)(void);
 	char *name;
 	int nargs;
@@ -505,6 +699,7 @@ struct predefined_function {
 } global_table_of_predefined_functions[] = {
 #define REGISTER_FUNCTION(x,n) {(void(*)(void))x, #x, n, 0}
 #define REGISTER_FUNCTIONN(x,xn,n) {(void(*)(void))x, xn, n, 0}
+//#define REGISTER_FUNCTIONC(x,n) {(void(*)(void))x, "complex#x, n, 0}
 	REGISTER_FUNCTION(acos,1),
 	REGISTER_FUNCTION(acosh,1),
 	REGISTER_FUNCTION(asin,1),
@@ -588,8 +783,30 @@ struct predefined_function {
 	REGISTER_FUNCTIONN(random_exponential,"rande",-1),
 	REGISTER_FUNCTIONN(random_pareto,"randp",-1),
 	REGISTER_FUNCTIONN(random_raw,"rand",-1),
+	REGISTER_FUNCTIONN(random_stable,"rands",2),
 	REGISTER_FUNCTIONN(from_cartesian_to_polar,"topolar", -2),
 	REGISTER_FUNCTIONN(from_polar_to_cartesian,"frompolar", -2),
+	REGISTER_FUNCTIONN(complex_exp,"cexp", -2),
+#ifdef __STDC_IEC_559_COMPLEX__
+	REGISTER_FUNCTIONN(complex_cacos , "cacos", -2),
+	REGISTER_FUNCTIONN(complex_cacosh, "cacosh", -2),
+	REGISTER_FUNCTIONN(complex_casin , "casin", -2),
+	REGISTER_FUNCTIONN(complex_casinh, "casinh", -2),
+	REGISTER_FUNCTIONN(complex_catan , "catan", -2),
+	REGISTER_FUNCTIONN(complex_catanh, "catanh", -2),
+	REGISTER_FUNCTIONN(complex_ccos  , "ccos", -2),
+	REGISTER_FUNCTIONN(complex_ccosh , "ccosh", -2),
+	REGISTER_FUNCTIONN(complex_cexp  , "ccexp", -2),
+	REGISTER_FUNCTIONN(complex_clog  , "clog", -2),
+	REGISTER_FUNCTIONN(complex_conj  , "conj", -2),
+	REGISTER_FUNCTIONN(complex_cproj , "cproj", -2),
+	REGISTER_FUNCTIONN(complex_csin  , "csin", -2),
+	REGISTER_FUNCTIONN(complex_csinh , "csinh", -2),
+	REGISTER_FUNCTIONN(complex_csqrt , "csqrt", -2),
+	REGISTER_FUNCTIONN(complex_ctan  , "ctan", -2),
+	REGISTER_FUNCTIONN(complex_ctanh , "ctanh", -2),
+#endif
+	REGISTER_FUNCTIONN(complex_exp,"cexp", -2),
 	REGISTER_FUNCTIONN(complex_product,"cprod", -3),
 	REGISTER_FUNCTIONN(matrix_product,"mprod",-5),
 	REGISTER_FUNCTIONN(vector_product,"vprod",-5),
@@ -598,8 +815,20 @@ struct predefined_function {
 	REGISTER_FUNCTIONN(matrix_transpose,"mtrans",-6),
 	REGISTER_FUNCTIONN(matrix_inverse,"minv",-6),
 	REGISTER_FUNCTIONN(matrix_trace,"mtrace",-6),
-	//REGISTER_FUNCTIONN(rgb2hsv,"rgb2hsv",3),
-	//REGISTER_FUNCTIONN(hsv2rgb,"rgb2hsv",3),
+	REGISTER_FUNCTIONN(matrix_3x3to12x9,"mto12x9",-6),
+	REGISTER_FUNCTIONN(vector_avg,"vavg",-6),
+	REGISTER_FUNCTIONN(vector_sum,"vsum",-6),
+	REGISTER_FUNCTIONN(vector_min,"vmin",-6),
+	REGISTER_FUNCTIONN(vector_max,"vmax",-6),
+	REGISTER_FUNCTIONN(vector_mul,"vmul",-6),
+	REGISTER_FUNCTIONN(vector_norm,"vnorm",-6),
+	REGISTER_FUNCTIONN(vector_dimension,"vdim",-6),
+	REGISTER_FUNCTIONN(vector_rgb2gray,"vgray",-6),
+	REGISTER_FUNCTIONN(vector_colorsign,"vcsign",-6),
+	REGISTER_FUNCTIONN(hsv2rgb,"hsv2rgb",-6),
+	REGISTER_FUNCTIONN(rgb2hsv,"rgb2hsv",-6),
+	REGISTER_FUNCTIONN(xyz2rgb,"xyz2rgb",-6),
+	REGISTER_FUNCTIONN(rgb2xyz,"rgb2xyz",-6),
 #undef REGISTER_FUNCTION
 #undef REGISTER_FUNCTIONN
 	{NULL, "pi", 0, M_PI},
@@ -630,7 +859,7 @@ static float apply_function(struct predefined_function *f, float *v)
 	case 1: return ((double(*)(double))(f->f))(v[0]);
 	case 2: return ((double(*)(double,double))f->f)(v[1], v[0]);
 	case 3: return ((double(*)(double,double,double))f->f)(v[2],v[1],v[0]);
-	case -1: return ((double(*)())(f->f))();
+	case -1: return ((double(*)(void))(f->f))();
 	default: fail("bizarre{%d}", f->nargs);
 	}
 	//return 0;
@@ -648,6 +877,7 @@ static int symmetrize_index_inside(int i, int m)
 // the value of colon variables depends on the position within the image
 static float eval_colonvar(int w, int h, int i, int j, int c)
 {
+	double x, y;
 	switch(c) {
 	case 'i': return i;
 	case 'j': return j;
@@ -660,6 +890,14 @@ static float eval_colonvar(int w, int h, int i, int j, int c)
 	case 't': return atan2((2.0/(h-1))*j-1,(2.0/(w-1))*i-1);
 	case 'I': return symmetrize_index_inside(i,w);
 	case 'J': return symmetrize_index_inside(j,h);
+	case 'P': return symmetrize_index_inside(i,w)*2*M_PI/w;
+	case 'Q': return symmetrize_index_inside(j,h)*2*M_PI/h;
+	case 'L': x = symmetrize_index_inside(i,w);
+		  y = symmetrize_index_inside(j,h);
+		  return -(x*x+y*y);
+	case 'R': x = symmetrize_index_inside(i,w);
+		  y = symmetrize_index_inside(j,h);
+		  return hypot(x, y);
 	case 'W': return w/(2*M_PI);
 	case 'H': return h/(2*M_PI);
 	default: fail("unrecognized colonvar \":%c\"", c);
@@ -679,6 +917,10 @@ struct plambda_token {
 	int colonvar;        // if type==colon, the letter
 
 	char *tmphack;       // temporary place for storing the unsorted index
+
+	// only for imageop hack:
+	int imageop_operator;
+	int imageop_scheme;
 };
 
 struct collection_of_varnames {
@@ -699,14 +941,13 @@ struct plambda_program {
 struct image_stats {
 	bool init_simple, init_vsimple, init_ordered, init_vordered;
 	float scalar_min, scalar_max, scalar_avg, scalar_med, scalar_sum;
-	//float vector_cmin[PLAMBDA_MAX_PIXELDIM];  // component-wise min
-	float vector_n1min[PLAMBDA_MAX_PIXELDIM]; // exemplar with min L1
+	float scalar_std;
+	//float vector_n1min[PLAMBDA_MAX_PIXELDIM]; // exemplar with min L1
 	float vector_n2min[PLAMBDA_MAX_PIXELDIM]; // exemplar with min L2
-	float vector_nimin[PLAMBDA_MAX_PIXELDIM]; // exemplar with min Linf
-	//float vector_cmax[PLAMBDA_MAX_PIXELDIM];
-	float vector_n1max[PLAMBDA_MAX_PIXELDIM];
+	//float vector_nimin[PLAMBDA_MAX_PIXELDIM]; // exemplar with min Linf
+	//float vector_n1max[PLAMBDA_MAX_PIXELDIM];
 	float vector_n2max[PLAMBDA_MAX_PIXELDIM];
-	float vector_nimax[PLAMBDA_MAX_PIXELDIM];
+	//float vector_nimax[PLAMBDA_MAX_PIXELDIM];
 	float vector_avg[PLAMBDA_MAX_PIXELDIM];
 	float vector_med[PLAMBDA_MAX_PIXELDIM];
 	float vector_sum[PLAMBDA_MAX_PIXELDIM];
@@ -716,11 +957,57 @@ struct image_stats {
 	float component_avg[PLAMBDA_MAX_PIXELDIM];
 	float component_med[PLAMBDA_MAX_PIXELDIM];
 	float component_sum[PLAMBDA_MAX_PIXELDIM];
+	float component_std[PLAMBDA_MAX_PIXELDIM];
 	float *sorted_samples, *sorted_components[PLAMBDA_MAX_PIXELDIM];
+
+	// original image data, for debugging purposes
+	int w, h, pd;
+	float *x;
 };
 
+// silly function to print the components of a vector to stderr
+//static int devec(float *x, int n)
+//{
+//	for (int i = 0; i < n; i++)
+//		fprintf(stderr, "%g%s", x[i], i==n-1?"":", ");
+//}
+//
+//TODO: make a reasonable way to call this debugging function
+//static void print_image_stats_to_stderr(struct image_stats *s)
+//{
+//	int n = s->pd;
+//	fprintf(stderr, "image [%dx%d,%d] (%p) stats %p\n", s->w, s->h, n,
+//			(void*)s->x, (void*)s);
+//	if (s->init_simple) {
+//		fprintf(stderr, "\tscalar_min = %g\n", s->scalar_min);
+//		fprintf(stderr, "\tscalar_max = %g\n", s->scalar_min);
+//		fprintf(stderr, "\tscalar_avg = %g\n", s->scalar_min);
+//		fprintf(stderr, "\tscalar_sum = %g\n", s->scalar_min);
+//		fprintf(stderr, "\tscalar_std = %g\n", s->scalar_min);
+//	}
+//	if (s->init_ordered) {
+//		fprintf(stderr, "\tscalar_med = %g\n", s->scalar_med);
+//	}
+//	if (s->init_vsimple) {
+//		fprintf(stderr,"\tvector_sum = "); devec(s->vector_sum,n);
+//		fprintf(stderr,"\tvector_avg = "); devec(s->vector_avg,n);
+//		fprintf(stderr,"\tvector_n2min = "); devec(s->vector_n2min,n);
+//		fprintf(stderr,"\tvector_n2max = "); devec(s->vector_n2max,n);
+//	}
+//	if (s->init_csimple) {
+//		fprintf(stderr,"\tcomponent_min = "); devec(s->component_min,n);
+//		fprintf(stderr,"\tcomponent_max = "); devec(s->component_max,n);
+//		fprintf(stderr,"\tcomponent_avg = "); devec(s->component_avg,n);
+//		fprintf(stderr,"\tcomponent_sum = "); devec(s->component_sum,n);
+//		fprintf(stderr,"\tcomponent_std = "); devec(s->component_std,n);
+//	}
+//	if (s->init_cordered) {
+//		fprintf(stderr,"\tcomponent_med = "); devec(s->component_med,n);
+//	}
+//}
+
 struct linear_statistics {
-	float min, max, avg, avgnz, sum;
+	float min, max, avg, avgnz, sum, std;
 	int n, rns, rnz, nnan, ninf;
 };
 
@@ -729,7 +1016,7 @@ static void compute_linstats(struct linear_statistics *s,
 {
 	int rns = 0, rnz = 0, nnan = 0, ninf = 0;
 	float min = INFINITY, max = -INFINITY;
-	long double avg = 0, avgnz = 0;
+	long double avg = 0, avgnz = 0, sumsq = 0;
 	for (int i = 0; i < n; i++) {
 		float y = x[i*stride + offset];
 		if (isnan(y)) {
@@ -748,6 +1035,12 @@ static void compute_linstats(struct linear_statistics *s,
 	}
 	s->sum = avg;
 	avg /= rns; avgnz /= rnz;
+	for (int i = 0; i < n; i++) {
+		float y = x[i*stride + offset];
+		if (!isnan(y))
+			sumsq += (y - avg) * (y - avg);
+	}
+	s->std = sqrt(sumsq / rns);
 	s->min=min; s->max=max; s->avg=avg; s->avgnz=avgnz;
 	s->n=n; s->rns=rns; s->rnz=rnz; s->nnan=nnan; s->ninf=ninf;
 }
@@ -763,6 +1056,7 @@ static void compute_simple_sample_stats(struct image_stats *s,
 	s->scalar_max = ls->max;
 	s->scalar_avg = ls->avg;
 	s->scalar_sum = ls->sum;
+	s->scalar_std = ls->std;
 }
 
 static void compute_simple_component_stats(struct image_stats *s,
@@ -777,6 +1071,7 @@ static void compute_simple_component_stats(struct image_stats *s,
 		s->component_min[l] = ls->min;
 		s->component_max[l] = ls->max;
 		s->component_avg[l] = ls->avg;
+		s->component_std[l] = ls->std;
 	}
 }
 
@@ -798,7 +1093,7 @@ static void compute_simple_vector_stats(struct image_stats *s,
 	if (w*h > 1) s->init_vsimple = true;
 	int np = w * h, rnp = 0;
 	float minpixel = INFINITY, maxpixel = -INFINITY;
-	long double avgpixel[PLAMBDA_MAX_PIXELDIM] = {0}, avgnorm = 0;
+	long double avgpixel[PLAMBDA_MAX_PIXELDIM];
 	int minidx=-1, maxidx=-1;
 	for (int j = 0; j < pd; j++)
 		avgpixel[j] = 0;
@@ -810,12 +1105,10 @@ static void compute_simple_vector_stats(struct image_stats *s,
 		if (xnorm > maxpixel) { maxidx = i; maxpixel = xnorm; }
 		for (int j = 0; j < pd; j++)
 			avgpixel[j] += x[pd*i+j];
-		avgnorm += xnorm;
 		rnp += 1;
 	}
 	//assert(rnp);
 	FORI(pd) s->vector_sum[i] = avgpixel[i];
-	avgnorm /= rnp;
 	long double mipi[pd], mapi[pd];
 	for (int j = 0; j < pd; j++) {
 		mipi[j] = x[minidx*pd+j];
@@ -825,7 +1118,6 @@ static void compute_simple_vector_stats(struct image_stats *s,
 	FORI(pd) s->vector_n2min[i] = mipi[i];
 	FORI(pd) s->vector_n2max[i] = mapi[i];
 	FORI(pd) s->vector_avg[i] = avgpixel[i];
-	//setnumber(p, "error", avgnorm);
 }
 
 static int compare_floats(const void *aa, const void *bb)
@@ -863,17 +1155,17 @@ static void compute_ordered_component_stats(struct image_stats *s,
 	}
 }
 
-static void compute_ordered_vector_stats(struct image_stats *s,
-		float *x, int w, int h, int pd)
-{
-	(void)x;
-	(void)w;
-	(void)h;
-	(void)pd;
-	fail("ordered vector stats not implemented");
-	// there is some bizarre trickery waiting to be coded in here
-	//s->init_vordered = true;
-}
+//static void compute_ordered_vector_stats(struct image_stats *s,
+//		float *x, int w, int h, int pd)
+//{
+//	(void)x;
+//	(void)w;
+//	(void)h;
+//	(void)pd;
+//	fail("ordered vector stats not implemented");
+//	// there is some bizarre trickery waiting to be coded in here
+//	//s->init_vordered = true;
+//}
 
 static int bound(int a, int x, int b)
 {
@@ -901,6 +1193,7 @@ static int eval_magicvar(float *out, int magic, int img_index, int comp, int qq,
 			t[i].init_vordered = false;
 			t[i].init_csimple = false;
 			t[i].init_cordered = false;
+			t[i].w=w;t[i].h=h;t[i].pd=pd;t[i].x=x; // for debug only
 		}
 		initt = true;
 	}
@@ -911,7 +1204,7 @@ static int eval_magicvar(float *out, int magic, int img_index, int comp, int qq,
 
 	struct image_stats *ti = t + img_index;
 
-	if (magic=='i' || magic=='a' || magic=='v' || magic=='s') {
+	if(magic=='i' || magic=='a' || magic=='v' || magic=='s' || magic=='r') {
 		if (comp < 0) { // use all samples
 			compute_simple_sample_stats(ti, x, w, h, pd);
 			switch(magic) {
@@ -919,6 +1212,7 @@ static int eval_magicvar(float *out, int magic, int img_index, int comp, int qq,
 				case 'a': *out = ti->scalar_max; break;
 				case 'v': *out = ti->scalar_avg; break;
 				case 's': *out = ti->scalar_sum; break;
+				case 'r': *out = ti->scalar_std; break;
 				default: fail("this can not happen");
 			}
 			return 1;
@@ -929,6 +1223,7 @@ static int eval_magicvar(float *out, int magic, int img_index, int comp, int qq,
 				case 'a': *out = ti->component_max[comp]; break;
 				case 'v': *out = ti->component_avg[comp]; break;
 				case 's': *out = ti->component_sum[comp]; break;
+				case 'r': *out = ti->component_std[comp]; break;
 				default: fail("this can not happen");
 			}
 			return 1;
@@ -943,11 +1238,12 @@ static int eval_magicvar(float *out, int magic, int img_index, int comp, int qq,
 		default: fail("this can not happen");
 		}
 		return pd;
-	} else if (magic=='Y' || magic=='E') {
+	} else if (magic=='Y' || magic=='E' || magic=='R') {
 		compute_simple_component_stats(ti, x, w, h, pd);
 		switch(magic) {
 		case 'Y': FORI(pd) out[i] = ti->component_min[i]; break;
 		case 'E': FORI(pd) out[i] = ti->component_max[i]; break;
+		case 'R': FORI(pd) out[i] = ti->component_std[i]; break;
 		default: fail("this can not happen");
 		}
 		return pd;
@@ -988,7 +1284,7 @@ static int eval_magicvar(float *out, int magic, int img_index, int comp, int qq,
 	} else if (magic == 'W') {
 		compute_ordered_component_stats(ti, x, w, h, pd);
 		FORI(pd) {
-			int qposi = round(qq*w*h/1000000.0);
+			int qposi = round(qq*(w*h/1000000.0));
 			qposi = bound(0, qposi, w*h-1);
 			out[i] = ti->sorted_components[i][qposi];
 		}
@@ -1010,7 +1306,7 @@ static int eval_magicvar(float *out, int magic, int img_index, int comp, int qq,
 		}
 		return pd;
 	} else
-		fail("magic of kind '%c' is not yed implemented", magic);
+		fail("magic of kind '%c' is not yet implemented", magic);
 
 	return 0;
 }
@@ -1062,8 +1358,6 @@ static int token_is_vardef(const char *t)
 #define PLAMBDA_STACKOP_ROT 5
 #define PLAMBDA_STACKOP_VMERGE3 6
 #define PLAMBDA_STACKOP_VMERGEALL 7
-#define PLAMBDA_STACKOP_HSV2RGB 8
-#define PLAMBDA_STACKOP_RGB2HSV 9
 #define PLAMBDA_STACKOP_NMERGE 10
 #define PLAMBDA_STACKOP_INTERLEAVE 11
 #define PLAMBDA_STACKOP_DEINTERLEAVE 12
@@ -1084,8 +1378,6 @@ static int token_is_stackop(const char *t)
 	if (0 == strcmp(t, "join3")) return PLAMBDA_STACKOP_VMERGE3;
 	if (0 == strcmp(t, "mergeall")) return PLAMBDA_STACKOP_VMERGEALL;
 	if (0 == strcmp(t, "joinall")) return PLAMBDA_STACKOP_VMERGEALL;
-	if (0 == strcmp(t, "hsv2rgb")) return PLAMBDA_STACKOP_HSV2RGB;
-	if (0 == strcmp(t, "rgb2hsv")) return PLAMBDA_STACKOP_RGB2HSV;
 	if (0 == strcmp(t, "njoin")) return PLAMBDA_STACKOP_NMERGE;
 	if (0 == strcmp(t, "nmerge")) return PLAMBDA_STACKOP_NMERGE;
 	if (0 == strcmp(t, "interleave")) return PLAMBDA_STACKOP_INTERLEAVE;
@@ -1110,7 +1402,8 @@ static int token_is_word(const char *t, const char **endptr)
 	while (t[n]) {
 		if  (!(isalnum(t[n])||t[n]=='_')) {
 			*endptr = t+n;
-			return (t[n]=='(' || t[n]=='[' || t[n]=='%') ? n : 0;
+			//return (t[n]=='('||t[n]=='['||t[n]=='%'||t[n]==';')?n:0;
+			return ispunct(t[n]) ? n : 0;
 		}
 		n += 1;
 	}
@@ -1176,6 +1469,47 @@ static void parse_modifiers(const char *mods,
 		*ocomp = comp;
 		return;
 	}
+}
+
+static bool hasprefix(const char *s, const char *p)
+{
+	return s == strstr(s, p);
+}
+
+static bool hassuffix(const char *s, const char *suf)
+{
+	int len_s = strlen(s);
+	int len_suf = strlen(suf);
+	if (len_s < len_suf)
+		return false;
+	return 0 == strcmp(suf, s + (len_s - len_suf));
+}
+
+static void parse_imageop(const char *s, int *op, int *scheme)
+{
+	*op = IMAGEOP_IDENTITY;
+	if (false) ;
+	else if (hasprefix(s, "xx")) *op = IMAGEOP_XX;
+	else if (hasprefix(s, "yy")) *op = IMAGEOP_YY;
+	else if (hasprefix(s, "xy")) *op = IMAGEOP_XY;
+	else if (hasprefix(s, "yx")) *op = IMAGEOP_XY;
+	else if (hasprefix(s, "l")) *op = IMAGEOP_LAP;
+	else if (hasprefix(s, "x")) *op = IMAGEOP_X;
+	else if (hasprefix(s, "y")) *op = IMAGEOP_Y;
+	else if (hasprefix(s, "n")) *op = IMAGEOP_NGRAD;
+	else if (hasprefix(s, "g")) *op = IMAGEOP_GRAD;
+	else if (hasprefix(s, "d")) *op = IMAGEOP_DIV;
+	else if (hasprefix(s, "S")) *op = IMAGEOP_SHADOW;
+	//else if (hasprefix(s, "k")) *op = IMAGEOP_CURV;
+	//else fail("unrecognized comma modifier \",%s\"", s);
+	*scheme = SCHEME_SOBEL;
+	if (*op == IMAGEOP_XY) *scheme = SCHEME_CENTERED;
+	if (false) ;
+	else if (hassuffix(s, "f")) *scheme = SCHEME_FORWARD;
+	else if (hassuffix(s, "b")) *scheme = SCHEME_BACKWARD;
+	else if (hassuffix(s, "c")) *scheme = SCHEME_CENTERED;
+	else if (hassuffix(s, "s")) *scheme = SCHEME_SOBEL;
+	else if (hassuffix(s, "p")) *scheme = SCHEME_PREWITT;
 }
 
 static void collection_of_varnames_init(struct collection_of_varnames *x)
@@ -1281,11 +1615,22 @@ static void process_token(struct plambda_program *p, const char *tokke)
 			varname[varlen] = '\0';
 			int comp, disp[2], magic;
 			t->tmphack =collection_of_varnames_add(p->var, varname);
+			//fprintf(stderr, "varname, mods = \"%s\" , \"%s\"\n", varname, tok_end);
 			parse_modifiers(tok_end, &comp, disp, disp+1, &magic);
+			//fprintf(stderr, "comp=%d disp=[%d %d] magic=%d\n",
+			//		comp, *disp, disp[1], magic);
 			t->type = comp<0 ? PLAMBDA_VECTOR : PLAMBDA_SCALAR;
-			if (magic) {
+			if (magic > 0) {
 				t->type = PLAMBDA_MAGIC;
 				t->colonvar = magic;
+			}
+			char *iopos = tok_end ? strchr(tok_end, ';') : 0;
+			if (!iopos && tok_end) iopos = strchr(tok_end, ',');
+			if (iopos) {
+				t->type = PLAMBDA_IMAGEOP; // comma operator
+				parse_imageop(1+iopos, &t->imageop_operator,
+							&t->imageop_scheme);
+				//fprintf(stderr, "imageop %d %d\n", t->imageop_operator, t->imageop_scheme);
 			}
 			t->component = comp;
 			t->displacement[0] = disp[0];
@@ -1311,7 +1656,8 @@ static void update_variable_indices(struct plambda_program *p)
 	{
 		struct plambda_token *t = p->t + i;
 		if (t->type == PLAMBDA_SCALAR || t->type == PLAMBDA_VECTOR
-				|| t->type == PLAMBDA_MAGIC)
+				|| t->type == PLAMBDA_MAGIC
+				|| t->type == PLAMBDA_IMAGEOP)
 		{
 			t->index = collection_of_varnames_find(p->var,
 								t->tmphack);
@@ -1327,17 +1673,13 @@ static void plambda_compile_program(struct plambda_program *p, const char *str)
 	char s[1+strlen(str)], *spacing = " \n\t";
 	strcpy(s, str);
 
-	//FORI(10) s->regn[i] = 0;
-
 	collection_of_varnames_init(p->var);
 	p->n = 0;
-	int n = 0;
 	char *tok = strtok(s, spacing);
 	while (tok) {
-		//fprintf(stderr, "token[%d] = %s\n", n, tok);
+		//fprintf(stderr, "TOK \"%s\"\n", tok);
 		process_token(p, tok);
 		tok = strtok(NULL, spacing);
-		n += 1;
 	}
 
 	collection_of_varnames_sort(p->var);
@@ -1358,6 +1700,7 @@ static const char *arity(struct predefined_function *f)
 	}
 }
 
+inline
 static void print_compiled_program(struct plambda_program *p)
 {
 	fprintf(stderr, "COMPILED PROGRAM OF %d TOKENS:\n", p->n);
@@ -1538,14 +1881,6 @@ static void treat_strange_case3(struct value_vstack *s,
 	vstack_push_vector(s, r, n);
 }
 
-// pop a 3-vector x from the stack and push f(x) as a 3-vector
-static void treat_strange_case4(struct value_vstack *s,
-		struct predefined_function *f)
-{
-	fail("color space conversions not implemented");
-}
-
-
 // codifies a function R^a x R^b -> R^c
 // the dimensions must be smaller than, say, 40
 static void treat_bivector_function(struct value_vstack *s,
@@ -1592,8 +1927,7 @@ static void vstack_apply_function(struct value_vstack *s,
 	float r[PLAMBDA_MAX_PIXELDIM];
 	FORI(f->nargs)
 		d[i] = vstack_pop_vector(v[i], s);
-	// the d[i] which are larger than one must be equal
-	FORI(f->nargs)
+	FORI(f->nargs) // the d[i] which are larger than one must be equal
 		if (d[i] > 1) {
 			if (rd > 1 && d[i] != rd)
 				fail("can not vectorize (%d %d)", rd, d[i]);
@@ -1662,28 +1996,6 @@ static void vstack_process_op(struct value_vstack *s, int opid)
 		FORI(nz) x[nx+ny+i] = z[i];
 		vstack_push_vector(s, x, nx+ny+nz);
 				     }
-		break;
-	case PLAMBDA_STACKOP_HSV2RGB: {
-		float x[PLAMBDA_MAX_PIXELDIM];
-		int n = vstack_pop_vector(x, s);
-		if (n != 3) fail("hsv2rgb needs a 3-vector");
-		double dx[3] = {x[0], x[1], x[2]};
-		double dy[3];
-		hsv_to_rgb_doubles(dy, dx);
-		FORI(3) x[i] = dy[i];
-		vstack_push_vector(s, x, 3);
-				      }
-		break;
-	case PLAMBDA_STACKOP_RGB2HSV: {
-		float x[PLAMBDA_MAX_PIXELDIM];
-		int n = vstack_pop_vector(x, s);
-		if (n != 3) fail("rgb2hsv needs a 3-vector");
-		double dx[3] = {x[0], x[1], x[2]};
-		double dy[3];
-		rgb_to_hsv_doubles(dy, dx);
-		FORI(3) x[i] = dy[i];
-		vstack_push_vector(s, x, 3);
-				      }
 		break;
 	case PLAMBDA_STACKOP_ROT: {
 		float x[PLAMBDA_MAX_PIXELDIM];
@@ -1783,12 +2095,13 @@ static void vstack_process_op(struct value_vstack *s, int opid)
 // run_program_vectorially_at {{{2
 #include "getpixel.c"
 
-SMART_PARAMETER_SILENT(PLAMBDA_GETPIXEL,1)
+SMART_PARAMETER_SILENT(PLAMBDA_GETPIXEL,-1)
 static float getsample_cfg(float *x, int w, int h, int pd, int i, int j, int l)
 {
-	getsample_operator p = NULL;
+	getsample_operator p = get_sample_operator(getsample_1);
 	int option = PLAMBDA_GETPIXEL();
 	switch (option) {
+	case -1: break;
 	case 0: p = getsample_0; break;
 	case 1: p = getsample_1; break;
 	case 2: p = getsample_2; break;
@@ -1799,9 +2112,173 @@ static float getsample_cfg(float *x, int w, int h, int pd, int i, int j, int l)
 	return p(x, w, h, pd, i, j, l);
 }
 
+#define H 0.5
+#define Q 0.25
+#define O 0.125
+static float stencil_3x3_identity[9] =  {0,0,0,  0,1,0, 0,0,0};
+static float stencil_3x3_dx_forward[9] =  {0,0,0,  0,-1,1, 0,0,0};
+static float stencil_3x3_dx_backward[9] = {0,0,0,  -1,1,0, 0,0,0};
+static float stencil_3x3_dx_centered[9] = {0,0,0,  -H,0,H, 0,0,0};
+static float stencil_3x3_dy_forward[9] =  {0,0,0,  0,-1,0, 0,1,0};
+static float stencil_3x3_dy_backward[9] = {0,-1,0, 0,1,0,  0,0,0};
+static float stencil_3x3_dy_centered[9] = {0,-H,0, 0,0,0,  0,H,0};
+static float stencil_3x3_dy_sobel[9] = {-O,-2*O,-O,  0,0,0, O,2*O,O};
+static float stencil_3x3_dx_sobel[9] = {-O,0,O,  -2*O,0,2*O, -O,0,O};
+static float stencil_3x3_dx_prewitt[9] =  {0,0,0,  0,-H,H, 0,-H,H};
+static float stencil_3x3_dy_prewitt[9] =  {0,0,0,  0,-H,-H, 0,H,H};
+static float stencil_3x3_laplace[9] =  {0,1,0,  1,-4,1, 0,1,0};
+static float stencil_3x3_dxx[9] =  {0,0,0,  1,-2,1, 0,0,0};
+static float stencil_3x3_dyy[9] =  {0,1,0,  0,-2,0, 0,1,0};
+static float stencil_3x3_dxy_4point[9] =  {-Q,0,Q,  0,0,0, Q,0,-Q};
+static float stencil_3x3_dxy_7point[9] =  {0,-H,H,  -H,1,-H, H,-H,0};
+#undef H
+#undef Q
+#undef O
+
+static float *get_stencil_3x3(int operator, int scheme)
+{
+	switch(operator) {
+	case IMAGEOP_LAP: return stencil_3x3_laplace;
+	case IMAGEOP_XX: return stencil_3x3_dxx;
+	case IMAGEOP_YY: return stencil_3x3_dyy;
+	case IMAGEOP_XY: { switch(scheme) {
+			 case SCHEME_CENTERED: return stencil_3x3_dxy_4point;
+			 case SCHEME_SOBEL: return stencil_3x3_dxy_7point;
+			 default: fail("unrecognized stencil,xy scheme %d");
+			 }
+		}
+	case IMAGEOP_X: { switch(scheme) {
+			case SCHEME_FORWARD: return stencil_3x3_dx_forward;
+			case SCHEME_BACKWARD: return stencil_3x3_dx_backward;
+			case SCHEME_CENTERED: return stencil_3x3_dx_centered;
+			case SCHEME_SOBEL: return stencil_3x3_dx_sobel;
+			case SCHEME_PREWITT: return stencil_3x3_dx_prewitt;
+			default: fail("unrecognized stencil,x scheme %d");
+			}
+		}
+	case IMAGEOP_Y: { switch(scheme) {
+			case SCHEME_FORWARD: return stencil_3x3_dy_forward;
+			case SCHEME_BACKWARD: return stencil_3x3_dy_backward;
+			case SCHEME_CENTERED: return stencil_3x3_dy_centered;
+			case SCHEME_SOBEL: return stencil_3x3_dy_sobel;
+			case SCHEME_PREWITT: return stencil_3x3_dy_prewitt;
+			default: fail("unrecognized stencil,y scheme %d");
+			}
+		}
+	case IMAGEOP_IDENTITY: return stencil_3x3_identity;
+	default: return NULL;//fail("unrecognized stencil operator %d");
+	}
+}
+
+static float apply_3x3_stencil(float *img, int w, int h, int pd,
+		int ai, int aj, int channel, float *s)
+{
+	assert(s);
+	getsample_operator P = getsample_cfg;
+	float r = 0;
+	for (int i = 0; i < 9; i++)
+		r += s[i] * P(img, w, h, pd, ai-1+i%3, aj-1+i/3, channel);
+	return r;
+}
+
+//static float imageop_scalar_old(float *img, int w, int h, int pd,
+//		int ai, int aj, int al, struct plambda_token *t)
+//{
+//	float *s = get_stencil_3x3(t->imageop_operator, t->imageop_scheme);
+//	return apply_3x3_stencil(img, w, h, pd, ai, aj, al, s);
+//}
+
+static float imageop_scalar(float *img, int w, int h, int pd,
+		int ai, int aj, int al, struct plambda_token *t)
+{
+	float *s = get_stencil_3x3(t->imageop_operator, t->imageop_scheme);
+	if (s)
+		return apply_3x3_stencil(img, w, h, pd, ai, aj, al, s);
+	else {
+		switch(t->imageop_operator) {
+		case IMAGEOP_NGRAD:
+			{
+			float *sx=get_stencil_3x3(IMAGEOP_X,t->imageop_scheme);
+			float *sy=get_stencil_3x3(IMAGEOP_Y,t->imageop_scheme);
+			float gx = apply_3x3_stencil(img, w,h,pd, ai,aj,al, sx);
+			float gy = apply_3x3_stencil(img, w,h,pd, ai,aj,al, sy);
+			return hypot(gx, gy);
+			}
+		default: fail("unrecognized imageop operator %d\n", t->imageop_operator);
+		}
+	}
+	return 0;
+}
+
+SMART_PARAMETER_SILENT(SHADOWX,1)
+SMART_PARAMETER_SILENT(SHADOWY,1)
+SMART_PARAMETER_SILENT(SHADOWZ,1)
+
+static int imageop_vector(float *out, float *img, int w, int h, int pd,
+		int ai, int aj, struct plambda_token *t)
+{
+	float *sx = get_stencil_3x3(IMAGEOP_X, t->imageop_scheme);
+	float *sy = get_stencil_3x3(IMAGEOP_Y, t->imageop_scheme);
+	switch (t->imageop_operator) {
+	case IMAGEOP_GRAD:
+		//if (pd != 1) fail("can not yet compute gradient of a vector");
+		//out[0] = apply_3x3_stencil(img, w,h,pd, ai,aj,0, sx);
+		//out[1] = apply_3x3_stencil(img, w,h,pd, ai,aj,0, sy);
+		//return 2;
+		for (int l = 0; l < pd; l++) {
+			out[2*l+0] = apply_3x3_stencil(img,w,h,pd,ai,aj,l, sx);
+			out[2*l+1] = apply_3x3_stencil(img,w,h,pd,ai,aj,l, sy);
+		}
+		return 2*pd;
+	case IMAGEOP_DIV:
+		//if (pd!=2)fail("can not compute divergence of a %d-vector",pd);
+		//float ax = apply_3x3_stencil(img, w,h,pd, ai,aj,0, sx);
+		//float by = apply_3x3_stencil(img, w,h,pd, ai,aj,1, sy);
+		//out[0] = ax + by;
+		//return 1;
+		if (pd%2)fail("can not compute divergence of a %d-vector",pd);
+		for (int l = 0; l < pd/2; l++) {
+			float ax=apply_3x3_stencil(img,w,h,pd,ai,aj,2*l+0,sx);
+			float by=apply_3x3_stencil(img,w,h,pd,ai,aj,2*l+1,sy);
+			out[l] = ax + by;
+		}
+		return pd/2;
+	case IMAGEOP_SHADOW: {
+		if (pd != 1) fail("can not yet compute shadow of a vector");
+		float vdx[3]={1,0,apply_3x3_stencil(img, w,h,pd, ai,aj,0, sx)};
+		float vdy[3]={0,1,apply_3x3_stencil(img, w,h,pd, ai,aj,0, sy)};
+		//float sun[3] = {-1, -1, 1}, nor[3];
+		float sun[3] = {-SHADOWX(), -SHADOWY(), SHADOWZ()}, nor[3];
+		vector_product(nor, vdx, vdy, 3, 3);
+		return scalar_product(out, nor, sun, 3, 3);
+		}
+	default: fail("unrecognized imageop %d\n", t->imageop_operator);
+	}
+}
+
+
+// compute the requested imageop at the given point
+static int imageop(float *out, float *img, int w, int h, int pd,
+				int ai, int aj, struct plambda_token *t)
+{
+	int retval = 1;
+	int pi = ai + t->displacement[0];
+	int pj = aj + t->displacement[1];
+	int channel = t->component;
+	if (t->imageop_operator > 1000)
+		return imageop_vector(out, img, w, h, pd, pi, pj, t);
+	if (channel < 0) { // means the whole of it
+		retval = pd;
+		FORL(pd)
+			out[l] = imageop_scalar(img, w, h, pd, pi, pj, l, t);
+	} else
+		*out = imageop_scalar(img, w, h, pd, pi, pj, channel, t);
+	return retval;
+}
+
 // returns the dimension of the output
 static int run_program_vectorially_at(float *out, struct plambda_program *p,
-		float **val, int w, int h, int *pd, int ai, int aj)
+		float **val, int *w, int *h, int *pd, int ai, int aj)
 {
 	getsample_operator P = getsample_cfg;
 	struct value_vstack s[1];
@@ -1816,41 +2293,61 @@ static int run_program_vectorially_at(float *out, struct plambda_program *p,
 			vstack_push_scalar(s, t->value);
 			break;
 		case PLAMBDA_COLONVAR: {
-			float x = eval_colonvar(w, h, ai, aj, t->colonvar);
+			int imw = w ? *w : 1;
+			int imh = h ? *h : 1;
+			/*hack*/if ('X' == t->colonvar) {
+				float v[2] = {ai, aj};
+				vstack_push_vector(s, v, 2);
+				break;
+			}
+			float x = eval_colonvar(imw, imh, ai, aj, t->colonvar);
 			vstack_push_scalar(s, x);
 			break;
 				       }
 		case PLAMBDA_SCALAR: {
 			float *img = val[t->index];
+			int imw = w ? w[t->index] : 1;
+			int imh = h ? h[t->index] : 1;
+			int pdv = pd[t->index];
 			int dai = ai + t->displacement[0];
 			int daj = aj + t->displacement[1];
 			int cmp = t->component;
-			int pdv = pd[t->index];
-			float x = P(img, w, h, pdv, dai, daj, cmp);
+			float x = P(img, imw, imh, pdv, dai, daj, cmp);
 			vstack_push_scalar(s, x);
 			break;
 				     }
 		case PLAMBDA_VECTOR: {
 			float *img = val[t->index];
+			int imw = w ? w[t->index] : 1;
+			int imh = h ? h[t->index] : 1;
+			int pdv = pd[t->index];
 			int dai = ai + t->displacement[0];
 			int daj = aj + t->displacement[1];
-			int pdv = pd[t->index];
 			float x[pdv];
 			if (t->component == -1) { // regular vector
 				FORL(pdv)
-				x[l] = P(img, w, h, pdv, dai, daj, l);
+				x[l] = P(img, imw, imh, pdv, dai, daj, l);
 				vstack_push_vector(s, x, pdv);
 			} else if (t->component == -2 && 0==pdv%2) {// 1st half
 				FORL(pdv/2)
-				x[l] = P(img, w, h, pdv, dai, daj, l);
+				x[l] = P(img, imw, imh, pdv, dai, daj, l);
 				vstack_push_vector(s, x, pdv/2);
 			} else if (t->component == -3 && 0==pdv%2) {// 2nd half
 				FORL(pdv/2)
-				x[l] = P(img, w, h, pdv, dai, daj, pdv/2+l);
+				x[l] = P(img, imw, imh, pdv, dai, daj, pdv/2+l);
 				vstack_push_vector(s, x, pdv/2);
 			}
 				     }
 			break;
+		case PLAMBDA_IMAGEOP: {
+			float *img = val[t->index], lout[PLAMBDA_MAX_PIXELDIM];
+			int pdv = pd[t->index];
+			int imw = w ? w[t->index] : 1;
+			int imh = h ? h[t->index] : 1;
+			int rdim = imageop(lout, img, imw, imh, pdv, ai, aj, t);
+			vstack_push_vector(s, lout, rdim);
+			break;
+				      }
 		case PLAMBDA_OPERATOR: {
 			struct predefined_function *f =
 				global_table_of_predefined_functions+t->index;
@@ -1870,11 +2367,13 @@ static int run_program_vectorially_at(float *out, struct plambda_program *p,
 			fail("magic variables are not available in "
 					"parallel plambda");
 #endif//_OPENMP
+			int imw = w ? w[t->index] : 1;
+			int imh = h ? h[t->index] : 1;
 			int pdv = pd[t->index];
 			float *img = val[t->index], x[pdv];
 			int rm = eval_magicvar(x, t->colonvar, t->index,
 					t->component, t->displacement[0],
-					img, w, h, pdv);
+					img, imw, imh, pdv);
 			vstack_push_vector(s, x, rm);
 				    }
 			break;
@@ -1890,23 +2389,24 @@ static int run_program_vectorially_at(float *out, struct plambda_program *p,
 
 static int eval_dim(struct plambda_program *p, float **val, int *pd)
 {
-	float result[PLAMBDA_MAX_PIXELDIM];
-	int r = run_program_vectorially_at(result, p, val, 1, 1, pd, 0, 0);
+	int r = run_program_vectorially_at(NULL, p, val, NULL, NULL, pd, 0, 0);
 	return r;
 }
 
 // returns the dimension of the output
 static int run_program_vectorially(float *out, int pdmax,
 		struct plambda_program *p,
-		float **val, int w, int h, int *pd)
+		float **val, int *w, int *h, int *pd)
 {
-	FORJ(h) FORI(w) {
+	for (int j = 0; j < *h; j++)
+	for (int i = 0; i < *w; i++)
+	{
 		float result[pdmax];
 		int r = run_program_vectorially_at(result, p,val, w,h,pd, i,j);
 		assert(r == pdmax);
 		if (r != pdmax) fail("r != pdmax");
-		FORL(r)
-			setsample_0(out, w, h, pdmax, i, j, l, result[l]);
+		for (int l = 0; l < r; l++)
+			setsample_0(out, *w, *h, pdmax, i, j, l, result[l]);
 	}
 	return pdmax;
 }
@@ -1924,7 +2424,7 @@ static void add_hidden_variables(char *out, int maxplen, int newvars, char *in)
 
 SMART_PARAMETER_SILENT(SRAND,0)
 
-int main_calc(int c, char **v)
+static int main_calc(int c, char **v)
 {
 	if (c < 2) {
 		fprintf(stderr, "usage:\n\t%s v1 v2 ... \"plambda\"\n", *v);
@@ -1953,13 +2453,18 @@ int main_calc(int c, char **v)
 		fprintf(stderr, "calculator correspondence \"%s\" = \"%s\"\n",
 				p->var->t[i], v[i+1]);
 
-	xsrand(SRAND());
+	xsrand(100+SRAND());
 
 	float out[pdmax];
-	int od = run_program_vectorially_at(out, p, x, 1, 1, pd, 0, 0);
+	int od = run_program_vectorially_at(out, p, x, NULL, NULL, pd, 0, 0);
 
+	char *fmt = getenv("PLAMBDA_FFMT");
+	if (!fmt) fmt = "%.15lf";
 	for (int i = 0; i < od; i++)
-		printf("%.15lf%c", out[i], i==(od-1)?'\n':' ');
+	{
+		printf(fmt, out[i]);
+		putchar(i==(od-1)?'\n':' ');
+	}
 
 	collection_of_varnames_end(p->var);
 	FORI(n) free(x[i]);
@@ -1989,8 +2494,11 @@ static char *pick_option(int *c, char ***v, char *o, char *d)
 }
 
 #include "iio.h"
-int main_images(int c, char **v)
+static int main_images(int c, char **v)
 {
+	//fprintf(stderr, "main images c = %d\n", c);
+	//for (int i = 0; i < c; i++)
+	//	fprintf(stderr, "main images argv[%d] = %s\n", i, v[i]);
 	if (c < 2) {
 		fprintf(stderr, "usage:\n\t%s in1 in2 ... \"plambda\"\n", *v);
 		//                          0 1   2         c-1
@@ -2003,7 +2511,9 @@ int main_images(int c, char **v)
 	plambda_compile_program(p, v[c-1]);
 
 	int n = c - 2;
+	//fprintf(stderr, "n = %d\n", n);
 	if (n > 0 && p->var->n == 0) {
+		//fprintf(stderr, "will add hidden variables! n=%d, vn=%d\n", n, p->var->n);
 		int maxplen = n*10 + strlen(v[c-1]) + 100;
 		char newprogram[maxplen];
 		add_hidden_variables(newprogram, maxplen, n, v[c-1]);
@@ -2015,24 +2525,24 @@ int main_images(int c, char **v)
 	int w[n], h[n], pd[n];
 	float *x[n];
 	FORI(n) x[i] = iio_read_image_float_vec(v[i+1], w + i, h + i, pd + i);
-	FORI(n-1)
-		if (w[0] != w[i+1] || h[0] != h[i+1])// || pd[0] != pd[i+1])
-			fail("input images size mismatch");
+	//FORI(n-1)
+	//	if (w[0] != w[i+1] || h[0] != h[i+1])// || pd[0] != pd[i+1])
+	//		fail("input images size mismatch");
 
-	//if (n>1) FORI(n) if (!strstr(p->var->t[i], "hidden"))
-	//	fprintf(stderr, "plambda correspondence \"%s\" = \"%s\"\n",
-	//			p->var->t[i], v[i+1]);
+	if (n>1) FORI(n) if (!strstr(p->var->t[i], "hidden"))
+		fprintf(stderr, "plambda correspondence \"%s\" = \"%s\"\n",
+				p->var->t[i], v[i+1]);
 
-	xsrand(SRAND());
+	xsrand(100+SRAND());
 
 	//print_compiled_program(p);
 	int pdreal = eval_dim(p, x, pd);
 
 	float *out = xmalloc(*w * *h * pdreal * sizeof*out);
-	int opd = run_program_vectorially(out, pdreal, p, x, *w, *h, pd);
+	int opd = run_program_vectorially(out, pdreal, p, x, w, h, pd);
 	assert(opd == pdreal);
 
-	iio_save_image_float_vec(filename_out, out, *w, *h, opd);
+	iio_write_image_float_vec(filename_out, out, *w, *h, opd);
 
 	FORI(n) free(x[i]);
 	free(out);
@@ -2117,6 +2627,10 @@ verbosity>0?
 " :t\trelative angle from the center of the image\n"
 " :I\thorizontal coordinate of the pixel (centered)\n"
 " :J\tvertical coordinate of the pixel (centered)\n"
+" :P\thorizontal coordinate of the pixel (phased)\n"
+" :Q\tvertical coordinate of the pixel (phased)\n"
+" :R\tcentered distance to the center\n"
+" :L\tminus squared centered distance to the center\n"
 " :W\twidth of the image divided by 2*pi\n"
 " :H\theight of the image divided by 2*pi\n"
 "\n"
@@ -2128,6 +2642,23 @@ verbosity>0?
 " x[0]\t\tvalue of first component of pixel (i,j)\n"
 " x[1]\t\tvalue of second component of pixel (i,j)\n"
 " x(1,2)[3]\tvalue of fourth component of pixel (i+1,j+2)\n"
+"Comma modifiers (pre-defined local operators):\n"
+" a,x\tx-derivative of the image a\n"
+" a,y\ty-derivative\n"
+" a,xx\tsecond x-derivative\n"
+" a,yy\tsecond y-derivative\n"
+" a,xy\tcrossed second derivative\n"
+" a,l\tLaplacian\n"
+" a,g\tgradient\n"
+" a,n\tgradient norm\n"
+" a,d\tdivergence\n"
+" a,S\tshadow operator\n"
+" a,xf\tx-derivative, forward differences\n"
+" a,xb\tx-derivative, backward differences\n"
+" a,xc\tx-derivative, centered differences\n"
+" a,xs\tx-derivative, sobel\n"
+" a,xp\tx-derivative, prewitt\n"
+" etc\n"
 "\n"
 "Stack operators (allow direct manipulation of the stack):\n"
 " del\tremove the value at the top of the stack (ATTTOS)\n"
@@ -2178,6 +2709,8 @@ verbosity>0?
 " frompolar\tconvert a 2-vector from polar to cartesian\n"
 " hsv2rgb\tconvert a 3-vector from HSV to RGB\n"
 " rgb2hsv\tconvert a 3-vector from RGB to HSV\n"
+" xyz2rgb\tconvert a 3-vector from XYZ to RGB\n"
+" rgb2xyz\tconvert a 3-vector from RGB to XYZ\n"
 " cprod\t\tmultiply two 2-vectrs as complex numbers\n"
 " mprod\t\tmultiply two 2-vectrs as matrices (4-vector = 2x2 matrix, etc)\n"
 " vprod\t\tvector product of two 3-vectors\n"
@@ -2206,11 +2739,16 @@ verbosity>0?
 
 static int do_man(void)
 {
+#ifdef __OpenBSD__
+#define MANPIPE "|mandoc -a"
+#else
+#define MANPIPE "|man -l -"
+#endif
 	return system("help2man -N -S imscript -n \"evaluate an expression "
-				"with images as variables\" plambda|man -l -");
+				"with images as variables\" plambda" MANPIPE);
 }
 
-int main(int c, char **v)
+int main_plambda(int c, char **v)
 {
 	if (c == 1) return print_help(*v, 0);
 	if (c == 2 && 0 == strcmp(v[1], "-h")) return print_help(*v,0);
@@ -2218,7 +2756,7 @@ int main(int c, char **v)
 	if (c == 2 && 0 == strcmp(v[1], "--version")) return print_version();
 	if (c == 2 && 0 == strcmp(v[1], "--man")) return do_man();
 
-	int (*f)(int, char**) = (**v=='c' || c==2) ? main_calc : main_images;
+	int (*f)(int, char**) = (**v=='c' || c==2) ?  main_calc : main_images;
 	if (f == main_images && c > 2 && 0 == strcmp(v[1], "-c"))
 	{
 		for (int i = 1; i <= c; i++)
@@ -2228,5 +2766,9 @@ int main(int c, char **v)
 	}
 	return f(c,v);
 }
+
+#ifndef HIDE_ALL_MAINS
+int main(int c, char **v) { return main_plambda(c, v); }
+#endif
 
 // vim:set foldmethod=marker:
