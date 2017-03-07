@@ -478,7 +478,7 @@ def plys_to_dsm(tile):
                      global_yoff + np.ceil((ymax - global_yoff) / res) * res)
     local_ysize = int(1 - np.floor((max(global_yoff - global_ysize * res, ymin) - local_yoff) / res))
 
-    clouds = '\n'.join(os.path.join(n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
+    clouds = '\n'.join(os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
 
     cmd = ['plyflatten', str(cfg['dsm_resolution']), out_dsm]
     cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
