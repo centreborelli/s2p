@@ -27,19 +27,29 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         disp_max : biggest disparity to consider
         extra_params: optional string with algorithm-dependent parameters
     """
-    # limit disparity bounds
-    if disp_min is not None and disp_max is not None:
-        w = common.image_size_gdal(im1)[0]
-        if disp_max - disp_min > w:
-            center = 0.5 * (disp_min + disp_max)
-            disp_min = int(center - 0.5 * w)
-            disp_max = int(center + 0.5 * w)
+    if cfg['epipolar_rectification']:
+        disp_min = [disp_min]
+        disp_max = [disp_max]
 
-    # round disparity bounds
-    if disp_min is not None:
-        disp_min = int(np.floor(disp_min))
-    if disp_max is not None:
-        disp_max = int(np.ceil(disp_max))
+    # limit disparity bounds
+    np.alltrue(len(disp_min) == len(disp_max))
+    for dim in range(len(disp_min)):
+        if disp_min[dim] is not None and disp_max[dim] is not None:
+            image_size = common.image_size_gdal(im1)
+            if disp_max[dim] - disp_min[dim] > image_size[dim]:
+                center = 0.5 * (disp_min[dim] + disp_max[dim])
+                disp_min[dim] = int(center - 0.5 * image_size[dim])
+                disp_max[dim] = int(center + 0.5 * image_size[dim])
+
+        # round disparity bounds
+        if disp_min[dim] is not None:
+            disp_min[dim] = int(np.floor(disp_min[dim]))
+        if disp_max is not None:
+            disp_max[dim] = int(np.ceil(disp_max[dim]))
+
+    if cfg['epipolar_rectification']:
+        disp_min = disp_min[0]
+        disp_max = disp_max[0]
 
     # call the block_matching binary
     if algo == 'hirschmuller02':
@@ -91,7 +101,8 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
 
     if algo == 'tvl1':
         tvl1 = 'callTVL1.sh'
-        common.run('{0} {1} {2} {3} {4}'.format(tvl1, im1, im2, disp, mask))
+        disp2D = cfg['epipolar_rectification'] is False
+        common.run('{0} {1} {2} {3} {4} {5}'.format(tvl1, im1, im2, disp, mask, int(disp2D)))
 
     if algo == 'msmw':
         bm_binary = 'iip_stereo_correlation_multi_win2'
