@@ -26,11 +26,6 @@ helpful to refer to the philosophy points (P1)--(P7) outlined below.
 you cannot add a feature and change the testing system at the same time.  More
 importantly, you cannot refactor and bugfix.
 
-(E8) Pending reviews of each team are cleared before submitting new pull
-requests.  Thus the other team can continue working without worrying about
-merge conflicts.
-
-
 
 PHILOSOPHY
 
