@@ -6,3 +6,7 @@
 	path = 3rdparty/mgm
 	url = https://github.com/gfacciol/mgm.git
 	ignore = untracked
+[submodule "3rdparty/tvl1flow"]
+	path = 3rdparty/tvl1flow
+	url = https://github.com/mnhrdt/tvl1flow.git
+	ignore = untracked
