@@ -7,14 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <xtiffio.h>
-#include <geo_tiffp.h>
-
 #include "iio.h"
 #include "lists.c"
 #include "fail.c"
 #include "xmalloc.c"
 
+#include "gdal.h"
+#include "ogr_api.h"
+#include "ogr_srs_api.h"
+#include "cpl_conv.h"
+#include "cpl_string.h"
 
 // convert string like '28N' into a number like 32628, according to:
 // WGS84 / UTM northern hemisphere: 326zz where zz is UTM zone number
@@ -33,37 +35,6 @@ static int get_utm_zone_index_for_geotiff(char *utm_zone)
 	out += atoi(utm_zone);
 	return out;
 }
-
-void set_geotif_header(char *tiff_fname, char *utm_zone, double xoff,
-		double yoff, double scale)
-{
-	// open tiff file
-	TIFF *tif = XTIFFOpen(tiff_fname, "r+");
-	if (!tif)
-		fail("failed in XTIFFOpen\n");
-
-	GTIF *gtif = GTIFNew(tif);
-	if (!gtif)
-		fail("failed in GTIFNew\n");
-
-	// write TIFF tags
-	double pixsize[3] = {scale, scale, 0.0};
-	TIFFSetField(tif, GTIFF_PIXELSCALE, 3, pixsize);
-
-	double tiepoint[6] = {0.0, 0.0, 0.0, xoff, yoff, 0.0};
-	TIFFSetField(tif, GTIFF_TIEPOINTS, 6, tiepoint);
-
-	// write GEOTIFF keys
-	int utm_ind = get_utm_zone_index_for_geotiff(utm_zone);
-	GTIFKeySet(gtif, ProjectedCSTypeGeoKey, TYPE_SHORT, 1, utm_ind);
-	GTIFWriteKeys(gtif);
-
-	// free and close
-	GTIFFree(gtif);
-	XTIFFClose(tif);
-}
-
-
 
 struct ply_property {
 	enum {UCHAR,FLOAT,DOUBLE} type;
@@ -342,9 +313,40 @@ int main(int c, char *v[])
 			x.avg[i] = NAN;
 
 	// save output image
-	iio_save_image_float(filename_out, x.avg, xsize, ysize);
-	set_geotif_header(filename_out, utm, xoff, yoff, resolution);
+	GDALAllRegister();
+	char **papszOptions = NULL;
+	const char *pszFormat = "GTiff";
+	GDALDriverH hDriver = GDALGetDriverByName( pszFormat );
+	GDALDatasetH hDstDS = GDALCreate( hDriver, filename_out,
+					  x.w, x.h, 1, GDT_Float32,
+					  papszOptions );
 
+	double adfGeoTransform[6] = { xoff, resolution, 0, yoff, 0, -resolution };
+	OGRSpatialReferenceH hSRS;
+	char *pszSRS_WKT = NULL;
+	GDALRasterBandH hBand;
+	GDALSetGeoTransform( hDstDS, adfGeoTransform );
+	hSRS = OSRNewSpatialReference( NULL );
+	char utmNumber[2];
+	utmNumber[0] = utm[0];
+	utmNumber[1] = utm[1];
+	int nZone = atoi(utmNumber);
+	int bNorth = (utm[2] == 'N')?TRUE:FALSE;
+	OSRSetUTM( hSRS, nZone, bNorth );
+	OSRSetWellKnownGeogCS( hSRS, "WGS84" );
+	OSRExportToWkt( hSRS, &pszSRS_WKT );
+	OSRDestroySpatialReference( hSRS );
+	GDALSetProjection( hDstDS, pszSRS_WKT );
+	CPLFree( pszSRS_WKT );
+	hBand = GDALGetRasterBand( hDstDS, 1 );
+	if (GDALRasterIO( hBand, GF_Write, 0, 0, x.w, x.h,
+			  x.avg, x.w, x.h, GDT_Float32,
+			  0, 0 ) != 0)
+	  fprintf(stderr, "error: can not write %s\n", filename_out);
+	  
+	/* Once we're done, close properly the dataset */
+	GDALClose( hDstDS );
+	
 	// cleanup and exit
 	free(x.min);
 	free(x.max);
