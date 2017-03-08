@@ -282,6 +282,7 @@ if __name__ == '__main__':
             command,args = registered_tests[test]
             try:
                 # Ensure each test starts from the default cfg
+                s2plib.config.cfg.clear()
                 s2plib.config.cfg.update(test_default_cfg)
                 command(*args)
                 print('Success.'+os.linesep)
