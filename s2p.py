@@ -311,6 +311,108 @@ def disparity_to_ply(tile):
         common.remove(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'))
 
 
+def multidisparities_to_ply(tile):
+    """
+    Compute a point cloud from the disparity maps of N-pairs of image tiles.
+
+    Args:
+        tile: dictionary containing the information needed to process a tile.
+    """
+    out_dir = os.path.join(tile['dir'])
+    ply_file = os.path.join(out_dir, 'cloud.ply')
+    plyextrema = os.path.join(out_dir, 'plyextrema.txt')
+    x, y, w, h = tile['coordinates']
+    z = cfg['subsampling_factor']
+
+    rpc_ref = cfg['images'][0]['rpc']
+    disp_list = list()
+    rpc_list = list()
+
+    if cfg['skip_existing'] and os.path.isfile(ply_file):
+        print('triangulation done on tile {} {}'.format(x, y))
+        return
+
+    print('triangulating tile {} {}...'.format(x, y))
+    n = len(cfg['images']) - 1
+    for i in range(n):
+        pair = 'pair_%d' % (i+1)
+        H_ref = os.path.join(out_dir, pair, 'H_ref.txt')
+        H_sec = os.path.join(out_dir, pair, 'H_sec.txt')
+        pointing = os.path.join(cfg['out_dir'], 'global_pointing_%s.txt' % pair)
+        disp = os.path.join(out_dir, pair, 'rectified_disp.tif')
+        mask_rect = os.path.join(out_dir, pair, 'rectified_mask.png')
+        disp2D = os.path.join(out_dir, pair, 'disp2D.tif')
+        rpc_sec = cfg['images'][i+1]['rpc']
+
+        if os.path.exists(disp):
+            # homography for warp
+            T = common.matrix_translation(x, y)
+            hom_ref = np.loadtxt(H_ref)
+            hom_ref_shift_inv = np.linalg.inv(np.dot(hom_ref, T))
+
+            # homography for 1D to 2D conversion
+            hom_sec = np.loadtxt(H_sec)
+            hom_pointing = np.loadtxt(pointing)
+            hom_sec_shift_inv = np.linalg.inv(np.dot(hom_sec,
+                                                     np.linalg.inv(hom_pointing)))
+            h1 = " ".join(str(x) for x in hom_ref_shift_inv.flatten())
+            h2 = " ".join(str(x) for x in hom_sec_shift_inv.flatten())
+
+            # relative disparity map to absolute disparity map
+            tmp_abs = common.tmpfile('.tif')
+            common.run('plambda %s %s "y 1 = x nan if :i + :j 1 3 njoin" -o %s' % (disp, mask_rect, tmp_abs))
+
+            # 1d to 2d conversion
+            tmp_1d_to_2d = common.tmpfile('.tif')
+            common.run('plambda %s "%s 9 njoin x mprod" -o %s' % (tmp_abs, h2, tmp_1d_to_2d))
+
+            # warp
+            tmp_warp = common.tmpfile('.tif')
+            common.run('homwarp -i -o 2 "%s" %d %d %s %s' % (h1, w, h, tmp_1d_to_2d, tmp_warp))
+
+            # absolute disparity map to relative disparity map
+            exp = 'x[0] :i - %d - x[1] :j - %d - nan 3 njoin' % (x, y)
+            common.run('plambda %s "%s" -o %s' % (tmp_warp, exp, disp2D))
+
+            # added input data for triangulation module
+            disp_list.append(disp2D)
+            rpc_list.append(rpc_sec)
+
+            if cfg['clean_intermediate']:
+                common.remove(H_ref)
+                common.remove(H_sec)
+                common.remove(disp)
+                common.remove(mask_rect)
+                common.remove(mask_orig)
+
+    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+
+
+    # H is the homography transforming the coordinates system of the original
+    # full size image into the coordinates system of the crop
+    H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
+    colors = os.path.join(out_dir, 'ref.png')
+    if cfg['images'][0]['clr']:
+        common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
+    else:
+        common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
+                                                 w, h), colors)
+    common.image_safe_zoom_fft(colors, z, colors)
+
+    # compute the point cloud
+    triangulation.multidisp_map_to_point_cloud(ply_file, disp_list, rpc_ref, rpc_list,
+                                               colors,
+                                               utm_zone=cfg['utm_zone'],
+                                               llbbx=tuple(cfg['ll_bbx']),
+                                               xybbx=(x, x+w, y, y+h),
+                                               xymsk=mask_orig)
+
+    # compute the point cloud extrema (xmin, xmax, xmin, ymax)
+    common.run("plyextrema %s %s" % (ply_file, plyextrema))
+
+    if cfg['clean_intermediate']:
+        common.remove(colors)
+
 def mean_heights(tile):
     """
     """
@@ -603,7 +705,7 @@ def main(user_cfg, steps=ALL_STEPS):
         print('running stereo matching...')
         parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
 
-    if n > 2:
+    if n > 2 and cfg['triangulation_mode'] == 'pairwise':
         if 'disparity-to-height' in steps:
             print('computing height maps...')
             parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
@@ -622,7 +724,12 @@ def main(user_cfg, steps=ALL_STEPS):
     else:
         if 'triangulation' in steps:
             print('triangulating tiles...')
-            parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
+            if cfg['triangulation_mode'] == 'geometric':
+                parallel.launch_calls(multidisparities_to_ply, tiles, nb_workers)
+            elif cfg['triangulation_mode'] == 'pairwise':
+                parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
+            else:
+                raise ValueError("possible values for 'triangulation_mode' : 'pairwise' or 'geometric'")
 
     if 'global-srcwin' in steps:
         print('computing global source window (xoff, yoff, xsize, ysize)...')
