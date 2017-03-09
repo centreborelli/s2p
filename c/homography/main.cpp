@@ -118,6 +118,7 @@ int main(int c, char* v[])
     }
     int size_x = poDataset->GetRasterXSize();
     int size_y = poDataset->GetRasterYSize();
+    int pixel_dimension = poDataset->GetRasterCount();
     if (x + w > size_x)
         w = size_x - x;
     if (y + h > size_y)
@@ -133,28 +134,44 @@ int main(int c, char* v[])
     matrix_33_product(hom_compensated, hom, translation);
     if (verbose) time.get_time("Compute needed ROI");
 
-    // read the needed ROI in the input image
-    GDALRasterBand *poBand = poDataset->GetRasterBand(1);
-    float *roi = (float *) CPLMalloc(sizeof(float)*w*h);
-    int errorRasterIO = poBand->RasterIO(GF_Read, x, y, w, h, roi, w, h, GDT_Float32, 0, 0);
-    if (errorRasterIO != CPLE_None)
-       fprintf(stderr, "errorRasterIO = %d\n", errorRasterIO);
-    GDALClose((GDALDatasetH) poDataset);
-    Image imI(roi, (const size_t) w, (const size_t) h, 1);
-    if (verbose) time.get_time("Read needed ROI");
+	// create the output image
+	Image out(out_w, out_h, pixel_dimension);
 
-    // call the mapping function
-    Image imO;
-    Parameters params(0, (const size_t) out_w, (const size_t) out_h, true);
-    runHomography(imI, hom_compensated, imO, params);
-    if (verbose) time.get_time("Apply the homography");
+	// crop and warp each input dimension separately
+	for (int l = 0; l < pixel_dimension; l++)
+	{
+		// read the needed ROI in the input image
+		// note: GDAL bands are 1-based
+		GDALRasterBand *poBand = poDataset->GetRasterBand(1 + l);
+		float *roi_data = (float *) CPLMalloc(sizeof(float)*w*h);
+		int e = poBand->RasterIO(GF_Read, x, y, w, h, roi_data,
+				w, h, GDT_Float32, 0, 0);
+		if (e != CPLE_None)
+			fprintf(stderr, "errorRasterIO(%d) = %d\n", l, e);
 
-    // write the output image
-    imO.write(fname_output);
-    if (verbose) time.get_time("Write image");
+		// copy the ROI data to marc's image struct
+		Image roi(roi_data, w, h, 1);
+		if (verbose) time.get_time("Read needed ROI");
 
-     // cleanup
-    CPLFree(roi);
+		// call the mapping function
+		Image out_l(out_w, out_h, 1);
+		Parameters params(0, out_w, out_h, true);
+		runHomography(roi, hom_compensated, out_l, params);
+		if (verbose) time.get_time("Apply homography");
+
+		// copy the data into the final output image
+		float *from = out_l.getPtr(0);
+		float *to = out.getPtr(l);
+		int n = out_w * out_h;
+		memcpy(to, from, n*sizeof*to);
+
+	}
+	out.write(fname_output);
+
+	// NOTE:
+	// The GDAL objects used above are not freed automatically.
+	// (it would be pointless to free them manually just before
+	// exiting the program)
 
     return EXIT_SUCCESS;
 }

@@ -13,12 +13,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wa,-q")
         set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-q")
     endif ()
-    # Optimize to the current CPU and enable warnings
-    #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -march=native")
-    #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -mavx")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -mavx")
 endif ()
+
+# Optimize to the current CPU and enable warnings
+#set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -march=native")
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -mavx")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -mavx")
 
 # Enable C99
 if (CMAKE_VERSION VERSION_LESS "3.1")

@@ -48,6 +48,16 @@ static double *read_ascii_doubles(FILE *f, int *no)
 	return t;
 }
 
+inline
+static double *read_ascii_doubles_fn(const char *fname, int *no)
+{
+	FILE *f = fopen(fname, "r");
+	if (!f) { *no = 0; return NULL; }
+	double *r = read_ascii_doubles(f, no);
+	fclose(f);
+	return r;
+}
+
 //// utility function: parse a matrix of doubles from a text file
 //// returns a pointer to a malloc'ed array of the parsed doubles
 //// fills *nc with the number of cols and *nr with the number of rows
@@ -144,6 +154,34 @@ static double *alloc_parse_doubles(int nmax, const char *ss, int *n)
 	}
 	*n = i;
 	return r;
+}
+
+// Obtain n numbers from string.
+// The string contains a list of ascii numbers
+// or the name of a file containing a list of ascii numbers.
+// In case of failure, unread numbers are set to zero.
+// Returns the number of read numbers.
+inline
+static int read_n_doubles_from_string(double *out, char *string, int n)
+{
+	for (int i = 0; i < n; i++)
+		out[i] = 0;
+
+	int no;
+	double *buf = NULL;
+	FILE *f = fopen(string, "r");
+	if (f) {
+		buf = read_ascii_doubles(f, &no);
+		fclose(f);
+	} else {
+		buf = alloc_parse_doubles(n, string, &no);
+	}
+
+	if (no > n) no = n;
+	for (int i = 0; i < no; i++)
+		out[i] = buf[i];
+	free(buf);
+	return no;
 }
 
 #endif//_PARSENUMBERS_C

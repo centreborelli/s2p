@@ -22,15 +22,14 @@ SRCDIR = c
 BINDIR = bin
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) homography sift imscript mgm piio
+default: $(BINDIR) homography sift imscript mgm piio tvl1
 
 # the "all" rule builds three further correlators
-all: default msmw3 sgbm tvl1
+all: default msmw3 sgbm
 
 # test for the default configuration
 test: default
-	python -u s2p_test.py
-
+	python -u s2p_test.py --all
 
 # make sure that the destination directory is built
 $(BINDIR):
@@ -98,9 +97,9 @@ msmw3:
 	cp $(BINDIR)/build_msmw3/msmw $(BINDIR)
 
 tvl1:
-	$(MAKE) -C 3rdparty/tvl1flow_3
-	cp 3rdparty/tvl1flow_3/tvl1flow $(BINDIR)
-	cp 3rdparty/tvl1flow_3/callTVL1.sh $(BINDIR)
+	$(MAKE) -C 3rdparty/tvl1flow
+	cp 3rdparty/tvl1flow/tvl1flow $(BINDIR)
+	cp 3rdparty/tvl1flow/callTVL1.sh $(BINDIR)
 
 
 
@@ -112,7 +111,7 @@ PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop bdint morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective\
-	remove_small_cc plambda
+	remove_small_cc plambda homwarp
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten plyextrema plytodsm
@@ -176,10 +175,21 @@ $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
 
+# automatic dependency generation
+-include makefile.dep
+ALL_SOURCES=`ls c/*.c c/*.cc c/*.cpp`
+.PHONY:
+depend:
+	$(CC) -MM $(ALL_SOURCES) | sed '/^[^ ]/s/^/c\//' > makefile.dep
+
 
 # rules for cleaning, nothing interesting below this point
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
-	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio
+	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio\
+	clean_depend
+
+clean_depend:
+	$(RM) makefile.dep
 
 clean_homography:
 	$(MAKE) -C c/homography clean
@@ -212,7 +222,7 @@ clean_msmw3:
 	$(RM) $(BINDIR)/msmw
 
 clean_tvl1:
-	$(MAKE) -C 3rdparty/tvl1flow_3 clean
+	$(MAKE) -C 3rdparty/tvl1flow clean
 	$(RM) $(BINDIR)/tvl1flow
 	$(RM) $(BINDIR)/callTVL1.sh
 

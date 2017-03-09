@@ -176,7 +176,7 @@ class RPCModel:
             else:
                 print('unknown sensor type')
         elif b is not None:
-            if b.text == 'WV02' or b.text == 'WV01':
+            if b.text == 'WV02' or b.text == 'WV01' or b.text == 'WV03':
                 self.read_rpc_worldview(tree)
             else:
                 print('unknown sensor type')

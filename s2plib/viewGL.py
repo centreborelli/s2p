@@ -23,10 +23,10 @@ imageData=0
 def loadImage(imageName):
     im = Image.open(imageName)
     try:
-       ix, iy, image = im.size[0], im.size[1], im.convert("RGBA").tostring("raw", "RGBA", 0, -1)
+       ix, iy, image = im.size[0], im.size[1], im.convert("RGBA").tobytes("raw", "RGBA", 0, -1)
     except SystemError:
-       ix, iy, image = im.size[0], im.size[1], im.convert("RGBA").tostring("raw", "RGBX", 0, -1)
-    return (image,ix,iy)
+       ix, iy, image = im.size[0], im.size[1], im.convert("RGBA").tobytes("raw", "RGBX", 0, -1)
+    return image, ix, iy
 
 
 

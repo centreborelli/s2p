@@ -64,31 +64,34 @@ static float getsample_exit(float *x, int w, int h, int pd, int i, int j, int l)
 	return x[(i+j*w)*pd + l];
 }
 
+// like n%p, but works for all numbers
 static int good_modulus(int n, int p)
 {
 	if (!p) return 0;
 	if (p < 1) return good_modulus(n, -p);
 
-	int r;
-	if (n >= 0)
-		r = n % p;
-	else {
-		r = p - (-n) % p;
-		if (r == p)
-			r = 0;
-	}
-	//assert(r >= 0);
-	//assert(r < p);
+	int r = n % p;
+	r = r < 0 ? r + p : r;
+
+//	assert(r >= 0);
+//	assert(r < p);
 	return r;
+}
+
+
+static int gmod(int x, int m)
+{
+	int r = x % m;
+	return r < 0 ? r + m : r;
 }
 
 static int positive_reflex(int n, int p)
 {
 	int r = good_modulus(n, 2*p);
-	if (r == p)
-		r -= 1;
+	if (r == p) r -= 1;
 	if (r > p)
 		r = 2*p - r;
+	if (n < 0 && p > 1) r += 1;
 	//assert(r >= 0);
 	//assert(r < p);
 	return r;
@@ -107,8 +110,8 @@ static float getsample_2(float *x, int w, int h, int pd, int i, int j, int l)
 inline
 static float getsample_per(float *x, int w, int h, int pd, int i, int j, int l)
 {
-	i = good_modulus(i, w);
-	j = good_modulus(j, w);
+	i = gmod(i, w);
+	j = gmod(j, h);
 	return getsample_abort(x, w, h, pd, i, j, l);
 }
 
@@ -132,16 +135,17 @@ static getsample_operator get_sample_operator(getsample_operator o)
 	char *option = getenv("GETPIXEL"), *endptr;
 	if (!option) return o;
 #ifdef NAN
-	if (0 == strcmp(option, "nan"      )) return getsample_nan;
+	if (0 == strcmp(option, "nan"      ))  return getsample_nan;
 #endif//NAN
-	if (0 == strcmp(option, "segfault" )) return getsample_error;
-	if (0 == strcmp(option, "error"    )) return getsample_error;
-	if (0 == strcmp(option, "abort"    )) return getsample_abort;
-	if (0 == strcmp(option, "exit"    ))  return getsample_exit;
-	if (0 == strcmp(option, "periodic" )) return getsample_per;
-	if (0 == strcmp(option, "constant" )) return getsample_0;
-	if (0 == strcmp(option, "reflex"   )) return getsample_2;
-	if (0 == strcmp(option, "symmetric")) return getsample_2;
+	if (0 == strcmp(option, "segfault" ))  return getsample_error;
+	if (0 == strcmp(option, "error"    ))  return getsample_error;
+	if (0 == strcmp(option, "abort"    ))  return getsample_abort;
+	if (0 == strcmp(option, "exit"    ))   return getsample_exit;
+	if (0 == strcmp(option, "periodic" ))  return getsample_per;
+	if (0 == strcmp(option, "constant" ))  return getsample_0;
+	if (0 == strcmp(option, "nearest"   )) return getsample_1;
+	if (0 == strcmp(option, "reflex"   ))  return getsample_2;
+	if (0 == strcmp(option, "symmetric"))  return getsample_2;
 	float value = strtof(option, &endptr);
 	if (endptr != option) {
 		getsample_constant(&value, 0, 0, 0, 0, 0, 0);
@@ -171,12 +175,24 @@ static void setsample_segf(float *x, int w, int h, int pd, int i, int j, int l,
 	x[(i+j*w)*pd + l] = v;
 }
 
-//static float getpixel(float *x, int w, int h, int i, int j)
-//{
-//	if (i < 0 || i >= w || j < 0 || j >= h)
-//		return 0;
-//	return x[i + j*w];
-//}
+typedef float (*getpixel_operator)(float*,int,int,int,int);
+
+static float getpixel_0(float *x, int w, int h, int i, int j)
+{
+	if (i < 0 || i >= w || j < 0 || j >= h)
+		return 0;
+	return x[i + j*w];
+}
+
+static float getpixel_1(float *x, int w, int h, int i, int j)
+{
+	if (i < 0) i = 0;
+	if (j < 0) j = 0;
+	if (i >= w) i = w-1;
+	if (j >= h) j = h-1;
+	return x[i+j*w];
+}
+
 //
 //static void setpixel(float *x, int w, int h, int i, int j, float v)
 //{

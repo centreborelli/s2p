@@ -292,7 +292,7 @@ int main(int c, char *v[])
 
         // write to ply
         if (ascii) {
-            fprintf(ply_file, "%a %a %a ", X[0], X[1], X[2]);
+            fprintf(ply_file, "%0.17g %0.17g %0.17g ", X[0], X[1], X[2]);
             if (clr)
                 fprintf(ply_file, "%d %d %d", rgb[0], rgb[1], rgb[2]);
             fprintf(ply_file, "\n");
