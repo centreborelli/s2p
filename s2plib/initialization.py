@@ -120,7 +120,8 @@ def build_cfg(user_cfg):
         cfg['disp_range_method'] = 'sift'
 
     # get utm zone
-    cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
+    if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
+        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
 
 
 def make_dirs():
