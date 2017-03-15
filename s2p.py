@@ -504,8 +504,17 @@ def global_dsm(tiles):
     out_dsm_vrt = os.path.join(cfg['out_dir'], 'dsm.vrt')
     out_dsm_tif = os.path.join(cfg['out_dir'], 'dsm.tif')
 
-    common.run("gdalbuildvrt -vrtnodata nan  %s %s" % (out_dsm_vrt,
-                                                       " ".join(dsm_list)))
+    cmd = ['gdalbuildvrt', '-vrtnodata', 'nan', out_dsm_vrt]
+    cmd += dsm_list
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
+    q = p.communicate()
+
+    run_cmd = " ".join(cmd)
+    print ("\nRUN: %s" % run_cmd)
+
+    if p.returncode != 0:
+        raise common.RunFailure({"command": run_cmd, "environment": os.environ, "output": q})
 
     global_srcwin = np.loadtxt(os.path.join(cfg['out_dir'],
                                             "global_srcwin.txt"))
