@@ -133,8 +133,8 @@ def write_row_vrts(tiles,sub_img,vrt_basename,min_x,max_x):
             h = tile_cfg['roi']['h']
             
             tile_dir = os.path.dirname(tile)
-            row_vrt_dir = os.path.join(*tile_dir.split('/')[:-1])
-            tile_sub_img_dir = os.path.join(*tile_dir.split('/')[-1:])
+            row_vrt_dir = os.path.dirname(tile_dir)
+            tile_sub_img_dir = os.path.basename(tile_dir)
 
             vrt_row.setdefault(y,{'vrt_body' : "", 'vrt_dir' : row_vrt_dir, "th" : h})
             
