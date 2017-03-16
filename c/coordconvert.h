@@ -1,12 +1,6 @@
 #ifndef _COORDCONVERT_H
 #define _COORDCONVERT_H
 
-#include "math.h"
-
-// Some numerical values related to WGS 84 ellipsoid
-#define A 6378137           // semi major axis
-#define E 0.081819190842622 // first eccentricity
-
 // convert (long,lat,h) to ECEF coord sys. (X,Y,Z)
 void geotedic_to_ECEF(double lg, double lt, double h, 
 					  double *X, double *Y, double *Z);
