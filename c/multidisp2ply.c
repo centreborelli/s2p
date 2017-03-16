@@ -293,8 +293,8 @@ int main_disp_to_heights(int c, char *v[])
   list_pairs.tot_size = nb_pairs;
   list_pairs.data = (type_pair *) malloc(list_pairs.real_size*sizeof(type_pair));
 
-  int width = (row_M - row_m);
-  int height = (col_M - col_m);
+  int width = (col_M - col_m);
+  int height = (row_M - row_m);
 
   for (int i = 0; i < N_pair ; i++)
     {
