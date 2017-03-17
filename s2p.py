@@ -500,17 +500,18 @@ def plys_to_dsm(tile):
 def global_dsm(tiles):
     """
     """
-    dsm_list = [os.path.join(t['dir'], 'dsm.tif') for t in tiles]
     out_dsm_vrt = os.path.join(cfg['out_dir'], 'dsm.vrt')
     out_dsm_tif = os.path.join(cfg['out_dir'], 'dsm.tif')
 
-    cmd = ['gdalbuildvrt', '-vrtnodata', 'nan', out_dsm_vrt]
-    cmd += dsm_list
+    dsms = '\n'.join(os.path.join(t['dir'], 'dsm.tif') for t in tiles)
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
-    q = p.communicate()
+    cmd = ['xargs', 'gdalbuildvrt', '-vrtnodata', 'nan', out_dsm_vrt]
 
-    run_cmd = " ".join(cmd)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         stdin=subprocess.PIPE)
+    q = p.communicate(input=dsms.encode())
+
+    run_cmd = "ls %s | %s" % (dsms.replace('\n', ' '), " ".join(cmd))
     print ("\nRUN: %s" % run_cmd)
 
     if p.returncode != 0:
