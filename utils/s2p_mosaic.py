@@ -257,7 +257,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: mosaic tool'))
     
     parser.add_argument('tiles',metavar='tiles.txt',help=('path to the tiles.txt file'))
-    parser.add_argument('outfile',metavar='out.tif|out.vrt',help=('path to the the output file'))
+    parser.add_argument('outfile',metavar='out.tif',help=('path to the the output file. File extension can be .tif or .vrt'))
     parser.add_argument('sub_img',metavar='pair_1/height_map.tif',help=('path to the sub-image to mosaic. Can be (but not limited to) height_map.tif, pair_n/height_map.tif, pair_n/rpc_err.tif, cloud_water_image_domain_mask.png. Note that rectified_* files CAN NOT be used.'))
     args = parser.parse_args()
 
