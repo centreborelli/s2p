@@ -15,7 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse, json, os
-from s2plib import common
+import sys
+
+# This is needed to import from a sibling folder
+sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
+        
+from  s2plib import common
 
 def vrt_body_source(filename,band,src_x,src_y,src_w,src_h,dst_x,dst_y,dst_w,dst_h):
     """

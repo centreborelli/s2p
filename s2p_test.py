@@ -16,7 +16,7 @@ import subprocess
 import glob
 
 import s2p
-import s2p_mosaic
+from utils import s2p_mosaic
 import s2plib
 
 
