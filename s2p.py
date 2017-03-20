@@ -483,8 +483,7 @@ def plys_to_dsm(tile):
     cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
                                             local_xsize, local_ysize)]
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                         stdin=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     q = p.communicate(input=clouds.encode())
 
     run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
@@ -496,15 +495,26 @@ def plys_to_dsm(tile):
 
     # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
 
+
 def global_dsm(tiles):
     """
     """
-    dsm_list = [os.path.join(t['dir'], 'dsm.tif') for t in tiles]
     out_dsm_vrt = os.path.join(cfg['out_dir'], 'dsm.vrt')
     out_dsm_tif = os.path.join(cfg['out_dir'], 'dsm.tif')
 
-    common.run("gdalbuildvrt -vrtnodata nan  %s %s" % (out_dsm_vrt,
-                                                       " ".join(dsm_list)))
+    dsms = '\n'.join(os.path.join(t['dir'], 'dsm.tif') for t in tiles)
+
+    cmd = ['xargs', 'gdalbuildvrt', '-vrtnodata', 'nan', out_dsm_vrt]
+
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    q = p.communicate(input=dsms.encode())
+
+    run_cmd = "ls %s | %s" % (dsms.replace('\n', ' '), " ".join(cmd))
+    print ("\nRUN: %s" % run_cmd)
+
+    if p.returncode != 0:
+        raise common.RunFailure({"command": run_cmd, "environment": os.environ,
+                                 "output": q})
 
     global_srcwin = np.loadtxt(os.path.join(cfg['out_dir'],
                                             "global_srcwin.txt"))
