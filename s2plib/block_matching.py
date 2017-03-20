@@ -9,6 +9,11 @@ import numpy as np
 from s2plib import common
 from s2plib.config import cfg
 
+def rectify_secondary_tile_only(algo):
+    if algo in ['tvl1_2d']:
+        return True
+    else:
+        return False
 
 def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                           disp_max=None, extra_params=''):
@@ -27,7 +32,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         disp_max : biggest disparity to consider
         extra_params: optional string with algorithm-dependent parameters
     """
-    if cfg['epipolar_rectification']:
+    if rectify_secondary_tile_only(algo) is False:
         disp_min = [disp_min]
         disp_max = [disp_max]
 
@@ -47,7 +52,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         if disp_max is not None:
             disp_max[dim] = int(np.ceil(disp_max[dim]))
 
-    if cfg['epipolar_rectification']:
+    if rectify_secondary_tile_only(algo) is False:
         disp_min = disp_min[0]
         disp_max = disp_max[0]
 
@@ -101,8 +106,12 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
 
     if algo == 'tvl1':
         tvl1 = 'callTVL1.sh'
-        disp2D = cfg['epipolar_rectification'] is False
-        common.run('{0} {1} {2} {3} {4} {5}'.format(tvl1, im1, im2, disp, mask, int(disp2D)))
+        common.run('{0} {1} {2} {3} {4}'.format(tvl1, im1, im2, disp, mask))
+
+    if algo == 'tvl1_2d':
+        tvl1 = 'callTVL1.sh'
+        common.run('{0} {1} {2} {3} {4} {5}'.format(tvl1, im1, im2, disp, mask, 1))
+
 
     if algo == 'msmw':
         bm_binary = 'iip_stereo_correlation_multi_win2'

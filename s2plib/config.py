@@ -55,9 +55,6 @@ cfg['dsm_resolution'] = 4
 # zoom out applied to input images
 cfg['subsampling_factor'] = 1
 
-# switch to False to disable epipolar rectification and rectify the secondary tiles only
-cfg['epipolar_rectification'] = True
-
 # sift threshold on the first over second best match ratio
 cfg['sift_match_thresh'] = 0.6
 
