@@ -70,7 +70,7 @@ and
 
     pip install utm bs4 requests
 
-`gdal` version must be 1.10 or newer.
+`gdal` version must be 2.1.0 or newer.
 
 
 ## Installation
