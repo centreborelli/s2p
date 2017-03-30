@@ -332,6 +332,8 @@ def multidisparities_to_ply(tile):
         print('triangulation done on tile {} {}'.format(x, y))
         return
 
+    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+
     print('triangulating tile {} {}...'.format(x, y))
     n = len(cfg['images']) - 1
     for i in range(n):
@@ -370,9 +372,9 @@ def multidisparities_to_ply(tile):
             tmp_warp = common.tmpfile('.tif')
             common.run('homwarp -i -o 2 "%s" %d %d %s %s' % (h1, w, h, tmp_1d_to_2d, tmp_warp))
 
-            # absolute disparity map to relative disparity map
-            exp = 'x[0] :i - %d - x[1] :j - %d - nan 3 njoin' % (x, y)
-            common.run('plambda %s "%s" -o %s' % (tmp_warp, exp, disp2D))
+            # absolute disparity map to relative disparity map and set masked value to NaN
+            exp = 'y 0 = nan x[0] :i - %d - x[1] :j - %d - nan 3 njoin if' % (x, y)
+            common.run('plambda %s %s "%s" -o %s' % (tmp_warp, mask_orig, exp, disp2D))
 
             # added input data for triangulation module
             disp_list.append(disp2D)
@@ -384,9 +386,6 @@ def multidisparities_to_ply(tile):
                 common.remove(disp)
                 common.remove(mask_rect)
                 common.remove(mask_orig)
-
-    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
-
 
     # H is the homography transforming the coordinates system of the original
     # full size image into the coordinates system of the crop
@@ -404,8 +403,7 @@ def multidisparities_to_ply(tile):
                                                colors,
                                                utm_zone=cfg['utm_zone'],
                                                llbbx=tuple(cfg['ll_bbx']),
-                                               xybbx=(x, x+w, y, y+h),
-                                               xymsk=mask_orig)
+                                               xybbx=(x, x+w, y, y+h))
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))

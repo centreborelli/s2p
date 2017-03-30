@@ -131,7 +131,7 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors,
     common.run(command)
 
 def multidisp_map_to_point_cloud(out, disp_list, rpc_ref, rpc_list, colors,
-                                 utm_zone=None, llbbx=None, xybbx=None, xymsk=None):
+                                 utm_zone=None, llbbx=None, xybbx=None):
     """
     Computes a 3D point cloud from N disparity maps.
 
@@ -148,14 +148,13 @@ def multidisp_map_to_point_cloud(out, disp_list, rpc_ref, rpc_list, colors,
     utm = "--utm-zone %s" % utm_zone if utm_zone else ""
     lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
     xbb = "--col-m %s --col-M %s --row-m %s --row-M %s" % xybbx if xybbx else ""
-    msk = "--mask-orig %s" % xymsk if xymsk else ""
 
     command = 'multidisp2ply {} {} {} {} {}'.format(out, len(disp_list),
                                                     " ".join(disp_command),
                                                     "--rpc_ref %s" % rpc_ref,
                                                     " ".join(rpc_command))
     command += ' --color {}'.format(colors)
-    command += ' {} {} {} {}'.format(utm, lbb, xbb, msk)
+    command += ' {} {} {}'.format(utm, lbb, xbb)
     common.run(command)
 
 def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
