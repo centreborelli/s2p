@@ -518,11 +518,13 @@ def global_dsm(tiles):
     res = cfg['dsm_resolution']
     xoff, yoff, xsize, ysize = global_srcwin
 
-    common.run("gdal_translate -projwin %s %s %s %s %s %s" % (xoff,
-                                                              yoff,
-                                                              xoff + xsize * res,
-                                                              yoff - ysize * res,
-                                                              out_dsm_vrt, out_dsm_tif))
+    common.run(" ".join(["gdal_translate",
+                         "-co TILED=YES -co BIGTIFF=IF_SAFER",
+                         "-projwin %s %s %s %s %s %s" % (xoff,
+                                                         yoff,
+                                                         xoff + xsize * res,
+                                                         yoff - ysize * res,
+                                                         out_dsm_vrt, out_dsm_tif)]))
 
 def lidar_preprocessor(tiles):
     """
