@@ -586,8 +586,7 @@ def plys_to_dsm(tile):
     cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
                                             local_xsize, local_ysize)]
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                         stdin=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     q = p.communicate(input=clouds.encode())
 
     run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
@@ -599,26 +598,35 @@ def plys_to_dsm(tile):
 
     # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
 
+
 def global_dsm(tiles):
     """
     """
-    dsm_list = [os.path.join(t['dir'], 'dsm.tif') for t in tiles]
     out_dsm_vrt = os.path.join(cfg['out_dir'], 'dsm.vrt')
     out_dsm_tif = os.path.join(cfg['out_dir'], 'dsm.tif')
 
-    common.run("gdalbuildvrt -vrtnodata nan  %s %s" % (out_dsm_vrt,
-                                                       " ".join(dsm_list)))
+    dsms_list = [os.path.join(t['dir'], 'dsm.tif') for t in tiles]
+    dsms = '\n'.join(d for d in dsms_list if os.path.exists(d) is True)
 
+    input_file_list = os.path.join(cfg['out_dir'], 'gdalbuildvrt_input_file_list.txt')
+
+    with open(input_file_list, 'w') as f:
+        f.write(dsms)
+
+    common.run("gdalbuildvrt -vrtnodata nan -input_file_list %s %s" % (input_file_list,
+                                                                       out_dsm_vrt))
     global_srcwin = np.loadtxt(os.path.join(cfg['out_dir'],
                                             "global_srcwin.txt"))
     res = cfg['dsm_resolution']
     xoff, yoff, xsize, ysize = global_srcwin
 
-    common.run("gdal_translate -projwin %s %s %s %s %s %s" % (xoff,
-                                                              yoff,
-                                                              xoff + xsize * res,
-                                                              yoff - ysize * res,
-                                                              out_dsm_vrt, out_dsm_tif))
+    common.run(" ".join(["gdal_translate",
+                         "-co TILED=YES -co BIGTIFF=IF_SAFER",
+                         "-projwin %s %s %s %s %s %s" % (xoff,
+                                                         yoff,
+                                                         xoff + xsize * res,
+                                                         yoff - ysize * res,
+                                                         out_dsm_vrt, out_dsm_tif)]))
 
 def lidar_preprocessor(tiles):
     """
