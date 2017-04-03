@@ -52,6 +52,13 @@ cfg['skip_existing'] = False
 # resolution of the output digital surface model, in meters per pixel
 cfg['dsm_resolution'] = 4
 
+# radius to compute altitudes (and to interpolate the small holes)
+cfg['dsm_radius'] = 0
+
+# dsm_sigma controls the spread of the blob from each point for the dsm computation
+# (dsm_resolution by default)
+cfg['dsm_sigma'] = None
+
 # zoom out applied to input images
 cfg['subsampling_factor'] = 1
 

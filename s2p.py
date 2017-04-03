@@ -484,6 +484,13 @@ def plys_to_dsm(tile):
     cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
                                             local_xsize, local_ysize)]
 
+    cmd += ['-radius', str(cfg['dsm_radius'])]
+
+    if cfg['dsm_sigma'] is not None:
+        cmd += ['-sigma', str(cfg['dsm_sigma'])]
+    else:
+        cmd += ['-sigma', str(cfg['dsm_resolution'])]
+
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     q = p.communicate(input=clouds.encode())
 
