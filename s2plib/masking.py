@@ -34,7 +34,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
     # coefficients of the transformation associated to the crop and zoom
     z = cfg['subsampling_factor']
     H = np.dot(np.diag((1/z, 1/z, 1)), common.matrix_translation(-x, -y))
-    hij = ' '.join([str(x) for x in H.flatten()])
+    hij = ' '.join([str(el) for el in H.flatten()])
 
     w, h = int(w/z), int(h/z)
     mask = np.ones((h, w), dtype=np.bool)
