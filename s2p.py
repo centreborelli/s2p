@@ -135,9 +135,10 @@ def rectification_pair(tile, i):
 
     x, y, w, h = tile['coordinates']
 
+    cur_dir = os.path.join(tile['dir'],'pair_{}'.format(i))
     for n in tile['neighborhood_dirs']:
-        nei_dir = os.path.join(tile['dir'],n, 'pair_{}'.format(i))
-        if not os.path.samefile(os.path.join(tile['dir'],'pair_{}'.format(i)),nei_dir):
+        nei_dir = os.path.join(tile['dir'], n, 'pair_{}'.format(i))
+        if os.path.exists(nei_dir) and not os.path.samefile(cur_dir, nei_dir):
             sift_from_neighborhood = os.path.join(nei_dir, 'sift_matches.txt')
             try:
                 m_n = np.loadtxt(sift_from_neighborhood)
