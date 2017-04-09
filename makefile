@@ -219,6 +219,8 @@ clean_imscript:
 	$(RM) $(PROGRAMS)
 	$(RM) $(SRCDIR)/iio.o
 	$(RM) $(SRCDIR)/rpc.o
+	$(RM) $(SRCDIR)/geographiclib_wrapper.o
+	$(RM) $(SRCDIR)/geoid_height_wrapper.o
 
 clean_msmw:
 	$(RM) -r $(BINDIR)/build_msmw
