@@ -430,8 +430,7 @@ def image_qauto(im, out=None):
         path of requantized image, saved as png
     """
     if out is None:
-        extension = '.tif' if tilewise else '.png'
-        out = tmpfile(extension)
+        out = tmpfile('.png')
     else:
         run('qauto %s %s' % (im, out))
     return out
@@ -532,13 +531,9 @@ def rgbi_to_rgb(im, out=None):
         output rgb image
     """
     if out is None:
-        extension = '.tif' if tilewise else '.png'
-        out = tmpfile(extension)
-        out = tmpfile(extension)
+        out = tmpfile('.png')
     pcmd = "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3"
-
     cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
-
     run(cmd)
     return out
 
