@@ -75,7 +75,7 @@ and
 
 ## Installation
 
-    git clone https://github.com/carlodef/s2p.git --recursive
+    git clone https://github.com/MISS3D/s2p.git --recursive
     cd s2p
     make
 
