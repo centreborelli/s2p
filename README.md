@@ -77,7 +77,7 @@ and
 
     git clone https://github.com/carlodef/s2p.git --recursive
     cd s2p
-    make
+    make all
 
 The `--recursive` option for `git clone` allows to clone all submodules, such
 as the [iio](https://github.com/mnhrdt/iio) library.
@@ -94,7 +94,7 @@ provided here in the `c` folder. For the other binaries, the source code is
 provided in the `3rdparty` folder.
 
 All the sources (ours and 3rdparties) are compiled from the same makefile. Just
-run `make` from the `s2p` folder to compile them.  This will create a `bin`
+run `make all` from the `s2p` folder to compile them.  This will create a `bin`
 directory containing all the needed binaries.
 
 
