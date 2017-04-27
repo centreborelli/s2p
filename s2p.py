@@ -582,6 +582,9 @@ def main(user_cfg, steps=ALL_STEPS):
     print('\ndiscarding masked tiles...')
     tiles = initialization.tiles_full_info(tw, th)
 
+    # generate svg tile map
+    common.write_svg_tilemap(os.path.join(cfg['out_dir'],'tiles.svg'), cfg, tiles)
+
     if 'initialisation' in steps:
         # Write the list of json files to outdir/tiles.txt
         with open(os.path.join(cfg['out_dir'],'tiles.txt'),'w') as f:
