@@ -844,30 +844,3 @@ def print_elapsed_time(since_first_call=False):
             print("Elapsed time:", t2 - print_elapsed_time.t0)
     print_elapsed_time.t1 = t2
     print()
-
-def write_svg_tilemap(filename, cfg, tiles):
-    '''
-    draw tiles boundaries with names in an svg file
-    '''
-    with open(filename,'w') as f:
-        f.write('<?xml version="1.0" standalone="no"?>\
-        <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" \
-         "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">')
-        f.write('<svg version="1.1" xmlns="http://www.w3.org/2000/svg" \
-               xmlns:xlink="http://www.w3.org/1999/xlink" \
-               width="1000px" height="1000px" viewBox="%d %d %d %d">'%(
-           cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h']))
-        for t in tiles:
-            #<clipPath id="clipTriangleUp">
-            x, y ,w ,h = t['coordinates']
-            dir = t['dir'].split(cfg['out_dir'])[-1]
-            f.write('<polygon style="fill:white;stroke:black;stroke-width:2" \
-                  points="%d %d, %d %d, %d %d, %d %d" />'%(
-                  x,y, x+w,y, x+w,y+w, x,y+w))
-            #</clipPath>
-            f.write('<g transform="translate(%d,%d)">\
-                  <text x="%d" y="%d" text-anchor="middle" \
-                  alignment-baseline="central">%s</text></g>'%(
-                     x,y,w/2,h/2,dir))
-        f.write('</svg>')
-        f.close()
