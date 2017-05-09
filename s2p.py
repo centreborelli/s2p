@@ -135,9 +135,10 @@ def rectification_pair(tile, i):
 
     x, y, w, h = tile['coordinates']
 
+    cur_dir = os.path.join(tile['dir'],'pair_{}'.format(i))
     for n in tile['neighborhood_dirs']:
-        if n != tile['dir']:
-            nei_dir = os.path.join(n, 'pair_{}'.format(i))
+        nei_dir = os.path.join(tile['dir'], n, 'pair_{}'.format(i))
+        if os.path.exists(nei_dir) and not os.path.samefile(cur_dir, nei_dir):
             sift_from_neighborhood = os.path.join(nei_dir, 'sift_matches.txt')
             try:
                 m_n = np.loadtxt(sift_from_neighborhood)
@@ -478,7 +479,7 @@ def plys_to_dsm(tile):
                      global_yoff + np.ceil((ymax - global_yoff) / res) * res)
     local_ysize = int(1 - np.floor((max(global_yoff - global_ysize * res, ymin) - local_yoff) / res))
 
-    clouds = '\n'.join(os.path.join(n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
+    clouds = '\n'.join(os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
 
     cmd = ['plyflatten', str(cfg['dsm_resolution']), out_dsm]
     cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
@@ -659,6 +660,32 @@ def main(user_cfg, steps=ALL_STEPS):
     common.print_elapsed_time(since_first_call=True)
 
 
+def make_path_relative_to_json_file(path,json_file):
+    json_abs_path = os.path.abspath(os.path.dirname(json_file))
+    out_path = os.path.join(json_abs_path,path)
+    return out_path
+
+def read_config_file(config_file):
+    # read the json configuration file
+    with open(config_file, 'r') as f:
+        user_cfg = json.load(f)
+
+    # Check if out_dir is a relative path
+    # In this case the relative path is relative to the config.json location,
+    # and not to the cwd
+    if not os.path.isabs(user_cfg['out_dir']):
+        print('WARNING: Output directory is a relative path, it will be interpreted with respect to config.json location, and not cwd')
+        user_cfg['out_dir'] = make_path_relative_to_json_file(user_cfg['out_dir'],config_file)
+        print('Output directory will be: '+user_cfg['out_dir'])
+
+    for i in range(0,len(user_cfg['images'])):
+        for d in ['clr','cld','roi','wat','img','rpc']:
+            if d in user_cfg['images'][i] and user_cfg['images'][i][d] is not None and not os.path.isabs(user_cfg['images'][i][d]):
+                user_cfg['images'][i][d]=make_path_relative_to_json_file(user_cfg['images'][i][d],config_file)
+        
+    return user_cfg
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
                                                   'Pipeline'))
@@ -670,8 +697,6 @@ if __name__ == '__main__':
                         default=ALL_STEPS)
     args = parser.parse_args()
 
-    # read the json configuration file
-    with open(args.config, 'r') as f:
-        user_cfg = json.load(f)
+    user_cfg = read_config_file(args.config)
 
     main(user_cfg, args.step)

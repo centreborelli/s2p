@@ -103,10 +103,9 @@ def unit_distributed_plyflatten(config):
 
     print('Running end2end with distributed plyflatten dsm ...')
 
-    with open(config, 'r') as f:
-        test_cfg = json.load(f)
-        test_cfg['skip_existing'] = True
-        s2p.main(test_cfg)
+    test_cfg = s2p.read_config_file(config)
+    test_cfg['skip_existing'] = True
+    s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
     computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
@@ -163,9 +162,8 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
     print('Configuration file: ',config)
     print('Reference DSM:',ref_dsm,os.linesep)
     
-    with open(config, 'r') as f:
-        test_cfg = json.load(f)
-        s2p.main(test_cfg)
+    test_cfg = s2p.read_config_file(config)
+    s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
     
@@ -179,11 +177,10 @@ def end2end_cluster(config):
 
     print('Running end2end in sequential mode to get reference DSM ...')
 
-    with open(config, 'r') as f:
-        test_cfg = json.load(f)
-        test_cfg['skip_existing'] = True
-        s2p.main(test_cfg)
-
+    test_cfg = s2p.read_config_file(config)
+    test_cfg['skip_existing'] = True
+    s2p.main(test_cfg)
+    
     outdir = test_cfg['out_dir']
     expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
     print('Running end2end in cluster mode ...')
@@ -206,7 +203,7 @@ def end2end_cluster(config):
 
     # Strip trailing \n
     tiles = list(map(str.strip,tiles))
-        
+
     print('Found '+str(len(tiles))+' tiles to process')
 
     for step in s2p.ALL_STEPS:
@@ -214,9 +211,8 @@ def end2end_cluster(config):
             print('Running %s on each tile...' % step)
             for tile in tiles:
                 print('tile : %s' % tile)
-                with open(tile, 'r') as f:
-                    tile_cfg_cluster = json.load(f)
-                    s2p.main(tile_cfg_cluster, [step])
+                tile_cfg_cluster = s2p.read_config_file(os.path.join(outdir,tile))
+                s2p.main(tile_cfg_cluster, [step])
         else:
             print('Running %s...' % step)
             print('test_cfg_cluster : %s' % test_cfg_cluster)
