@@ -376,6 +376,7 @@ def multidisparities_to_ply(tile):
             # set masked value to NaN
             exp = 'y 0 = nan x if'
             common.run('plambda %s %s "%s" -o %s' % (tmp_warp, mask_orig, exp, disp2D))
+            # disp2D contains positions in the secondary image
 
             # added input data for triangulation module
             disp_list.append(disp2D)
