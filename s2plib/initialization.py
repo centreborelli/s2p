@@ -216,7 +216,7 @@ def get_tile_dir(x, y, w, h):
     """
     Get the name of a tile directory
     """
-    return os.path.join('tiles','tiles_row_{:07d}_height_{}'.format(y, h),
+    return os.path.join('tiles','row_{:07d}_height_{}'.format(y, h),
                         'col_{:07d}_width_{}'.format(x, w))
 
 
