@@ -213,8 +213,7 @@ def stereo_matching(tile,i):
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     disp_min, disp_max = np.loadtxt(os.path.join(out_dir, 'disp_min_max.txt'))
-    if cfg['disp_min'] is not None: disp_min = cfg['disp_min']
-    if cfg['disp_max'] is not None: disp_max = cfg['disp_max']
+
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
                                          cfg['matching_algorithm'], disp_min,
                                          disp_max)
