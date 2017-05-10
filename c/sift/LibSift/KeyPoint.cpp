@@ -11,6 +11,7 @@
 #include <iostream>
 #include <math.h>
 
+#include <cassert>
 
 //! Local includes
 #include "KeyPoint.h"
@@ -404,9 +405,9 @@ void KeyPoint::extractFeatureVector(
     const int i0 = arrI[n];
     const int j0 = arrJ[n];
     const int ia = std::max(0, i0);
-    const int ib = std::min(i0 + 1, nHist - 1);
+    const int ib = std::min(ia + 1, nHist - 1);
     const int ja = std::max(0, j0);
-    const int jb = std::min(j0 + 1, nHist - 1);
+    const int jb = std::min(ja + 1, nHist - 1);
     const size_t bl = (size_t) ( int(gamma)      % nOri);
     const size_t br = (size_t) ((int(gamma) + 1) % nOri);
     const float v0 = arr0[n];
@@ -418,7 +419,7 @@ void KeyPoint::extractFeatureVector(
 
     iD[(ia * nHist + jb) * nOri + bl] += gl * v0 * v3 * M;
     iD[(ia * nHist + jb) * nOri + br] += gr * v0 * v3 * M;
-
+    
     iD[(ib * nHist + ja) * nOri + bl] += gl * v1 * v2 * M;
     iD[(ib * nHist + ja) * nOri + br] += gr * v1 * v2 * M;
 
