@@ -381,14 +381,14 @@ int main_disp_to_heights(int c, char *v[])
 	    list_pairs.data[pid].q0[1] = y+row_m;
 	    list_pairs.data[pid].q0[2] = 1.;
 
-	    double dx = list_pairs.data[pid].dispx[posH];
-	    double dy = list_pairs.data[pid].dispy[posH];
+	    double posx = list_pairs.data[pid].dispx[posH];
+	    double posy = list_pairs.data[pid].dispy[posH];
 	     
-	    list_pairs.data[pid].q1[0] = (x+dx)+col_m;
-	    list_pairs.data[pid].q1[1] = (y+dy)+row_m;
+	    list_pairs.data[pid].q1[0] = posx;
+	    list_pairs.data[pid].q1[1] = posy;
 	    list_pairs.data[pid].q1[2] = 1.;
 
-	    if (isnan(dx) || isnan(dy))
+	    if (isnan(posx) || isnan(posy))
 	      {
 		list_pairs.data[pid].process = false;
 		local_nb_sights --;

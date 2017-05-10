@@ -350,14 +350,14 @@ def multidisparities_to_ply(tile):
             # homography for warp
             T = common.matrix_translation(x, y)
             hom_ref = np.loadtxt(H_ref)
-            hom_ref_shift_inv = np.linalg.inv(np.dot(hom_ref, T))
+            hom_ref_shift = np.dot(hom_ref, T)
 
             # homography for 1D to 2D conversion
             hom_sec = np.loadtxt(H_sec)
             hom_pointing = np.loadtxt(pointing)
             hom_sec_shift_inv = np.linalg.inv(np.dot(hom_sec,
                                                      np.linalg.inv(hom_pointing)))
-            h1 = " ".join(str(x) for x in hom_ref_shift_inv.flatten())
+            h1 = " ".join(str(x) for x in hom_ref_shift.flatten())
             h2 = " ".join(str(x) for x in hom_sec_shift_inv.flatten())
 
             # relative disparity map to absolute disparity map
@@ -370,10 +370,10 @@ def multidisparities_to_ply(tile):
 
             # warp
             tmp_warp = common.tmpfile('.tif')
-            common.run('homwarp -i -o 2 "%s" %d %d %s %s' % (h1, w, h, tmp_1d_to_2d, tmp_warp))
+            common.run('homwarp -o 2 "%s" %d %d %s %s' % (h1, w, h, tmp_1d_to_2d, tmp_warp))
 
-            # absolute disparity map to relative disparity map and set masked value to NaN
-            exp = 'y 0 = nan x[0] :i - %d - x[1] :j - %d - nan 3 njoin if' % (x, y)
+            # set masked value to NaN
+            exp = 'y 0 = nan x if'
             common.run('plambda %s %s "%s" -o %s' % (tmp_warp, mask_orig, exp, disp2D))
 
             # added input data for triangulation module
@@ -387,9 +387,6 @@ def multidisparities_to_ply(tile):
                 common.remove(mask_rect)
                 common.remove(mask_orig)
 
-    # H is the homography transforming the coordinates system of the original
-    # full size image into the coordinates system of the crop
-    H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
     colors = os.path.join(out_dir, 'ref.png')
     if cfg['images'][0]['clr']:
         common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
