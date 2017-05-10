@@ -665,6 +665,21 @@ def make_path_relative_to_json_file(path,json_file):
     out_path = os.path.join(json_abs_path,path)
     return out_path
 
+
+def read_tiles(tiles_file):
+    tiles = []
+    outdir = os.path.dirname(tiles_file)
+
+    with open(tiles_file) as f:
+        tiles = f.readlines()
+
+    # Strip trailing \n
+    tiles = list(map(str.strip,tiles))
+    tiles = [os.path.join(outdir, t) for t in tiles]
+
+    return tiles
+
+
 def read_config_file(config_file):
     # read the json configuration file
     with open(config_file, 'r') as f:

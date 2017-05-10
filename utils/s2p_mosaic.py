@@ -1,17 +1,16 @@
 #!/usr/bin/env python
-
-# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>                                                                                                                                                        
-# This program is free software: you can redistribute it and/or modify                                                                                                                                            
-# it under the terms of the GNU Affero General Public License as published                                                                                                                                        
-# by the Free Software Foundation, either version 3 of the License, or                                                                                                                                            
-# (at your option) any later version.                                                                                                                                                                             
-#                                                                                                                                                                                                                 
-# This program is distributed in the hope that it will be useful,                                                                                                                                                 
-# but WITHOUT ANY WARRANTY; without even the implied warranty of                                                                                                                                                  
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                                                                                                                                                   
-# GNU Affero General Public License for more details.                                                                                                                                                             
-#                                                                                                                                                                                                                 
-# You should have received a copy of the GNU Affero General Public License                                                                                                                                        
+# Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse, json, os
@@ -19,8 +18,9 @@ import sys
 
 # This is needed to import from a sibling folder
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        
-from  s2plib import common
+
+import s2p
+from s2plib import common
 
 def vrt_body_source(fname,band,src_x,src_y,src_w,src_h,dst_x,dst_y,dst_w,dst_h):
     """
@@ -102,16 +102,6 @@ def global_extent(tiles):
                 max_y = y + h
                 
     return(min_x,max_x,min_y,max_y)
-
-def read_tiles(tiles_file):
-    tiles = []    
-    with open(tiles_file) as f:
-        tiles = f.readlines()
-
-    # Strip trailing \n
-    tiles = list(map(str.strip,tiles))
-
-    return tiles
 
 def write_row_vrts(tiles,sub_img,vrt_basename,min_x,max_x):
     """
@@ -209,7 +199,7 @@ def main(tiles_file,outfile,sub_img):
     
     output_format = outfile_basename[-3:]
 
-    print('Ouptut format is '+output_format)
+    print('Output format is '+output_format)
 
     # If output format is tif, we need to generate a temporary vrt
     # with the same name
@@ -224,7 +214,7 @@ def main(tiles_file,outfile,sub_img):
     vrt_name = os.path.join(outfile_dirname,vrt_basename)
     
     # Read the tiles file
-    tiles = read_tiles(tiles_file)
+    tiles = s2p.read_tiles(tiles_file)
 
     print(str(len(tiles))+' tiles found')
 

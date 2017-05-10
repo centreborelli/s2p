@@ -196,13 +196,7 @@ def end2end_cluster(config):
     outdir = test_cfg_cluster['out_dir']
     tiles_file = os.path.join(outdir,'tiles.txt')
 
-    tiles = []
-    
-    with open(tiles_file) as f:
-        tiles = f.readlines()
-
-    # Strip trailing \n
-    tiles = list(map(str.strip,tiles))
+    tiles = s2p.read_tiles(tiles_file)
 
     print('Found '+str(len(tiles))+' tiles to process')
 
@@ -211,7 +205,7 @@ def end2end_cluster(config):
             print('Running %s on each tile...' % step)
             for tile in tiles:
                 print('tile : %s' % tile)
-                tile_cfg_cluster = s2p.read_config_file(os.path.join(outdir,tile))
+                tile_cfg_cluster = s2p.read_config_file(tile)
                 s2p.main(tile_cfg_cluster, [step])
         else:
             print('Running %s...' % step)
@@ -224,12 +218,10 @@ def end2end_cluster(config):
   
 def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
-    with open(config, 'r') as f:
-        test_cfg = json.load(f)
-        test_cfg['skip_existing'] = True
-        s2p.main(test_cfg)
-
+    test_cfg = s2p.read_config_file(config)
     outdir = test_cfg['out_dir']
+    test_cfg['skip_existing'] = True
+    s2p.main(test_cfg)
 
     tiles_file = os.path.join(outdir,'tiles.txt')
     global_height_map = os.path.join(outdir,'height_map.tif')
