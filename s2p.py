@@ -30,6 +30,7 @@ import subprocess
 import multiprocessing
 from osgeo import gdal
 import collections
+import shutil
 
 gdal.UseExceptions()
 
@@ -68,7 +69,14 @@ def pointing_correction(tile, i):
 
     # correct pointing error
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
-    A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
+    try:
+        A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
+    except common.RunFailure as e:
+        stderr = os.path.join(out_dir, 'stderr.log')
+        with open(stderr, 'w') as f:
+            f.write('ERROR during pointing correction with cmd: %s\n' % e[0]['command'])
+            f.write('Stop processing this pair\n')
+        return
 
     if A is not None:  # A is the correction matrix
         np.savetxt(os.path.join(out_dir, 'pointing.txt'), A, fmt='%6.3f')
@@ -118,6 +126,12 @@ def rectification_pair(tile, i):
                             'global_pointing_pair_{}.txt'.format(i))
 
     outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
+
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('rectification: stderr.log exists')
+        print('pair_{} not processed on tile {} {}'.format(i, x, y))
+        return
+
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
         print('rectification done on tile {} {} pair {}'.format(x, y, i))
@@ -135,9 +149,10 @@ def rectification_pair(tile, i):
 
     x, y, w, h = tile['coordinates']
 
+    cur_dir = os.path.join(tile['dir'],'pair_{}'.format(i))
     for n in tile['neighborhood_dirs']:
-        if n != tile['dir']:
-            nei_dir = os.path.join(n, 'pair_{}'.format(i))
+        nei_dir = os.path.join(tile['dir'], n, 'pair_{}'.format(i))
+        if os.path.exists(nei_dir) and not os.path.samefile(cur_dir, nei_dir):
             sift_from_neighborhood = os.path.join(nei_dir, 'sift_matches.txt')
             try:
                 m_n = np.loadtxt(sift_from_neighborhood)
@@ -145,14 +160,12 @@ def rectification_pair(tile, i):
                 m_n = m_n[np.where(np.linalg.norm([(m_n[:,0]-(x+w/2))/w,
                                                    (m_n[:,1]-(y+h/2))/h],
                                                   axis=0) < 3.0/4)]
-
                 if m is None:
                     m = m_n
                 else:
                     m = np.concatenate((m, m_n))
             except IOError:
                 print('%s does not exist' % sift_from_neighborhood)
-                pass
 
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
@@ -183,6 +196,12 @@ def stereo_matching(tile,i):
     x, y = tile['coordinates'][:2]
 
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
+
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('disparity estimation: stderr.log exists')
+        print('pair_{} not processed on tile {} {}'.format(i, x, y))
+        return
+
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
                                     f in outputs):
         print('disparity estimation done on tile {} {} pair {}'.format(x, y, i))
@@ -221,6 +240,11 @@ def disparity_to_height(tile, i):
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     height_map = os.path.join(out_dir, 'height_map.tif')
     x, y, w, h = tile['coordinates']
+
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('triangulation: stderr.log exists')
+        print('pair_{} not processed on tile {} {}'.format(i, x, y))
+        return
 
     if cfg['skip_existing'] and os.path.isfile(height_map):
         print('triangulation done on tile {} {} pair {}'.format(x, y, i))
@@ -262,6 +286,11 @@ def disparity_to_ply(tile):
     x, y, w, h = tile['coordinates']
     rpc1 = cfg['images'][0]['rpc']
     rpc2 = cfg['images'][1]['rpc']
+
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('triangulation: stderr.log exists')
+        print('pair_1 not processed on tile {} {}'.format(x, y))
+        return
 
     if cfg['skip_existing'] and os.path.isfile(ply_file):
         print('triangulation done on tile {} {}'.format(x, y))
@@ -579,7 +608,7 @@ def plys_to_dsm(tile):
                      global_yoff + np.ceil((ymax - global_yoff) / res) * res)
     local_ysize = int(1 - np.floor((max(global_yoff - global_ysize * res, ymin) - local_yoff) / res))
 
-    clouds = '\n'.join(os.path.join(n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
+    clouds = '\n'.join(os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
 
     cmd = ['plyflatten', str(cfg['dsm_resolution']), out_dsm]
     cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
@@ -765,6 +794,47 @@ def main(user_cfg, steps=ALL_STEPS):
     common.print_elapsed_time(since_first_call=True)
 
 
+def make_path_relative_to_json_file(path,json_file):
+    json_abs_path = os.path.abspath(os.path.dirname(json_file))
+    out_path = os.path.join(json_abs_path,path)
+    return out_path
+
+
+def read_tiles(tiles_file):
+    tiles = []
+    outdir = os.path.dirname(tiles_file)
+
+    with open(tiles_file) as f:
+        tiles = f.readlines()
+
+    # Strip trailing \n
+    tiles = list(map(str.strip,tiles))
+    tiles = [os.path.join(outdir, t) for t in tiles]
+
+    return tiles
+
+
+def read_config_file(config_file):
+    # read the json configuration file
+    with open(config_file, 'r') as f:
+        user_cfg = json.load(f)
+
+    # Check if out_dir is a relative path
+    # In this case the relative path is relative to the config.json location,
+    # and not to the cwd
+    if not os.path.isabs(user_cfg['out_dir']):
+        print('WARNING: Output directory is a relative path, it will be interpreted with respect to config.json location, and not cwd')
+        user_cfg['out_dir'] = make_path_relative_to_json_file(user_cfg['out_dir'],config_file)
+        print('Output directory will be: '+user_cfg['out_dir'])
+
+    for i in range(0,len(user_cfg['images'])):
+        for d in ['clr','cld','roi','wat','img','rpc']:
+            if d in user_cfg['images'][i] and user_cfg['images'][i][d] is not None and not os.path.isabs(user_cfg['images'][i][d]):
+                user_cfg['images'][i][d]=make_path_relative_to_json_file(user_cfg['images'][i][d],config_file)
+        
+    return user_cfg
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
                                                   'Pipeline'))
@@ -776,8 +846,10 @@ if __name__ == '__main__':
                         default=ALL_STEPS)
     args = parser.parse_args()
 
-    # read the json configuration file
-    with open(args.config, 'r') as f:
-        user_cfg = json.load(f)
+    user_cfg = read_config_file(args.config)
 
     main(user_cfg, args.step)
+
+    # Backup input file for sanity check
+    if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
+        shutil.copy2(args.config,os.path.join(cfg['out_dir'],'config.json.orig'))
