@@ -73,6 +73,9 @@ cfg['epipolar_thresh'] = 0.5
 # triangulation mode : 'pairwise'or 'geometric'
 cfg['triangulation_mode'] = 'pairwise'
 
+# use global pointing for geometric triangulation
+cfg['use_global_pointing_for_geometric_triangulation'] = False
+
 # stereo matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
 # hirschmuller08_laplacian', 'sgbm', 'mgm'
 cfg['matching_algorithm'] = 'mgm'

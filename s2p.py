@@ -356,8 +356,10 @@ def multidisparities_to_ply(tile):
             # homography for 1D to 2D conversion
             hom_sec = np.loadtxt(H_sec)
             hom_pointing = np.loadtxt(pointing)
-            hom_sec_shift_inv = np.linalg.inv(np.dot(hom_sec,
-                                                     np.linalg.inv(hom_pointing)))
+            if cfg["use_global_pointing_for_geometric_triangulation"] is True:
+                hom_sec = np.dot(hom_sec,np.linalg.inv(hom_pointing))
+            hom_sec_shift_inv = np.linalg.inv(hom_sec)
+
             h1 = " ".join(str(x) for x in hom_ref_shift.flatten())
             h2 = " ".join(str(x) for x in hom_sec_shift_inv.flatten())
 
