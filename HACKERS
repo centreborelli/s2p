@@ -22,9 +22,8 @@ helpful to refer to the philosophy points (P1)--(P7) outlined below.
 	* [doc] documentation / comments
 	* [trivial] typo or trivial bugfix on a single file
 
-(E7) The types of pull requests in (E6) are mutually exclusive.  For example,
-you cannot add a feature and change the testing system at the same time.  More
-importantly, you cannot refactor and bugfix.
+(E7) As far as possible, the types of pull requests in (E6) should be mutually exclusive.
+For example, you cannot refactor and bugfix.
 
 
 PHILOSOPHY
