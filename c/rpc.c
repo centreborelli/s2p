@@ -8,26 +8,7 @@
 #include <float.h>
 
 #include "xfopen.c"
-
-
-
-// rational polynomial coefficients (and those of the inverse model)
-struct rpc {
-	double numx[20];
-	double denx[20];
-	double numy[20];
-	double deny[20];
-	double scale[3], offset[3];
-
-	double inumx[20];
-	double idenx[20];
-	double inumy[20];
-	double ideny[20];
-	double iscale[3], ioffset[3];
-
-	double dmval[4];
-	double imval[4];
-};
+#include "rpc.h"
 
 // set all the values of an rpc model to NAN
 static void nan_rpc(struct rpc *p)
