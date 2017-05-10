@@ -30,6 +30,7 @@ import subprocess
 import multiprocessing
 from osgeo import gdal
 import collections
+import shutil
 
 gdal.UseExceptions()
 
@@ -715,3 +716,7 @@ if __name__ == '__main__':
     user_cfg = read_config_file(args.config)
 
     main(user_cfg, args.step)
+
+    # Backup input file for sanity check
+    if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
+        shutil.copy2(args.config,os.path.join(cfg['out_dir'],'config.json.orig'))
