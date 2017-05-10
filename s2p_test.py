@@ -112,7 +112,7 @@ def unit_distributed_plyflatten(config):
 
     print('Running plyflatten dsm reference ...')
 
-    clouds = '\n'.join(glob.glob(os.path.join(outdir, "*", "*", "cloud.ply")))
+    clouds = '\n'.join(glob.glob(os.path.join(outdir, "tiles", "*", "*", "cloud.ply")))
     out_dsm = os.path.join(outdir, "dsm_ref.tif")
     cmd = ['plyflatten', str(test_cfg['dsm_resolution']), out_dsm]
     if 'utm_bbx' in test_cfg:
