@@ -79,7 +79,7 @@ int main(int c, char *v[]) {
         h = size_y - y;
     if (w <= 0 || h <= 0) {
         fprintf(stderr, "WARNING: empty roi\n");
-        return 0;
+        return 1;
     }
 
     // read roi
