@@ -76,6 +76,10 @@ int compare_floats(const void *a, const void *b)
 float op_median(float* data, int N){
    int i;
    float median;
+   if (N == 1)
+   {
+      return data[0];
+   }
    // this will modify data
    qsort(data, N, sizeof*data, compare_floats);
    median = data[N/2-1];
@@ -161,7 +165,10 @@ void morphoop(float *ptrI, int nc, int nr,  float *ptrS, int se_nc, int se_nr, i
             exit(1);
          }
 
-         *ptrO++ = (float) S;
+	 if (i!=0)
+	   *ptrO++ = (float) S;
+	 else
+	   *ptrO++ = NAN;
       }
 }
 
