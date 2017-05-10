@@ -255,6 +255,7 @@ registered_tests = [('unit_image_keypoints', (unit_image_keypoints,[])),
                     ('end2end_triplet', (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])),
                     ('end2end_cluster', (end2end_cluster, ['testdata/input_triplet/config.json'])),
                     ('end2end_mosaic', (end2end_mosaic, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.05,2])),
+                    ('end2end_geometric', (end2end, ['testdata/input_triplet/config_geo.json', 'testdata/expected_output/triplet/dsm_geo.tif',0.05,2])),
                     ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['testdata/input_triplet/config.json']))]
 
 registered_tests = collections.OrderedDict(registered_tests)
