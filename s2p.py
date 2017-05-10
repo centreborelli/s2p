@@ -317,12 +317,13 @@ def multidisparities_to_ply(tile):
 
     Args:
         tile: dictionary containing the information needed to process a tile.
+
+    # There is no guarantee that this function works with z!=1
     """
     out_dir = os.path.join(tile['dir'])
     ply_file = os.path.join(out_dir, 'cloud.ply')
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     x, y, w, h = tile['coordinates']
-    z = cfg['subsampling_factor']
 
     rpc_ref = cfg['images'][0]['rpc']
     disp_list = list()
@@ -395,7 +396,6 @@ def multidisparities_to_ply(tile):
     else:
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
-    common.image_safe_zoom_fft(colors, z, colors)
 
     # compute the point cloud
     triangulation.multidisp_map_to_point_cloud(ply_file, disp_list, rpc_ref, rpc_list,
