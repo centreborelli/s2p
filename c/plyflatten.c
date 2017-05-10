@@ -234,8 +234,10 @@ static int insideP(int w, int h, int i, int j)
 
 static float distance_weight(float sigma, float d)
 {
-	// note, since exp(-inf)=0, this function returns 1 when sigma=inf
-	return exp(-d*d/(2*sigma*sigma));
+	if (isinf(sigma))
+		return 1;
+	else
+		return exp(-d*d/(2*sigma*sigma));
 }
 
 // open a ply file, and accumulate its points to the grand image

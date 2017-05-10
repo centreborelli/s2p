@@ -617,8 +617,6 @@ def plys_to_dsm(tile):
 
     if cfg['dsm_sigma'] is not None:
         cmd += ['-sigma', str(cfg['dsm_sigma'])]
-    else:
-        cmd += ['-sigma', str(cfg['dsm_resolution'])]
 
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     q = p.communicate(input=clouds.encode())
