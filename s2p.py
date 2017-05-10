@@ -362,7 +362,8 @@ def multidisparities_to_ply(tile):
 
             # relative disparity map to absolute disparity map
             tmp_abs = common.tmpfile('.tif')
-            common.run('plambda %s %s "y 1 = x nan if :i + :j 1 3 njoin" -o %s' % (disp, mask_rect, tmp_abs))
+            os.environ["PLAMBDA_GETPIXEL"] = "0"
+            common.run('plambda %s %s "y 0 = nan x[0] :i + x[1] :j + 1 3 njoin if" -o %s' % (disp, mask_rect, tmp_abs))
 
             # 1d to 2d conversion
             tmp_1d_to_2d = common.tmpfile('.tif')
