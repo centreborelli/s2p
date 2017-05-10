@@ -13,6 +13,17 @@ persons must be different to the author of the pull request.
 (E5) Optional: If the intent of the pull request is not clear, it may be
 helpful to refer to the philosophy points (P1)--(P7) outlined below.
 
+(E6) Admissible types of pull requests:
+	* [bugfix] solves a concrete problem, changing one or at most two files
+	* [feature] adds a new feature which is disabled by default
+	* [config] changes the default configuration options
+	* [refactor] moves files/functions around without changing the algorithm
+	* [testing] changes the testing system, adds test data, etc.
+	* [doc] documentation / comments
+	* [trivial] typo or trivial bugfix on a single file
+
+(E7) As far as possible, the types of pull requests in (E6) should be mutually exclusive.
+For example, you cannot refactor and bugfix.
 
 
 PHILOSOPHY
