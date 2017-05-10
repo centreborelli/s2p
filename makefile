@@ -113,7 +113,7 @@ SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop bdint morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective\
 	remove_small_cc plambda homwarp
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
-SRCKKK = watermask disp_to_h colormesh disp2ply bin2asc siftu ransac srtm4\
+SRCKKK = watermask disp_to_h colormesh disp2ply multidisp2ply  bin2asc siftu ransac srtm4\
 	srtm4_which_tile plyflatten plyextrema plytodsm
 
 imscript: $(BINDIR) $(PROGRAMS)
@@ -155,6 +155,15 @@ $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c
 
 $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
+
+$(SRCDIR)/triangulation.o: c/triangulation.c c/triangulation.h
+	$(CC) $(CFLAGS) -c $< -lm -o $@
+
+$(SRCDIR)/coordconvert.o: c/coordconvert.c c/coordconvert.h
+	$(CC) $(CFLAGS) -c $< -lm -o $@
+
+$(BINDIR)/multidisp2ply: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/triangulation.o $(SRCDIR)/coordconvert.o c/multidisp2ply.c c/vvector.h 3rdparty/iio/iio.h c/rpc.h c/triangulation.h c/coordconvert.h c/read_matrix.c
+	$(CC) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/triangulation.o $(SRCDIR)/coordconvert.o c/multidisp2ply.c $(IIOLIBS) -lGeographic -o $@
 
 $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@

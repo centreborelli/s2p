@@ -84,6 +84,21 @@ def unit_matching():
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
 
 
+# test the plyflatten executable
+def unit_plyflatten():
+    f = "testdata/input_ply/cloud.ply"                       # input cloud
+    e = "testdata/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
+    o = s2plib.common.tmpfile(".tiff")                       # actual output
+    s2plib.common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
+    s = "\"%%w %%h %%v %%Y\"" # statistics to compare: width,height,avg,numnans
+    X = s2plib.common.tmpfile(".txt")
+    Y = s2plib.common.tmpfile(".txt")
+    s2plib.common.run("imprintf %s %s > %s" % (s, o, X))     # actual stats
+    s2plib.common.run("imprintf %s %s > %s" % (s, e, Y))     # expected stats
+    s2plib.common.run("diff %s %s" % (X, Y)) # compare stats
+
+
+
     
 def unit_matches_from_rpc():
 
@@ -238,11 +253,13 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
 registered_tests = [('unit_image_keypoints', (unit_image_keypoints,[])),
                     ('unit_matching', (unit_matching,[])),
+                    ('unit_plyflatten', (unit_plyflatten,[])),
                     ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
                     ('end2end_pair', (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1])),
                     ('end2end_triplet', (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])),
                     ('end2end_cluster', (end2end_cluster, ['testdata/input_triplet/config.json'])),
                     ('end2end_mosaic', (end2end_mosaic, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.05,2])),
+                    ('end2end_geometric', (end2end, ['testdata/input_triplet/config_geo.json', 'testdata/expected_output/triplet/dsm_geo.tif',0.05,2])),
                     ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['testdata/input_triplet/config.json']))]
 
 registered_tests = collections.OrderedDict(registered_tests)
