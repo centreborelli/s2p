@@ -56,6 +56,10 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         disp_min = disp_min[0]
         disp_max = disp_max[0]
 
+    # define environment variables
+    env = os.environ.copy()
+    env['OMP_NUM_THREADS'] = str(cfg['omp_num_threads'])
+
     # call the block_matching binary
     if algo == 'hirschmuller02':
         bm_binary = 'subpix.sh'
@@ -106,11 +110,13 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
 
     if algo == 'tvl1':
         tvl1 = 'callTVL1.sh'
-        common.run('{0} {1} {2} {3} {4}'.format(tvl1, im1, im2, disp, mask))
+        common.run('{0} {1} {2} {3} {4}'.format(tvl1, im1, im2, disp, mask),
+                   env)
 
     if algo == 'tvl1_2d':
         tvl1 = 'callTVL1.sh'
-        common.run('{0} {1} {2} {3} {4} {5}'.format(tvl1, im1, im2, disp, mask, 1))
+        common.run('{0} {1} {2} {3} {4} {5}'.format(tvl1, im1, im2, disp, mask,
+                                                    1), env)
 
 
     if algo == 'msmw':
@@ -128,8 +134,6 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                 bm_binary, disp_min, disp_max, im1, im2, disp, mask))
 
     if algo == 'mgm':
-        env = os.environ.copy()
-        env['OMP_NUM_THREADS'] = str(cfg['omp_num_threads'])
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
         env['TSGM'] = '3'
