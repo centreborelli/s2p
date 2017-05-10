@@ -78,7 +78,7 @@ int main(int c, char *v[]) {
     if (y + h > size_y)
         h = size_y - y;
     if (w <= 0 || h <= 0) {
-        fprintf(stderr, "WARNING: empty roi\n");
+        fprintf(stderr, "ERROR: empty roi\n");
         return 1;
     }
 

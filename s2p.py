@@ -71,10 +71,10 @@ def pointing_correction(tile, i):
     try:
         A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
     except common.RunFailure as e:
-        stderr = os.path.join(out_dir, "stderr.log")
+        stderr = os.path.join(out_dir, 'stderr.log')
         with open(stderr, 'w') as f:
-            f.write("ERROR during pointing correction with cmd : %s\n" % e[0]["command"])
-            f.write("Stop processing this pair\n")
+            f.write('ERROR during pointing correction with cmd: %s\n' % e[0]['command'])
+            f.write('Stop processing this pair\n')
         return
 
     if A is not None:  # A is the correction matrix
@@ -126,9 +126,9 @@ def rectification_pair(tile, i):
 
     outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
 
-    if os.path.exists(os.path.join(out_dir, "stderr.log")):
-        print("rectification : stderr.log exists")
-        print("pair_{} not processed on tile {} {}".format(i, x, y))
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('rectification: stderr.log exists')
+        print('pair_{} not processed on tile {} {}'.format(i, x, y))
         return
 
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
@@ -158,14 +158,12 @@ def rectification_pair(tile, i):
                 m_n = m_n[np.where(np.linalg.norm([(m_n[:,0]-(x+w/2))/w,
                                                    (m_n[:,1]-(y+h/2))/h],
                                                   axis=0) < 3.0/4)]
-
                 if m is None:
                     m = m_n
                 else:
                     m = np.concatenate((m, m_n))
             except IOError:
                 print('%s does not exist' % sift_from_neighborhood)
-                pass
 
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
@@ -197,9 +195,9 @@ def stereo_matching(tile,i):
 
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
 
-    if os.path.exists(os.path.join(out_dir, "stderr.log")):
-        print("disparity estimation : stderr.log exists")
-        print("pair_{} not processed on tile {} {}".format(i, x, y))
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('disparity estimation: stderr.log exists')
+        print('pair_{} not processed on tile {} {}'.format(i, x, y))
         return
 
     if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
@@ -241,9 +239,9 @@ def disparity_to_height(tile, i):
     height_map = os.path.join(out_dir, 'height_map.tif')
     x, y, w, h = tile['coordinates']
 
-    if os.path.exists(os.path.join(out_dir, "stderr.log")):
-        print("triangulation : stderr.log exists")
-        print("pair_{} not processed on tile {} {}".format(i, x, y))
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('triangulation: stderr.log exists')
+        print('pair_{} not processed on tile {} {}'.format(i, x, y))
         return
 
     if cfg['skip_existing'] and os.path.isfile(height_map):
@@ -287,8 +285,9 @@ def disparity_to_ply(tile):
     rpc1 = cfg['images'][0]['rpc']
     rpc2 = cfg['images'][1]['rpc']
 
-    if os.path.exists(os.path.join(out_dir, "stderr.log")):
-        print("triangulation : stderr.log exists : pair_1 not processed on tile {} {}".format(x, y))
+    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
+        print('triangulation: stderr.log exists')
+        print('pair_1 not processed on tile {} {}'.format(x, y))
         return
 
     if cfg['skip_existing'] and os.path.isfile(ply_file):
