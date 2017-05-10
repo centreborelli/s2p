@@ -182,8 +182,12 @@ int main(int c, char *v[])
     }
 
     // open disp and mask input images
-    int w, h, ww, hh, pd;
-    float *disp = iio_read_image_float(v[2], &w, &h);
+    int w, h, nch, ww, hh, pd;
+    float *dispy;
+    float *dispx = iio_read_image_float_split(v[2], &w, &h, &nch);
+    if (nch > 1) dispy = dispx + w*h;
+    else dispy = calloc(w*h, sizeof(*dispy));
+
     float *mask = iio_read_image_float(v[3], &ww, &hh);
     if (w != ww || h != hh) fail("disp and mask image size mismatch\n");
 
@@ -226,8 +230,9 @@ int main(int c, char *v[])
                 continue;
 
         // compute (lon, lat, alt) of the 3D point
-        float d = disp[pix];
-        double b[2] = {col + d, row};
+        float dx = dispx[pix];
+        float dy = dispy[pix];
+        double b[2] = {col + dx, row + dy};
         apply_homography(q, hsec_inv, b);
         intersect_rays(X, p, q, rpc_ref, rpc_sec);
 
@@ -271,8 +276,9 @@ int main(int c, char *v[])
                 continue;
 
         // compute (lon, lat, alt) of the 3D point
-        float d = disp[pix];
-        double b[2] = {col + d, row};
+        float dx = dispx[pix];
+        float dy = dispy[pix];
+        double b[2] = {col + dx, row + dy};
         apply_homography(q, hsec_inv, b);
         intersect_rays(X, p, q, rpc_ref, rpc_sec);
 
