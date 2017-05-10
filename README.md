@@ -59,6 +59,9 @@ ROI will be selected interactively on that preview. The path of the preview
 file must be given by the key `'prv'` of the `'images'[0]` dictionary (as in
 the example).
 
+#### File paths in json configuration files
+
+In json configuration files, relative file path for inputs files and output directory are relative to the json file location, not to the current working directory.
 
 ## Dependencies
 
