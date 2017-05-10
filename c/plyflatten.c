@@ -137,13 +137,15 @@ struct images {
 };
 
 // update the output images with a new height
-static void add_height_to_images(struct images *x, int i, int j, double v)
+static void add_height_to_images(struct images *x, int i, int j, double v, float weight, bool updateminmax)
 {
 	uint64_t k = (uint64_t) x->w * j + i;
-	x->min[k] = fmin(x->min[k], v);
-	x->max[k] = fmax(x->max[k], v);
-	x->avg[k] = (v + x->cnt[k] * x->avg[k]) / (1 + x->cnt[k]);
-	x->cnt[k] += 1;
+	if (updateminmax) {
+		x->min[k] = fmin(x->min[k], v);
+		x->max[k] = fmax(x->max[k], v);
+	}
+	x->avg[k] = (v * weight + x->cnt[k] * x->avg[k]) / (weight + x->cnt[k]);
+	x->cnt[k] += weight;
 }
 
 size_t get_record(FILE *f_in, int isbin, struct ply_property *t, int n, double *data){
@@ -213,7 +215,8 @@ static void parse_ply_points_for_extrema(double *xmin, double *xmax, double *ymi
 // open a ply file, and accumulate its points to the image
 static void add_ply_points_to_images(struct images *x,
 		double xmin, double ymax, double resolution,
-		char utm_zone[3], char *fname, int col_idx)
+		char utm_zone[3], char *fname, int col_idx,
+		int radius, double sigma)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -232,24 +235,35 @@ static void add_ply_points_to_images(struct images *x,
 	if (col_idx < 2 || col_idx > 5)
 		exit(fprintf(stderr, "error: bad col_idx %d\n", col_idx));
 
-
 	double data[n];
+	double amplitude = sigma*sqrt(2*M_PI);
+	double sigma2mult2 = 2*sigma*sigma;
+
 	while ( n == get_record(f, isbin, t, n, data) ) {
 
 		int i = rescale_double_to_int(data[0], xmin, resolution);
 		int j = rescale_double_to_int(-data[1], -ymax, resolution);
 
-		if ((0 <= i) && (i < x->w) && (0 <= j) && (j < x->h)) {
-		  if (col_idx == 2) {
-		    add_height_to_images(x, i, j, data[2]);
-		    assert(isfinite(data[2]));
-		  }
-		  else
-		    {
-		      unsigned int rgb = data[col_idx];
-		      add_height_to_images(x, i, j, rgb);
+		for (int k1 = -radius; k1 <= radius; k1++)
+		  for (int k2 = -radius; k2 <= radius; k2++) {
+		    int i_new = i + k1;
+		    int j_new = j + k2;
+		    float dist_x = data[0] - (xmin + (0.5 + i_new) * resolution);
+		    float dist_y = data[1] - (ymax - (0.5 + j_new) * resolution);
+		    float dist2 = dist_x*dist_x + dist_y*dist_y;
+		    float weight = amplitude * exp(-dist2/sigma2mult2);
+
+		    if ((0 <= i_new) && (i_new < x->w) && (0 <= j_new) && (j_new < x->h)) {
+		      if (col_idx == 2) {
+			add_height_to_images(x, i_new, j_new, data[2], weight, radius==0);
+			assert(isfinite(data[2]));
+		      }
+		      else {
+			unsigned int rgb = data[col_idx];
+			add_height_to_images(x, i_new, j_new, rgb, weight, radius==0);
+		      }
 		    }
-		}
+		  }
 
 	}
 
@@ -260,7 +274,7 @@ static void add_ply_points_to_images(struct images *x,
 void help(char *s)
 {
 	fprintf(stderr, "usage:\n\t"
-			"ls files | %s [-c column] [-srcwin \"xoff yoff xsize ysize\"] resolution out.tif\n", s);
+			"ls files | %s [-c column] [-srcwin \"xoff yoff xsize ysize\"] [-radius 0] [-sigma resolution] resolution out.tif\n", s);
 	fprintf(stderr, "\t the resolution is in meters per pixel\n");
 }
 
@@ -270,14 +284,22 @@ int main(int c, char *v[])
 {
 	int col_idx = atoi(pick_option(&c, &v, "c", "2"));
 	const char *srcwin = pick_option(&c, &v, "srcwin", "");
+	int radius = atoi(pick_option(&c, &v, "radius", "0"));
+	const char *sigma_str = pick_option(&c, &v, "sigma", "");
 
 	// process input arguments
 	if (c != 3) {
 		help(*v);
 		return 1;
 	}
+
 	double resolution = atof(v[1]);
 	char *filename_out = v[2];
+
+	double sigma = resolution;
+	if (0 != strcmp(sigma_str, "") ) {
+		sigma = atof(sigma_str);
+	}
 
 	// initialize x, y extrema values
 	double xmin = INFINITY;
@@ -332,7 +354,7 @@ int main(int c, char *v[])
 	while (l != NULL)
 	{
 		// printf("FILENAME: \"%s\"\n", l->current);
-	        add_ply_points_to_images(&x, xoff, yoff, resolution, utm, l->current, col_idx);
+		add_ply_points_to_images(&x, xoff, yoff, resolution, utm, l->current, col_idx, radius, sigma);
 		l = l->next;
 	}
 
