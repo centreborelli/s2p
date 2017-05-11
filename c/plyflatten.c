@@ -21,23 +21,6 @@
 #include "cpl_string.h"
 #endif
 
-// convert string like '28N' into a number like 32628, according to:
-// WGS84 / UTM northern hemisphere: 326zz where zz is UTM zone number
-// WGS84 / UTM southern hemisphere: 327zz where zz is UTM zone number
-// http://www.remotesensing.org/geotiff/spec/geotiff6.html#6.3.3.1
-static int get_utm_zone_index_for_geotiff(char *utm_zone)
-{
-	int out = 32000;
-	if (utm_zone[2] == 'N')
-		out += 600;
-	else if (utm_zone[2] == 'S')
-		out += 700;
-	else
-		fprintf(stderr, "WARNING: bad utm zone value: %s\n", utm_zone);
-	utm_zone[2] = '\0';
-	out += atoi(utm_zone);
-	return out;
-}
 
 struct ply_property {
 	enum {UCHAR,FLOAT,DOUBLE} type;
