@@ -417,8 +417,11 @@ int main(int c, char *v[])
 			x->avg[i] = NAN;
 
 	// save output image
-	save_output_image_with_utm_georeferencing(filename_out, x.avg, x.w, x.h,
-			xoff, resolution, 0, yoff, 0, -resolution, utm);
+	save_output_image_with_utm_georeferencing(
+			filename_out,
+			x->avg, x->w, x->h,
+			xoff, resolution, 0, yoff, 0, -resolution, utm
+			);
 
 	// cleanup and exit
 	free(x->min);
