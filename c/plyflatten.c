@@ -19,7 +19,6 @@
 #include "ogr_srs_api.h"
 #include "cpl_conv.h"
 #include "cpl_string.h"
-#else
 #endif
 
 // convert string like '28N' into a number like 32628, according to:
