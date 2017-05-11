@@ -7,6 +7,8 @@ LDLIBS = -lstdc++
 IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
 FFTLIBS = -lfftw3f -lfftw3
+GDAL_LIBS=`gdal-config --libs`
+GDAL_CFLAGS=`gdal-config --cflags`
 
 # The following conditional statement appends "-std=gnu99" to CFLAGS when the
 # compiler does not define __STDC_VERSION__.  The idea is that many older
@@ -172,7 +174,7 @@ $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
 
 $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) -I/usr/include/geotiff $^ -o $@ $(IIOLIBS) $(GEOLIBS)
+	$(CC) $(CFLAGS) $(GDAL_CFLAGS) $^ -o $@ $(IIOLIBS) $(GDAL_LIBS)
 
 $(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS) -I/usr/include/geotiff $^ -o $@ $(IIOLIBS) $(GEOLIBS)
