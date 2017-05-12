@@ -24,6 +24,7 @@ import numpy as np
 import datetime
 
 
+import s2p
 from s2plib.config import cfg
 from s2plib import common
 from s2plib import initialization
@@ -43,10 +44,10 @@ def write_svg_tilemap(filename, cfg, tiles):
            cfg['roi']['x'], cfg['roi']['y'], cfg['roi']['w'], cfg['roi']['h']))
         for t in tiles:
             x, y ,w ,h = t['coordinates']
-            dir = t['dir'].split(cfg['out_dir'])[-1]
+            dir = os.path.abspath(t['dir']).split(os.path.abspath(cfg['out_dir']))[-1]
             try:
-               common.image_qauto("./%s/dsm.tif"%t['dir'], "./%s/dsm.tif.png"%t['dir'])
-            except RunFailure:
+               common.image_qauto("%s/dsm.tif"%t['dir'], "%s/dsm.tif.png"%t['dir'])
+            except common.RunFailure:
                pass
 
             f.write('<polygon style="fill:white;stroke:black;stroke-width:2" \
@@ -99,8 +100,6 @@ if __name__ == '__main__':
                               'parameters'))
     args = parser.parse_args()
 
-    # read the json configuration file
-    with open(args.config, 'r') as f:
-        user_cfg = json.load(f)
+    user_cfg = s2p.read_config_file(args.config)
 
     main(user_cfg)
