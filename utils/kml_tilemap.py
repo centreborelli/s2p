@@ -42,27 +42,6 @@ def pix_2_latlon(gt, px, py, zone_number, northern):
 
     return lon, lat, 0
 
-def relaunch(t):
-    tile_cfg = s2p.read_config_file(os.path.join(t, "config.json"))
-    for i in range(len(tile_cfg['images'])-1):
-        disp = os.path.join(t,
-                            "pair_%d" % (i+1),
-                            "rectified_disp.tif")
-
-        if os.path.exists(disp) is True:
-            home = os.environ["PWD"]
-            os.environ["TMPDIR"] = os.path.join(t, "s2p_tmp")
-            os.chdir(t)
-            try:
-                os.makedirs(os.environ["TMPDIR"])
-            except OSError:
-                pass
-            for step in ['triangulation', 'local-dsm-rasterization']:
-                s2p.main(tile_cfg, step)
-            os.chdir(home)
-            return "ok"
-    return "no rectified_disp.tif founded"
-
 def read_tiles(tile_files, outdir, m, M, key):
     tiles = []
     tile_file_dir = os.path.dirname(tile_files)
