@@ -186,18 +186,10 @@ def disparity_range_from_matches(matches, H1, H2, w, h):
     x2 = p2[:, 0]
     y2 = p2[:, 1]
 
-    # estimate an affine transformation (tilt, shear and bias) mapping p1 on p2
-    t, s, b = np.linalg.lstsq(np.vstack((x2, y2, y2*0+1)).T, x1)[0][:3]
-
-    # compute the disparities for the affine model. The extrema are obtained at
-    # the ROI corners
-    xx = np.array([0, w, 0, w])
-    yy = np.array([0, 0, h, h])
-    disp_affine_model = (xx*t + yy*s + b) - xx
 
     # compute the final disparity range
-    disp_min = np.floor(min(np.min(disp_affine_model), np.min(x2 - x1)))
-    disp_max = np.ceil(max(np.max(disp_affine_model), np.max(x2 - x1)))
+    disp_min = np.floor(np.min(x2 - x1))
+    disp_max = np.ceil(np.max(x2 - x1))
 
     # add a security margin to the disparity range
     disp_min *= (1 - np.sign(disp_min) * cfg['disp_range_extra_margin'])
