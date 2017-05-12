@@ -63,7 +63,7 @@ def relaunch(t):
             return "ok"
     return "no rectified_disp.tif founded"
 
-def read_tiles(tile_files, outdir, m, M, key, with_retry):
+def read_tiles(tile_files, outdir, m, M, key):
     tiles = []
     tile_file_dir = os.path.dirname(tile_files)
     err_log = os.path.join(outdir, "%s_invalid_tiles.txt" % key)
@@ -76,18 +76,9 @@ def read_tiles(tile_files, outdir, m, M, key, with_retry):
             for el in readlines:
                 t = os.path.dirname(os.path.join(tile_file_dir, el))
                 dsm = os.path.join(t, 'dsm.tif')
-                cloud = os.path.join(t, 'cloud.ply')
                 message = "ok"
                 if os.path.exists(dsm) is False:
-                    if with_retry:
-                        message = relaunch(t)
-                        if os.path.exists(dsm) is False:
-                            if os.path.exists(cloud) is True:
-                                message = "cloud exists but there is no dsm"
-                            else:
-                                message = "unexplained error (restart triangulation tried)"
-                    else:
-                        message = "no dsm"
+                    message = "no dsm"
 
                 if message != "ok":
                     ferr.write(t)
@@ -324,7 +315,7 @@ def write_tiles_info(tiles, outdir, key):
     print "kml saved"
 
 
-def main(tiles_file, outdir, key, with_retry=False, with_overlay=False):
+def main(tiles_file, outdir, key, with_overlay=False):
     # makedirs
     try:
         os.makedirs(os.path.join(outdir, "href"))
@@ -340,7 +331,7 @@ def main(tiles_file, outdir, key, with_retry=False, with_overlay=False):
     print "min : %s, max : %s" % (m, M)
 
     # Read the tiles file
-    tiles = read_tiles(tiles_file, outdir, m, M, key, with_retry)
+    tiles = read_tiles(tiles_file, outdir, m, M, key)
     add_tot = len(tiles)
     print (str(add_tot)+' tiles found')
 
@@ -359,9 +350,8 @@ if __name__ == '__main__':
                         help=('path to the output directory.'))
     PARSER.add_argument('--ID', default='dsm',
                         help=('basename for output files'))
-    PARSER.add_argument('--retry', action='store_true', help=('retry failed tiles'))
     PARSER.add_argument('--overlay', action='store_true', help=('compute overlay'))
 
     ARGS = PARSER.parse_args()
 
-    main(ARGS.tiles, ARGS.outdir, ARGS.ID, ARGS.retry, ARGS.overlay)
+    main(ARGS.tiles, ARGS.outdir, ARGS.ID, ARGS.overlay)
