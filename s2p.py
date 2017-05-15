@@ -369,7 +369,6 @@ def multidisparities_to_ply(tile):
         pair = 'pair_%d' % (i+1)
         H_ref = os.path.join(out_dir, pair, 'H_ref.txt')
         H_sec = os.path.join(out_dir, pair, 'H_sec.txt')
-        pointing = os.path.join(cfg['out_dir'], 'global_pointing_%s.txt' % pair)
         disp = os.path.join(out_dir, pair, 'rectified_disp.tif')
         mask_rect = os.path.join(out_dir, pair, 'rectified_mask.png')
         disp2D = os.path.join(out_dir, pair, 'disp2D.tif')
@@ -383,8 +382,9 @@ def multidisparities_to_ply(tile):
 
             # homography for 1D to 2D conversion
             hom_sec = np.loadtxt(H_sec)
-            hom_pointing = np.loadtxt(pointing)
             if cfg["use_global_pointing_for_geometric_triangulation"] is True:
+                pointing = os.path.join(cfg['out_dir'], 'global_pointing_%s.txt' % pair)
+                hom_pointing = np.loadtxt(pointing)
                 hom_sec = np.dot(hom_sec,np.linalg.inv(hom_pointing))
             hom_sec_shift_inv = np.linalg.inv(hom_sec)
 
