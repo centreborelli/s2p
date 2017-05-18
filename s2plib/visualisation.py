@@ -98,7 +98,7 @@ def plot_matches_low_level(im1, im2, matches):
         x2 = matches[i, 2] + w1
         y2 = matches[i, 3]
         # convert endpoints to int (nn interpolation)
-        x1, y1, x2, y2 = map(int, np.round([x1, y1, x2, y2]))
+        x1, y1, x2, y2 = list(map(int, np.round([x1, y1, x2, y2])))
         plot_line(out, x1, y1, x2, y2, blue)
         try:
             out[y1, x1] = green
