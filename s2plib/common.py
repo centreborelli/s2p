@@ -431,8 +431,7 @@ def image_qauto(im, out=None):
     """
     if out is None:
         out = tmpfile('.png')
-    else:
-        run('qauto %s %s' % (im, out))
+    run('qauto %s %s' % (im, out))
     return out
 
 
