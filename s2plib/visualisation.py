@@ -34,15 +34,21 @@ def plot_line(im, x1, y1, x2, y2, colour):
     if np.abs(x2 - x1) >= np.abs(y2 - y1):
         n = np.abs(x2 - x1)
         for i in range(int(n+1)):
-            x = x1 + i * (x2 - x1) / n
-            y = np.round(y1 + i * (y2 - y1) / n)
-            im[y, x] = colour
+            x = int(x1 + i * (x2 - x1) / n)
+            y = int(np.round(y1 + i * (y2 - y1) / n))
+            try:
+                im[y, x] = colour
+            except IndexError:
+                pass
     else:
         n = np.abs(y2 - y1)
         for i in range(int(n+1)):
-            y = y1 + i * (y2 - y1) / n
-            x = np.round(x1 + i * (x2 - x1) / n)
-            im[y, x] = colour
+            y = int(y1 + i * (y2 - y1) / n)
+            x = int(np.round(x1 + i * (x2 - x1) / n))
+            try:
+                im[y, x] = colour
+            except IndexError:
+                pass
 
     return im
 
@@ -92,11 +98,13 @@ def plot_matches_low_level(im1, im2, matches):
         x2 = matches[i, 2] + w1
         y2 = matches[i, 3]
         # convert endpoints to int (nn interpolation)
-        x1, y1, x2, y2 = np.round([x1, y1, x2, y2])
+        x1, y1, x2, y2 = list(map(int, np.round([x1, y1, x2, y2])))
         plot_line(out, x1, y1, x2, y2, blue)
-        out[y1, x1] = green
-        out[y2, x2] = green
-
+        try:
+            out[y1, x1] = green
+            out[y2, x2] = green
+        except IndexError:
+            pass
     # save the output image, and return its path
     outfile = common.tmpfile('.png')
     piio.write(outfile, out)
