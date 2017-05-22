@@ -320,7 +320,7 @@ if __name__ == '__main__':
             print('Test '+test+' not found')
     
     if len(failed)==0:
-        print('All tests passes')
+        print('All tests passed')
         exit(0)
     else:
         print('The following tests failed:')
