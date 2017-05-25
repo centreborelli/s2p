@@ -573,10 +573,10 @@ def global_srcwin(tiles):
             else:
                 extrema.append([np.nan]*4)
 
-        xmin = np.nanmin(map(lambda x:x[0], extrema))
-        xmax = np.nanmax(map(lambda x:x[1], extrema))
-        ymin = np.nanmin(map(lambda x:x[2], extrema))
-        ymax = np.nanmax(map(lambda x:x[3], extrema))
+        xmin = np.nanmin(list(map(lambda x:x[0], extrema)))
+        xmax = np.nanmax(list(map(lambda x:x[1], extrema)))
+        ymin = np.nanmin(list(map(lambda x:x[2], extrema)))
+        ymax = np.nanmax(list(map(lambda x:x[3], extrema)))
 
         global_xsize = int(1 + np.floor((xmax - xmin) / res))
         global_ysize = int(1 + np.floor((ymax - ymin) / res))
