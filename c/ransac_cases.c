@@ -305,6 +305,7 @@ int seven_point_algorithm(float *fm, float *p, void *usr)
 	for (int k = 0; k < r; k++)
 	for (int j = 1; j <= 3; j++)
 	for (int i = 1; i <= 3; i++)
+	if (isfinite(z[k]))
 		fm[cx++] = F1[i][j] + z[k]*F2[i][j];
 	//fprintf(stderr, "\tspa = %g %g %g   %g %g %g   %g %g %g\n",
 	//		fm[0], fm[1], fm[2],
