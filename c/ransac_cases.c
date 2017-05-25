@@ -343,9 +343,13 @@ static float epipolar_euclidean_error(float *fm, float *pair, void *usr)
 		       fm[1]*p[0] + fm[4]*p[1] + fm[7],
 		       fm[2]*p[0] + fm[5]*p[1] + fm[8]};
 	float npf = hypot(pf[0], pf[1]);
-	pf[0] /= npf; pf[1] /= npf; pf[2] /= npf;
-	float pfq = pf[0]*q[0] + pf[1]*q[1] + pf[2]*q[2];
-	return fabs(pfq);
+	if (npf == 0)  // the epipolar line is (0, 0, 1), ie the line at infinity
+		return INFINITY;
+	else {
+		pf[0] /= npf; pf[1] /= npf; pf[2] /= npf;
+		float pfq = pf[0]*q[0] + pf[1]*q[1] + pf[2]*q[2];
+		return fabs(pfq);
+    }
 }
 
 // instance of "ransac_error_evaluation_function"
