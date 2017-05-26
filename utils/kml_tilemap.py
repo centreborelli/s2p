@@ -25,8 +25,9 @@ import collections
 import utm
 import simplekml
 import gdal
-
 import numpy as np
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import s2p
 from s2plib import rpc_model
 from s2plib import common

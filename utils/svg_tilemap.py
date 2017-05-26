@@ -24,6 +24,7 @@ import numpy as np
 import datetime
 
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import s2p
 from s2plib.config import cfg
 from s2plib import common
