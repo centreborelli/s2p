@@ -148,6 +148,22 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         # map
         common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
 
+    if algo == 'mgm_multi':
+        env['REMOVESMALLCC'] = '25'
+        env['MINDIFF'] = '1'
+        env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
+        env['SUBPIX'] = '2'
+        common.run('{0} -r {1} -R {2} -S 3 -s vfit -t census {3} {4} {5}'.format('mgm_multi',
+                                                                                 disp_min,
+                                                                                 disp_max,
+                                                                                 im1, im2,
+                                                                                 disp),
+                   env)
+
+        # produce the mask: rejected pixels are marked with nan of inf in disp
+        # map
+        common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
+
     if (algo == 'micmac'):
         # add micmac binaries to the PATH environment variable
         s2p_dir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
