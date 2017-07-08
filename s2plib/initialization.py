@@ -220,7 +220,30 @@ def get_tile_dir(x, y, w, h):
                         'col_{:07d}_width_{}'.format(x, w))
 
 
-def tiles_full_info(tw, th):
+def create_tile(coords, neighborhood_coords_dict):
+    tile = {}
+    x, y, w, h = coords
+    tile['dir'] = os.path.join(cfg['out_dir'], get_tile_dir(x, y, w, h))
+    tile['coordinates'] = coords
+    tile['neighborhood_dirs'] = list()
+    key = str((x, y, w, h))
+
+    if 'neighborhood_dirs' in cfg:
+        tile['neighborhood_dirs'] = cfg['neighborhood_dirs']
+    elif key in neighborhood_coords_dict:
+        for coords2 in neighborhood_coords_dict[key]:
+            x2, y2, w2, h2 = coords2
+            tile['neighborhood_dirs'].append(os.path.join('../../..', get_tile_dir(x2,
+                                                                                   y2,
+                                                                                   w2,
+                                                                                   h2)))
+
+    tile_json = os.path.join(get_tile_dir(x,y,w,h),'config.json')
+    tile['json'] = tile_json
+
+    return tile
+
+def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     """
     List the tiles to process and prepare their output directories structures.
 
@@ -241,65 +264,59 @@ def tiles_full_info(tw, th):
     rw = cfg['roi']['w']
     rh = cfg['roi']['h']
 
+    # build a tile dictionary for all non-masked tiles and store them in a list
+    tiles = []
     # list tiles coordinates
     tiles_coords, neighborhood_coords_dict = compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z)
 
-    # compute all masks in parallel as numpy arrays
-    tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
-                                               tiles_coords,
-                                               cfg['max_processes'], rpc,
-                                               roi_msk, cld_msk, wat_msk,
-                                               cfg['use_srtm_for_water'])
+    if os.path.exists(tiles_txt) is False or create_masks is True:
+        print('\ndiscarding masked tiles...')
+        # compute all masks in parallel as numpy arrays
+        tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
+                                                   tiles_coords,
+                                                   cfg['max_processes'], rpc,
+                                                   roi_msk, cld_msk, wat_msk,
+                                                   cfg['use_srtm_for_water'])
+        for coords, mask in zip(tiles_coords,
+                                tiles_masks):
+            if mask.any():  # there's at least one non-masked pixel in the tile
+                tile = create_tile(coords, neighborhood_coords_dict)
+                tiles.append(tile)
 
-    # build a tile dictionary for all non-masked tiles and store them in a list
-    tiles = []
-    for coords, mask in zip(tiles_coords,
-                            tiles_masks):
-        if mask.any():  # there's at least one non-masked pixel in the tile
-            tile = {}
-            x, y, w, h = coords
-            tile['dir'] = os.path.join(cfg['out_dir'],get_tile_dir(x, y, w, h))
-            tile['coordinates'] = coords
-            tile['mask'] = mask
-            tile['neighborhood_dirs'] = list()
-            key = str((x, y, w, h))
+                # make tiles directories and store json configuration dumps
+                common.mkdir_p(tile['dir'])
+                for i in range(1, len(cfg['images'])):
+                    common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
 
-            if 'neighborhood_dirs' in cfg:
-                tile['neighborhood_dirs'] = cfg['neighborhood_dirs']
-            elif key in neighborhood_coords_dict:
-                for coords2 in neighborhood_coords_dict[key]:
-                    x2, y2, w2, h2 = coords2
-                    tile['neighborhood_dirs'].append(os.path.join('../../..',get_tile_dir(x2,
-                                                                  y2,
-                                                                  w2,
-                                                                  h2)))
-            tiles.append(tile)
+                # save a json dump of the tile configuration
+                tile_cfg = copy.deepcopy(cfg)
+                x, y, w, h = tile['coordinates']
+                tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
+                tile_cfg['full_img'] = False
+                tile_cfg['max_processes'] = 1
+                tile_cfg['omp_num_threads'] = 1
+                tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
+                tile_cfg['out_dir'] = '../../..'
 
-    # make tiles directories and store json configuration dumps
-    for tile in tiles:
-        common.mkdir_p(tile['dir'])
-        for i in range(1, len(cfg['images'])):
-            common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
+                with open(os.path.join(cfg['out_dir'], tile['json']), 'w') as f:
+                    json.dump(tile_cfg, f, indent=2)
 
-        # save a json dump of the tile configuration
-        tile_cfg = copy.deepcopy(cfg)
-        x, y, w, h = tile['coordinates']
-        tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
-        tile_cfg['full_img'] = False
-        tile_cfg['max_processes'] = 1
-        tile_cfg['omp_num_threads'] = 1
-        tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
-        tile_cfg['out_dir']='../../..'
-
-        tile_json = os.path.join(get_tile_dir(x,y,w,h),'config.json')
-        tile['json'] = tile_json
-
-        with open(os.path.join(cfg['out_dir'],tile_json), 'w') as f:
-            json.dump(tile_cfg, f, indent=2)
-
-        # save the mask
-        piio.write(os.path.join(tile['dir'],
-                                'cloud_water_image_domain_mask.png'),
-                   tile['mask'].astype(np.uint8))
+                # save the mask
+                piio.write(os.path.join(tile['dir'],
+                                        'cloud_water_image_domain_mask.png'),
+                           mask.astype(np.uint8))
+    else:
+        if len(tiles_coords) == 1:
+            tiles.append(create_tile(tiles_coords[0], neighborhood_coords_dict))
+        else:
+            with open(tiles_txt, 'r') as f_tiles:
+                for config_json in f_tiles:
+                    tile = {}
+                    with open(os.path.join(cfg['out_dir'],
+                                           config_json.rstrip(os.linesep)), 'r') as f_config:
+                        tile_cfg = json.load(f_config)
+                        roi = tile_cfg['roi']
+                        coords = roi['x'], roi['y'], roi['w'], roi['h']
+                        tiles.append(create_tile(coords, neighborhood_coords_dict))
 
     return tiles

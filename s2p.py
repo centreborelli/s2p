@@ -690,12 +690,13 @@ def main(user_cfg, steps=ALL_STEPS):
     cfg['max_processes'] = nb_workers
 
     tw, th = initialization.adjust_tile_size()
-    print('\ndiscarding masked tiles...')
-    tiles = initialization.tiles_full_info(tw, th)
+    tiles_txt = os.path.join(cfg['out_dir'],'tiles.txt')
+    create_masks = 'initialisation' in steps
+    tiles = initialization.tiles_full_info(tw, th, tiles_txt, create_masks)
 
     if 'initialisation' in steps:
         # Write the list of json files to outdir/tiles.txt
-        with open(os.path.join(cfg['out_dir'],'tiles.txt'),'w') as f:
+        with open(tiles_txt,'w') as f:
             for t in tiles:
                 f.write(t['json']+os.linesep)
 
