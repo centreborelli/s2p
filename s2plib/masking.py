@@ -31,12 +31,11 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         2D array containing the output binary mask. 0 indicate masked pixels, 1
         visible pixels.
     """
-    # coefficients of the transformation associated to the crop and zoom
-    z = cfg['subsampling_factor']
-    H = np.dot(np.diag((1/z, 1/z, 1)), common.matrix_translation(-x, -y))
+    # coefficients of the transformation associated to the crop
+    H = np.dot(np.diag((1, 1, 1)), common.matrix_translation(-x, -y))
     hij = ' '.join([str(el) for el in H.flatten()])
 
-    w, h = int(w/z), int(h/z)
+    
     mask = np.ones((h, w), dtype=np.bool)
 
     if roi_gml is not None:  # image domain mask (polygons)

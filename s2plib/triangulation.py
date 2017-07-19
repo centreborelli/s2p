@@ -33,7 +33,7 @@ def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None
                                                       mask, height, rpc_err))
 
 
-def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
+def transfer_map(in_map, H, x, y, w, h, out_map):
     """
     Transfer the heights computed on the rectified grid to the original
     Pleiades image grid.
@@ -55,7 +55,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # This matrix transports the coordinates of the original cropped and
     # zoomed grid (the one desired for out_height) to the rectified cropped and
     # zoomed grid (the one we have for height)
-    Z = np.diag([zoom, zoom, 1])
+    Z = np.diag([1, 1, 1])
     A = common.matrix_translation(x, y)
     HH = np.dot(np.loadtxt(H), np.dot(A, Z))
 
@@ -73,7 +73,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
 
 
-def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
+def height_map(out, x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
                out_filt, A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
@@ -84,8 +84,6 @@ def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        z: zoom factor (usually 1, 2 or 4) used to produce the input disparity
-            map
         rpc1, rpc2: paths to the xml files
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
@@ -96,7 +94,7 @@ def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     """
     tmp = common.tmpfile('.tif')
     height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
-    transfer_map(tmp, H1, x, y, w, h, z, out)
+    transfer_map(tmp, H1, x, y, w, h, out)
 
     # apply output filter
     common.run('plambda {0} {1} "x 0 > y nan if" -o {1}'.format(out_filt, out))

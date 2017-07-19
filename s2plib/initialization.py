@@ -107,17 +107,11 @@ def build_cfg(user_cfg):
             if d in cfg['images'][i] and cfg['images'][i][d] is not None:
                 cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
 
-    # check the zoom factor
-    z = cfg['subsampling_factor']
-    assert(z > 0 and z == np.floor(z))
-
-    # ensure that the coordinates of the ROI are multiples of the zoom factor,
-    # to avoid bad registration of tiles due to rounding problems.
     x = cfg['roi']['x']
     y = cfg['roi']['y']
     w = cfg['roi']['w']
     h = cfg['roi']['h']
-    x, y, w, h = common.round_roi_to_nearest_multiple(z, x,y, w, h)
+    
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
     # if srtm is disabled set disparity range method to sift
@@ -160,13 +154,13 @@ def adjust_tile_size():
     """
     Adjust the size of the tiles.
     """
-    zoom = cfg['subsampling_factor']
-    tile_w = min(cfg['roi']['w'], zoom * cfg['tile_size'])  # tile width
+
+    tile_w = min(cfg['roi']['w'], cfg['tile_size'])  # tile width
     ntx = int(np.round(float(cfg['roi']['w']) / tile_w))
     # ceil so that, if needed, the last tile is slightly smaller
     tile_w = int(np.ceil(float(cfg['roi']['w']) / ntx))
 
-    tile_h = min(cfg['roi']['h'], zoom * cfg['tile_size'])  # tile height
+    tile_h = min(cfg['roi']['h'], cfg['tile_size'])  # tile height
     nty = int(np.round(float(cfg['roi']['h']) / tile_h))
     tile_h = int(np.ceil(float(cfg['roi']['h']) / nty))
 
@@ -180,7 +174,7 @@ def adjust_tile_size():
     return tile_w, tile_h
 
 
-def compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z=1):
+def compute_tiles_coordinates(rx, ry, rw, rh, tw, th):
     """
     """
     out = []
@@ -190,9 +184,6 @@ def compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z=1):
         h = min(th, ry + rh - y)
         for x in np.arange(rx, rx + rw, tw):
             w = min(tw, rx + rw - x)
-
-            # ensure that tile coordinates are multiples of the zoom factor
-            x, y, w, h = common.round_roi_to_nearest_multiple(z, x, y, w, h)
 
             out.append((x, y, w, h))
 
@@ -204,7 +195,6 @@ def compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z=1):
                     w2 = min(tw, rx + rw - x2)
                     if rx + rw > x2 >= rx:
                         if ry + rh > y2 >= ry:
-                            x2, y2, w2, h2 = common.round_roi_to_nearest_multiple(z, x2, y2, w2, h2)
                             out2.append((x2, y2, w2, h2))
 
             neighborhood_dict[str((x, y, w, h))] = out2
@@ -258,7 +248,6 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     roi_msk = cfg['images'][0]['roi']
     cld_msk = cfg['images'][0]['cld']
     wat_msk = cfg['images'][0]['wat']
-    z =  cfg['subsampling_factor']
     rx = cfg['roi']['x']
     ry = cfg['roi']['y']
     rw = cfg['roi']['w']
@@ -267,7 +256,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     # build a tile dictionary for all non-masked tiles and store them in a list
     tiles = []
     # list tiles coordinates
-    tiles_coords, neighborhood_coords_dict = compute_tiles_coordinates(rx, ry, rw, rh, tw, th, z)
+    tiles_coords, neighborhood_coords_dict = compute_tiles_coordinates(rx, ry, rw, rh, tw, th)
 
     if os.path.exists(tiles_txt) is False or create_masks is True:
         print('\ndiscarding masked tiles...')
