@@ -46,15 +46,13 @@ def transfer_map(in_map, H, x, y, w, h, out_map):
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
-            map
         out_map: path to the output map
     """
     # write the inverse of the resampling transform matrix. In brief it is:
-    # homography * translation * zoom
+    # homography * translation
     # This matrix transports the coordinates of the original cropped and
-    # zoomed grid (the one desired for out_height) to the rectified cropped and
-    # zoomed grid (the one we have for height)
+    # grid (the one desired for out_height) to the rectified cropped and
+    # grid (the one we have for height)
     Z = np.diag([1, 1, 1])
     A = common.matrix_translation(x, y)
     HH = np.dot(np.loadtxt(H), np.dot(A, Z))
@@ -65,7 +63,7 @@ def transfer_map(in_map, H, x, y, w, h, out_map):
     # zero:256x256 is the iio way to create a 256x256 image filled with zeros
     hij = ' '.join(['%r' % num for num in HH.flatten()])
     common.run('synflow hom "%s" zero:%dx%d /dev/null - | BILINEAR=1 backflow - %s %s' % (
-        hij, w/zoom, h/zoom, in_map, out_map))
+        hij, w, h, in_map, out_map))
 
     # replace the -inf with nan in the heights map, because colormesh filter
     # out nans but not infs
