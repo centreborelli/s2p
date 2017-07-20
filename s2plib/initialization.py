@@ -20,6 +20,16 @@ from s2plib import masking
 from s2plib import parallel
 from s2plib.config import cfg
 
+# This function is here as a workaround to python bug #24313 When
+# using python3, json does not know how to serialize numpy.int64 on
+# some platform numpy also decides to go for int64 when numpy.arange
+# is called. This results in our json not being serializable anymore
+# Calling json.dump(..,default=workaround_json_int64) fixes this
+# https://bugs.python.org/issue24313
+def workaround_json_int64(o):
+    if isinstance(o,np.integer) : return int(o)
+    raise TypeError
+
 def dict_has_keys(d, l):
     """
     Return True if the dict d contains all the keys of the input list l.
@@ -134,7 +144,7 @@ def make_dirs():
     with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
         cfg_copy = copy.deepcopy(cfg)
         cfg_copy['out_dir']='.'
-        json.dump(cfg_copy, f, indent=2)
+        json.dump(cfg_copy, f, indent=2, default=workaround_json_int64)
 
     # copy RPC xml files in the output directory
     for img in cfg['images']:
@@ -288,7 +298,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                 tile_cfg['out_dir'] = '../../..'
 
                 with open(os.path.join(cfg['out_dir'], tile['json']), 'w') as f:
-                    json.dump(tile_cfg, f, indent=2)
+                    json.dump(tile_cfg, f, indent=2,default=workaround_json_int64)
 
                 # save the mask
                 piio.write(os.path.join(tile['dir'],
