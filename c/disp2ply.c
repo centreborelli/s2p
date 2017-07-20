@@ -85,7 +85,7 @@ void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
 
 static void parse_utm_string(int *zone, bool *hem, const char *s)
 {
-    if (strncmp(s, "no_utm_zone", 12)) {
+    if (0 == strcmp(s, "no_utm_zone")) {
         *zone = -1;
         return;
     }
