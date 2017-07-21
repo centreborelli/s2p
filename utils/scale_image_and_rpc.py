@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     common.run('gdal_translate -of VRT -a_ullr 0 0 %d %d %s %s' % (w, h,in_img_file, tmp_vrt))
 
-    common.run(('gdal_translate -co RPB=NO -co PROFILE=GeoTIFF -r %s -co "BIGTIFF=IF_NEEDED" -co "TILED=YES" -tr'
+    common.run(('gdalwarp -co RPB=NO -co PROFILE=GeoTIFF -r %s -co "BIGTIFF=IF_NEEDED" -co "TILED=YES" -ovr NONE -overwrite -to SRC_METHOD=NO_GEOTRANSFORM -to DST_METHOD=NO_GEOTRANSFORM -tr'
          ' %d %d %s %s') % (filt,scale_x,scale_y, tmp_vrt,out_img_file))
 
     try:
