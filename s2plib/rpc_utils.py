@@ -7,6 +7,7 @@ from __future__ import print_function
 import bs4
 import utm
 import datetime
+import gdal
 import numpy as np
 
 from s2plib import estimation
@@ -255,7 +256,7 @@ def altitude_range_coarse(rpc, scale_factor=1):
 
 def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     """
-    Computes an altitude range using SRTM data.
+    Computes an altitude range using the exogenous dem.
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
@@ -269,7 +270,7 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     Returns:
         lower and upper bounds on the altitude of the world points that are
         imaged by the RPC projection function in the provided ROI. To compute
-        these bounds, we use SRTM data. The altitudes are computed with respect
+        these bounds, we use exogenous data. The altitudes are computed with respect
         to the WGS84 reference ellipsoid.
     """
     # TODO: iterate the procedure used here to get a finer estimation of the
@@ -280,26 +281,23 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     # find bounding box on the ellipsoid (in geodesic coordinates)
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
 
-    # if bounding box is out of srtm domain, return coarse altitude estimation
-    if (lat_m < -60 or lat_M > 60 or cfg['disable_srtm']):
-        print("WARNING: returning coarse range from rpc")
-        return altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
-
     # sample the bounding box with regular step of 3 arcseconds (srtm
     # resolution)
     ellipsoid_points = sample_bounding_box(lon_m, lon_M, lat_m, lat_M)
 
-    # compute srtm height on all these points
-    srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4',
-                                               env_var=('SRTM4_CACHE',
-                                                        cfg['srtm_dir']))
-    h = np.ravel(srtm)
+    # compute heights on all these points
+    heights = common.image_from_lon_lat(cfg['exogenous_dem'],
+                                        ellipsoid_points[:,0],
+                                        ellipsoid_points[:,1])
 
-    # srtm data may contain 'nan' values (meaning no data is available there).
+    h = np.ravel(heights)
+
+    # exogenous dem may contain 'nan' values (meaning no data is available there).
     # These points are most likely water (sea) and thus their height with
     # respect to geoid is 0. Thus we replace the nans with 0.
     # TODO: this should not be zero, but the geoid/ellipsoid offset
-    srtm[np.isnan(h)] = 0
+    heights[np.isnan(h)] = 0
+    heights[h == -32768] = 0 # removed water
 
     # extract extrema (and add a +-100m security margin)
     h_m = np.round(h.min()) + margin_bottom
@@ -569,8 +567,8 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     return disp
 
 
-def srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
-        margin_top=0, margin_bottom=0):
+def exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
+                                    margin_top=0, margin_bottom=0):
     """
     Args:
         rpc1: an instance of the rpc_model.RPCModel class for the reference
@@ -587,17 +585,15 @@ def srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
 
     Returns:
         the min and max horizontal disparity observed on the 4 corners of the
-        ROI with the min/max altitude assumptions given by the srtm. The
+        ROI with the min/max altitude assumptions given by the exogenous dem. The
         disparity is made horizontal thanks to the two rectifying homographies
         H1 and H2.
     """
     m, M = altitude_range(rpc1, x, y, w, h, margin_top, margin_bottom)
 
-    return altitude_range_to_disp_range(m,M,rpc1, rpc2, x, y, w, h, H1, H2, A,
-                                        margin_top, margin_bottom)
+    return altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A)
 
-def altitude_range_to_disp_range(m,M,rpc1, rpc2, x, y, w, h, H1, H2, A=None,
-                                margin_top=0, margin_bottom=0):
+def altitude_range_to_disp_range(m,M,rpc1, rpc2, x, y, w, h, H1, H2, A=None):
     """
     Args:
         m: Min altitude over the tile
@@ -611,8 +607,6 @@ def altitude_range_to_disp_range(m,M,rpc1, rpc2, x, y, w, h, H1, H2, A=None,
             (w, h) are the dimensions of the rectangle.
         H1, H2: rectifying homographies
         A (optional): pointing correction matrix
-        margin_top: margin (in meters) to add to the upper bound of the range
-        margin_bottom: margin (negative) to add to the lower bound of the range
 
     Returns:
         the min and max horizontal disparity observed on the 4 corners of the

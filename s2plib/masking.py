@@ -9,23 +9,22 @@ import numpy as np
 from osgeo import gdal
 
 from s2plib import common
+from s2plib import rpc_model
+from s2plib import rpc_utils
 from s2plib.config import cfg
 
 
 def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
-                             wat_msk=None, use_srtm_for_water=False):
+                             wat_msk=None):
     """
     Compute a mask for pixels masked by clouds, water, or out of image domain.
 
     Args:
         x, y, w, h: coordinates of the ROI
-        rpc: path to the xml file containing the rpc coefficients of the image
-            RPC model is used with SRTM data to derive the water mask
         roi_gml (optional): path to a gml file containing a mask
             defining the area contained in the full image
         cld_gml (optional): path to a gml file containing a mask
             defining the areas covered by clouds
-        wat_msk (optional): path to an image file containing a water mask
 
     Returns:
         2D array containing the output binary mask. 0 indicate masked pixels, 1
@@ -69,16 +68,18 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         mask = np.logical_and(mask, f.ReadAsArray(x, y, w, h))
         f = None  # this is the gdal way of closing files
 
-    elif use_srtm_for_water:  # water mask (srtm)
-        tmp = common.tmpfile('.png')
-        env = os.environ.copy()
-        env['SRTM4_CACHE'] = cfg['srtm_dir']
-        subprocess.check_call('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc,
-                                                                 tmp),
-                              shell=True, env=env)
-        f = gdal.Open(tmp)
-        mask = np.logical_and(mask, f.ReadAsArray())
-        f = None  # this is the gdal way of closing files
+    if cfg['exogenous_dem'] is not None:
+        col_range = [x, x + w - 1, w]
+        row_range = [y, y + h - 1, h]
+        alt_range = [0, 0, 1]
+        col, row, alt = rpc_utils.generate_point_mesh(col_range,
+                                                      row_range,
+                                                      alt_range)
+        rpc_ref = rpc_model.RPCModel(rpc)
+        lon, lat, alt = rpc_ref.direct_estimate(col, row, alt)
+        exogenous_mask = common.image_from_lon_lat(cfg['exogenous_dem'], lon, lat)
+        exogenous_mask = exogenous_mask.reshape(w, h)
+        mask = np.logical_and(mask, exogenous_mask != -32768)
 
     return mask
 

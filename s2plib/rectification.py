@@ -222,20 +222,21 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     """
     # Default disparity range to return if everything else breaks
     disp = (-3,3)
-    srtm_disp = None
+    exogenous_disp = None
     sift_disp = None
     alt_disp  = None
     
-    # Compute SRTM disparity range if needed
-    if (cfg['disp_range_method'] in ['srtm', 'wider_sift_srtm']):
-        srtm_disp = rpc_utils.srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h,
-                                                         H1, H2, A,
-                                                         cfg['disp_range_srtm_high_margin'],
-                                                         cfg['disp_range_srtm_low_margin'])
-        print("SRTM disparity range: [%f, %f]" % (srtm_disp[0], srtm_disp[1]))
+    # Compute exogenous disparity range if needed
+    if (cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']):
+        exogenous_disp = rpc_utils.exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h,
+                                                              H1, H2, A,
+                                                              cfg['disp_range_exogenous_high_margin'],
+                                                              cfg['disp_range_exogenous_low_margin'])
+
+        print("exogenous disparity range: [%f, %f]" % (exogenous_disp[0], exogenous_disp[1]))
         
     # Compute SIFT disparity range if needed
-    if (cfg['disp_range_method'] in ['sift', 'wider_sift_srtm']):
+    if (cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']):
         if matches is not None and len(matches)>=2:
             sift_disp = disparity_range_from_matches(matches, H1, H2, w, h)
             print("SIFT disparity range: [%f, %f]" % (sift_disp[0], sift_disp[1]))
@@ -249,18 +250,22 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
             print("Altitude fixed disparity range: [%f, %f]" % (alt_disp[0], alt_disp[1]))
             
     # Now, compute disparity range according to selected method
-    if cfg['disp_range_method'] == 'srtm':
-        disp = srtm_disp
+    if cfg['disp_range_method'] == 'exogenous':
+        if exogenous_disp is not None:
+            disp = exogenous_disp
 
     elif cfg['disp_range_method'] == 'sift':
         if sift_disp is not None:
             disp = sift_disp
 
-    elif cfg['disp_range_method'] == 'wider_sift_srtm':
-        if sift_disp is not None:
-            disp = min(srtm_disp[0], sift_disp[0]), max(srtm_disp[1], sift_disp[1])
+    elif cfg['disp_range_method'] == 'wider_sift_exogenous':
+        if sift_disp is not None and exogenous_disp is not None:
+            disp = min(exogenous_disp[0], sift_disp[0]), max(exogenous_disp[1], sift_disp[1])
         else:
-            disp = srtm_disp
+            if sift_disp is not None:
+                disp = sift_disp
+            else:
+                disp = exogenous_disp
         
     elif cfg['disp_range_method'] == 'fixed_pixel_range':
         if cfg['disp_min'] is not None and cfg['disp_max'] is not None:

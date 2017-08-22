@@ -102,7 +102,6 @@ def unit_plyflatten():
     
 def unit_matches_from_rpc():
 
-    s2plib.config.cfg['disable_srtm'] = True
     rpc1 = s2plib.rpc_model.RPCModel('testdata/input_pair/rpc_01.xml')
     rpc2 = s2plib.rpc_model.RPCModel('testdata/input_pair/rpc_02.xml')
 
