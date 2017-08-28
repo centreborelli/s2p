@@ -675,8 +675,10 @@ def image_from_lon_lat(im, lon, lat):
     y0 = min(max(0, y), sizey-1)
     w -= (x0-x)
     h -= (y0-y)
-    w = min(max(0, w), sizex-1)
-    h = min(max(0, h), sizey-1)
+    w = max(0, w)
+    w = min(w, sizex - 1 - x0)
+    h = max(0, h)
+    h = min(h, sizey - 1 - y0)
 
     # get value for each pixel
     if (w != 0) and (h != 0):
