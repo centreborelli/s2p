@@ -190,11 +190,7 @@ def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
         in geodetic coordinates.
     """
     # check parameters
-    assert lon_m > -180
-    assert lon_M < 180
     assert lon_m < lon_M
-    assert lat_m > -60
-    assert lat_M < 60
     assert lat_m < lat_M
 
     # width of srtm bin: 6000x6000 samples in a tile of 5x5 degrees, ie 3
