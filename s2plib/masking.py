@@ -68,19 +68,6 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         mask = np.logical_and(mask, f.ReadAsArray(x, y, w, h))
         f = None  # this is the gdal way of closing files
 
-    if cfg['exogenous_dem'] is not None:
-        col_range = [x, x + w - 1, w]
-        row_range = [y, y + h - 1, h]
-        alt_range = [0, 0, 1]
-        col, row, alt = rpc_utils.generate_point_mesh(col_range,
-                                                      row_range,
-                                                      alt_range)
-        rpc_ref = rpc_model.RPCModel(rpc)
-        lon, lat, alt = rpc_ref.direct_estimate(col, row, alt)
-        exogenous_mask = common.image_from_lon_lat(cfg['exogenous_dem'], lon, lat)
-        exogenous_mask = exogenous_mask.reshape(h, w)
-        mask = np.logical_and(mask, exogenous_mask != -32768)
-
     return mask
 
 
