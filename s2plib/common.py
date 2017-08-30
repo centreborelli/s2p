@@ -16,7 +16,7 @@ import tempfile
 import subprocess
 import multiprocessing
 import numpy as np
-from osgeo import gdal, osr
+from osgeo import gdal
 
 
 from s2plib.config import cfg
@@ -624,79 +624,6 @@ def image_crop_gdal(im, x, y, w, h, out=None):
 
     return out
 
-
-def image_from_lon_lat(im, lon, lat):
-    """
-    Create image from a lonlat grid (numpy array) and a raster
-
-    Args:
-        im: path to an image file
-        lonlat: lonlat grid
-
-    Returns:
-        numpy array with values of image file for each lonlat
-    """
-
-    lon_ravel = np.ravel(lon)
-    lat_ravel = np.ravel(lat)
-    dataset = gdal.Open(im)
-
-    # get lon/lat to im projection conversion
-    new_cs = osr.SpatialReference()
-    new_cs.ImportFromWkt(dataset.GetProjectionRef())
-    old_cs = osr.SpatialReference()
-    old_cs.ImportFromEPSG(4326)
-    lonlat_to_im_proj = osr.CoordinateTransformation(old_cs,new_cs)
-
-    # convert lon/lat to im projection
-    lonlatalt = zip(lon_ravel, lat_ravel, np.zeros(np.shape(lon_ravel)))
-    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im_proj.TransformPoints(lonlatalt)))
-    x_im_proj = np.array(x_im_proj)
-    y_im_proj = np.array(y_im_proj)
-
-    # convert im projection to pixel
-    forward = dataset.GetGeoTransform()
-    reverse = gdal.InvGeoTransform(forward)
-    px = reverse[0] + x_im_proj * reverse[1] + y_im_proj * reverse[2]
-    py = reverse[3] + x_im_proj * reverse[4] + y_im_proj * reverse[5]
-    nb_elts = len(px)
-
-    # get footprint
-    [px_min, px_max, py_min, py_max] = map(int, [np.amin(px),
-                                                 np.amax(px)+1,
-                                                 np.amin(py),
-                                                 np.amax(py)+1])
-
-    # limits of im extract
-    x, y, w, h = px_min, py_min, px_max - px_min + 1, py_max - py_min + 1
-    sizex = dataset.RasterXSize
-    sizey = dataset.RasterYSize
-    x0 = min(max(0, x), sizex-1)
-    y0 = min(max(0, y), sizey-1)
-    w -= (x0-x)
-    h -= (y0-y)
-    w = max(0, w)
-    w = min(w, sizex - 1 - x0)
-    h = max(0, h)
-    h = min(h, sizey - 1 - y0)
-
-    # get value for each pixel
-    if (w != 0) and (h != 0):
-        band = dataset.GetRasterBand(1)
-        array = band.ReadAsArray(x0, y0, w, h)
-        values = list()
-        for ind in range(nb_elts):
-            try:
-                values.append(array[int(py[ind]-y0), int(px[ind]-x0)])
-            except IndexError:
-                values.append(np.nan)
-        values = np.array(values).reshape(np.shape(lon))
-    else:
-        print ("WARNING: image_from_lon_lat: access window out of range")
-        values = np.empty(np.shape(lon))
-        values[:] = np.nan
-
-    return values
 
 def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
     """

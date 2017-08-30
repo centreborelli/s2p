@@ -7,7 +7,7 @@ from __future__ import print_function
 import bs4
 import utm
 import datetime
-import gdal
+from osgeo import gdal, osr
 import numpy as np
 
 from s2plib import estimation
@@ -176,47 +176,6 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     return np.min(lon), np.max(lon), np.min(lat), np.max(lat)
 
 
-def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
-    """
-    Samples a geodetic "rectangular" region with regularly spaced points.
-    The sampling distance is the srtm resolution, ie 3 arcseconds.
-
-    Args:
-        lon_m, lon_M: min and max longitudes, between -180 and 180
-        lat_m, lat_M: min and max latitudes, between -60 and 60
-
-    Returns:
-        a numpy array, of size N x 2, containing the list of sample locations
-        in geodetic coordinates.
-    """
-    # check parameters
-    assert lon_m < lon_M
-    assert lat_m < lat_M
-
-    # width of srtm bin: 6000x6000 samples in a tile of 5x5 degrees, ie 3
-    # arcseconds (in degrees)
-    srtm_bin = 1.0/1200
-
-    # round down lon_m, lat_m and round up lon_M, lat_M so they are integer
-    # multiples of 3 arcseconds
-    lon_m, lon_M = round_updown(lon_m, lon_M, srtm_bin)
-    lat_m, lat_M = round_updown(lat_m, lat_M, srtm_bin)
-
-    # compute the samples: one in the center of each srtm bin
-    lons = np.arange(lon_m, lon_M, srtm_bin) + .5 * srtm_bin
-    lats = np.arange(lat_m, lat_M, srtm_bin) + .5 * srtm_bin
-
-    # put all the samples in an array. There should be a more pythonic way to
-    # do this
-    out = np.zeros((len(lons)*len(lats), 2))
-    for i in range(len(lons)):
-        for j in range(len(lats)):
-            out[i*len(lats)+j, 0] = lons[i]
-            out[i*len(lats)+j, 1] = lats[j]
-
-    return out
-
-
 def round_updown(a, b, q):
     """
     Rounds down (resp. up) a (resp. b) to the closest multiple of q.
@@ -250,6 +209,78 @@ def altitude_range_coarse(rpc, scale_factor=1):
     return m, M
 
 
+def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M):
+    """
+    Compute min, max heights from bounding box
+
+    Args:
+        im: path to an image file
+        lon_m, lon_M, lat_m, lat_M: bounding box
+
+    Returns:
+        hmin, hmax: min, max heights
+    """
+
+    # open image
+    dataset = gdal.Open(im)
+
+    # get lon/lat to im projection conversion
+    new_cs = osr.SpatialReference()
+    new_cs.ImportFromWkt(dataset.GetProjectionRef())
+    old_cs = osr.SpatialReference()
+    old_cs.ImportFromEPSG(4326)
+    lonlat_to_im = osr.CoordinateTransformation(old_cs, new_cs)
+
+    # convert lon/lat to im projection
+    lon = np.linspace(lon_m, lon_M, 2)
+    lat = np.linspace(lat_m, lat_M, 2)
+    lonv, latv = np.meshgrid(lon, lat)
+    lonlatalt = zip(np.ravel(lonv),
+                    np.ravel(latv),
+                    np.zeros(np.shape(np.ravel(lonv))))
+    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im.TransformPoints(lonlatalt)))
+    x_im_proj = np.array(x_im_proj)
+    y_im_proj = np.array(y_im_proj)
+
+    # convert im projection to pixel
+    forward = dataset.GetGeoTransform()
+    reverse = gdal.InvGeoTransform(forward)
+    px = reverse[0] + x_im_proj * reverse[1] + y_im_proj * reverse[2]
+    py = reverse[3] + x_im_proj * reverse[4] + y_im_proj * reverse[5]
+    nb_elts = len(px)
+
+    # get footprint
+    [px_min, px_max, py_min, py_max] = map(int, [np.amin(px),
+                                                 np.amax(px)+1,
+                                                 np.amin(py),
+                                                 np.amax(py)+1])
+
+    # limits of im extract
+    x, y, w, h = px_min, py_min, px_max - px_min + 1, py_max - py_min + 1
+    sizex = dataset.RasterXSize
+    sizey = dataset.RasterYSize
+    x0 = min(max(0, x), sizex-1)
+    y0 = min(max(0, y), sizey-1)
+    w -= (x0-x)
+    h -= (y0-y)
+    w = max(0, w)
+    w = min(w, sizex - 1 - x0)
+    h = max(0, h)
+    h = min(h, sizey - 1 - y0)
+
+    # get value for each pixel
+    if (w != 0) and (h != 0):
+        band = dataset.GetRasterBand(1)
+        array = band.ReadAsArray(x0, y0, w, h)
+        array[array==-32768] = np.nan
+        h_m, h_M = np.nanmin(array), np.nanmax(array)
+    else:
+        print ("WARNING: rpc_utils.min_max_heights_from_bbx: access window out of range")
+        h_m, h_M = 0, 0
+
+    return h_m, h_M
+
+
 def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     """
     Computes an altitude range using the exogenous dem.
@@ -277,27 +308,11 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     # find bounding box on the ellipsoid (in geodesic coordinates)
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
 
-    # sample the bounding box with regular step of 3 arcseconds (srtm
-    # resolution)
-    ellipsoid_points = sample_bounding_box(lon_m, lon_M, lat_m, lat_M)
-
-    # compute heights on all these points
-    heights = common.image_from_lon_lat(cfg['exogenous_dem'],
-                                        ellipsoid_points[:,0],
-                                        ellipsoid_points[:,1])
-
-    h = np.ravel(heights)
-
-    # exogenous dem may contain 'nan' values (meaning no data is available there).
-    # These points are most likely water (sea) and thus their height with
-    # respect to geoid is 0. Thus we replace the nans with 0.
-    # TODO: this should not be zero, but the geoid/ellipsoid offset
-    heights[np.isnan(h)] = 0
-    heights[h == -32768] = 0 # removed water
-
-    # extract extrema (and add a +-100m security margin)
-    h_m = np.round(h.min()) + margin_bottom
-    h_M = np.round(h.max()) + margin_top
+    # compute heights on this bounding box
+    h_m, h_M = min_max_heights_from_bbx(cfg['exogenous_dem'],
+                                        lon_m, lon_M, lat_m, lat_M)
+    h_m += margin_bottom
+    h_M += margin_top
 
     return h_m, h_M
 
