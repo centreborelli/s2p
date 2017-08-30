@@ -78,7 +78,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         rpc_ref = rpc_model.RPCModel(rpc)
         lon, lat, alt = rpc_ref.direct_estimate(col, row, alt)
         exogenous_mask = common.image_from_lon_lat(cfg['exogenous_dem'], lon, lat)
-        exogenous_mask = exogenous_mask.reshape(w, h)
+        exogenous_mask = exogenous_mask.reshape(h, w)
         mask = np.logical_and(mask, exogenous_mask != -32768)
 
     return mask
