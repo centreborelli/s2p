@@ -209,7 +209,7 @@ def altitude_range_coarse(rpc, scale_factor=1):
     return m, M
 
 
-def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M):
+def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
     """
     Compute min, max heights from bounding box
 
@@ -272,13 +272,12 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M):
     if (w != 0) and (h != 0):
         band = dataset.GetRasterBand(1)
         array = band.ReadAsArray(x0, y0, w, h)
-        array[array==-32768] = np.nan
-        h_m, h_M = np.nanmin(array), np.nanmax(array)
+        array[array == -32768] = np.nan
+        return np.nanmin(array), np.nanmax(array)
     else:
-        print ("WARNING: rpc_utils.min_max_heights_from_bbx: access window out of range")
-        h_m, h_M = 0, 0
-
-    return h_m, h_M
+        print("WARNING: rpc_utils.min_max_heights_from_bbx: access window out of range")
+        print("returning coarse range from rpc")
+        return altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
 
 
 def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
@@ -310,7 +309,7 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
 
     # compute heights on this bounding box
     h_m, h_M = min_max_heights_from_bbx(cfg['exogenous_dem'],
-                                        lon_m, lon_M, lat_m, lat_M)
+                                        lon_m, lon_M, lat_m, lat_M, rpc)
     h_m += margin_bottom
     h_M += margin_top
 
