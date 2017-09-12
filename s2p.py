@@ -554,58 +554,30 @@ def heights_to_ply(tile):
         common.remove(os.path.join(out_dir,
                                    'cloud_water_image_domain_mask.png'))
 
-def global_srcwin(tiles):
+def plys_to_dsm(tile):
     """
     """
+    out_dsm = os.path.join(tile['dir'], 'dsm.tif')
+
     res = cfg['dsm_resolution']
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         global_xoff = bbx[0]
         global_yoff = bbx[3]
-        global_xsize = int(np.ceil((bbx[1]-bbx[0]) / res))
-        global_ysize = int(np.ceil((bbx[3]-bbx[2]) / res))
     else:
-        extrema = list()
-        for t in tiles:
-            plyextrema_file = os.path.join(t['dir'], "plyextrema.txt")
-            if os.path.exists(plyextrema_file):
-                extrema.append(np.loadtxt(plyextrema_file))
-            else:
-                extrema.append([np.nan]*4)
-
-        xmin = np.nanmin(list(map(lambda x:x[0], extrema)))
-        xmax = np.nanmax(list(map(lambda x:x[1], extrema)))
-        ymin = np.nanmin(list(map(lambda x:x[2], extrema)))
-        ymax = np.nanmax(list(map(lambda x:x[3], extrema)))
-
-        global_xsize = int(1 + np.floor((xmax - xmin) / res))
-        global_ysize = int(1 + np.floor((ymax - ymin) / res))
-        global_xoff = (xmax + xmin - res * global_xsize) / 2
-        global_yoff = (ymax + ymin + res * global_ysize) / 2
-
-    np.savetxt(os.path.join(cfg['out_dir'], "global_srcwin.txt"),
-               [global_xoff, global_yoff, global_xsize, global_ysize])
-
-def plys_to_dsm(tile):
-    """
-    """
-    out_dsm = os.path.join(tile['dir'], 'dsm.tif')
-    global_srcwin = np.loadtxt(os.path.join(cfg['out_dir'],
-                                            "global_srcwin.txt"))
+        global_xoff = 0 # arbitrary reference
+        global_yoff = 0 # arbitrary reference
 
     res = cfg['dsm_resolution']
-    global_xoff, global_yoff, global_xsize, global_ysize = global_srcwin
 
     xmin, xmax, ymin, ymax = np.loadtxt(os.path.join(tile['dir'], "plyextrema.txt"))
 
     # compute xoff, yoff, xsize, ysize considering final dsm
-    local_xoff = max(global_xoff,
-                     global_xoff + np.floor((xmin - global_xoff) / res) * res)
-    local_xsize = int(1 + np.floor((min(global_xoff + global_xsize * res, xmax) - local_xoff) / res))
+    local_xoff = global_xoff + np.floor((xmin - global_xoff) / res) * res
+    local_xsize = int(1 + np.floor((xmax - local_xoff) / res))
 
-    local_yoff = min(global_yoff,
-                     global_yoff + np.ceil((ymax - global_yoff) / res) * res)
-    local_ysize = int(1 - np.floor((max(global_yoff - global_ysize * res, ymin) - local_yoff) / res))
+    local_yoff = global_yoff + np.ceil((ymax - global_yoff) / res) * res
+    local_ysize = int(1 - np.floor((ymin - local_yoff) / res))
 
     clouds = '\n'.join(os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
 
@@ -638,7 +610,7 @@ def global_dsm(tiles):
     out_dsm_tif = os.path.join(cfg['out_dir'], 'dsm.tif')
 
     dsms_list = [os.path.join(t['dir'], 'dsm.tif') for t in tiles]
-    dsms = '\n'.join(d for d in dsms_list if os.path.exists(d) is True)
+    dsms = '\n'.join(d for d in dsms_list if os.path.exists(d))
 
     input_file_list = os.path.join(cfg['out_dir'], 'gdalbuildvrt_input_file_list.txt')
 
@@ -647,18 +619,24 @@ def global_dsm(tiles):
 
     common.run("gdalbuildvrt -vrtnodata nan -input_file_list %s %s" % (input_file_list,
                                                                        out_dsm_vrt))
-    global_srcwin = np.loadtxt(os.path.join(cfg['out_dir'],
-                                            "global_srcwin.txt"))
+
     res = cfg['dsm_resolution']
-    xoff, yoff, xsize, ysize = global_srcwin
+
+    if 'utm_bbx' in cfg:
+        bbx = cfg['utm_bbx']
+        xoff = bbx[0]
+        yoff = bbx[3]
+        xsize = int(np.ceil((bbx[1]-bbx[0]) / res))
+        ysize = int(np.ceil((bbx[3]-bbx[2]) / res))
+        projwin = "-projwin %s %s %s %s" % (xoff, yoff,
+                                            xoff + xsize * res,
+                                            yoff - ysize * res)
+    else:
+        projwin = ""
 
     common.run(" ".join(["gdal_translate",
                          "-co TILED=YES -co BIGTIFF=IF_SAFER",
-                         "-projwin %s %s %s %s %s %s" % (xoff,
-                                                         yoff,
-                                                         xoff + xsize * res,
-                                                         yoff - ysize * res,
-                                                         out_dsm_vrt, out_dsm_tif)]))
+                         "%s %s %s" % (projwin, out_dsm_vrt, out_dsm_tif)]))
 
 def lidar_preprocessor(tiles):
     """
@@ -685,7 +663,6 @@ ALL_STEPS = [('initialisation', False),
              ('disparity-to-height', True),
              ('global-mean-heights', False),
              ('heights-to-ply', True),
-             ('global-srcwin', False),
              ('local-dsm-rasterization', True),
              ('global-dsm-rasterization', False),
              ('lidar-preprocessor', False)]
@@ -713,12 +690,13 @@ def main(user_cfg, steps=ALL_STEPS):
     cfg['max_processes'] = nb_workers
 
     tw, th = initialization.adjust_tile_size()
-    print('\ndiscarding masked tiles...')
-    tiles = initialization.tiles_full_info(tw, th)
+    tiles_txt = os.path.join(cfg['out_dir'],'tiles.txt')
+    create_masks = 'initialisation' in steps
+    tiles = initialization.tiles_full_info(tw, th, tiles_txt, create_masks)
 
     if 'initialisation' in steps:
         # Write the list of json files to outdir/tiles.txt
-        with open(os.path.join(cfg['out_dir'],'tiles.txt'),'w') as f:
+        with open(tiles_txt,'w') as f:
             for t in tiles:
                 f.write(t['json']+os.linesep)
 
@@ -770,11 +748,6 @@ def main(user_cfg, steps=ALL_STEPS):
                 parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
             else:
                 raise ValueError("possible values for 'triangulation_mode' : 'pairwise' or 'geometric'")
-
-    if 'global-srcwin' in steps:
-        print('computing global source window (xoff, yoff, xsize, ysize)...')
-        global_srcwin(tiles)
-        common.print_elapsed_time()
 
     if 'local-dsm-rasterization' in steps:
         print('computing DSM by tile...')
