@@ -26,8 +26,8 @@ BINDIR = bin
 # default rule builds only the programs necessary for the test
 default: $(BINDIR) homography sift imscript mgm piio tvl1
 
-# the "all" rule builds three further correlators
-all: default msmw3 sgbm
+# the "all" rule builds four further correlators
+all: default msmw3 sgbm mgm_multi
 
 # test for the default configuration
 test: default
@@ -38,7 +38,7 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 #
-# three standard "modules": homography, sift, and mgm
+# four standard "modules": homography, sift, mgm, and mgm_multi
 #
 
 homography: $(BINDIR)
@@ -53,6 +53,11 @@ sift: $(BINDIR)
 mgm:
 	$(MAKE) -C 3rdparty/mgm
 	cp 3rdparty/mgm/mgm $(BINDIR)
+
+mgm_multi:
+	mkdir -p $(BINDIR)/build_mgm_multi
+	cd $(BINDIR)/build_mgm_multi; cmake ../../3rdparty/mgm_multi; $(MAKE)
+	cp $(BINDIR)/build_mgm_multi/mgm_multi $(BINDIR)
 
 # piio: a required python extension
 piio: s2plib/piio/libiio.so
