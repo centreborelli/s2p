@@ -76,6 +76,12 @@ def check_parameters(d):
         print('ERROR: missing or incomplete roi definition')
         sys.exit(1)
 
+    # d['roi'] : all the values must be integers
+    d['roi']['x'] = int(np.floor(d['roi']['x']))
+    d['roi']['y'] = int(np.floor(d['roi']['y']))
+    d['roi']['w'] = int(np.ceil(d['roi']['w']))
+    d['roi']['h'] = int(np.ceil(d['roi']['h']))
+
     # warn about unknown parameters. The known parameters are those defined in
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
     # 'roi_utm'
