@@ -271,7 +271,7 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
     # get value for each pixel
     if (w != 0) and (h != 0):
         band = dataset.GetRasterBand(1)
-        array = band.ReadAsArray(x0, y0, w, h)
+        array = band.ReadAsArray(x0, y0, w, h).astype(float)
         array[array == -32768] = np.nan
         return np.nanmin(array), np.nanmax(array)
     else:
