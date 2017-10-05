@@ -117,6 +117,7 @@ cfg['disp_range_exogenous_high_margin'] = +100
 
 # exogenous dem
 cfg['exogenous_dem'] = None
+cfg['exogenous_dem_geoid_mode'] = True
 
 # clean height maps outliers
 cfg['cargarse_basura'] = True

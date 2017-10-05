@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+import os
 import subprocess
 import numpy as np
 from s2plib import common
@@ -87,6 +88,12 @@ def geoid_above_ellipsoid(lat, lon):
     the GeographicLib library:
     http://geographiclib.sourceforge.net/html/intro.html
     """
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    geoid_dir = os.path.join(parent_dir, 'c')
+    geoid_name = 'egm96-15'
     p = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
-    q = subprocess.Popen(['GeoidEval'], stdin=p.stdout, stdout=subprocess.PIPE)
-    return float(q.stdout.readline().split()[0])
+    q = subprocess.Popen(['GeoidEval',
+                          '-d', geoid_dir,
+                          '-n', geoid_name], stdin=p.stdout, stdout=subprocess.PIPE)
+    height = float(q.stdout.readline().split()[0])
+    return height
