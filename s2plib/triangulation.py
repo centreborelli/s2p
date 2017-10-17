@@ -53,9 +53,7 @@ def transfer_map(in_map, H, x, y, w, h, out_map):
     # This matrix transports the coordinates of the original cropped and
     # grid (the one desired for out_height) to the rectified cropped and
     # grid (the one we have for height)
-    Z = np.diag([1, 1, 1])
-    A = common.matrix_translation(x, y)
-    HH = np.dot(np.loadtxt(H), np.dot(A, Z))
+    HH = np.dot(np.loadtxt(H), common.matrix_translation(x, y))
 
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow
