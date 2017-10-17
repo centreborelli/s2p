@@ -593,6 +593,31 @@ def srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
     """
     m, M = altitude_range(rpc1, x, y, w, h, margin_top, margin_bottom)
 
+    return altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2,
+                                        A, margin_top, margin_bottom)
+
+def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
+                                 margin_top=0, margin_bottom=0):
+    """
+    Args:
+        m: min altitude over the tile
+        M: max altitude over the tile
+        rpc1: instance of the rpc_model.RPCModel class for the reference image
+        rpc2: instance of the rpc_model.RPCModel class for the secondary image
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the reference image. (x, y) is the top-left corner, and
+            (w, h) are the dimensions of the rectangle.
+        H1, H2: rectifying homographies
+        A (optional): pointing correction matrix
+        margin_top: margin (in meters) to add to the upper bound of the range
+        margin_bottom: margin (negative) to add to the lower bound of the range
+
+    Returns:
+        the min and max horizontal disparity observed on the 4 corners of the
+        ROI with the min/max altitude assumptions given as parameters. The
+        disparity is made horizontal thanks to the two rectifying homographies
+        H1 and H2.
+    """
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
     b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
@@ -603,7 +628,6 @@ def srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
 
     # return min and max disparities
     return np.min(d), np.max(d)
-
 
 def compute_ms_panchro_offset(dim_pan, dim_ms):
     """
