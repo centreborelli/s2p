@@ -32,9 +32,8 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         visible pixels.
     """
     # coefficients of the transformation associated to the crop
-    H = np.dot(np.diag((1, 1, 1)), common.matrix_translation(-x, -y))
+    H = common.matrix_translation(-x, -y)
     hij = ' '.join([str(el) for el in H.flatten()])
-
     
     mask = np.ones((h, w), dtype=np.bool)
 
