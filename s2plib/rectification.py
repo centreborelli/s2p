@@ -345,13 +345,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         {h,v}margin (optional): horizontal and vertical margins added on the
             sides of the rectified images
 
-        This function uses the parameter subsampling_factor from the
-        config module. If the factor z > 1 then the output images will
-        be subsampled by a factor z. The output matrices H1, H2, and the
-        ranges are also updated accordingly:
-        Hi = Z * Hi with Z = diag(1/z, 1/z, 1) and
-        disp_min = disp_min / z  (resp _max)
-
     Returns:
         H1, H2: Two 3x3 matrices representing the rectifying homographies that
         have been applied to the two original (large) images.
@@ -414,17 +407,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         T = common.matrix_translation(-x + hmargin, -y + vmargin)
         H1 = np.dot(T, H1)
         H2 = np.dot(T, H2)
-
-    #  if subsampling_factor'] the homographies are altered to reflect the zoom
-    z = cfg['subsampling_factor']
-    if z != 1:
-        Z = np.diag((1/z, 1/z, 1))
-        H1 = np.dot(Z, H1)
-        H2 = np.dot(Z, H2)
-        disp_m = np.floor(disp_m / z)
-        disp_M = np.ceil(disp_M / z)
-        hmargin = int(np.floor(hmargin / z))
-        vmargin = int(np.floor(vmargin / z))
 
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]

@@ -260,7 +260,7 @@ def disparity_to_height(tile, i):
     out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
-    triangulation.height_map(height_map, x, y, w, h, cfg['subsampling_factor'],
+    triangulation.height_map(height_map, x, y, w, h,
                              rpc1, rpc2, H_ref, H_sec, disp, mask, rpc_err,
                              out_mask, pointing)
 
@@ -444,9 +444,8 @@ def mean_heights(tile):
     """
     """
     w, h = tile['coordinates'][2:]
-    z = cfg['subsampling_factor']
     n = len(cfg['images']) - 1
-    maps = np.empty((int(h/z), int(w/z), n))
+    maps = np.empty((h, w, n))
     for i in range(n):
         try:
             f = gdal.Open(os.path.join(tile['dir'], 'pair_{}'.format(i + 1),
@@ -522,7 +521,6 @@ def heights_to_ply(tile):
     # compute a ply from the merged height map
     out_dir = tile['dir']
     x, y, w, h = tile['coordinates']
-    z = cfg['subsampling_factor']
     plyfile = os.path.join(out_dir, 'cloud.ply')
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     height_map = os.path.join(out_dir, 'height_map.tif')
@@ -532,14 +530,14 @@ def heights_to_ply(tile):
 
     # H is the homography transforming the coordinates system of the original
     # full size image into the coordinates system of the crop
-    H = np.dot(np.diag([1 / z, 1 / z, 1]), common.matrix_translation(-x, -y))
+    H = np.dot(np.diag([1, 1, 1]), common.matrix_translation(-x, -y))
     colors = os.path.join(out_dir, 'ref.png')
     if cfg['images'][0]['clr']:
         common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
     else:
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
-    common.image_safe_zoom_fft(colors, z, colors)
+        
     triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpc'], H, colors,
                                             utm_zone=cfg['utm_zone'],
