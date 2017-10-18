@@ -67,7 +67,7 @@ In json configuration files, relative file path for inputs files and output dire
 
 Required dependencies (Ubuntu 16.04):
 
-    apt-get install build-essential gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-gdal python-numpy python-pip
+    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-gdal python-numpy python-pip
 
 and
 
