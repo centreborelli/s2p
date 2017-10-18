@@ -17,6 +17,7 @@ matrix:
       env: PATH=/Library/Frameworks/GDAL.framework/Versions/2.1/unix/bin:$PATH
 
 before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo rm -vf /etc/apt/sources.list.d/*riak*; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:ubuntugis/ppa; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev geographiclib-tools libgeographiclib-dev; fi
