@@ -771,26 +771,6 @@ def download(to_file, from_url):
                 print(status, end=" ")
 
 
-def round_roi_to_nearest_multiple(n, x, y, w, h):
-    """
-    Rounds coordinates of a ROI to the nearest multiple of a given int.
-
-    Args:
-        n: integer
-        x, y, w, h: 4 numbers defining a ROI
-
-    Returns:
-        x, y, w, h: 4 ints close to the input numbers. x and y are rounded
-            down, while w and h are rounded up to the nearest multiple of n.
-    """
-    x, y, w, h = map(float, [x, y, w, h])
-    x = n * np.floor(x / n)
-    y = n * np.floor(y / n)
-    w = n * np.ceil(w / n)
-    h = n * np.ceil(h / n)
-    return map(int, [x, y, w, h])
-
-
 def lidar_preprocessor(output, input_plys):
     """
     Compute a multi-scale representation of a large point cloud.

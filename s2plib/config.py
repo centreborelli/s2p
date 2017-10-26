@@ -59,9 +59,6 @@ cfg['dsm_radius'] = 0
 # (dsm_resolution by default)
 cfg['dsm_sigma'] = None
 
-# zoom out applied to input images
-cfg['subsampling_factor'] = 1
-
 # sift threshold on the first over second best match ratio
 cfg['sift_match_thresh'] = 0.6
 

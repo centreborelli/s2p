@@ -33,7 +33,7 @@ def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None
                                                       mask, height, rpc_err))
 
 
-def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
+def transfer_map(in_map, H, x, y, w, h, out_map):
     """
     Transfer the heights computed on the rectified grid to the original
     Pleiades image grid.
@@ -46,18 +46,14 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        zoom: zoom factor (usually 1, 2 or 4) used to produce the input height
-            map
         out_map: path to the output map
     """
     # write the inverse of the resampling transform matrix. In brief it is:
-    # homography * translation * zoom
+    # homography * translation
     # This matrix transports the coordinates of the original cropped and
-    # zoomed grid (the one desired for out_height) to the rectified cropped and
-    # zoomed grid (the one we have for height)
-    Z = np.diag([zoom, zoom, 1])
-    A = common.matrix_translation(x, y)
-    HH = np.dot(np.loadtxt(H), np.dot(A, Z))
+    # grid (the one desired for out_height) to the rectified cropped and
+    # grid (the one we have for height)
+    HH = np.dot(np.loadtxt(H), common.matrix_translation(x, y))
 
     # apply the homography
     # write the 9 coefficients of the homography to a string, then call synflow
@@ -65,7 +61,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # zero:256x256 is the iio way to create a 256x256 image filled with zeros
     hij = ' '.join(['%r' % num for num in HH.flatten()])
     common.run('synflow hom "%s" zero:%dx%d /dev/null - | BILINEAR=1 backflow - %s %s' % (
-        hij, w/zoom, h/zoom, in_map, out_map))
+        hij, w, h, in_map, out_map))
 
     # replace the -inf with nan in the heights map, because colormesh filter
     # out nans but not infs
@@ -73,7 +69,7 @@ def transfer_map(in_map, H, x, y, w, h, zoom, out_map):
     # common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
 
 
-def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
+def height_map(out, x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
                out_filt, A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
@@ -84,8 +80,6 @@ def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        z: zoom factor (usually 1, 2 or 4) used to produce the input disparity
-            map
         rpc1, rpc2: paths to the xml files
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
@@ -96,7 +90,7 @@ def height_map(out, x, y, w, h, z, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     """
     tmp = common.tmpfile('.tif')
     height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
-    transfer_map(tmp, H1, x, y, w, h, z, out)
+    transfer_map(tmp, H1, x, y, w, h, out)
 
     # apply output filter
     common.run('plambda {0} {1} "x 0 > y nan if" -o {1}'.format(out_filt, out))

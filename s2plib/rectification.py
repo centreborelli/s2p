@@ -244,9 +244,13 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
             print("No SIFT available, SIFT disparity can not be estimated")
 
     # Compute altitude range disparity if needed
-    if(cfg['disp_range_method'] in ['fixed_altitude_range']):
+    if cfg['disp_range_method'] == 'fixed_altitude_range':
         if cfg['alt_min'] is not None and cfg['alt_max'] is not None:
-            alt_disp = rpc_utils.altitude_range_to_disp_range(cfg['alt_min'],cfg['alt_max'],rpc1, rpc2, x, y, w, h, H1, H2, A)
+            alt_disp = rpc_utils.altitude_range_to_disp_range(cfg['alt_min'],
+                                                              cfg['alt_max'],
+                                                              rpc1, rpc2,
+                                                              x, y, w, h,
+                                                              H1, H2, A)
             print("Altitude fixed disparity range: [%f, %f]" % (alt_disp[0], alt_disp[1]))
             
     # Now, compute disparity range according to selected method
@@ -269,7 +273,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
         
     elif cfg['disp_range_method'] == 'fixed_pixel_range':
         if cfg['disp_min'] is not None and cfg['disp_max'] is not None:
-            disp = cfg['disp_min'],cfg['disp_max']
+            disp = cfg['disp_min'], cfg['disp_max']
 
     elif cfg['disp_range_method'] == 'fixed_altitude_range':
         disp = alt_disp
@@ -346,13 +350,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         {h,v}margin (optional): horizontal and vertical margins added on the
             sides of the rectified images
 
-        This function uses the parameter subsampling_factor from the
-        config module. If the factor z > 1 then the output images will
-        be subsampled by a factor z. The output matrices H1, H2, and the
-        ranges are also updated accordingly:
-        Hi = Z * Hi with Z = diag(1/z, 1/z, 1) and
-        disp_min = disp_min / z  (resp _max)
-
     Returns:
         H1, H2: Two 3x3 matrices representing the rectifying homographies that
         have been applied to the two original (large) images.
@@ -406,7 +403,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
                                    os.path.join(out_dir, 'sift_matches_disp.png'))
     disp_m, disp_M = disparity_range(rpc1, rpc2, x, y, w, h, H1, H2,
                                      sift_matches, A)
-
     
     # compute rectifying homographies for non-epipolar mode (rectify the secondary tile only)
     if block_matching.rectify_secondary_tile_only(cfg['matching_algorithm']):
@@ -416,17 +412,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         T = common.matrix_translation(-x + hmargin, -y + vmargin)
         H1 = np.dot(T, H1)
         H2 = np.dot(T, H2)
-
-    #  if subsampling_factor'] the homographies are altered to reflect the zoom
-    z = cfg['subsampling_factor']
-    if z != 1:
-        Z = np.diag((1/z, 1/z, 1))
-        H1 = np.dot(Z, H1)
-        H2 = np.dot(Z, H2)
-        disp_m = np.floor(disp_m / z)
-        disp_M = np.ceil(disp_M / z)
-        hmargin = int(np.floor(hmargin / z))
-        vmargin = int(np.floor(vmargin / z))
 
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
@@ -438,8 +423,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     # apply homographies and do the crops
     common.image_apply_homography(out1, im1, H1, w0 + 2*hmargin, h0 + 2*vmargin)
     common.image_apply_homography(out2, im2, H2, w0 + 2*hmargin, h0 + 2*vmargin)
-
-   
 
     if block_matching.rectify_secondary_tile_only(cfg['matching_algorithm']):
         pts_in = [[0, 0], [disp_m, 0], [disp_M, 0]]
