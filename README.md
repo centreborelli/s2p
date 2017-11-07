@@ -71,7 +71,7 @@ Required dependencies (Ubuntu 16.04):
 
 and
 
-    pip install utm bs4 requests
+    pip install utm bs4 lxml requests
 
 `gdal` version must be 2.1.0 or newer.
 
