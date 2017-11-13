@@ -35,7 +35,7 @@ A precompiled docker image is available and ready to use:
 Run the python script `s2p.py` with a json configuration file as unique
 argument:
 
-    python s2p.py test.json
+    python s2p.py testdata/input_pair/config.json
 
 All the parameters of the algorithm, paths to input and output data are stored
 in the json file. See the provided `test.json` file for an example, and the
