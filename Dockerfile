@@ -16,12 +16,14 @@ RUN apt-get update && apt-get install -y \
     python \
     python-gdal \
     python-numpy \
-    python-pip
+    python-pip \
+    cmake \
+    vim
 RUN pip install -U pip
-RUN pip install utm bs4 requests
+RUN pip install utm bs4 lxml requests
 
 # install s2p
-RUN git clone https://github.com/carlodef/s2p.git --branch master --single-branch --depth 1 --recursive
+RUN git clone https://github.com/MISS3D/s2p.git --branch master --single-branch --depth 1 --recursive
 RUN cd s2p && make
 
 WORKDIR /s2p
