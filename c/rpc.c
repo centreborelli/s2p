@@ -152,7 +152,7 @@ void read_rpc_file_ikonos(struct rpc *p, char *filename)
 	while (1) {
 		char line[n], tag[n], *sl = fgets(line, n, f);;
 		if (!sl) break;
-        tag[0] = 'i';
+	tag[0] = 'i';
 		double x = get_tagged_number(tag+1, line);
 		if (isfinite(x)) {
 			//fprintf(stderr, "%s [%d]: %g\n", tag+o, o, x);
@@ -228,12 +228,12 @@ void read_rpc_file_xml(struct rpc *p, char *filename)
 	while (!found) {
 		char line[n], *sl = fgets(line, n, f);;
 		if (!sl) break;
-        if (0 == strhas(line, "LINE_OFF:")) {
-            found = 1; char tag[n];
+	if (0 == strhas(line, "LINE_OFF:")) {
+	    found = 1; char tag[n];
 		    double x = get_tagged_number(tag, line);
 			if (isfinite(x)) add_tag_to_rpc(p, tag, x);
-            read_rpc_file_ikonos(p, filename);
-        }
+	    read_rpc_file_ikonos(p, filename);
+	}
 		if (0 == strhas(line, "<SATID>") && 0 == strhas(line, "WV0")) {
 			found = 1;
 			read_rpc_file_xml_worldview(p, filename);
@@ -245,6 +245,11 @@ void read_rpc_file_xml(struct rpc *p, char *filename)
 		}
 		if (0 == strhas(line, "<METADATA_PROFILE>") && 0 == strhas(line,
 					"S6_SENSOR")) {
+			found = 1;
+			read_rpc_file_xml_pleiades(p, filename);
+		}
+		if (0 == strhas(line, "<METADATA_PROFILE>") && 0 == strhas(line,
+					"S7_SENSOR")) {
 			found = 1;
 			read_rpc_file_xml_pleiades(p, filename);
 		}
@@ -355,7 +360,7 @@ static double l2_squared_dist(double a[2], double b[2])
 //     M = np.vstack((u, v)).T
 // [a,b] = np.dot(np.linalg.inv(M), x)
 static void decompose_vector_basis(double a[2], double x[2], double u[2],
-        double v[2])
+	double v[2])
 {
 	double det = u[0]*v[1] - u[1]*v[0];
 	if (fabs(det) < FLT_MIN) {
