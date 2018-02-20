@@ -160,8 +160,22 @@ def produce_potree(s2poutdir, potreeoutdir):
     tiles = s2p.read_tiles(tiles_file)
     print(str(len(tiles))+' tiles found')
 
+
+    def plyvertex(fname):
+        with open(fname) as f:
+            for x in f:
+                if x.split()[0] == 'element' and x.split()[1] == 'vertex':
+                    return int(x.split()[2])
+
+
     # collect all plys
-    plys = [os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply') for t in tiles]
+    plys = []
+    for t in tiles:
+        clo = os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply')
+        if os.path.isfile(clo):
+            if plyvertex(clo) > 0 :
+                plys.append(clo)
+#    plys = [os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply') for t in tiles if os.path.isfile(os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply'))]
 
     # produce the potree point cloud
     plys_to_potree(plys, os.path.join(potreeoutdir, 'cloud.potree'), 
