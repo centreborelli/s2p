@@ -14,6 +14,8 @@ matrix:
       env: CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
     - os: osx
       language: generic
+      python: 3.5
+      env: PYTHON=3.5.1
       env: PATH=/Library/Frameworks/GDAL.framework/Versions/2.1/unix/bin:$PATH
 
 before_install:
@@ -21,14 +23,15 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:ubuntugis/ppa; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev geographiclib-tools libgeographiclib-dev; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew unlink gdal libgeotiff; brew install geographiclib fftw libgeotiff; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew install python3 && brew unlink gdal &&  (brew install gcc || brew link --overwrite gcc) &&  brew install geographiclib fftw libgeotiff; fi
 
 install:
-  - pip install numpy utm bs4 requests
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install numpy utm bs4 requests; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}'); fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip3 install numpy utm bs4 requests; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.1.dmg; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then X=$(echo `hdiutil mount GDAL_Complete-2.1.dmg | tail -1 | awk '{$1=$2=""; print $0}'` | xargs -0 echo) && sudo installer -pkg "${X}/"GDAL\ Complete.pkg -target /; export PATH="/Library/Frameworks/GDAL.framework/Programs:$PATH"; fi
 
 script:
   - make
-  - make test
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make test; fi
