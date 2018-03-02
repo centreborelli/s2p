@@ -22,6 +22,16 @@ import s2plib
 
 ############### Tests functions  #######################
 
+def unit_gdal_version():
+    try:
+        import gdal
+        version_num = int(gdal.VersionInfo('VERSION_NUM'))
+        if (version_num < 2010000):
+            raise AssertionError("The version of GDAL should be at least 2.1.\nHere is the recommended fix if installed on Ubuntu 16.04:\nsudo add-apt-repository ppa:ubuntugis/ppa && sudo apt-get update\nsudo apt-get install gdal-bin")
+    except ImportError:
+        raise AssertionError('GDAL does not seem to be installed.')
+
+
 def unit_image_keypoints():
 
     kpts = s2plib.sift.image_keypoints('testdata/input_triplet/img_02.tif',100,100,200,200)
@@ -251,7 +261,8 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
     
 ############### Registered tests #######################
 
-registered_tests = [('unit_image_keypoints', (unit_image_keypoints,[])),
+registered_tests = [('unit_gdal_version', (unit_gdal_version,[])),
+                    ('unit_image_keypoints', (unit_image_keypoints,[])),
                     ('unit_matching', (unit_matching,[])),
                     ('unit_plyflatten', (unit_plyflatten,[])),
                     ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
