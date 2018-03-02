@@ -101,6 +101,9 @@ All the sources (ours and 3rdparties) are compiled from the same makefile. Just
 run `make all` from the `s2p` folder to compile them.  This will create a `bin`
 directory containing all the needed binaries.
 
+You can test if S2P is correctly working using:
+
+    make test
 
 ### MicMac (optional)
 
