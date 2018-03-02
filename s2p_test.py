@@ -27,7 +27,7 @@ def unit_gdal_version():
         import gdal
         version_num = int(gdal.VersionInfo('VERSION_NUM'))
         if (version_num < 2010000):
-            raise AssertionError("The version of GDAL should be at least 2.1.\nHere is the recommended fix if installed on Ubuntu 16.04:\nsudo add-apt-repository ppa:ubuntugis/ppa && sudo apt-get update\nsudo apt-get install gdal-bin")
+            raise AssertionError("The version of GDAL should be at least 2.1.\nHere is the recommended fix if installed on Ubuntu 16.04:\nadd-apt-repository -y ppa:ubuntugis/ubuntugis-unstable\nsudo apt-get update\nsudo apt-get upgrade")
     except ImportError:
         raise AssertionError('GDAL does not seem to be installed.')
 
