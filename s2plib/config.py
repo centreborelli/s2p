@@ -131,6 +131,3 @@ cfg['ll_bbx'] = ("-inf", "inf", "-inf", "inf")
 
 # use srtm to generate a watermask
 cfg['use_srtm_for_water'] = False
-
-# If true, lidar preprocessor will be called if found in path
-cfg['run_lidar_preprocessor'] = False
