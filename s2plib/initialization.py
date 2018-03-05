@@ -54,11 +54,10 @@ def check_parameters(d):
             print('ERROR: missing img paths for image', img)
             sys.exit(1)
         if not dict_has_keys(img, ['rpc']) or img['rpc'] == '':
-            import tempfile     # TODO: fix common.tmpfile failure
+            import tempfile     # TODO: fix for common.tmpfile failure
             img['rpc'] = tempfile.mktemp('.rpc')
             rpc_utils.rpc_from_geotiff(img['img'], img['rpc'])
             print('INFO: trying reading rpc from image', img)
-    print (d)
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:

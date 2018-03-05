@@ -725,17 +725,17 @@ def rpc_from_geotiff(geotiff_path, outrpcfile='.rpc'):
     x = x.splitlines()
     for l in x:
 
-        if(1):
-            if (b'SAMP_' not in l) and (b'LINE_' not in l) and (b'HEIGHT_' not in l) and (b'LAT_' not in l) and (b'LONG_' not in l) and (b'MAX_' not in l) and (b'MIN_' not in l):
-                  continue
-            y = l.strip().replace(b'=',b': ')
-            if b'COEFF' in y:
-                  z = y.split(b' ')
-                  t=1
-                  for j in z[1:]:
-                          f.write(b'%s_%d: %s\n'%(z[0][:-1],t,j))
-                          t+=1
-            else:
-                  f.write((y+b'\n'))
+        if (b'SAMP_' not in l) and (b'LINE_' not in l) and (b'HEIGHT_' not in l) and (b'LAT_' not in l) and (b'LONG_' not in l) and (b'MAX_' not in l) and (b'MIN_' not in l):
+              continue
+        y = l.strip().replace(b'=',b': ')
+        if b'COEFF' in y:
+              z = y.split(b' ')
+              t=1
+              for j in z[1:]:
+                      f.write(b'%s_%d: %s\n'%(z[0][:-1],t,j))
+                      t+=1
+        else:
+              f.write((y+b'\n'))
+
     f.close()
     return rpc_model.RPCModel(outrpcfile)
