@@ -771,27 +771,6 @@ def download(to_file, from_url):
                 print(status, end=" ")
 
 
-def lidar_preprocessor(output, input_plys):
-    """
-    Compute a multi-scale representation of a large point cloud.
-
-    The output file can be viewed with LidarPreprocessor. This is useful for
-    huge point clouds. The input is a list of ply files.
-
-    Args:
-        output: path to the output folder
-        input_plys: list of paths to ply files
-    """
-    tmp = os.path.expandvars(cfg['temporary_dir'])
-    nthreads = multiprocessing.cpu_count()
-    plys = ' '.join(input_plys)
-    run("LidarPreprocessor -to %s/LidarO -tp %s/LidarP -nt %d %s -o %s" % (tmp,
-                                                                           tmp,
-                                                                           nthreads,
-                                                                           plys,
-                                                                           output))
-
-
 def cargarse_basura(inputf, outputf):
     se=5
     tmp1 = outputf + '1.tif'

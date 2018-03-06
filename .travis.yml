@@ -23,7 +23,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:ubuntugis/ppa; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev geographiclib-tools libgeographiclib-dev; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew install python3 && brew unlink gdal &&  (brew install gcc || brew link --overwrite gcc) &&  brew install geographiclib fftw libgeotiff; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew upgrade python && brew unlink gdal &&  (brew install gcc || brew link --overwrite gcc) &&  brew install geographiclib fftw  &&  brew upgrade libgeotiff; fi
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install numpy utm bs4 requests; fi

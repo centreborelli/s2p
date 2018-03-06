@@ -121,6 +121,3 @@ cfg['cargarse_basura'] = True
 
 # longitude/latitude bounding box
 cfg['ll_bbx'] = ("-inf", "inf", "-inf", "inf")
-
-# If true, lidar preprocessor will be called if found in path
-cfg['run_lidar_preprocessor'] = False
