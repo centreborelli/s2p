@@ -636,19 +636,6 @@ def global_dsm(tiles):
                          "-co TILED=YES -co BIGTIFF=IF_SAFER",
                          "%s %s %s" % (projwin, out_dsm_vrt, out_dsm_tif)]))
 
-def lidar_preprocessor(tiles):
-    """
-    Produce a single multiscale point cloud for the whole processed region.
-
-    Args:
-        tiles: list of tiles dictionaries
-    """
-    if common.which('LidarPreprocessor') is None:
-        return
-    plys = [os.path.join(os.path.abspath(t['dir']), 'cloud.ply') for t in tiles]
-    common.lidar_preprocessor(os.path.join(cfg['out_dir'],
-                                           'cloud.lidar_viewer'), plys)
-
 
 # ALL_STEPS is a ordonned dictionary : key = 'stepname' : value = is_distributed (True/False)
 # initialization : pass in a sequence of tuples
@@ -662,8 +649,7 @@ ALL_STEPS = [('initialisation', False),
              ('global-mean-heights', False),
              ('heights-to-ply', True),
              ('local-dsm-rasterization', True),
-             ('global-dsm-rasterization', False),
-             ('lidar-preprocessor', False)]
+             ('global-dsm-rasterization', False) ]
 ALL_STEPS = collections.OrderedDict(ALL_STEPS)
 
 
@@ -755,14 +741,6 @@ def main(user_cfg, steps=ALL_STEPS):
         print('computing global DSM...')
         global_dsm(tiles)
         common.print_elapsed_time()
-
-    if 'lidar-preprocessor' in steps:
-        if cfg['run_lidar_preprocessor']:
-            print('lidar preprocessor...')
-            lidar_preprocessor(tiles)
-            common.print_elapsed_time()
-        else:
-            print("LidarPreprocessor explicitly disabled in config.json")
 
     # cleanup
     common.garbage_cleanup()

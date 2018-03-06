@@ -704,3 +704,38 @@ def crop_corresponding_areas(out_dir, images, roi, zoom=1):
             # before the zoom out the image may be that big
             tmp = common.image_crop_gdal(image['img'], x, y, w, h)
             common.image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir, i), w, h)
+
+
+def rpc_from_geotiff(geotiff_path, outrpcfile='.rpc'):
+    """
+    extracts the rpc from a geotiff file (including vsicurl)
+    """
+    import os
+    import subprocess
+
+    env = os.environ.copy()
+    if geotiff_path.startswith(('http://', 'https://')):
+        env['CPL_VSIL_CURL_ALLOWED_EXTENSIONS'] = geotiff_path[-3:]
+        path = '/vsicurl/{}'.format(geotiff_path)
+    else:
+        path = geotiff_path
+
+    f = open(outrpcfile, 'wb')
+    x = subprocess.Popen(["gdalinfo", path], stdout=subprocess.PIPE).communicate()[0]
+    x = x.splitlines()
+    for l in x:
+
+        if (b'SAMP_' not in l) and (b'LINE_' not in l) and (b'HEIGHT_' not in l) and (b'LAT_' not in l) and (b'LONG_' not in l) and (b'MAX_' not in l) and (b'MIN_' not in l):
+              continue
+        y = l.strip().replace(b'=',b': ')
+        if b'COEFF' in y:
+              z = y.split(b' ')
+              t=1
+              for j in z[1:]:
+                      f.write(b'%s_%d: %s\n'%(z[0][:-1],t,j))
+                      t+=1
+        else:
+              f.write((y+b'\n'))
+
+    f.close()
+    return rpc_model.RPCModel(outrpcfile)
