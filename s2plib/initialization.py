@@ -48,10 +48,16 @@ def check_parameters(d):
     if 'images' not in d or len(d['images']) < 2:
         print('ERROR: missing paths to input images')
         sys.exit(1)
-    for img in d['images']:
-        if not dict_has_keys(img, ['img', 'rpc']):
-            print('ERROR: missing img or rpc paths for image', img)
+    for i in range(len(d['images'])):
+        img = d['images'][i]
+        if not dict_has_keys(img, ['img']):
+            print('ERROR: missing img paths for image', img)
             sys.exit(1)
+        if not dict_has_keys(img, ['rpc']) or img['rpc'] == '':
+            import tempfile     # TODO: fix for common.tmpfile failure
+            img['rpc'] = tempfile.mktemp('.rpc')
+            rpc_utils.rpc_from_geotiff(img['img'], img['rpc'])
+            print('INFO: trying reading rpc from image', img)
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:
@@ -120,7 +126,7 @@ def build_cfg(user_cfg):
     # Make sure that input data have absolute paths
     for i in range(0,len(cfg['images'])):
         for d in ['clr','cld','roi','wat','img','rpc']:
-            if d in cfg['images'][i] and cfg['images'][i][d] is not None:
+            if d in cfg['images'][i] and cfg['images'][i][d] is not None and not os.path.isabs(cfg['images'][i][d]):
                 cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
 
     x = cfg['roi']['x']
