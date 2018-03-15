@@ -5,6 +5,7 @@
 from __future__ import print_function
 import numpy as np
 import os
+from osgeo import gdal
 
 from s2plib import piio
 from s2plib import common
@@ -67,8 +68,14 @@ def plot_matches_low_level(im1, im2, matches):
         path to the resulting image, to be displayed
     """
     # load images
-    img1 = piio.read(im1).astype(np.uint8)
-    img2 = piio.read(im2).astype(np.uint8)
+    img1 = gdal.Open(im1).ReadAsArray()
+    img2 = gdal.Open(im2).ReadAsArray()
+
+    # transform single channel to 3-channels
+    if img1.ndim < 3:
+        img1 = np.dstack([img1] * 3)
+    if img2.ndim < 3:
+        img2= np.dstack([img2] * 3)
 
     # if images have more than 3 channels, keep only the first 3
     if img1.shape[2] > 3:
