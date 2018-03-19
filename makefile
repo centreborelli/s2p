@@ -24,7 +24,7 @@ SRCDIR = c
 BINDIR = bin
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) homography sift imscript mgm piio tvl1
+default: $(BINDIR) homography sift imscript mgm mgm_multi piio tvl1
 
 # the "all" rule builds four further correlators
 all: default msmw3 sgbm mgm_multi
