@@ -315,10 +315,14 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
 
     # compute heights on this bounding box
-    h_m, h_M = min_max_heights_from_bbx(cfg['exogenous_dem'],
-                                        lon_m, lon_M, lat_m, lat_M, rpc)
-    h_m += margin_bottom
-    h_M += margin_top
+    if cfg['exogenous_dem'] is not None:
+        h_m, h_M = min_max_heights_from_bbx(cfg['exogenous_dem'],
+                                            lon_m, lon_M, lat_m, lat_M, rpc)
+        h_m += margin_bottom
+        h_M += margin_top
+    else:
+        print("WARNING: returning coarse range from rpc")
+        h_m, h_M = altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
 
     return h_m, h_M
 
