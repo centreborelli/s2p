@@ -278,8 +278,8 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
 
         if cfg['exogenous_dem_geoid_mode'] is True:
             geoid = geographiclib.geoid_above_ellipsoid((lat_m + lat_M)/2, (lon_m + lon_M)/2)
-            hmin -= geoid
-            hmax -= geoid
+            hmin += geoid
+            hmax += geoid
         return hmin, hmax
     else:
         print("WARNING: rpc_utils.min_max_heights_from_bbx: access window out of range")
