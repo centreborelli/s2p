@@ -79,7 +79,7 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
 
 def register_horizontally_shear(matches, H1, H2):
     """
-    Adjust rectifying homographies with a shear to modify the disparity range.
+    Adjust rectifying homographies with tilt, shear and translation to reduce the disparity range.
 
     Args:
         matches: list of pairs of 2D points, stored as a Nx4 numpy array
@@ -104,14 +104,13 @@ def register_horizontally_shear(matches, H1, H2):
         print("Residual vertical disparities: max, min, mean. Should be zero")
         print(np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1))
 
-    # we search the (s, b) vector that minimises \sum (x1 - (x2+s*y2+b))^2
+    # we search the (a, b, c) vector that minimises \sum (x1 - (a*x2+b*y2+c))^2
     # it is a least squares minimisation problem
-    A = np.vstack((y2, y2*0+1)).T
-    B = x1 - x2
-    s, b = np.linalg.lstsq(A, B)[0].flatten()
+    A = np.vstack((x2, y2, y2*0+1)).T
+    a, b, c = np.linalg.lstsq(A, x1)[0].flatten()
 
-    # correct H2 with the estimated shear
-    return np.dot(np.array([[1, s, b], [0, 1, 0], [0, 0, 1]]), H2)
+    # correct H2 with the estimated tilt, shear and translation
+    return np.dot(np.array([[a, b, c], [0, 1, 0], [0, 0, 1]]), H2)
 
 
 def register_horizontally_translation(matches, H1, H2, flag='center'):
