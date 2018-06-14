@@ -74,6 +74,9 @@ cfg['n_gcp_per_axis'] = 5
 # max distance allowed for a point to the epipolar line of its match
 cfg['epipolar_thresh'] = 0.5
 
+# maximal pointing error, in pixels
+cfg['max_pointing_error'] = 10
+
 # triangulation mode : 'pairwise'or 'geometric'
 cfg['triangulation_mode'] = 'pairwise'
 

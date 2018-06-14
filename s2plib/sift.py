@@ -44,7 +44,7 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
 
 
 def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
-                    model=None):
+                    model=None, epipolar_threshold=10):
     """
     Find matches among two lists of sift keypoints.
 
@@ -74,6 +74,7 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         fij = ' '.join(str(x) for x in [F[0, 2], F[1, 2], F[2, 0],
                                         F[2, 1], F[2, 2]])
         cmd = "%s -f \"%s\"" % (cmd, fij)
+        cmd += " --epipolar-threshold {}".format(epipolar_threshold)
     common.run(cmd)
 
     matches = np.loadtxt(mfile)
@@ -123,7 +124,8 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
         p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
         matches = keypoints_match(p1, p2, 'relative', cfg['sift_match_thresh'],
-                                  F, model='fundamental')
+                                  F, model='fundamental',
+                                  epipolar_threshold=cfg['max_pointing_error'])
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
             break
         thresh_dog /= 2.0
