@@ -238,7 +238,7 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
     lonlatalt = zip(np.ravel(lonv),
                     np.ravel(latv),
                     np.zeros(np.shape(np.ravel(lonv))))
-    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im.TransformPoints(lonlatalt)))
+    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im.TransformPoints([a for a in lonlatalt])))
     x_im_proj = np.array(x_im_proj)
     y_im_proj = np.array(y_im_proj)
 
