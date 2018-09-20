@@ -8,10 +8,10 @@ QuickBird, Spot or Ikonos. It generates 3D point clouds and digital surface
 models from stereo pairs (two images) or tri-stereo sets (three images) in a
 completely automatic fashion.
 
-S2P was used to win the 2016 [IARPA Multi-View Stereo 3D Mapping Challenge](https://www.iarpa.gov/challenges/3dchallenge.html). 
+S2P was used to win the 2016 [IARPA Multi-View Stereo 3D Mapping Challenge](https://www.iarpa.gov/challenges/3dchallenge.html).
 
-A wide variety of stereo correlation algorithms are supported, including several 
-flavors of semi-global matching (SGM), TV-L1 optical flow, etc. 
+A wide variety of stereo correlation algorithms are supported, including several
+flavors of semi-global matching (SGM), TV-L1 optical flow, etc.
 
 The main language is Python, although several operations are handled by
 binaries written in C.
@@ -61,12 +61,15 @@ the example).
 
 #### File paths in json configuration files
 
-In json configuration files, relative file path for inputs files and output directory are relative to the json file location, not to the current working directory.
+In the json configuration files, input and output paths are relative to the json
+file location, not to the current working directory.
 
 ## Dependencies
 
 Required dependencies (Ubuntu 16.04):
 
+    add-apt-repository -y ppa:ubuntugis/ppa  # The repository is added so that the version >= 2.1 of gdal is installed (requirement)
+    apt-get update
     apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-gdal python-numpy python-pip
 
 and
@@ -100,6 +103,9 @@ All the sources (ours and 3rdparties) are compiled from the same makefile. Just
 run `make all` from the `s2p` folder to compile them.  This will create a `bin`
 directory containing all the needed binaries.
 
+You can test if S2P is correctly working using:
+
+    make test
 
 ### MicMac (optional)
 

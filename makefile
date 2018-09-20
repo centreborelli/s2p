@@ -120,8 +120,7 @@ SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop bdint morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective\
 	remove_small_cc plambda homwarp
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
-SRCKKK = watermask disp_to_h colormesh disp2ply multidisp2ply  bin2asc siftu ransac srtm4\
-	srtm4_which_tile plyflatten plyextrema plytodsm
+SRCKKK = disp_to_h colormesh disp2ply multidisp2ply  bin2asc siftu ransac plyflatten plyextrema plytodsm
 
 imscript: $(BINDIR) $(PROGRAMS)
 
@@ -146,16 +145,6 @@ $(BINDIR)/siftu: c/siftu.c c/siftie.c
 $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/homographies.c\
 	c/ransac_cases.c c/parsenumbers.c c/random.c
 	$(CC) $(CFLAGS) $< -lm -o $@
-
-$(BINDIR)/srtm4: c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4 $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
-
-$(BINDIR)/srtm4_which_tile: c/srtm4.c $(SRCDIR)/geoid_height_wrapper.o
-	$(CC) $(CFLAGS) -DMAIN_SRTM4_WHICH_TILE $^ $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
-
-$(BINDIR)/watermask: $(SRCDIR)/iio.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(SRCDIR)/fail.c\
-	$(SRCDIR)/xmalloc.c $(SRCDIR)/pickopt.c $(SRCDIR)/rpc.c $(SRCDIR)/srtm4.c $(SRCDIR)/parsenumbers.c
-	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/geoid_height_wrapper.o $(SRCDIR)/watermask.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@

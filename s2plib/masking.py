@@ -9,23 +9,22 @@ import numpy as np
 from osgeo import gdal
 
 from s2plib import common
+from s2plib import rpc_model
+from s2plib import rpc_utils
 from s2plib.config import cfg
 
 
 def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
-                             wat_msk=None, use_srtm_for_water=False):
+                             wat_msk=None):
     """
     Compute a mask for pixels masked by clouds, water, or out of image domain.
 
     Args:
         x, y, w, h: coordinates of the ROI
-        rpc: path to the xml file containing the rpc coefficients of the image
-            RPC model is used with SRTM data to derive the water mask
         roi_gml (optional): path to a gml file containing a mask
             defining the area contained in the full image
         cld_gml (optional): path to a gml file containing a mask
             defining the areas covered by clouds
-        wat_msk (optional): path to an image file containing a water mask
 
     Returns:
         2D array containing the output binary mask. 0 indicate masked pixels, 1
@@ -65,17 +64,6 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
     if wat_msk is not None:  # water mask (raster)
         f = gdal.Open(wat_msk)
         mask = np.logical_and(mask, f.ReadAsArray(x, y, w, h))
-        f = None  # this is the gdal way of closing files
-
-    elif use_srtm_for_water:  # water mask (srtm)
-        tmp = common.tmpfile('.png')
-        env = os.environ.copy()
-        env['SRTM4_CACHE'] = cfg['srtm_dir']
-        subprocess.check_call('watermask %d %d -h "%s" %s %s' % (w, h, hij, rpc,
-                                                                 tmp),
-                              shell=True, env=env)
-        f = gdal.Open(tmp)
-        mask = np.logical_and(mask, f.ReadAsArray())
         f = None  # this is the gdal way of closing files
 
     return mask
