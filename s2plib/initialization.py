@@ -14,7 +14,6 @@ import numpy as np
 
 from s2plib import piio
 from s2plib import common
-from s2plib import srtm
 from s2plib import rpc_utils
 from s2plib import masking
 from s2plib import parallel
@@ -136,10 +135,6 @@ def build_cfg(user_cfg):
     
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
-    # if srtm is disabled set disparity range method to sift
-    if 'disable_srtm' in cfg and cfg['disable_srtm']:
-        cfg['disp_range_method'] = 'sift'
-
     # get utm zone
     if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
         cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
@@ -161,15 +156,6 @@ def make_dirs():
     # copy RPC xml files in the output directory
     for img in cfg['images']:
         shutil.copy2(img['rpc'], cfg['out_dir'])
-
-    # download needed srtm tiles
-    if not cfg['disable_srtm']:
-        x = cfg['roi']['x']
-        y = cfg['roi']['y']
-        w = cfg['roi']['w']
-        h = cfg['roi']['h']
-        for s in srtm.list_srtm_tiles(cfg['images'][0]['rpc'], x, y, w, h):
-            srtm.get_srtm_tile(s, cfg['srtm_dir'])
 
 
 def adjust_tile_size():
@@ -260,7 +246,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     List the tiles to process and prepare their output directories structures.
 
     Most of the time is spent discarding tiles that are masked by water
-    (according to SRTM data).
+    (according to exogenous dem).
 
     Returns:
         a list of dictionaries. Each dictionary contains the image coordinates
@@ -286,8 +272,8 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
         tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
                                                    tiles_coords,
                                                    cfg['max_processes'], rpc,
-                                                   roi_msk, cld_msk, wat_msk,
-                                                   cfg['use_srtm_for_water'])
+                                                   roi_msk, cld_msk, wat_msk)
+
         for coords, mask in zip(tiles_coords,
                                 tiles_masks):
             if mask.any():  # there's at least one non-masked pixel in the tile

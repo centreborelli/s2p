@@ -283,9 +283,7 @@ static void save_output_image_with_utm_georeferencing(
 	GDALRasterBandH hBand;
 	GDALSetGeoTransform( hDstDS, adfGeoTransform );
 	hSRS = OSRNewSpatialReference( NULL );
-	char utmNumber[2];
-	utmNumber[0] = utm[0];
-	utmNumber[1] = utm[1];
+	char utmNumber[3] = {utm[0], utm[1], '\0'};
 	int nZone = atoi(utmNumber);
 	int bNorth = (utm[2] == 'N');
 	OSRSetUTM( hSRS, nZone, bNorth );
