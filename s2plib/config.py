@@ -74,6 +74,9 @@ cfg['n_gcp_per_axis'] = 5
 # max distance allowed for a point to the epipolar line of its match
 cfg['epipolar_thresh'] = 0.5
 
+# maximal pointing error, in pixels
+cfg['max_pointing_error'] = 10
+
 # triangulation mode : 'pairwise'or 'geometric'
 cfg['triangulation_mode'] = 'pairwise'
 
@@ -105,29 +108,19 @@ cfg['fusion_operator'] = 'average_if_close'
 # It should be adapted to the zoom factor
 cfg['fusion_thresh'] = 3
 
-cfg['disable_srtm'] = False
 cfg['rpc_alt_range_scale_factor'] = 1
 
-# method to compute the disparity range: "sift", "srtm", "wider_sift_srtm", "fixed_pixel_range", "fixed_altitude_range"
-cfg['disp_range_method'] = "wider_sift_srtm"
-cfg['disp_range_srtm_low_margin'] = -10
-cfg['disp_range_srtm_high_margin'] = +100
+# method to compute the disparity range: "sift", "exogenous", "wider_sift_exogenous", "fixed_pixel_range", "fixed_altitude_range"
+cfg['disp_range_method'] = "wider_sift_exogenous"
+cfg['disp_range_exogenous_low_margin'] = -10
+cfg['disp_range_exogenous_high_margin'] = +100
 
-# url of the srtm database mirror
-cfg['srtm_url'] = 'http://138.231.80.250:443/srtm/tiff'
-cfg['srtm_url'] = 'ftp://xftp.jrc.it/pub/srtmV4/tiff'
-cfg['srtm_url'] = 'http://data_public:GDdci@data.cgiar-csi.org/srtm/tiles/GeoTIFF'
-
-# directory where to store the srtm tiles
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-cfg['srtm_dir'] = os.path.join(parent_dir, '.srtm')
+# exogenous dem
+cfg['exogenous_dem'] = None
+cfg['exogenous_dem_geoid_mode'] = True
 
 # clean height maps outliers
 cfg['cargarse_basura'] = True
 
 # longitude/latitude bounding box
 cfg['ll_bbx'] = ("-inf", "inf", "-inf", "inf")
-
-# use srtm to generate a watermask
-cfg['use_srtm_for_water'] = False

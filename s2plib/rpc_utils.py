@@ -7,6 +7,7 @@ from __future__ import print_function
 import bs4
 import utm
 import datetime
+from osgeo import gdal, osr
 import numpy as np
 
 from s2plib import estimation
@@ -175,51 +176,6 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     return np.min(lon), np.max(lon), np.min(lat), np.max(lat)
 
 
-def sample_bounding_box(lon_m, lon_M, lat_m, lat_M):
-    """
-    Samples a geodetic "rectangular" region with regularly spaced points.
-    The sampling distance is the srtm resolution, ie 3 arcseconds.
-
-    Args:
-        lon_m, lon_M: min and max longitudes, between -180 and 180
-        lat_m, lat_M: min and max latitudes, between -60 and 60
-
-    Returns:
-        a numpy array, of size N x 2, containing the list of sample locations
-        in geodetic coordinates.
-    """
-    # check parameters
-    assert lon_m > -180
-    assert lon_M < 180
-    assert lon_m < lon_M
-    assert lat_m > -60
-    assert lat_M < 60
-    assert lat_m < lat_M
-
-    # width of srtm bin: 6000x6000 samples in a tile of 5x5 degrees, ie 3
-    # arcseconds (in degrees)
-    srtm_bin = 1.0/1200
-
-    # round down lon_m, lat_m and round up lon_M, lat_M so they are integer
-    # multiples of 3 arcseconds
-    lon_m, lon_M = round_updown(lon_m, lon_M, srtm_bin)
-    lat_m, lat_M = round_updown(lat_m, lat_M, srtm_bin)
-
-    # compute the samples: one in the center of each srtm bin
-    lons = np.arange(lon_m, lon_M, srtm_bin) + .5 * srtm_bin
-    lats = np.arange(lat_m, lat_M, srtm_bin) + .5 * srtm_bin
-
-    # put all the samples in an array. There should be a more pythonic way to
-    # do this
-    out = np.zeros((len(lons)*len(lats), 2))
-    for i in range(len(lons)):
-        for j in range(len(lats)):
-            out[i*len(lats)+j, 0] = lons[i]
-            out[i*len(lats)+j, 1] = lats[j]
-
-    return out
-
-
 def round_updown(a, b, q):
     """
     Rounds down (resp. up) a (resp. b) to the closest multiple of q.
@@ -253,9 +209,87 @@ def altitude_range_coarse(rpc, scale_factor=1):
     return m, M
 
 
+def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
+    """
+    Compute min, max heights from bounding box
+
+    Args:
+        im: path to an image file
+        lon_m, lon_M, lat_m, lat_M: bounding box
+
+    Returns:
+        hmin, hmax: min, max heights
+    """
+
+    # open image
+    dataset = gdal.Open(im)
+
+    # get lon/lat to im projection conversion
+    new_cs = osr.SpatialReference()
+    new_cs.ImportFromWkt(dataset.GetProjectionRef())
+    old_cs = osr.SpatialReference()
+    old_cs.ImportFromEPSG(4326)
+    lonlat_to_im = osr.CoordinateTransformation(old_cs, new_cs)
+
+    # convert lon/lat to im projection
+    lon = np.linspace(lon_m, lon_M, 2)
+    lat = np.linspace(lat_m, lat_M, 2)
+    lonv, latv = np.meshgrid(lon, lat)
+    lonlatalt = zip(np.ravel(lonv),
+                    np.ravel(latv),
+                    np.zeros(np.shape(np.ravel(lonv))))
+    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im.TransformPoints(lonlatalt)))
+    x_im_proj = np.array(x_im_proj)
+    y_im_proj = np.array(y_im_proj)
+
+    # convert im projection to pixel
+    forward = dataset.GetGeoTransform()
+    reverse = gdal.InvGeoTransform(forward)
+    px = reverse[0] + x_im_proj * reverse[1] + y_im_proj * reverse[2]
+    py = reverse[3] + x_im_proj * reverse[4] + y_im_proj * reverse[5]
+    nb_elts = len(px)
+
+    # get footprint
+    [px_min, px_max, py_min, py_max] = map(int, [np.amin(px),
+                                                 np.amax(px)+1,
+                                                 np.amin(py),
+                                                 np.amax(py)+1])
+
+    # limits of im extract
+    x, y, w, h = px_min, py_min, px_max - px_min + 1, py_max - py_min + 1
+    sizex = dataset.RasterXSize
+    sizey = dataset.RasterYSize
+    x0 = min(max(0, x), sizex-1)
+    y0 = min(max(0, y), sizey-1)
+    w -= (x0-x)
+    h -= (y0-y)
+    w = max(0, w)
+    w = min(w, sizex - 1 - x0)
+    h = max(0, h)
+    h = min(h, sizey - 1 - y0)
+
+    # get value for each pixel
+    if (w != 0) and (h != 0):
+        band = dataset.GetRasterBand(1)
+        array = band.ReadAsArray(x0, y0, w, h).astype(float)
+        array[array == -32768] = np.nan
+        hmin = np.nanmin(array)
+        hmax = np.nanmax(array)
+
+        if cfg['exogenous_dem_geoid_mode'] is True:
+            geoid = geographiclib.geoid_above_ellipsoid((lat_m + lat_M)/2, (lon_m + lon_M)/2)
+            hmin += geoid
+            hmax += geoid
+        return hmin, hmax
+    else:
+        print("WARNING: rpc_utils.min_max_heights_from_bbx: access window out of range")
+        print("returning coarse range from rpc")
+        return altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
+
+
 def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     """
-    Computes an altitude range using SRTM data.
+    Computes an altitude range using the exogenous dem.
 
     Args:
         rpc: instance of the rpc_model.RPCModel class
@@ -269,7 +303,7 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     Returns:
         lower and upper bounds on the altitude of the world points that are
         imaged by the RPC projection function in the provided ROI. To compute
-        these bounds, we use SRTM data. The altitudes are computed with respect
+        these bounds, we use exogenous data. The altitudes are computed with respect
         to the WGS84 reference ellipsoid.
     """
     # TODO: iterate the procedure used here to get a finer estimation of the
@@ -280,30 +314,15 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     # find bounding box on the ellipsoid (in geodesic coordinates)
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
 
-    # if bounding box is out of srtm domain, return coarse altitude estimation
-    if (lat_m < -60 or lat_M > 60 or cfg['disable_srtm']):
+    # compute heights on this bounding box
+    if cfg['exogenous_dem'] is not None:
+        h_m, h_M = min_max_heights_from_bbx(cfg['exogenous_dem'],
+                                            lon_m, lon_M, lat_m, lat_M, rpc)
+        h_m += margin_bottom
+        h_M += margin_top
+    else:
         print("WARNING: returning coarse range from rpc")
-        return altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
-
-    # sample the bounding box with regular step of 3 arcseconds (srtm
-    # resolution)
-    ellipsoid_points = sample_bounding_box(lon_m, lon_M, lat_m, lat_M)
-
-    # compute srtm height on all these points
-    srtm = common.run_binary_on_list_of_points(ellipsoid_points, 'srtm4',
-                                               env_var=('SRTM4_CACHE',
-                                                        cfg['srtm_dir']))
-    h = np.ravel(srtm)
-
-    # srtm data may contain 'nan' values (meaning no data is available there).
-    # These points are most likely water (sea) and thus their height with
-    # respect to geoid is 0. Thus we replace the nans with 0.
-    # TODO: this should not be zero, but the geoid/ellipsoid offset
-    srtm[np.isnan(h)] = 0
-
-    # extract extrema (and add a +-100m security margin)
-    h_m = np.round(h.min()) + margin_bottom
-    h_M = np.round(h.max()) + margin_top
+        h_m, h_M = altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
 
     return h_m, h_M
 
@@ -569,8 +588,8 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     return disp
 
 
-def srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
-        margin_top=0, margin_bottom=0):
+def exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
+                                    margin_top=0, margin_bottom=0):
     """
     Args:
         rpc1: an instance of the rpc_model.RPCModel class for the reference
@@ -587,7 +606,7 @@ def srtm_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
 
     Returns:
         the min and max horizontal disparity observed on the 4 corners of the
-        ROI with the min/max altitude assumptions given by the srtm. The
+        ROI with the min/max altitude assumptions given by the exogenous dem. The
         disparity is made horizontal thanks to the two rectifying homographies
         H1 and H2.
     """
@@ -609,8 +628,6 @@ def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
             (w, h) are the dimensions of the rectangle.
         H1, H2: rectifying homographies
         A (optional): pointing correction matrix
-        margin_top: margin (in meters) to add to the upper bound of the range
-        margin_bottom: margin (negative) to add to the lower bound of the range
 
     Returns:
         the min and max horizontal disparity observed on the 4 corners of the
