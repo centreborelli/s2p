@@ -63,7 +63,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
 
     if wat_msk is not None:  # water mask (raster)
         f = gdal.Open(wat_msk)
-        mask = np.logical_and(mask, f.ReadAsArray(x, y, w, h))
+        mask = np.logical_and(mask, f.ReadAsArray(*map(int, (x, y, w, h))))
         f = None  # this is the gdal way of closing files
 
     return mask
