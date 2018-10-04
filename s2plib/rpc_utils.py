@@ -746,7 +746,7 @@ def rpc_from_geotiff(geotiff_path, outrpcfile='.rpc'):
               continue
         y = l.strip().replace(b'=',b': ')
         if b'COEFF' in y:
-              z = y.split(b' ')
+              z = y.split()
               t=1
               for j in z[1:]:
                       f.write(b'%s_%d: %s\n'%(z[0][:-1],t,j))
