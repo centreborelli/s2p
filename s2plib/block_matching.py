@@ -137,12 +137,11 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
         env['TSGM'] = '3'
-        conf = disp+'.confidence.tif'
-        common.run('{0} -r {1} -R {2} -s vfit -t census -O 8 -confidence_consensusL {6} {3} {4} {5}'.format('mgm',
+        common.run('{0} -r {1} -R {2} -s vfit -t census -O 8 {3} {4} {5}'.format('mgm',
                                                                                  disp_min,
                                                                                  disp_max,
                                                                                  im1, im2,
-                                                                                 disp, conf),
+                                                                                 disp),
                    env)
 
         # produce the mask: rejected pixels are marked with nan of inf in disp
