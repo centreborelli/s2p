@@ -222,7 +222,7 @@ static void accumulate_ply_points_to_images(
 	if (0 != strncmp(utm_zone, utm, 3))
 		fprintf(stderr, "error: different UTM zones among ply files\n");
 
-	if (col_idx < 2 || col_idx > 5)
+	if (col_idx < 2 || col_idx > n-1)
 		exit(fprintf(stderr, "error: bad col_idx %d\n", col_idx));
 
 	double data[n];
