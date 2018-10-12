@@ -148,6 +148,56 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         # map
         common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
 
+
+    if algo == 'mgm_multi_lsd':
+
+
+        ref = im1
+        sec = im2
+
+        wref = common.tmpfile('.tif')
+        wsec = common.tmpfile('.tif')
+        # TODO TUNE LSD PARAMETERS TO HANDLE DIRECTLY 12 bits images?
+        # image dependent weights based on lsd segments
+        image_size = common.image_size_gdal(ref)
+        common.run('qauto %s | \
+                   lsd  -  - | \
+                   cut -d\' \' -f1,2,3,4   | \
+                   pview segments %d %d | \
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(ref,image_size[0], image_size[1],wref))
+        # image dependent weights based on lsd segments
+        image_size = common.image_size_gdal(sec)
+        common.run('qauto %s | \
+                   lsd  -  - | \
+                   cut -d\' \' -f1,2,3,4   | \
+                   pview segments %d %d | \
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(sec,image_size[0], image_size[1],wsec))
+
+
+        env['REMOVESMALLCC'] = str(cfg['stereo_speckle_filter'])
+        env['SUBPIX'] = '2'
+        env['MEDIAN'] = '1'
+        env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
+        # it is required that p2 > p1. The larger p1, p2, the smoother the disparity
+        regularity_multiplier = cfg['stereo_regularity_multiplier']
+
+        # increasing these numbers compensates the loss of regularity after incorporating LSD weights
+        P1 = 12*regularity_multiplier   # penalizes disparity changes of 1 between neighbor pixels
+        P2 = 48*regularity_multiplier  # penalizes disparity changes of more than 1
+        conf = disp+'.confidence.tif'
+        common.run('{0} -r {1} -R {2} -S 6 -s vfit -t census -O 8 -P1 {7} -P2 {8} -wl {3} -wr {4} -confidence_consensusL {10} {5} {6} {9}'.format('mgm_multi',
+                                                                                 disp_min,
+                                                                                 disp_max,
+                                                                                 wref,wsec,
+                                                                                 im1, im2,
+                                                                                 P1, P2,
+                                                                                 disp, conf),
+                   env)
+
+        # produce the mask: rejected pixels are marked with nan of inf in disp
+        # map
+        common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
+
     if algo == 'mgm_multi':
         env['REMOVESMALLCC'] = '25'
         env['MINDIFF'] = '1'
