@@ -150,12 +150,6 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
 
 
-                   env)
-
-        # produce the mask: rejected pixels are marked with nan of inf in disp
-        # map
-        common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
-
     if algo == 'mgm_multi':
         env['REMOVESMALLCC'] = str(cfg['stereo_speckle_filter'])
         env['MINDIFF'] = '1'
