@@ -50,7 +50,7 @@ unsigned char test_little_endian(void)
 
 
 void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
-        bool colors, bool normals)
+        bool colors, bool normals, bool extra)
 {
     if (!ascii)
         if (!test_little_endian())
@@ -78,6 +78,9 @@ void write_ply_header(FILE* f, bool ascii, int npoints, int zone, bool hem,
         fprintf(f, "property uchar red\n");
         fprintf(f, "property uchar green\n");
         fprintf(f, "property uchar blue\n");
+    }
+    if (extra) {
+        fprintf(f, "property double extr\n");
     }
     fprintf(f, "end_header\n");
 }
@@ -121,7 +124,7 @@ void intersect_rays(double out[3], double p[2], double q[2], struct rpc *r1,
 static void help(char *s)
 {
     fprintf(stderr, "\t usage: %s out.ply disp.tif msk.png "
-            "rpc_ref.xml rpc_sec.xml [colors.png] "
+            "rpc_ref.xml rpc_sec.xml [colors.png] [extra.tif]"
             "[-href \"h1 ... h9\"] [-hsec \"h1 ... h9\"] "
             "[--utm-zone ZONE] [--ascii] [--mask-orig msk.png] "
             "[--lon-m l0] [--lon-M lf] [--lat-m l0] [--lat-M lf] "
@@ -198,6 +201,13 @@ int main(int c, char *v[])
         if (w != ww || h != hh) fail("disp and color image size mismatch\n");
     }
 
+    // open extra channel image if provided
+    uint8_t *extr = NULL;
+    if (c > 7) {
+        extr = iio_read_image_uint8_vec(v[7], &ww, &hh, &pd);
+        if (w != ww || h != hh) fail("disp and extra image size mismatch\n");
+    }
+
     // read input rpc models
     struct rpc rpc_ref[1], rpc_sec[1];
     read_rpc_file_xml(rpc_ref, v[4]);
@@ -250,7 +260,7 @@ int main(int c, char *v[])
 
     // print header for ply file
     FILE *ply_file = fopen(v[1], "w");
-    write_ply_header(ply_file, ascii, npoints, zone, hem, (bool) clr, false);
+    write_ply_header(ply_file, ascii, npoints, zone, hem, (bool) clr, false, (bool) extr);
 
     // loop over all the pixels of the input disp map
     // a 3D point is produced for each non-masked disparity
@@ -295,6 +305,10 @@ int main(int c, char *v[])
             for (int k = 0; k < pd; k++) rgb[k] = clr[k + pd*pix];
             for (int k = pd; k < 3; k++) rgb[k] = rgb[k-1];
         }
+        double extra[1];
+        if (extr) {
+            extra[0] = extr[pix];
+        }
 
         // write to ply
         if (ascii) {
@@ -306,8 +320,10 @@ int main(int c, char *v[])
             double XX[3] = {X[0], X[1], X[2]};
             fwrite(XX, sizeof(double), 3, ply_file);
             if (clr) {
-                unsigned char C[3] = {rgb[0], rgb[1], rgb[2]};
                 fwrite(rgb, sizeof(unsigned char), 3, ply_file);
+            }
+            if (extr) {
+                fwrite(extra, sizeof(double), 1, ply_file);
             }
         }
     }
