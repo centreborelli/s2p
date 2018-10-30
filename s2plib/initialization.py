@@ -291,7 +291,6 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                 tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
                 tile_cfg['full_img'] = False
                 tile_cfg['max_processes'] = 1
-                tile_cfg['omp_num_threads'] = 1
                 tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
                 tile_cfg['out_dir'] = '../../..'
 
