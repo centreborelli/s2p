@@ -126,7 +126,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
     if algo == 'msmw2':
         bm_binary = 'iip_stereo_correlation_multi_win2_newversion'
         common.run('{0} -i 1 -n 4 -p 4 -W 5 -x 9 -y 9 -r 1 -d 1 -t -1 -s 0 -b 0 -o -0.25 -f 0 -P 32 -D 0 -O 25 -c 0 -m {1} -M {2} {3} {4} {5} {6}'.format(
-                bm_binary, disp_min, disp_max, im1, im2, disp, mask))
+                bm_binary, disp_min, disp_max, im1, im2, disp, mask), env)
 
     if algo == 'msmw3':
         bm_binary = 'msmw'

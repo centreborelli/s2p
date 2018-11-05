@@ -238,7 +238,7 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
     lonlatalt = zip(np.ravel(lonv),
                     np.ravel(latv),
                     np.zeros(np.shape(np.ravel(lonv))))
-    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im.TransformPoints(lonlatalt)))
+    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im.TransformPoints([a for a in lonlatalt])))
     x_im_proj = np.array(x_im_proj)
     y_im_proj = np.array(y_im_proj)
 
@@ -746,7 +746,7 @@ def rpc_from_geotiff(geotiff_path, outrpcfile='.rpc'):
               continue
         y = l.strip().replace(b'=',b': ')
         if b'COEFF' in y:
-              z = y.split(b' ')
+              z = y.split()
               t=1
               for j in z[1:]:
                       f.write(b'%s_%d: %s\n'%(z[0][:-1],t,j))
