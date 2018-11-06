@@ -43,33 +43,31 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     return keyfile
 
 
-def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
+def keypoints_match(k1, k2, sift_thresh=0.6, F=None,
                     model=None, epipolar_threshold=10):
     """
     Find matches among two lists of sift keypoints.
 
     Args:
         k1, k2: paths to text files containing the lists of sift descriptors
-        method (optional, default is 'relative'): flag ('relative' or
-            'absolute') indicating wether to use absolute distance or relative
-            distance
         sift_thresh (optional, default is 0.6): threshold for distance between SIFT
-            descriptors. These descriptors are 128-vectors, whose coefficients
-            range from 0 to 255, thus with absolute distance a reasonable value
-            for this threshold is between 200 and 300. With relative distance
-            (ie ratio between distance to nearest and distance to second
-            nearest), the commonly used value for the threshold is 0.6.
+            descriptors (relative). These descriptors are 128-vectors, whose coefficients
+            range from 0 to 255. With relative distance (ie ratio between distance
+            to nearest and distance to second nearest), the commonly used value for
+            the threshold is 0.6.
         F (optional): affine fundamental matrix
         model (optional, default is None): model imposed by RANSAC when
             searching the set of inliers. If None all matches are considered as
             inliers.
+        epipolar_threshold (optional, default is 10): maximum distance allowed for
+            a point to the epipolar line of its match.
 
     Returns:
         if any, a numpy 2D array containing the list of inliers matches.
     """
     # compute matches
     mfile = common.tmpfile('.txt')
-    cmd = "matching %s %s -%s %f -o %s" % (k1, k2, method, sift_thresh, mfile)
+    cmd = "matching %s %s -o %s --sift-threshold %f" % (k1, k2, mfile, sift_thresh)
     if F is not None:
         fij = ' '.join(str(x) for x in [F[0, 2], F[1, 2], F[2, 0],
                                         F[2, 1], F[2, 2]])
@@ -123,7 +121,7 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     for i in range(2):
         p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
-        matches = keypoints_match(p1, p2, 'relative', cfg['sift_match_thresh'],
+        matches = keypoints_match(p1, p2, cfg['sift_match_thresh'],
                                   F, model='fundamental',
                                   epipolar_threshold=cfg['max_pointing_error'])
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
