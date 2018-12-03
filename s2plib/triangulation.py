@@ -96,7 +96,7 @@ def height_map(out, x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
     common.run('plambda {0} {1} "x 0 > y nan if" -o {1}'.format(out_filt, out))
 
 
-def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors,
+def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors, extra='',
                             utm_zone=None, llbbx=None, xybbx=None, xymsk=None):
     """
     Computes a 3D point cloud from a disparity map.
@@ -120,7 +120,8 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors,
     msk = "--mask-orig %s" % xymsk if xymsk else ""
 
     command = 'disp2ply {} {} {} {} {}'.format(out, disp, mask, rpc1, rpc2)
-    command += ' {} -href "{}" -hsec "{}"'.format(colors, href, hsec)
+    # extra: is an optinonal extra data channel in the ply its default value '' ignores it
+    command += ' {} {} -href "{}" -hsec "{}"'.format(colors, extra, href, hsec)
     command += ' {} {} {} {}'.format(utm, lbb, xbb, msk)
     common.run(command)
 
