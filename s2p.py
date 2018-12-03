@@ -669,9 +669,8 @@ def main(user_cfg, steps=ALL_STEPS):
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
-    if cfg['max_processes']:
-        nb_workers = min(nb_workers, cfg['max_processes'])
-    cfg['max_processes'] = nb_workers
+    if cfg['max_processes'] is not None:
+        nb_workers = cfg['max_processes']
 
     tw, th = initialization.adjust_tile_size()
     tiles_txt = os.path.join(cfg['out_dir'],'tiles.txt')
@@ -686,9 +685,6 @@ def main(user_cfg, steps=ALL_STEPS):
 
     n = len(cfg['images'])
     tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
-
-    # omp_num_threads should not exceed nb_workers when multiplied by len(tiles)
-    cfg['omp_num_threads'] = max(1, int(nb_workers / len(tiles_pairs)))
 
     if 'local-pointing' in steps:
         print('correcting pointing locally...')

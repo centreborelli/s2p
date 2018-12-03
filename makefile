@@ -52,12 +52,13 @@ sift: $(BINDIR)
 
 mgm:
 	$(MAKE) -C 3rdparty/mgm
-	cp 3rdparty/mgm/mgm $(BINDIR)
+	#cp 3rdparty/mgm/mgm $(BINDIR)
 
 mgm_multi:
 	mkdir -p $(BINDIR)/build_mgm_multi
 	cd $(BINDIR)/build_mgm_multi; cmake ../../3rdparty/mgm_multi; $(MAKE)
 	cp $(BINDIR)/build_mgm_multi/mgm_multi $(BINDIR)
+	cp $(BINDIR)/build_mgm_multi/mgm $(BINDIR)
 
 lsd:
 	wget http://www.ipol.im/pub/art/2012/gjmr-lsd/lsd_1.6.zip

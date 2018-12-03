@@ -83,13 +83,6 @@ cfg['triangulation_mode'] = 'pairwise'
 # use global pointing for geometric triangulation
 cfg['use_global_pointing_for_geometric_triangulation'] = False
 
-# stereo matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
-# hirschmuller08_laplacian', 'sgbm', 'mgm'
-cfg['matching_algorithm'] = 'mgm'
-
-# size of the Census NCC square windows used in mgm
-cfg['census_ncc_win'] = 5
-
 # set these params if you want to impose the disparity range manually (cfg['disp_range_method'] == 'fixed_pixel_range')
 cfg['disp_min'] = None
 cfg['disp_max'] = None
@@ -118,6 +111,21 @@ cfg['disp_range_exogenous_high_margin'] = +100
 # exogenous dem
 cfg['exogenous_dem'] = None
 cfg['exogenous_dem_geoid_mode'] = True
+
+### stereo matching parameters
+
+# stereo matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
+# hirschmuller08_laplacian', 'sgbm', 'mgm', 'mgm_multi'
+cfg['matching_algorithm'] = 'mgm'
+
+# size of the Census NCC square windows used in mgm
+cfg['census_ncc_win'] = 5
+
+# MGM parameter: speckle filter minimum area (REMOVESMALLCC flag)
+cfg['stereo_speckle_filter'] = 25
+
+# MGM parameter: regularity (multiplies P1 and P2)
+cfg['stereo_regularity_multiplier'] = 1.0
 
 # clean height maps outliers
 cfg['cargarse_basura'] = True
