@@ -137,7 +137,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
         env['TSGM'] = '3'
-        conf = disp+'.confidence.tif'
+        conf = '{}_confidence.tif'.format(os.path.splitext(disp)[0])
         common.run('{0} -r {1} -R {2} -s vfit -t census -O 8 {3} {4} {5} -confidence_consensusL {6}'.format('mgm',
                                                                                  disp_min,
                                                                                  disp_max,
@@ -159,7 +159,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         regularity_multiplier = cfg['stereo_regularity_multiplier']
         P1 = 8*regularity_multiplier   # penalizes disparity changes of 1 between neighbor pixels
         P2 = 32*regularity_multiplier  # penalizes disparity changes of more than 1
-        conf = disp+'.confidence.tif'
+        conf = '{}_confidence.tif'.format(os.path.splitext(disp)[0])
         common.run('{0} -r {1} -R {2} -S 6 -s vfit -t census {3} {4} {5} -confidence_consensusL {6}'.format('mgm_multi',
                                                                                  disp_min,
                                                                                  disp_max,

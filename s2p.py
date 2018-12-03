@@ -301,7 +301,7 @@ def disparity_to_ply(tile):
     H_sec = os.path.join(out_dir, 'pair_1', 'H_sec.txt')
     pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_1.txt')
     disp  = os.path.join(out_dir, 'pair_1', 'rectified_disp.tif')
-    extra = os.path.join(out_dir, 'pair_1', 'rectified_disp.tif.confidence.tif')
+    extra = os.path.join(out_dir, 'pair_1', 'rectified_disp_confidence.tif')
     if not os.path.exists(extra):
         extra = ''
     mask_rect = os.path.join(out_dir, 'pair_1', 'rectified_mask.png')
