@@ -285,7 +285,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     return disp
 
 
-def rectification_homographies(matches, x, y, w, h, hmargin=0, vmargin=0):
+def rectification_homographies(matches, x, y, w, h):
     """
     Computes rectifying homographies from point matches for a given ROI.
 
@@ -299,9 +299,6 @@ def rectification_homographies(matches, x, y, w, h, hmargin=0, vmargin=0):
         x, y, w, h: four integers defining the rectangular ROI in the first
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        {h,v}margin: translations added to the rectifying similarities to extend the
-            horizontal and vertical footprint of the rectified images
-
     Returns:
         S1, S2, F: three numpy arrays of shape (3, 3) representing the
         two rectifying similarities to be applied to the two images and the
@@ -323,7 +320,7 @@ def rectification_homographies(matches, x, y, w, h, hmargin=0, vmargin=0):
     # pull back top-left corner of the ROI to the origin (plus margin)
     pts = common.points_apply_homography(S1, [[x, y], [x+w, y], [x+w, y+h], [x, y+h]])
     x0, y0 = common.bounding_box2D(pts)[:2]
-    T = common.matrix_translation(-x0 + hmargin, -y0 + vmargin)
+    T = common.matrix_translation(-x0, -y0)
     return np.dot(T, S1), np.dot(T, S2), F
 
 
@@ -372,7 +369,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         matches = sift_matches
 
     # compute rectifying homographies
-    H1, H2, F = rectification_homographies(matches, x, y, w, h, hmargin, vmargin)
+    H1, H2, F = rectification_homographies(matches, x, y, w, h)
 
     if cfg['register_with_shear']:
         # compose H2 with a horizontal shear to reduce the disparity range
@@ -402,7 +399,12 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
                                    os.path.join(out_dir, 'sift_matches_disp.png'))
     disp_m, disp_M = disparity_range(rpc1, rpc2, x, y, w, h, H1, H2,
                                      sift_matches, A)
-    
+
+    # recompute hmargin and homographies
+    hmargin = int(np.ceil(max([hmargin, np.fabs(disp_m), np.fabs(disp_M)])))
+    T = common.matrix_translation(hmargin, vmargin)
+    H1, H2 = np.dot(T, H1), np.dot(T, H2)
+
     # compute rectifying homographies for non-epipolar mode (rectify the secondary tile only)
     if block_matching.rectify_secondary_tile_only(cfg['matching_algorithm']):
         H1_inv = np.linalg.inv(H1)

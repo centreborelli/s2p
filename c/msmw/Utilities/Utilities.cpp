@@ -16,8 +16,9 @@
 #include <math.h>
 #include <png.h>
 #include <tiffio.h>
+#ifdef _OPENMP
 #include <omp.h>
-
+#endif
 
 //! Local includes
 #include "Utilities.h"

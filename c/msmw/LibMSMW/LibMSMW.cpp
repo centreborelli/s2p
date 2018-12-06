@@ -7,7 +7,7 @@
 
 
 //! Global includes
-#include <omp.h>
+//#include <omp.h>
 
 
 //! Local includes

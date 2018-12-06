@@ -24,7 +24,7 @@ SRCDIR = c
 BINDIR = bin
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) homography sift imscript mgm mgm_multi piio tvl1
+default: $(BINDIR) homography sift imscript mgm mgm_multi piio tvl1 lsd
 
 # the "all" rule builds four further correlators
 all: default msmw3 sgbm mgm_multi
@@ -52,12 +52,20 @@ sift: $(BINDIR)
 
 mgm:
 	$(MAKE) -C 3rdparty/mgm
-	cp 3rdparty/mgm/mgm $(BINDIR)
+	#cp 3rdparty/mgm/mgm $(BINDIR)
 
 mgm_multi:
 	mkdir -p $(BINDIR)/build_mgm_multi
 	cd $(BINDIR)/build_mgm_multi; cmake ../../3rdparty/mgm_multi; $(MAKE)
 	cp $(BINDIR)/build_mgm_multi/mgm_multi $(BINDIR)
+	cp $(BINDIR)/build_mgm_multi/mgm $(BINDIR)
+
+lsd:
+	wget http://www.ipol.im/pub/art/2012/gjmr-lsd/lsd_1.6.zip
+	mv lsd_1.6.zip 3rdparty
+	unzip -o 3rdparty/lsd_1.6.zip -d 3rdparty
+	$(MAKE) -C 3rdparty/lsd_1.6
+	cp 3rdparty/lsd_1.6/lsd $(BINDIR)
 
 # piio: a required python extension
 piio: s2plib/piio/libiio.so
@@ -118,7 +126,7 @@ PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
 SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop bdint morsi\
 	morphoop cldmask disp_to_h_projective colormesh_projective\
-	remove_small_cc plambda homwarp
+	remove_small_cc plambda homwarp pview
 SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
 SRCKKK = disp_to_h colormesh disp2ply multidisp2ply  bin2asc siftu ransac plyflatten plyextrema plytodsm
 
