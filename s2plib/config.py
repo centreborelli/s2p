@@ -59,7 +59,12 @@ cfg['dsm_radius'] = 0
 # (dsm_resolution by default)
 cfg['dsm_sigma'] = None
 
+# relative sift match threshold (else sift match threshold is absolute)
+cfg['relative_sift_match_thresh'] = True
+
+# if cfg['relative_sift_match_thresh'] is True :
 # sift threshold on the first over second best match ratio
+# else (absolute) a reasonable value is between 200 and 300 (128-vectors SIFT descriptors)
 cfg['sift_match_thresh'] = 0.6
 
 # disp range expansion facto
