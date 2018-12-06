@@ -29,6 +29,7 @@ void print_help(char *v[])
     fprintf(stderr, "usage:\n\t%s file1.txt file2.txt [-o file]"
             //                          0 1         2 3 4 5
             " [--verbose] [-f \"a b c d e\"]"
+            " [--absolute] [--sift-threshold t (0.6)]"
             " [--epipolar-threshold t (10)]\n", *v);
 }
 
@@ -39,12 +40,12 @@ int main(int c, char *v[])
     int n_hist = 4;
     int n_ori = 8;
     int n_bins = 36;
-    int meth_flag = 1;
-    float sift_thresh = 0.6;
 
     // parse arguments
     const char *output_file = pick_option(&c, &v, "o", "/dev/stdout");
     bool verbose = (bool) pick_option(&c, &v, "-verbose", NULL);
+    float sift_thresh = (float) atof(pick_option(&c, &v, "-sift-threshold", "0.6"));
+    bool meth_flag = ((bool) pick_option(&c, &v, "-absolute", NULL)) == false;
     float epi_thresh = (float) atof(pick_option(&c, &v, "-epipolar-threshold", "10"));
 
     // read the (optional) fundamental matrix

@@ -63,13 +63,17 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         model (optional, default is None): model imposed by RANSAC when
             searching the set of inliers. If None all matches are considered as
             inliers.
+        epipolar_threshold (optional, default is 10): maximum distance allowed for
+            a point to the epipolar line of its match.
 
     Returns:
         if any, a numpy 2D array containing the list of inliers matches.
     """
     # compute matches
     mfile = common.tmpfile('.txt')
-    cmd = "matching %s %s -%s %f -o %s" % (k1, k2, method, sift_thresh, mfile)
+    cmd = "matching %s %s -o %s --sift-threshold %f" % (k1, k2, mfile, sift_thresh)
+    if method == 'absolute':
+        cmd += " --absolute"
     if F is not None:
         fij = ' '.join(str(x) for x in [F[0, 2], F[1, 2], F[2, 0],
                                         F[2, 1], F[2, 2]])
@@ -118,12 +122,15 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
     F = estimation.affine_fundamental_matrix(rpc_matches)
 
+    # sift matching method:
+    method = 'relative' if cfg['relative_sift_match_thresh'] is True else 'absolute'
+
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
     for i in range(2):
         p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
-        matches = keypoints_match(p1, p2, 'relative', cfg['sift_match_thresh'],
+        matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'],
                                   F, model='fundamental',
                                   epipolar_threshold=cfg['max_pointing_error'])
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
