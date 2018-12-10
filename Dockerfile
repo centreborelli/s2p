@@ -3,7 +3,8 @@
 
 FROM ubuntu:16.04
 MAINTAINER Carlo de Franchis <carlodef@gmail.com>
-ARG DEBIAN_FRONTEND=noninteractive # https://goo.gl/aypXVx
+# https://goo.gl/aypXVx
+ARG DEBIAN_FRONTEND=noninteractive 
 RUN apt-get update && apt-get install -y \
     build-essential \
     geographiclib-tools \
@@ -18,7 +19,8 @@ RUN apt-get update && apt-get install -y \
     python-pip \
     cmake \
     software-properties-common \
-    python-software-properties
+    python-software-properties \
+    unzip
 RUN pip install -U pip
 RUN pip install utm bs4 lxml requests
 
