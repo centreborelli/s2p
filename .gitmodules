@@ -15,3 +15,7 @@
 	url = https://github.com/gfacciol/mgm.git
 	branch = multiscale
 	ignore = untracked
+[submodule "3rdparty/lsd"]
+	path = 3rdparty/lsd
+	url = https://github.com/openmv/lsd.git
+	ignore = untracked

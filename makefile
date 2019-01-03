@@ -61,11 +61,8 @@ mgm_multi:
 	cp $(BINDIR)/build_mgm_multi/mgm $(BINDIR)
 
 lsd:
-	wget http://www.ipol.im/pub/art/2012/gjmr-lsd/lsd_1.6.zip
-	mv lsd_1.6.zip 3rdparty
-	unzip -o 3rdparty/lsd_1.6.zip -d 3rdparty
-	$(MAKE) -C 3rdparty/lsd_1.6
-	cp 3rdparty/lsd_1.6/lsd $(BINDIR)
+	$(MAKE) -C 3rdparty/lsd
+	cp 3rdparty/lsd/lsd $(BINDIR)
 
 # piio: a required python extension
 piio: s2plib/piio/libiio.so
