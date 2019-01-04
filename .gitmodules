@@ -17,5 +17,5 @@
 	ignore = untracked
 [submodule "3rdparty/lsd"]
 	path = 3rdparty/lsd
-	url = https://github.com/openmv/lsd.git
+	url = https://github.com/cmla/lsd
 	ignore = untracked
