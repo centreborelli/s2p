@@ -420,7 +420,7 @@ def affine_crop(input_path, A, w, h):
         aoi = src.read(indexes=1, window=((y, y + h0), (x, x + w0)))
 
     # compensate the affine transform for the crop
-    B = A @ matrix_translation(x, y)
+    B = np.dot(A, matrix_translation(x, y))
 
     # apply the affine transform
     out = ndimage.affine_transform(aoi.T, np.linalg.inv(B), output_shape=(w, h)).T
