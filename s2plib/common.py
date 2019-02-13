@@ -17,6 +17,10 @@ import subprocess
 import multiprocessing
 import numpy as np
 from osgeo import gdal
+from scipy import ndimage
+import rasterio
+
+from s2plib import piio
 
 
 from s2plib.config import cfg
@@ -375,28 +379,52 @@ def image_zoom_out_morpho(im, f):
     return out
 
 
-def image_apply_homography(out, im, H, w, h):
+def image_apply_affinity(out, input_path, A, w, h):
     """
-    Applies an homography to an image.
+    Apply an affine transform to an image and save it to a file.
 
     Args:
-        out: path to the output image file
-        im: path to the input image file
-        H: numpy array containing the 3x3 homography matrix
-        w, h: dimensions (width and height) of the output image
-
-    The output image is defined on the domain [0, w] x [0, h]. Its pixels
-    intensities are defined by out(x) = im(H^{-1}(x)).
-
-    This function calls the homography binary, rewritten by Marc Lebrun and
-    Carlo de Franchis based on a code of Pascal Monasse refactored by Gabriele
-    Facciolo.
+        out (str): path to the output image file
+        input_path (str): path or url to the input image
+        A (2D array): 3x3 array representing an affine transform in
+            homogeneous coordinates
+        w, h (ints): width and height of the output image
     """
-    # write the matrix to a string
-    hij = " ".join(str(x) for x in H.flatten())
+    img = affine_crop(input_path, A, w, h)
+    piio.write(out, img)
 
-    # apply the homography
-    run("homography %s -h \"%s\" %s %d %d" % (im, hij, out, w, h))
+
+def affine_crop(input_path, A, w, h):
+    """
+    Apply an affine transform to an image.
+
+    Args:
+        input_path (str): path or url to the input image
+        A (2D array): 3x3 array representing an affine transform in
+            homogeneous coordinates
+        w, h (ints): width and height of the output image
+
+    Return:
+        numpy array of shape (h, w) containing a subset of the transformed
+        image. The subset is the rectangle between points 0, 0 and w, h.
+    """
+    # determine the rectangle that we need to read in the input image
+    output_rectangle = [[0, 0], [w, 0], [w, h], [0, h]]
+    x, y, w0, h0 = bounding_box2D(points_apply_homography(np.linalg.inv(A),
+                                                          output_rectangle))
+    x, y = np.floor((x, y)).astype(int)
+    w0, h0 = np.ceil((w0, h0)).astype(int)
+
+    # crop the needed rectangle in the input image
+    with rasterio.open(input_path, 'r') as src:
+        aoi = src.read(indexes=1, window=((y, y + h0), (x, x + w0)))
+
+    # compensate the affine transform for the crop
+    B = A @ matrix_translation(x, y)
+
+    # apply the affine transform
+    out = ndimage.affine_transform(aoi.T, np.linalg.inv(B), output_shape=(w, h)).T
+    return out
 
 
 def median_filter(im, w, n):

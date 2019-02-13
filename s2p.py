@@ -314,9 +314,9 @@ def disparity_to_ply(tile):
         roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
         ww, hh = common.bounding_box2D(common.points_apply_homography(hom, roi))[2:]
         tmp = common.tmpfile('.tif')
-        common.image_apply_homography(tmp, cfg['images'][0]['clr'], hom,
-                                      ww + 2*cfg['horizontal_margin'],
-                                      hh + 2*cfg['vertical_margin'])
+        common.image_apply_affinity(tmp, cfg['images'][0]['clr'], hom, ww +
+                                    2*cfg['horizontal_margin'], hh +
+                                    2*cfg['vertical_margin'])
         common.image_qauto(tmp, colors)
     else:
         common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)

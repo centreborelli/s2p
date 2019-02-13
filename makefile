@@ -24,7 +24,7 @@ SRCDIR = c
 BINDIR = bin
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) homography sift imscript mgm mgm_multi piio tvl1 lsd
+default: $(BINDIR) sift imscript mgm mgm_multi piio tvl1 lsd
 
 # the "all" rule builds four further correlators
 all: default msmw3 sgbm mgm_multi
@@ -38,12 +38,8 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 #
-# four standard "modules": homography, sift, mgm, and mgm_multi
+# three standard "modules": sift, mgm, and mgm_multi
 #
-
-homography: $(BINDIR)
-	$(MAKE) -j -C c/homography
-	cp c/homography/homography $(BINDIR)
 
 sift: $(BINDIR)
 	$(MAKE) -j -C c/sift
@@ -194,16 +190,12 @@ depend:
 
 
 # rules for cleaning, nothing interesting below this point
-clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
+clean: clean_asift clean_sift clean_imscript clean_msmw\
 	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio\
 	clean_depend
 
 clean_depend:
 	$(RM) makefile.dep
-
-clean_homography:
-	$(MAKE) -C c/homography clean
-	$(RM) $(BINDIR)/homography
 
 clean_sift:
 	$(MAKE) -C c/sift clean

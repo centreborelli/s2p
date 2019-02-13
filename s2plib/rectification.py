@@ -422,8 +422,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     np.testing.assert_allclose(np.round([x0, y0]), [hmargin, vmargin], atol=.01)
 
     # apply homographies and do the crops
-    common.image_apply_homography(out1, im1, H1, w0 + 2*hmargin, h0 + 2*vmargin)
-    common.image_apply_homography(out2, im2, H2, w0 + 2*hmargin, h0 + 2*vmargin)
+    common.image_apply_affinity(out1, im1, H1, w0 + 2*hmargin, h0 + 2*vmargin)
+    common.image_apply_affinity(out2, im2, H2, w0 + 2*hmargin, h0 + 2*vmargin)
 
     if block_matching.rectify_secondary_tile_only(cfg['matching_algorithm']):
         pts_in = [[0, 0], [disp_m, 0], [disp_M, 0]]
