@@ -13,14 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import argparse, json, os
-import sys
-
-# This is needed to import from a sibling folder
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import os
+import json
+import argparse
 
 import s2p
-from s2plib import common
+from s2p import common
 
 
 
@@ -86,7 +84,7 @@ def produce_lidarviewer(s2poutdir, output):
     """
 
     tiles_file = os.path.join(s2poutdir, 'tiles.txt')
-    
+
     # Read the tiles file
     tiles = s2p.read_tiles(tiles_file)
     print(str(len(tiles))+' tiles found')
@@ -94,7 +92,7 @@ def produce_lidarviewer(s2poutdir, output):
     # collect all plys
     plys = [os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply') for t in tiles]
 
-	
+
     nthreads = 4
     plys = ' '.join(plys)
     common.run("LidarPreprocessor -to %s.LidarO -tp %s.LidarP -nt %d %s -o %s" % (output,
@@ -103,10 +101,10 @@ def produce_lidarviewer(s2poutdir, output):
                                                                            plys,
                                                                            output))
 
-    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: lidarviewer generation tool'))
-    
+
     parser.add_argument('s2pout',metavar='s2poutdir',
                         help=('path to the s2p output directory'))
     parser.add_argument('outdir',metavar='potreeoutdir', default='',nargs='?',

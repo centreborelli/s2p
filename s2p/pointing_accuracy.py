@@ -8,14 +8,14 @@ from __future__ import print_function
 import os
 import numpy as np
 
-from s2plib import sift
-from s2plib import rectification
-from s2plib import rpc_utils
-from s2plib import rpc_model
-from s2plib import common
-from s2plib import estimation
-from s2plib import evaluation
-from s2plib.config import cfg
+from s2p import sift
+from s2p import rectification
+from s2p import rpc_utils
+from s2p import rpc_model
+from s2p import common
+from s2p import estimation
+from s2p import evaluation
+from s2p.config import cfg
 
 
 def evaluation_iterative(im1, im2, rpc1, rpc2, x, y, w, h, A=None,

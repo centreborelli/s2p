@@ -10,11 +10,11 @@ import datetime
 from osgeo import gdal, osr
 import numpy as np
 
-from s2plib import estimation
-from s2plib import geographiclib
-from s2plib import common
-from s2plib import rpc_model
-from s2plib.config import cfg
+from s2p import estimation
+from s2p import geographiclib
+from s2p import common
+from s2p import rpc_model
+from s2p.config import cfg
 
 def print_distance_between_vectors(u, v, msg):
     """

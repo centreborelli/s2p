@@ -13,14 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import argparse, json, os
-import sys
-
-# This is needed to import from a sibling folder
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import os
+import json
+import argparse
 
 import s2p
-from s2plib import common
+from s2p import common
 
 
 
@@ -74,7 +72,7 @@ def plys_to_potree(input_plys, output, bin_dir='.'):
     PotreeConverter = os.path.join(bin_dir, 'PotreeConverter/build/PotreeConverter/PotreeConverter')
 
     #if (not os.path.exists(ply2ascii)) or (not os.path.exists(txt2las)) or (not os.path.exists(PotreeConverter)) :
-    #    return  
+    #    return
 
     outdir = os.path.dirname(output)
 
@@ -89,9 +87,9 @@ def plys_to_potree(input_plys, output, bin_dir='.'):
         lp = tmpfile('.las', outdir)
 
         las.append(lp)
-        common.run("%s < %s > %s" % (ply2ascii, p, ap)) 
+        common.run("%s < %s > %s" % (ply2ascii, p, ap))
         # convert ply to las because PotreeConverter is not able to read PLY
-        common.run("%s -parse xyzRGB -verbose -i  %s -o %s 2>/dev/null" % (txt2las, ap, lp)) 
+        common.run("%s -parse xyzRGB -verbose -i  %s -o %s 2>/dev/null" % (txt2las, ap, lp))
 
     # generate potree output
     listfile = tmpfile('.txt', outdir)
@@ -155,7 +153,7 @@ def produce_potree(s2poutdir, potreeoutdir):
     test_for_potree(os.path.join(basedir,'PotreeConverter_PLY_toolchain/'))
 
     tiles_file = os.path.join(s2poutdir, 'tiles.txt')
-    
+
     # Read the tiles file
     tiles = s2p.read_tiles(tiles_file)
     print(str(len(tiles))+' tiles found')
@@ -178,14 +176,14 @@ def produce_potree(s2poutdir, potreeoutdir):
 #    plys = [os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply') for t in tiles if os.path.isfile(os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply'))]
 
     # produce the potree point cloud
-    plys_to_potree(plys, os.path.join(potreeoutdir, 'cloud.potree'), 
+    plys_to_potree(plys, os.path.join(potreeoutdir, 'cloud.potree'),
 		os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'))
 
 
-    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: potree generation tool'))
-    
+
     parser.add_argument('s2pout',metavar='s2poutdir',
                         help=('path to the s2p output directory'))
     parser.add_argument('potreeoutdir',metavar='potreeoutdir', default='',nargs='?',

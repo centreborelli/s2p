@@ -19,7 +19,7 @@ import numpy as np
 from osgeo import gdal
 
 
-from s2plib.config import cfg
+from s2p.config import cfg
 
 
 # add the bin folder to system path
@@ -676,7 +676,7 @@ def get_rectangle_coordinates(im):
             rectangle.
     """
     points_file = tmpfile('.txt')
-    run('python s2plib/viewGL.py %s > %s' % (shellquote(im), points_file))
+    run('python s2p/viewGL.py %s > %s' % (shellquote(im), points_file))
     x1, y1, x2, y2 = map(int, open(points_file).read().split())
     # viewGL.py returns the coordinates of two corners defining the rectangle.
     # We can's make any assumption on the ordering of these coordinates.

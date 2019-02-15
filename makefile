@@ -65,10 +65,10 @@ lsd:
 	cp 3rdparty/lsd/lsd $(BINDIR)
 
 # piio: a required python extension
-piio: s2plib/piio/libiio.so
+piio: s2p/piio/libiio.so
 
-s2plib/piio/libiio.so: s2plib/piio/setup.py s2plib/piio/freemem.c s2plib/piio/iio.c s2plib/piio/iio.h
-	$(MAKE) -C s2plib/piio
+s2p/piio/libiio.so: s2p/piio/setup.py s2p/piio/freemem.c s2p/piio/iio.c s2p/piio/iio.h
+	$(MAKE) -C s2p/piio
 
 
 #
@@ -247,7 +247,7 @@ clean_mgm:
 	$(RM) $(BINDIR)/mgm
 
 clean_piio:
-	$(MAKE) -C s2plib/piio clean
+	$(MAKE) -C s2p/piio clean
 
 .PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
 	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_piio test
