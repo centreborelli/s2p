@@ -418,6 +418,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
     pts1 = common.points_apply_homography(H1, roi)
     x0, y0, w0, h0 = common.bounding_box2D(pts1)
+    w0, h0 = np.ceil([w0, h0]).astype(int)
+
     # check that the first homography maps the ROI in the positive quadrant
     np.testing.assert_allclose(np.round([x0, y0]), [hmargin, vmargin], atol=.01)
 
