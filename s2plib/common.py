@@ -21,7 +21,6 @@ from osgeo import gdal
 from scipy import ndimage
 import rasterio
 
-from s2plib import piio
 from s2plib.config import cfg
 
 warnings.filterwarnings("ignore",
@@ -381,6 +380,39 @@ def image_zoom_out_morpho(im, f):
     return out
 
 
+def rasterio_write(path, array, profile={}, tags={}):
+    """
+    Write a numpy array in a tiff or png file with rasterio.
+
+    Args:
+        path (str): path to the output tiff/png file
+        array (numpy array): 2D or 3D array containing the image to write.
+        profile (dict): rasterio profile (ie dictionary of metadata)
+        tags (dict): dictionary with additional geotiff tags
+    """
+    # determine the driver based on the file extension
+    extension = os.path.splitext(path)[1].lower()
+    if extension in ['.tif', '.tiff']:
+        driver = 'GTiff'
+    elif extension in ['.png']:
+        driver = 'png'
+    else:
+        raise NotImplementedError('format {} not supported'.format(extension))
+
+    # read image size and number of bands
+    array = np.atleast_3d(array)
+    height, width, nbands = array.shape
+
+    # define image metadata dict
+    profile.update(driver=driver, count=nbands, width=width, height=height,
+                   dtype=array.dtype)
+
+    # write to file
+    with rasterio.open(path, 'w', **profile) as dst:
+        dst.write(np.transpose(array, (2, 0, 1)))
+        dst.update_tags(**tags)
+
+
 def image_apply_affinity(out, input_path, A, w, h):
     """
     Apply an affine transform to an image and save it to a file.
@@ -393,7 +425,7 @@ def image_apply_affinity(out, input_path, A, w, h):
         w, h (ints): width and height of the output image
     """
     img = affine_crop(input_path, A, w, h)
-    piio.write(out, img)
+    rasterio_write(out, img)
 
 
 def affine_crop(input_path, A, w, h):
