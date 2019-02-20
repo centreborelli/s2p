@@ -10,6 +10,7 @@ import re
 import sys
 import errno
 import base64
+import warnings
 import datetime
 import requests
 import tempfile
@@ -21,9 +22,10 @@ from scipy import ndimage
 import rasterio
 
 from s2plib import piio
-
-
 from s2plib.config import cfg
+
+warnings.filterwarnings("ignore",
+                        category=rasterio.errors.NotGeoreferencedWarning)
 
 
 # add the bin folder to system path
