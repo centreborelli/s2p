@@ -1,5 +1,6 @@
 import subprocess
 from setuptools import setup, find_packages
+from setuptools.command import develop, build_py
 
 
 def readme():
@@ -7,7 +8,7 @@ def readme():
         return f.read()
 
 
-class CustomDevelop(setuptools.command.develop.develop):
+class CustomDevelop(develop.develop):
     """
     Class needed for "pip install -e ."
     """
@@ -16,7 +17,7 @@ class CustomDevelop(setuptools.command.develop.develop):
         super().run()
 
 
-class CustomBuildPy(setuptools.command.build_py.build_py):
+class CustomBuildPy(build_py.build_py):
     """
     Class needed for "pip install pys2p"
     """
@@ -27,6 +28,9 @@ class CustomBuildPy(setuptools.command.build_py.build_py):
 
 
 requirements = ['numpy',
+                'scipy',
+                'gdal',
+                'rasterio[s3]',
                 'utm',
                 'bs4',
                 'requests']
