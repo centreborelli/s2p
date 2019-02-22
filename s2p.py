@@ -28,11 +28,10 @@ import argparse
 import numpy as np
 import subprocess
 import multiprocessing
-from osgeo import gdal
 import collections
 import shutil
+import rasterio
 
-gdal.UseExceptions()
 
 from s2plib.config import cfg
 from s2plib import common
@@ -451,10 +450,9 @@ def mean_heights(tile):
     maps = np.empty((h, w, n))
     for i in range(n):
         try:
-            f = gdal.Open(os.path.join(tile['dir'], 'pair_{}'.format(i + 1),
-                                       'height_map.tif'))
-            maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
-            f = None  # this is the gdal way of closing files
+            with rasterio.open(os.path.join(tile['dir'], 'pair_{}'.format(i + 1),
+                                            'height_map.tif'), 'r') as f:
+                maps[:, :, i] = f.read(1)
         except RuntimeError:  # the file is not there
             maps[:, :, i] *= np.nan
 
