@@ -265,48 +265,6 @@ def fundamental_matrix_cameras(P1, P2):
     return F
 
 
-def loop_zhang(F, w, h):
-    """
-    Computes rectifying homographies from a fundamental matrix, with Loop-Zhang.
-
-    Args:
-        F: 3x3 numpy array containing the fundamental matrix
-        w, h: images size. The two images are supposed to have same size
-
-    Returns:
-        The two rectifying homographies.
-
-    The rectifying homographies are computed using the Pascal Monasse binary
-    named rectify_mindistortion. It uses the Loop-Zhang algorithm.
-    """
-    Ffile = common.tmpfile('.txt')
-    Haf = common.tmpfile('.txt')
-    Hbf = common.tmpfile('.txt')
-    common.matrix_write(Ffile, F)
-    common.run('rectify_mindistortion %s %d %d %s %s > /dev/null' % (Ffile, w,
-                                                                     h, Haf,
-                                                                     Hbf))
-    Ha = common.matrix_read(Haf, size=(3, 3))
-    Hb = common.matrix_read(Hbf, size=(3, 3))
-
-    # check if both the images are rotated
-    a = does_this_homography_change_the_vertical_direction(Ha)
-    b = does_this_homography_change_the_vertical_direction(Hb)
-    if a and b:
-        R = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])
-        Ha = np.dot(R, Ha)
-        Hb = np.dot(R, Hb)
-    return Ha, Hb
-
-
-def does_this_homography_change_the_vertical_direction(H):
-    d = H[1,1]
-    q = H[1,2]
-    s = H[2,1]
-    t = H[2,2]
-    return ((d+q) / (s+t)) < (q/t)
-
-
 def get_angle_from_cos_and_sin(c, s):
     """
     Computes x in ]-pi, pi] such that cos(x) = c and sin(x) = s.

@@ -69,8 +69,3 @@ def test_affine_transformation():
         xx = common.points_apply_homography(B, x)
         E = estimation.affine_transformation(x, xx)
         assert_array_almost_equal(E, B)
-
-#def test_camera_matrix():
-#def test_fundamental_matrix():
-#def test_fundamental_matrix_ransac():
-#def test_loop_zhang():
