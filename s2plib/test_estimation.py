@@ -25,19 +25,6 @@ def similarity_matrix(t, s):
     R[1, 1] =  s * np.cos(t)
     return R
 
-def test_normalize_2d_points():
-    pts = np.array([[0, 0], [1, 0], [1, 1], [0, 1]])
-    new_pts, T = estimation.normalize_2d_points(pts)
-    assert_array_almost_equal(new_pts, [[-1, -1], [1, -1], [1, 1], [-1, 1]])
-    assert_array_almost_equal(T, [[2, 0, -1], [0, 2, -1], [0, 0, 1]])
-
-def test_normalize_3d_points():
-    pts = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
-                    [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]])
-    new_pts, U = estimation.normalize_3d_points(pts)
-    assert_array_almost_equal(U, [[2, 0, 0, -1], [0, 2, 0, -1], [0, 0, 2, -1], [0, 0, 0, 1]])
-    assert_array_almost_equal(new_pts, [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
-                                        [-1, -1,  1], [1, -1,  1], [1, 1,  1], [-1, 1,  1]])
 
 def test_affine_transformation():
     x =  np.array([[0, 0], [0, 1], [1, 0], [1, 1]])

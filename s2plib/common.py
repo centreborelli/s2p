@@ -161,39 +161,6 @@ def gdal_read_as_array_with_nans(im):
     return array
 
 
-def grep_xml(xml_file, tag):
-    """
-    Reads the value of an element in an xml file.
-
-    Args:
-        xml_file: path to the xml file
-        tag: start/end tag delimiting the desired element
-
-    Returns:
-        A string containing the element written between <tag> and </tag>
-        Only the value of the element associated to the first occurence of the
-        tag will be returned.
-    """
-    try:
-        with open(xml_file):
-            p1 = subprocess.Popen(['grep', tag, xml_file],
-                    stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(['cut', '-d', '>', '-f', '2'],
-                    stdin=p1.stdout, stdout=subprocess.PIPE)
-            p3 = subprocess.Popen(['cut', '-d', '<', '-f', '1'],
-                    stdin=p2.stdout, stdout=subprocess.PIPE)
-            lines = p3.stdout.read().splitlines()
-            if not lines:
-                print("grep_xml: no tag %s in file %s" % (tag, xml_file))
-                return
-            if len(lines) > 1:
-                print("grep_xml: WARNING several occurences of %s in file %s" % (tag, xml_file))
-            return lines[0]
-    except IOError:
-        print("grep_xml: the input file %s doesn't exist" % xml_file)
-        sys.exit()
-
-
 def image_zoom_out_morpho(im, f):
     """
     Image zoom out by morphological operation (median).
