@@ -11,7 +11,6 @@ import numpy as np
 from osgeo import gdal
 gdal.UseExceptions()
 
-from s2plib import piio
 from s2plib.config import cfg
 
 
@@ -52,8 +51,8 @@ def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
         x[:, :, i] = f.GetRasterBand(1).ReadAsArray() - offsets[i]
         f = None
         if cfg['debug']:
-            piio.write('{}_registered.tif'.format(os.path.splitext(img)[0]),
-                       x[:, :, i] + np.mean(offsets))
+            common.rasterio_write('{}_registered.tif'.format(os.path.splitext(img)[0]),
+                                  x[:, :, i] + np.mean(offsets))
 
     # apply the averaging operator
     if averaging.startswith(('np.', 'numpy.')):
