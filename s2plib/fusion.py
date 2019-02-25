@@ -12,6 +12,7 @@ from osgeo import gdal
 gdal.UseExceptions()
 
 from s2plib.config import cfg
+from s2plib import common
 
 
 def average_if_close(x, threshold):
