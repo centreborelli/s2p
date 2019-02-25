@@ -37,10 +37,10 @@ def unit_gdal_version():
 
 def unit_image_keypoints():
 
-    kpts = s2p.sift.image_keypoints('data/input_triplet/img_02.tif',100,100,200,200)
+    kpts = s2p.sift.image_keypoints('tests/data/input_triplet/img_02.tif', 100, 100, 200, 200)
 
     test_kpts = np.loadtxt(kpts)
-    ref_kpts  = np.loadtxt('data/expected_output/units/unit_image_keypoints.txt')
+    ref_kpts  = np.loadtxt('tests/data/expected_output/units/unit_image_keypoints.txt')
 
     test_set = set(map(tuple,test_kpts[:,0:2]))
     ref_set = set(map(tuple,ref_kpts[:,0:2]))
@@ -87,8 +87,8 @@ def unit_image_keypoints():
 
 def unit_matching():
 
-    test_matches = s2p.sift.keypoints_match('data/units/sift1.txt','data/units/sift2.txt')
-    expected_matches = np.loadtxt('data/expected_output/units/unit_keypoints_match.txt')
+    test_matches = s2p.sift.keypoints_match('tests/data/units/sift1.txt','tests/data/units/sift2.txt')
+    expected_matches = np.loadtxt('tests/data/expected_output/units/unit_keypoints_match.txt')
 
     # Check that numbers of matches are the same
     np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0],verbose=True)
@@ -99,8 +99,8 @@ def unit_matching():
 
 # test the plyflatten executable
 def unit_plyflatten():
-    f = "data/input_ply/cloud.ply"                       # input cloud
-    e = "data/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
+    f = "tests/data/input_ply/cloud.ply"                       # input cloud
+    e = "tests/data/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
     o = s2p.common.tmpfile(".tiff")                       # actual output
     s2p.common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
     s = "\"%w %h %v %Y\n\"" # statistics to compare: width,height,avg,numnans
@@ -115,11 +115,11 @@ def unit_plyflatten():
 
 def unit_matches_from_rpc():
 
-    rpc1 = s2p.rpc_model.RPCModel('data/input_pair/rpc_01.xml')
-    rpc2 = s2p.rpc_model.RPCModel('data/input_pair/rpc_02.xml')
+    rpc1 = s2p.rpc_model.RPCModel('tests/data/input_pair/rpc_01.xml')
+    rpc2 = s2p.rpc_model.RPCModel('tests/data/input_pair/rpc_02.xml')
 
     test_matches = s2p.rpc_utils.matches_from_rpc(rpc1,rpc2,100,100,200,200,5)
-    expected_matches = np.loadtxt('data/expected_output/units/unit_matches_from_rpc.txt')
+    expected_matches = np.loadtxt('tests/data/expected_output/units/unit_matches_from_rpc.txt')
 
     np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
@@ -268,12 +268,12 @@ registered_tests = [('unit_gdal_version', (unit_gdal_version,[])),
                     ('unit_matching', (unit_matching,[])),
                     ('unit_plyflatten', (unit_plyflatten,[])),
                     ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
-                    ('end2end_pair', (end2end, ['data/input_pair/config.json','data/expected_output/pair/dsm.tif',0.025,1])),
-                    ('end2end_triplet', (end2end, ['data/input_triplet/config.json','data/expected_output/triplet/dsm.tif',0.05,2])),
-                    ('end2end_cluster', (end2end_cluster, ['data/input_triplet/config.json'])),
-                    ('end2end_mosaic', (end2end_mosaic, ['data/input_triplet/config.json','data/expected_output/triplet/height_map.tif',0.05,2])),
-                    ('end2end_geometric', (end2end, ['data/input_triplet/config_geo.json', 'data/expected_output/triplet/dsm_geo.tif',0.05,2])),
-                    ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['data/input_triplet/config.json']))]
+                    ('end2end_pair', (end2end, ['tests/data/input_pair/config.json','tests/data/expected_output/pair/dsm.tif',0.025,1])),
+                    ('end2end_triplet', (end2end, ['tests/data/input_triplet/config.json','tests/data/expected_output/triplet/dsm.tif',0.05,2])),
+                    ('end2end_cluster', (end2end_cluster, ['tests/data/input_triplet/config.json'])),
+                    ('end2end_mosaic', (end2end_mosaic, ['tests/data/input_triplet/config.json','tests/data/expected_output/triplet/height_map.tif',0.05,2])),
+                    ('end2end_geometric', (end2end, ['tests/data/input_triplet/config_geo.json', 'tests/data/expected_output/triplet/dsm_geo.tif',0.05,2])),
+                    ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['tests/data/input_triplet/config.json']))]
 
 registered_tests = collections.OrderedDict(registered_tests)
 
