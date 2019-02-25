@@ -6,7 +6,6 @@ export CXXFLAGS = -march=native -O3
 LDLIBS = -lstdc++
 IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
 GEOLIBS = -lgeotiff -ltiff
-FFTLIBS = -lfftw3f -lfftw3
 GDAL_LIBS=`gdal-config --libs`
 GDAL_CFLAGS=`gdal-config --cflags`
 
@@ -120,20 +119,15 @@ tvl1:
 #
 
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
-SRC = $(SRCIIO) $(SRCFFT) $(SRCKKK)
-SRCIIO = downsa backflow synflow imprintf iion qauto qeasy crop bdint morsi\
-	morphoop cldmask disp_to_h_projective colormesh_projective\
-	remove_small_cc plambda homwarp pview
-SRCFFT = gblur blur fftconvolve zoom_zeropadding zoom_2d
-SRCKKK = disp_to_h colormesh disp2ply multidisp2ply  bin2asc siftu ransac plyflatten plyextrema plytodsm
+SRC = $(SRCIIO) $(SRCKKK)
+SRCIIO = downsa backflow synflow imprintf qauto morsi\
+	morphoop cldmask remove_small_cc plambda homwarp pview
+SRCKKK = disp_to_h colormesh disp2ply multidisp2ply bin2asc ransac plyflatten plyextrema
 
 imscript: $(BINDIR) $(PROGRAMS)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
-
-$(addprefix $(BINDIR)/,$(SRCFFT)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS) $(FFTLIBS)
 
 $(SRCDIR)/iio.o: c/iio.c c/iio.h
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -143,9 +137,6 @@ $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
 
 $(BINDIR)/bin2asc: c/bin2asc.c
 	$(CC) $(CFLAGS) $^ -o $@
-
-$(BINDIR)/siftu: c/siftu.c c/siftie.c
-	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/homographies.c\
 	c/ransac_cases.c c/parsenumbers.c c/random.c
@@ -174,9 +165,6 @@ $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 
 $(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS) $(GDAL_CFLAGS) $^ -o $@ $(IIOLIBS) $(GDAL_LIBS)
-
-$(BINDIR)/plytodsm: $(SRCDIR)/plytodsm.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) -I/usr/include/geotiff $^ -o $@ $(IIOLIBS) $(GEOLIBS)
 
 # Geographiclib wrappers
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp

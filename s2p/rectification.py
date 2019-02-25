@@ -5,7 +5,6 @@
 
 from __future__ import print_function
 import os
-import sys
 import numpy as np
 
 from s2p import rpc_model
@@ -13,42 +12,9 @@ from s2p import rpc_utils
 from s2p import estimation
 from s2p import evaluation
 from s2p import common
-from s2p import sift
 from s2p import visualisation
 from s2p import block_matching
 from s2p.config import cfg
-
-
-def center_2d_points(pts):
-    """
-    Translates 2D points.
-
-    The input points are translated such that the output points are centered at
-    origin.
-
-    Args:
-        pts: 2D array of dimension Nx2 containing the coordinates of the input
-            points, one point per line
-
-    Returns:
-        new_x, new_y, T: coordinates of the transformed points, together with
-            the similarity (translation) matrix. This transformation takes the
-            input points on the output points.
-    """
-    # centroid
-    cx = np.mean(pts[:, 0])
-    cy = np.mean(pts[:, 1])
-
-    # shift origin to centroid
-    new_x = pts[:, 0] - cx
-    new_y = pts[:, 1] - cy
-
-    # translation matrix
-    T = np.eye(3)     #              1     0    -cx
-    T[0, 2] = -cx     # matrix T  =  0     1    -cy
-    T[1, 2] = -cy     #              0     0     1
-
-    return np.vstack([new_x, new_y]).T, T
 
 
 def filter_matches_epipolar_constraint(F, matches, thresh):

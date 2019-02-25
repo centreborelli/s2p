@@ -18,3 +18,4 @@
 [submodule "3rdparty/lsd"]
 	path = 3rdparty/lsd
 	url = https://github.com/cmla/lsd.git
+	ignore = untracked

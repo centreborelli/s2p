@@ -6,15 +6,11 @@
 
 from __future__ import print_function
 import os
-import re
 import sys
 import errno
-import base64
 import datetime
-import requests
 import tempfile
 import subprocess
-import multiprocessing
 import numpy as np
 from osgeo import gdal
 
@@ -113,45 +109,6 @@ def shellquote(s):
     return "'%s'" % s.replace("'", "'\\''")
 
 
-def matrix_write(filename, m):
-    """
-    Writes a 3x3 matrix in a txt file using the matlab format.
-
-    Args:
-        filename: path of the file where to write the matrix
-        m: 3x3 array
-    """
-    f = open(filename, 'w')
-    f.write('[ %.20f  %.20f  %.20f ; ' % (m[0, 0], m[0, 1], m[0, 2]))
-    f.write('  %.20f  %.20f  %.20f ; ' % (m[1, 0], m[1, 1], m[1, 2]))
-    f.write('  %.20f  %.20f  %.20f ] ' % (m[2, 0], m[2, 1], m[2, 2]))
-    f.close()
-
-
-def matrix_read(filename, size=None):
-    """
-    Reads a matrix from a txt file assuming the matlab format was used.
-
-    Args:
-        filename: path of the file from where to read the matrix
-        size: tuple (r, c) telling the number of rows and columns of the matrix
-
-    Returns:
-        numpy array
-    """
-    with open(filename, 'r') as f:
-        return matrix_read_from_string(f.read(), size)
-
-
-def matrix_read_from_string(s, size=None):
-    x = s.replace('[', ' ').replace(']', ' ').replace(',', ' ').replace(';', ' ')
-    x = map(float, x.split())
-    if size:
-       return np.array(x).reshape(size[0], size[1])
-    else:
-       return np.array(x)
-
-
 def matrix_translation(x, y):
     t = np.eye(3)
     t[0, 2] = x
@@ -204,157 +161,6 @@ def gdal_read_as_array_with_nans(im):
     return array
 
 
-def grep_xml(xml_file, tag):
-    """
-    Reads the value of an element in an xml file.
-
-    Args:
-        xml_file: path to the xml file
-        tag: start/end tag delimiting the desired element
-
-    Returns:
-        A string containing the element written between <tag> and </tag>
-        Only the value of the element associated to the first occurence of the
-        tag will be returned.
-    """
-    try:
-        with open(xml_file):
-            p1 = subprocess.Popen(['grep', tag, xml_file],
-                    stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(['cut', '-d', '>', '-f', '2'],
-                    stdin=p1.stdout, stdout=subprocess.PIPE)
-            p3 = subprocess.Popen(['cut', '-d', '<', '-f', '1'],
-                    stdin=p2.stdout, stdout=subprocess.PIPE)
-            lines = p3.stdout.read().splitlines()
-            if not lines:
-                print("grep_xml: no tag %s in file %s" % (tag, xml_file))
-                return
-            if len(lines) > 1:
-                print("grep_xml: WARNING several occurences of %s in file %s" % (tag, xml_file))
-            return lines[0]
-    except IOError:
-        print("grep_xml: the input file %s doesn't exist" % xml_file)
-        sys.exit()
-
-
-def image_fftconvolve(im, mtf):
-    """
-    returns the fourier convolution: F^{-1} ( F(im)  mtf )
-    mtf and im must be the same size
-    """
-    out = tmpfile('.tif')
-    run('fftconvolve %s %s %s' % (mtf, im, out))
-    return out
-
-
-def image_zeropadding_from_image_with_target_size(im, image_with_target_size):
-    """
-    zooms im by zero padding to the size of the image_with_target_size
-    It works with the fft representation of im
-    and just adds or remove frequencies from it
-    No control of Gibbs artifacts
-    """
-    out = tmpfile('.tif')
-    run('zoom_zeropadding %s %s %s' % (image_with_target_size, im, out))
-    return out
-
-
-def image_apply_pleiades_unsharpening_filter(im):
-    """
-    Convolve the image by the unsharpening MTF idata_0009_MTF_89x89.tif.
-
-    This filter specifically undoes the sharpening applied to the sensor perfect
-    Pleiades images. It has been pre-computed for processing Pleiades sensor
-    perfect images resampled with a factor 1.4x. But in theory it should be
-    adapted depending on the RESAMPLING_SPACING stored in the RPC xml files.
-    """
-    mtf = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       'idata_0009_MTF_89x89.tif')
-    mtf_large = image_zeropadding_from_image_with_target_size(mtf, im)
-    return image_fftconvolve(im, mtf_large)
-
-
-def image_safe_zoom_fft(im, f, out=None):
-    """
-    zooms im by a factor: f in [0,1] for zoom in, f in [1 +inf] for zoom out. It
-    works with the fft representation of the symmetrized im thus it controls
-    the Gibbs artifacts.
-    In case of zoom out it filters the image before truncating the
-    spectrum, for zoom in it performs a zero padding.
-    Because of the discrete frequency representation the zero padding/
-    truncation may yield a final zoom factor that differs from the
-    desired one, particularly for small source or target images.
-    """
-    if f == 1:
-        return im
-
-    if out is None:
-        out = tmpfile('.tif')
-
-    sz = image_size_gdal(im)
-    # FFT doesn't play nice with infinite values, so we remove them
-    run('zoom_2d %s %s %d %d' % (im, out, sz[0]/f, sz[1]/f))
-    return out
-
-
-def image_zoom_gdal(im, f, out=None, w=None, h=None):
-    """
-    Zooms an image using gdal (nearest neighbor interpolation)
-
-    Args:
-        im: path to the input image
-        f:  zoom factor. f in [0,1] for zoom in, f in [1 +inf] for zoom out.
-        out (optional): path to the ouput file
-        w, h (optional): input image dimensions
-
-    Returns:
-        path to the output image. In case f=1, the input image is returned
-    """
-    if f == 1:
-        return im
-
-    if out is None:
-        out = tmpfile('.tif')
-
-    tmp = tmpfile('.tif')
-
-    if w is None or h is None:
-        sz = image_size_gdal(im)
-        w = sz[0]
-        h = sz[1]
-
-    # First, we need to make sure the dataset has a proper origin/spacing
-    run('gdal_translate -a_ullr 0 0 %d %d %s %s' % (w/float(f), -h/float(f),
-                                                    im, tmp))
-
-    # do the zoom with gdalwarp
-    # -wm gives the max memory in MB. If bigger than 2GB, int overflow
-    run(('gdalwarp -r near -co "BIGTIFF=IF_NEEDED" -co "TILED=YES" -wm 2047 -ts'
-         ' %d %d %s %s') % (w/float(f), h/float(f), tmp, out))
-    return out
-
-
-def cropImage(inp, out, x, y, w, h, zoom=1):
-    """
-    Crop a rectangular region and apply a zoom.
-
-    Args:
-        inp: path to the input file
-        out: path to the output file
-        x, y, w, h: upper left corner and size of the rectangular region of
-            interest
-        zoom (default is 1): zoom factor
-    """
-
-    if zoom == 1:
-        image_crop_gdal(inp, x, y, w, h, out)
-    else:
-        # gdal is used for the zoom because it handles BigTIFF files, and
-        # before the zoom out the image may be that big
-        tmp = image_crop_gdal(inp, x, y, w, h)
-        image_zoom_gdal(tmp, zoom, out, w, h)
-
-
 def image_zoom_out_morpho(im, f):
     """
     Image zoom out by morphological operation (median).
@@ -399,25 +205,6 @@ def image_apply_homography(out, im, H, w, h):
     run("homography %s -h \"%s\" %s %d %d" % (im, hij, out, w, h))
 
 
-def median_filter(im, w, n):
-    """
-    Applies median filter.
-
-    Args:
-        im: path to the input image
-        w: window size
-        n: number of repetitions
-
-    Returns:
-        path to the filtered image
-    """
-    out = tmpfile('.tif')
-    run('cp %s %s' % (im, out))
-    for i in range(n):
-        run('morphoop %s median %d %s' % (out, w, out))
-    return out
-
-
 def image_qauto(im, out=None):
     """
     Uniform requantization between min and max intensity.
@@ -432,123 +219,6 @@ def image_qauto(im, out=None):
     if out is None:
         out = tmpfile('.png')
     run('qauto %s %s' % (im, out))
-    return out
-
-
-def image_qauto_gdal(im):
-    """
-    Uniform requantization between min and max intensity.
-
-    Args:
-        im: path to input image
-
-    Returns:
-        path of requantized image, saved as png
-    """
-    out = tmpfile('.png')
-    run('gdal_translate -of png -ot Byte -scale %s %s' % (im, out))
-    return out
-
-
-def image_qauto_otb(img_out, img_in, ram=128, gamma=1.5, intensity_cut_high=.1,
-                    intensity_cut_low=.1):
-    """
-    Gamma correction and simplest color balance to 8 bits with otbcli_Convert.
-
-    Args:
-        img_out, img_in: paths to output and input images
-        ram: allowed memory amount, in MB
-        gamma: exponent for the gamma correction applied to the input image
-        intensity_cut_high/low: percentage of pixels whose intensity is clipped
-            to 255/0.
-    """
-    gdaltags = ('gdal:co:TILED=YES&'
-                'gdal:co:BIGTIFF=IF_SAFER&'
-                'gdal:co:PROFILE=BASELINE')
-    cmd = ('otbcli_Convert -progress 1 -ram %d'
-           ' -type linear'
-           ' -type.linear.gamma %f'
-           ' -hcp.high %f'
-           ' -hcp.low %f'
-           ' -in %s'
-           ' -out "%s?writegeom=false&%s" uint8') % (ram, gamma,
-                                                     intensity_cut_high,
-                                                     intensity_cut_low, img_in,
-                                                     img_out, gdaltags)
-    run(cmd)
-
-
-def image_qeasy(im, black, white, out=None):
-    """
-    Uniform requantization between user-specified min and max levels.
-
-    Args:
-        im: path to input image
-        black: lower threshold. Values lower or equal are mapped to 0
-        white: upper threshold. Values greater or equal are mapped to 255
-        out (optional, default is None): path to output image
-
-    Returns:
-        path of requantized image, saved as png
-    """
-    if out is None:
-        out = tmpfile('.png')
-    run('qeasy %d %d %s %s' % (black, white, im, out))
-    return out
-
-
-def pansharpened_to_panchro(im, out=None):
-    """
-    Converts a RGBI pansharpened image to a graylevel image.
-
-    Args:
-        im: path to the input image
-        out (optional): path to the output image
-
-    Returns:
-        path to the output image
-    """
-    if out is None:
-        out = tmpfile('.tif')
-    pcmd = "x[0] x[1] x[2] x[3] + + + 4 /"
-
-    cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
-
-    run(cmd)
-    return out
-
-
-def rgbi_to_rgb(im, out=None):
-    """
-    Converts a 4-channel RGBI (I for infrared) image to rgb, with iio
-
-    Args:
-        im: path to the input image
-        out (optional): path to the output image
-
-    Returns:
-        output rgb image
-    """
-    if out is None:
-        out = tmpfile('.png')
-    pcmd = "x[0] x[1] 0.9 * x[3] 0.1 * + x[2] join3"
-    cmd = 'plambda %s \"%s\" -o %s' % (im, pcmd, out)
-    run(cmd)
-    return out
-
-
-def rgbi_to_rgb_gdal(im):
-    """
-    Converts a 4-channel RGBI (I for infrared) image to rgb, using gdal
-
-    Args:
-        im: path to the input image
-
-    Returns:
-        output rgb image
-    """
-    out = tmpfile('.tif')
-    run('gdal_translate -b 1 -b 2 -b 3 %s %s' %(im, out))
     return out
 
 
@@ -716,59 +386,6 @@ def get_roi_coordinates(img, preview):
     w = int(w*nc/nc_preview)
     h = int(h*nr/nr_preview)
     return x, y, w, h
-
-
-def is_exe(fpath):
-    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-
-def which(program):
-    """
-    Test if a program exists, and returns its path.
-
-    Args:
-        program: name of the binary, or its full path. For example, "ls", or
-            "/bin/ls".
-
-    Returns:
-        full path to the binary if it exists
-
-    This function was copied from:
-    http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
-    """
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-
-def download(to_file, from_url):
-    """
-    Download a file from the internet.
-
-    Args:
-        to_file: path where to store the downloaded file
-        from_url: url of the file to download
-    """
-    r = requests.get(from_url, stream=True)
-    file_size = int(r.headers['content-length'])
-    print("Downloading: %s Bytes: %s" % (to_file, file_size))
-
-    downloaded = 0
-    with open(to_file, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            if chunk:  # filter out keep-alive new chunks
-                f.write(chunk)
-                downloaded += len(chunk)
-                status = r"%10d  [%3.2f%%]" % (downloaded, downloaded * 100. / file_size)
-                status = status + chr(8)*(len(status)+1)
-                print(status, end=" ")
 
 
 def cargarse_basura(inputf, outputf):
