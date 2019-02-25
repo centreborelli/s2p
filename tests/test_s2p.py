@@ -8,6 +8,7 @@ from __future__ import print_function
 import numpy as np
 import argparse
 import os
+import sys
 import json
 import shutil
 import multiprocessing
@@ -16,6 +17,8 @@ import subprocess
 import glob
 
 import s2p
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import s2p_mosaic
 
 
