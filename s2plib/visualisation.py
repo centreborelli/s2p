@@ -7,7 +7,6 @@ import numpy as np
 import os
 from osgeo import gdal
 
-from s2plib import piio
 from s2plib import common
 from s2plib import sift
 from s2plib import estimation
@@ -114,7 +113,7 @@ def plot_matches_low_level(im1, im2, matches):
             pass
     # save the output image, and return its path
     outfile = common.tmpfile('.png')
-    piio.write(outfile, out)
+    common.rasterio_write(outfile, out)
     return outfile
 
 
