@@ -6,22 +6,13 @@
 from __future__ import print_function
 import bs4
 import utm
-import datetime
 from osgeo import gdal, osr
 import numpy as np
 
-from s2plib import estimation
 from s2plib import geographiclib
 from s2plib import common
 from s2plib import rpc_model
 from s2plib.config import cfg
-
-def print_distance_between_vectors(u, v, msg):
-    """
-    print min, max and mean of the coordinates of two vectors difference
-    """
-    tmp = u - v
-    print('distance on %s: '%(msg), np.min(tmp), np.max(tmp), np.mean(tmp))
 
 
 def find_corresponding_point(model_a, model_b, x, y, z):
@@ -43,7 +34,6 @@ def find_corresponding_point(model_a, model_b, x, y, z):
     t1, t2, t3 = model_a.direct_estimate(x, y, z)
     xp, yp, zp = model_b.inverse_estimate(t1, t2, z)
     return (xp, yp, z)
-
 
 
 def compute_height(model_a, model_b, x1, y1, x2, y2):
@@ -102,46 +92,6 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
     return h0, err
 
 
-def approximate_rpc_as_projective(rpc_model, col_range, lin_range, alt_range,
-        verbose=False):
-    """
-    Returns a least-square approximation of the RPC functions as a projection
-    matrix. The approximation is optimized on a sampling of the 3D region
-    defined by the altitudes in alt_range and the image tile defined by
-    col_range and lin_range.
-    """
-    ### step 1: generate cartesian coordinates of 3d points used to fit the
-    ###         best projection matrix
-    # get mesh points and convert them to geodetic then to geocentric
-    # coordinates
-    cols, lins, alts = generate_point_mesh(col_range, lin_range, alt_range)
-    lons, lats, alts = rpc_model.direct_estimate(cols, lins, alts)
-    x, y, z = geographiclib.geodetic_to_geocentric(lats, lons, alts)
-
-    ### step 2: estimate the camera projection matrix from corresponding
-    # 3-space and image entities
-    world_points = np.vstack([x, y, z]).T
-    image_points = np.vstack([cols, lins]).T
-    P = estimation.camera_matrix(world_points, image_points)
-
-    ### step 3: for debug, test the approximation error
-    if verbose:
-        # compute the projection error made by the computed matrix P, on the
-        # used learning points
-        colPROJ = np.zeros(len(x))
-        linPROJ = np.zeros(len(x))
-        for i in range(len(x)):
-            v = np.dot(P, [[x[i]],[y[i]],[z[i]],[1]])
-            colPROJ[i] = v[0]/v[2]
-            linPROJ[i] = v[1]/v[2]
-
-        print('approximate_rpc_as_projective: (min, max, mean)')
-        print_distance_between_vectors(cols, colPROJ, 'cols')
-        print_distance_between_vectors(lins, linPROJ, 'rows')
-
-    return P
-
-
 def geodesic_bounding_box(rpc, x, y, w, h):
     """
     Computes a bounding box on the WGS84 ellipsoid associated to a Pleiades
@@ -174,23 +124,6 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     # for latitudes it doesn't matter since for latitudes out of [-60, 60]
     # there is no SRTM data
     return np.min(lon), np.max(lon), np.min(lat), np.max(lat)
-
-
-def round_updown(a, b, q):
-    """
-    Rounds down (resp. up) a (resp. b) to the closest multiple of q.
-
-    Args:
-        a: float value to round down
-        b: float value to round up
-        q: float value defining the targeted multiples
-
-    Returns:
-        the two modified values
-    """
-    a = q*np.floor(a/q)
-    b = q*np.ceil(b/q)
-    return a, b
 
 
 def altitude_range_coarse(rpc, scale_factor=1):
@@ -530,29 +463,6 @@ def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
     return np.vstack([x1, y1, x2, y2]).T
 
 
-def world_to_image_correspondences_from_rpc(rpc, x, y, w, h, n):
-    """
-    Uses RPC functions to generate a set of world to image correspondences.
-
-    Args:
-        rpc: an instance of the rpc_model.RPCModel class
-        x, y, w, h: four integers defining a rectangular region of interest
-            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
-            are the dimensions of the rectangle. The correspondences
-            will be located in that ROI.
-        n: cube root of the desired number of correspondences.
-
-    Returns:
-        an array of correspondences, one per line, expressed as X, Y, Z, x, y.
-    """
-    m, M = altitude_range(rpc, x, y, w, h, 100, -100)
-    lon, lat, alt = ground_control_points(rpc, x, y, w, h, m, M, n)
-    x, y, h = rpc.inverse_estimate(lon, lat, alt)
-    X, Y, Z = geographiclib.geodetic_to_geocentric(lat, lon, alt)
-
-    return np.vstack([X, Y, Z]).T, np.vstack([x, y]).T
-
-
 def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     """
     Converts an altitude into a disparity.
@@ -645,82 +555,6 @@ def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
 
     # return min and max disparities
     return np.min(d), np.max(d)
-
-def compute_ms_panchro_offset(dim_pan, dim_ms):
-    """
-    Computes the offset, in panchro pixels,  between a panchro image and the
-    corresponding 4x zoomed ms image.
-
-    Args:
-        dim_pan: path to the xml file DIM_*.XML for the panchro image
-        dim_ms:  path to the xml file DIM_*.XML for the ms (ie color) image
-
-    Returns:
-        (off_col, off_row): the offset to apply to the ms image before fusion
-        with the panchro.
-    """
-    # column offset
-    first_col_ms = int(common.grep_xml(dim_ms, "FIRST_COL"))
-    first_col_pan = int(common.grep_xml(dim_pan, "FIRST_COL"))
-    off_col = 4 * first_col_ms - first_col_pan
-
-    # row offset
-    t_e_pan = float(common.grep_xml(dim_pan, "LINE_PERIOD"))
-    t_init_ms  = common.grep_xml(dim_ms, "START")
-    t_init_pan = common.grep_xml(dim_pan, "START")
-    t_ms =  datetime.datetime.strptime(t_init_ms[:26], "%Y-%m-%dT%H:%M:%S.%f")
-    t_pan = datetime.datetime.strptime(t_init_pan[:26], "%Y-%m-%dT%H:%M:%S.%f")
-
-    delta_t = 1000 * (t_ms - t_pan)
-    off_row = int(total_seconds(delta_t) / t_e_pan)
-
-    #print("t_e_pan: %f" % t_e_pan)
-    #print("t_init_ms:  %s" % t_init_ms)
-    #print("t_init_pan: %s" % t_init_pan)
-    #print(off_col, off_row)
-
-    return off_col, off_row
-
-
-def total_seconds(td):
-    """
-    Return the total number of seconds contained in the duration.
-
-    Args:
-        td: datetime.timedelta object
-
-    Returns:
-        the equivalent time expressed in seconds
-
-    This function implements the timedelta.total_seconds() method available in
-    python 2.7, to make the compute_ms_panchro_offset usable even with python
-    2.6
-    """
-    return float((td.microseconds + (td.seconds + td.days * 24 * 3600) *
-        10**6)) / 10**6
-
-
-def crop_corresponding_areas(out_dir, images, roi, zoom=1):
-    """
-    Crops areas corresponding to the reference ROI in the secondary images.
-
-    Args:
-        out_dir:
-        images: sequence of dicts containing the paths to input data
-        roi: dictionary containing the ROI definition
-        zoom: integer zoom out factor
-    """
-    rpc_ref = images[0]['rpc']
-    for i, image in enumerate(images[1:]):
-        x, y, w, h = corresponding_roi(rpc_ref, image['rpc'], roi['x'],
-                                       roi['y'], roi['w'], roi['h'])
-        if zoom == 1:
-            common.image_crop_gdal(image['img'], x, y, w, h, '%s/roi_sec_%d.tif' % (out_dir, i))
-        else:
-            # gdal is used for the zoom because it handles BigTIFF files, and
-            # before the zoom out the image may be that big
-            tmp = common.image_crop_gdal(image['img'], x, y, w, h)
-            common.image_zoom_gdal(tmp, zoom, '%s/roi_sec_%d.tif' % (out_dir, i), w, h)
 
 
 def rpc_from_geotiff(geotiff_path, outrpcfile='.rpc'):
