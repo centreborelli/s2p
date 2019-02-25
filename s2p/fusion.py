@@ -8,8 +8,7 @@ import os
 import sys
 import shutil
 import numpy as np
-from osgeo import gdal
-gdal.UseExceptions()
+import rasterio
 
 from s2p import piio
 from s2p.config import cfg
@@ -41,16 +40,14 @@ def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
 
     # get input images size
     if inputs:
-        f = gdal.Open(inputs[0])
-        w, h = f.RasterXSize, f.RasterYSize
-        f = None  # this is the gdal way of closing files
+        with rasterio.open(inputs[0], 'r') as f:
+            h, w = f.shape
 
     # read input images and apply offsets
     x = np.empty((h, w, len(inputs)))
     for i, img in enumerate(inputs):
-        f = gdal.Open(img)
-        x[:, :, i] = f.GetRasterBand(1).ReadAsArray() - offsets[i]
-        f = None
+        with rasterio.open(img, 'r') as f:
+            x[:, :, i] = f.read(1) - offsets[i]
         if cfg['debug']:
             piio.write('{}_registered.tif'.format(os.path.splitext(img)[0]),
                        x[:, :, i] + np.mean(offsets))
@@ -68,6 +65,5 @@ def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
     # write the average to output
     if inputs:
         shutil.copy(inputs[0], output)  # copy an input file to get the metadata
-        f = gdal.Open(output, gdal.GA_Update)
-        f.GetRasterBand(1).WriteArray(avg)  # update the output file content
-        f = None
+        with rasterio.open(output, 'r+') as f:
+            f.write(np.asarray([avg]).astype('float32'))  # update the output file content

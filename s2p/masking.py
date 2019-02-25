@@ -6,7 +6,7 @@
 import os
 import subprocess
 import numpy as np
-from osgeo import gdal
+import rasterio
 
 from s2p import common
 from s2p import rpc_model
@@ -33,7 +33,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
     # coefficients of the transformation associated to the crop
     H = common.matrix_translation(-x, -y)
     hij = ' '.join([str(el) for el in H.flatten()])
-    
+
     mask = np.ones((h, w), dtype=np.bool)
 
     if roi_gml is not None:  # image domain mask (polygons)
@@ -42,9 +42,8 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
                                                                roi_gml, tmp),
                               shell=True)
 
-        f = gdal.Open(tmp)
-        mask = np.logical_and(mask, f.ReadAsArray())
-        f = None  # this is the gdal way of closing files
+        with rasterio.open(tmp, 'r') as f:
+            mask = np.logical_and(mask, f.read().squeeze())
 
     if not mask.any():
         return mask
@@ -54,17 +53,16 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                cld_gml, tmp),
                               shell=True)
-        f = gdal.Open(tmp)
-        mask = np.logical_and(mask, ~f.ReadAsArray().astype(bool))
-        f = None  # this is the gdal way of closing files
+        with rasterio.open(tmp, 'r') as f:
+            mask = np.logical_and(mask, ~f.read().squeeze().astype(bool))
 
     if not mask.any():
         return mask
 
     if wat_msk is not None:  # water mask (raster)
-        f = gdal.Open(wat_msk)
-        mask = np.logical_and(mask, f.ReadAsArray(*map(int, (x, y, w, h))))
-        f = None  # this is the gdal way of closing files
+        x, y, w, h = map(int, (x, y, w, h))
+        with rasterio.open(wat_msk, 'r') as f:
+            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w))).squeeze())
 
     return mask
 

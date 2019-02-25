@@ -23,16 +23,16 @@ from utils import s2p_mosaic
 
 def unit_gdal_version():
     try:
-        import gdal
-        version_num = int(gdal.VersionInfo('VERSION_NUM'))
-        if (version_num < 2010000):
+        import rasterio
+        version = rasterio.gdal_version()
+        if (version < '2.1'):
             raise AssertionError(("The version of GDAL should be at least 2.1.\n",
                                   "Recommended fix for Ubuntu 16.04:\n",
                                   "add-apt-repository -y ppa:ubuntugis/ppa\n",
                                   "apt-get update\n",
                                   "apt-get install gdal-bin libgdal-dev\n"))
     except ImportError:
-        raise AssertionError('GDAL does not seem to be installed.')
+        raise AssertionError('rasterio does not seem to be installed.')
 
 
 def unit_image_keypoints():

@@ -6,7 +6,9 @@
 from __future__ import print_function
 import bs4
 import utm
-from osgeo import gdal, osr
+import datetime
+import pyproj
+import rasterio
 import numpy as np
 
 from s2p import geographiclib
@@ -153,34 +155,21 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
     Returns:
         hmin, hmax: min, max heights
     """
-
     # open image
-    dataset = gdal.Open(im)
-
-    # get lon/lat to im projection conversion
-    new_cs = osr.SpatialReference()
-    new_cs.ImportFromWkt(dataset.GetProjectionRef())
-    old_cs = osr.SpatialReference()
-    old_cs.ImportFromEPSG(4326)
-    lonlat_to_im = osr.CoordinateTransformation(old_cs, new_cs)
+    dataset = rasterio.open(im, 'r')
 
     # convert lon/lat to im projection
-    lon = np.linspace(lon_m, lon_M, 2)
-    lat = np.linspace(lat_m, lat_M, 2)
-    lonv, latv = np.meshgrid(lon, lat)
-    lonlatalt = zip(np.ravel(lonv),
-                    np.ravel(latv),
-                    np.zeros(np.shape(np.ravel(lonv))))
-    x_im_proj, y_im_proj, __ = (zip(*lonlat_to_im.TransformPoints([a for a in lonlatalt])))
-    x_im_proj = np.array(x_im_proj)
-    y_im_proj = np.array(y_im_proj)
+    x_im_proj, y_im_proj = pyproj.transform(pyproj.Proj(init='epsg:4326'),
+                                            pyproj.Proj(init=dataset.crs['init']),
+                                            [lon_m, lon_M],
+                                            [lat_m, lat_M])
 
     # convert im projection to pixel
-    forward = dataset.GetGeoTransform()
-    reverse = gdal.InvGeoTransform(forward)
-    px = reverse[0] + x_im_proj * reverse[1] + y_im_proj * reverse[2]
-    py = reverse[3] + x_im_proj * reverse[4] + y_im_proj * reverse[5]
-    nb_elts = len(px)
+    pts = []
+    pts.append(~dataset.transform * (x_im_proj[0], y_im_proj[0]))
+    pts.append(~dataset.transform * (x_im_proj[1], y_im_proj[1]))
+    px = [p[0] for p in pts]
+    py = [p[1] for p in pts]
 
     # get footprint
     [px_min, px_max, py_min, py_max] = map(int, [np.amin(px),
@@ -190,21 +179,17 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
 
     # limits of im extract
     x, y, w, h = px_min, py_min, px_max - px_min + 1, py_max - py_min + 1
-    sizex = dataset.RasterXSize
-    sizey = dataset.RasterYSize
-    x0 = min(max(0, x), sizex-1)
-    y0 = min(max(0, y), sizey-1)
+    sizey, sizex = dataset.shape
+    x0 = np.clip(x, 0, sizex-1)
+    y0 = np.clip(y, 0, sizey-1)
     w -= (x0-x)
     h -= (y0-y)
-    w = max(0, w)
-    w = min(w, sizex - 1 - x0)
-    h = max(0, h)
-    h = min(h, sizey - 1 - y0)
+    w = np.clip(w, 0, sizex - 1 - x0)
+    h = np.clip(h, 0, sizey - 1 - y0)
 
     # get value for each pixel
     if (w != 0) and (h != 0):
-        band = dataset.GetRasterBand(1)
-        array = band.ReadAsArray(x0, y0, w, h).astype(float)
+        array = dataset.read(1, window=((y0, y0 + h), (x0, x0 + w))).astype(float)
         array[array == -32768] = np.nan
         hmin = np.nanmin(array)
         hmax = np.nanmax(array)

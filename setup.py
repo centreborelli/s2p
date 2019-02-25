@@ -29,7 +29,6 @@ class CustomBuildPy(build_py.build_py):
 
 requirements = ['numpy',
                 'scipy',
-                'gdal',
                 'rasterio[s3]',
                 'utm',
                 'bs4',

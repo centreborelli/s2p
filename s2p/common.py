@@ -12,7 +12,7 @@ import datetime
 import tempfile
 import subprocess
 import numpy as np
-from osgeo import gdal
+import rasterio
 
 
 from s2p.config import cfg
@@ -118,7 +118,7 @@ def matrix_translation(x, y):
 
 def image_size_gdal(im):
     """
-    Read the width, height and pixel dimension of an image using gdal.
+    Read the width, height and pixel dimension of an image using rasterio.
 
     Args:
         im: path to the input image file
@@ -126,11 +126,9 @@ def image_size_gdal(im):
     Returns:
         w, h, pd: a tuple of length 3
     """
-    f = gdal.Open(im)
-    x = f.RasterXSize
-    y = f.RasterYSize
-    pd = f.RasterCount
-    f = None
+    with rasterio.open(im, 'r') as f:
+        y, x = f.shape
+        pd = f.count
     return x, y, pd
 
 
@@ -144,21 +142,15 @@ def gdal_read_as_array_with_nans(im):
     Returns:
         array: raster as numpy array
     """
-    raster = gdal.Open(im)
-    array = raster.ReadAsArray()
+    with rasterio.open(im, 'r') as src:
+        array = src.read()
+        nodata_values = src.nodatavals
 
-    # replace gdal NoDataValue with np.nan for the np.isfinite counting
-    noDataValues = [raster.GetRasterBand(b+1).GetNoDataValue() for b in range(raster.RasterCount)]
-    if len(noDataValues) == 1:
-        if noDataValues[0] is not None:
-            array[array == noDataValues[0]] = np.nan
-    else:
-        for b in range(raster.RasterCount):
-            if noDataValues[b] is not None:
-                array_band = array[b, :, :]
-                array_band[array_band == noDataValues[b]] = np.nan
+    for band, nodata in zip(array, nodata_values):
+        if nodata is not None:
+            band[band == nodata] = np.nan
 
-    return array
+    return array.squeeze()
 
 
 def image_zoom_out_morpho(im, f):
