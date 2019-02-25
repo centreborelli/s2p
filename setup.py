@@ -13,7 +13,7 @@ class CustomDevelop(develop.develop):
     Class needed for "pip install -e ."
     """
     def run(self):
-        subprocess.check_call("make", shell=True)
+        subprocess.check_call("make CC=gcc-8 CXX=g++-8", shell=True)
         super().run()
 
 
@@ -31,6 +31,7 @@ requirements = ['numpy',
                 'scipy',
                 'rasterio[s3]',
                 'utm',
+                'pyproj',
                 'bs4',
                 'requests']
 
