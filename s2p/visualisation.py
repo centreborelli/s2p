@@ -7,13 +7,13 @@ import numpy as np
 import os
 import rasterio
 
-from s2p import piio
 from s2p import common
 from s2p import sift
 from s2p import estimation
 from s2p import rpc_model
 from s2p import rpc_utils
 import s2p.pointing_accuracy
+
 
 def plot_line(im, x1, y1, x2, y2, colour):
     """
@@ -116,7 +116,7 @@ def plot_matches_low_level(im1, im2, matches):
             pass
     # save the output image, and return its path
     outfile = common.tmpfile('.png')
-    piio.write(outfile, out)
+    common.rasterio_write(outfile, out)
     return outfile
 
 
