@@ -15,9 +15,13 @@ from s2plib import rpc_utils
 from s2plib import estimation
 from s2plib.config import cfg
 
-# Locate sift4ctypes library and raise an ImportError if it can not be found
-# This call will raise an exception if library can not be found, at import time
-sift4ctypes_library = 'libsift4ctypes.so'
+# Locate sift4ctypes library and raise an ImportError if it can not be
+# found This call will raise an exception if library can not be found,
+# at import time 
+
+# TODO: This is kind of ugly. Cleaner way to do this is to update
+# LD_LIBRARY_PATH, which we should do once we have a proper config file
+sift4ctypes_library = os.path.join(os.path.dirname(os.path.abspath(__file__)),'../lib/libsift4ctypes.so')
 ctypes.CDLL(sift4ctypes_library)
 
 def keypoints_from_nparray(arr,thresh_dog=0.0133,nb_octaves=8, nb_scales=3,offset=None):
