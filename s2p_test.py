@@ -132,7 +132,7 @@ def unit_distributed_plyflatten(config):
     print('Running end2end with distributed plyflatten dsm ...')
 
     test_cfg = s2p.read_config_file(config)
-    test_cfg['skip_existing'] = True
+    test_cfg['skip_existing'] = False
     s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
@@ -206,7 +206,7 @@ def end2end_cluster(config):
     print('Running end2end in sequential mode to get reference DSM ...')
 
     test_cfg = s2p.read_config_file(config)
-    test_cfg['skip_existing'] = True
+    test_cfg['skip_existing'] = False
     s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
@@ -215,7 +215,7 @@ def end2end_cluster(config):
     test_cfg_cluster = dict()
     test_cfg_cluster.update(test_cfg)
     test_cfg_cluster['out_dir'] = test_cfg_cluster['out_dir'] + "_cluster"
-    test_cfg_cluster['skip_existing'] = True
+    test_cfg_cluster['skip_existing'] = False
 
     print("Running initialisation step ...")
     s2p.main(test_cfg_cluster,["initialisation"])
@@ -248,7 +248,7 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
     test_cfg = s2p.read_config_file(config)
     outdir = test_cfg['out_dir']
-    test_cfg['skip_existing'] = True
+    test_cfg['skip_existing'] = False
     s2p.main(test_cfg)
 
     tiles_file = os.path.join(outdir,'tiles.txt')
