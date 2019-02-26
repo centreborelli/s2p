@@ -37,7 +37,7 @@ extern "C"{
         const KeyPoint * firstPoint = sift.m_keyPoints->front();
         descriptorSize = firstPoint->getNbOri() * firstPoint->getNbHist() * firstPoint->getNbHist();
     }
-    recordSize = descriptorSize + 2;
+    recordSize = descriptorSize + 4;
     
     // Allocate output buffer
     float * out = new float[recordSize*nbRecords];
@@ -48,12 +48,13 @@ extern "C"{
     for(;key != sift.m_keyPoints->end();++key,++currentPoint)
     {
         size_t currentIndex = recordSize*currentPoint;
-        out[currentIndex] = (*key)->getX();
-        out[currentIndex+1] = (*key)->getY();
-
+        out[currentIndex] = (*key)->getY();
+        out[currentIndex+1] = (*key)->getX();
+	out[currentIndex+2] = (*key)->getSigma();
+	out[currentIndex+3] = (*key)->getTheta();
         for(unsigned int i = 0; i < descriptorSize;++i)
         {
-            out[currentIndex+2+i] = (*key)->getPtrDescr()[i];
+            out[currentIndex+4+i] = (*key)->getPtrDescr()[i];
         } 
     }   
     return out;

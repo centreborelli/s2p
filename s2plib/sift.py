@@ -2,14 +2,12 @@
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
-
 from __future__ import print_function
 import os
 import numpy as np
 
 import rasterio as rio
 import ctypes
-from ctypes import c_uint, c_float, byref, POINTER
 from numpy.ctypeslib import ndpointer
 
 from s2plib import common
@@ -17,6 +15,60 @@ from s2plib import rpc_utils
 from s2plib import estimation
 from s2plib.config import cfg
 
+# Locate sift4ctypes library and raise an ImportError if it can not be found
+# This call will raise an exception if library can not be found, at import time
+sift4ctypes_library = 'libsift4ctypes.so'
+ctypes.CDLL(sift4ctypes_library)
+
+def keypoints_from_nparray(arr,thresh_dog=0.0133,nb_octaves=8, nb_scales=3,offset=None):
+    """
+    Runs SIFT (the keypoints detection and description only, no matching) on an image stored in a 2D numpy array
+
+    It uses Ives Rey Otero's implementation published in IPOL:
+    http://www.ipol.im/pub/pre/82/
+
+    Args:
+        arr: A 2D numpy array respresenting the input image
+        thresh_dog (optional): Threshold on gaussian derivative
+        nb_octaves (optional): Number of octaves
+        nb_scales (optional): Number of scales
+        offset (optional): offset to apply to sift position in case arr is an extract of a bigger image (beware that keypoints are stored in y,x order)
+    Returns:
+        A numpy array of shape (nb_points,132) containing for each row (y,x,scale,orientation, sift_descriptor)    
+    """
+    # retrieve numpy buffer dimensions  
+    (h,w) = arr.shape
+
+    # load shared library 
+    lib = ctypes.CDLL(sift4ctypes_library)
+
+    # Set expected args and return types
+    lib.sift.argtypes = (ndpointer(dtype=ctypes.c_float,shape=(w,h)),ctypes.c_uint,ctypes.c_uint,ctypes.c_float,ctypes.c_uint,ctypes.c_uint,ctypes.POINTER(ctypes.c_uint),ctypes.POINTER(ctypes.c_uint))
+    lib.sift.restype = ctypes.POINTER(ctypes.c_float)
+
+    # Create variables to be updated by function call
+    nb_points = ctypes.c_uint()
+    desc_size = ctypes.c_uint()
+
+    # Call sift fonction from sift4ctypes.so
+    keypoints_ptr = lib.sift(arr.astype(np.float32),w,h,thresh_dog,nb_octaves,nb_scales,ctypes.byref(desc_size),ctypes.byref(nb_points))
+
+    # Transform result into a numpy array
+    keypoints = np.asarray([keypoints_ptr[i] for i in range(0,nb_points.value*desc_size.value)])
+    
+    # Delete results to release memory
+    lib.delete_buffer.argtypes=(ctypes.POINTER(ctypes.c_float)),
+    lib.delete_buffer(keypoints_ptr)
+
+    # Reshape keypoints array
+    keypoints = keypoints.reshape((nb_points.value,desc_size.value))
+
+    if offset is not None:
+        y,x = offset
+        keypoints[:,0]+=y
+        keypoints[:,1]+=x
+
+    return keypoints
 
 def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     """
@@ -39,30 +91,17 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     with rio.open(im) as ds:
        in_buffer = ds.read(window=((x,x+w),(y,y+h)))
 
-    # load shared library 
-    lib = ctypes.CDLL('sift4ctypes.so')
+    # Detect keypoints on first band
+    keypoints = keypoints_from_nparray(in_buffer[0,],offset=(y,x))
 
-    # retrieve numpy buffer dimensions  
-    (band,h,w) = in_buffer.shape
-
-    lib.sift.argtypes = (ndpointer(dtype=c_float, shape=(band,w,h)),c_uint, c_uint, c_float,c_uint, c_uint,ctypes.POINTER(c_uint),ctypes.POINTER(c_uint))
-    lib.sift.restype = POINTER(c_float)
-    nb_points = c_uint()
-    desc_size = c_uint()
-    keypoints_ptr = lib.sift(in_buffer.astype(np.float32),w,h,0.0133,8,3,byref(desc_size),byref(nb_points))
-
-    
-
-    print("Number of points:{}".format(nb_points))
-    print("Descriptor size:{}".format(desc_size))
-    print(repr(keypoints_ptr))
-
-    keypoints = numpy.array(keypoints_ptr.contents,(nb_points.value,desc_size.value))
-    #keypoints = keypoints.reshape((nb_points.value,desc_size.value))
-
-   # print(keypoints.shape())
+    # Limit number of keypoints if needed
+    if max_nb is not None:
+        keypoints=keypoints[:max_nb,]
 
     keyfile = common.tmpfile('.txt')
+
+    with open(keyfile,'w') as f:
+        np.savetxt(f,keypoints,delimiter=' ',fmt='%.3f')
     
     return keyfile
 

@@ -13,15 +13,14 @@ OBJ = LibImages/LibImages.o \
       Utilities/Parameters.o \
       Utilities/Time.o \
       Utilities/Utilities.o\
-      sift4ctypes.o 
+      sift4ctypes.o \
 
-LIB = sift4ctypes.so
+LIB = libsift4ctypes.so
+
+all: $(LIB) matching
 
 $(LIB): $(OBJ)
 	$(CXX) -fPIC -shared -o $@ $^
-    
-lib: $(LIB)
-
 
 clean:
-	rm -f sift_roi matching $(OBJ)
+	rm -f $(LIB) matching $(OBJ)
