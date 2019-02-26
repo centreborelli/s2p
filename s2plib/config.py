@@ -46,9 +46,6 @@ cfg['omp_num_threads'] = 1
 # debug mode (more verbose logs and intermediate results saved)
 cfg['debug'] = False
 
-# don't rerun when the output file is already there
-cfg['skip_existing'] = False
-
 # resolution of the output digital surface model, in meters per pixel
 cfg['dsm_resolution'] = 4
 
