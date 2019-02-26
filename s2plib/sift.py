@@ -28,7 +28,8 @@ sift4ctypes_library = os.path.join(os.path.dirname(
 ctypes.CDLL(sift4ctypes_library)
 
 # Filter warnings from rasterio reading files wihtout georeferencing
-warnings.filterwarnings("ignore",category=rio.errors.NotGeoreferencedWarning)
+warnings.filterwarnings("ignore", category=rio.errors.NotGeoreferencedWarning)
+
 
 def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, offset=None):
     """
@@ -53,7 +54,7 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
     lib = ctypes.CDLL(sift4ctypes_library)
 
     # Set expected args and return types
-    lib.sift.argtypes = (ndpointer(dtype=ctypes.c_float, shape=(w, h)), ctypes.c_uint, ctypes.c_uint, ctypes.c_float,
+    lib.sift.argtypes = (ndpointer(dtype=ctypes.c_float, shape=(h, w)), ctypes.c_uint, ctypes.c_uint, ctypes.c_float,
                          ctypes.c_uint, ctypes.c_uint, ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint))
     lib.sift.restype = ctypes.POINTER(ctypes.c_float)
 
@@ -99,9 +100,10 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
     Returns:
         path to the file containing the list of descriptors
     """
+
     # Read file with rasterio
     with rio.open(im) as ds:
-        in_buffer = ds.read(window=((x, x+w), (y, y+h)))
+        in_buffer = ds.read(window=rio.windows.Window(x, y, w, h))
 
     # Detect keypoints on first band
     keypoints = keypoints_from_nparray(
