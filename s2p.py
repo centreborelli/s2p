@@ -685,35 +685,16 @@ def global_dsm(tiles):
                              "%s %s %s" % (projwin, out_conf_vrt, out_conf_tif)]))
 
 
-# ALL_STEPS is a ordonned dictionary : key = 'stepname' : value = is_distributed (True/False)
-# initialization : pass in a sequence of tuples
-ALL_STEPS = [('initialisation', False),
-             ('local-pointing', True),
-             ('global-pointing', False),
-             ('rectification', True),
-             ('matching', True),
-             ('triangulation', True),
-             ('disparity-to-height', True),
-             ('global-mean-heights', False),
-             ('heights-to-ply', True),
-             ('local-dsm-rasterization', True),
-             ('global-dsm-rasterization', False) ]
-ALL_STEPS = collections.OrderedDict(ALL_STEPS)
-
-
-def main(user_cfg, steps=ALL_STEPS):
+def main(user_cfg):
     """
     Launch the s2p pipeline with the parameters given in a json file.
 
     Args:
         user_cfg: user config dictionary
-        steps: either a string (single step) or a list of strings (several
-            steps)
     """
     common.print_elapsed_time.t0 = datetime.datetime.now()
     initialization.build_cfg(user_cfg)
-    if 'initialisation' in steps:
-        initialization.make_dirs()
+    initialization.make_dirs()
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -722,69 +703,67 @@ def main(user_cfg, steps=ALL_STEPS):
 
     tw, th = initialization.adjust_tile_size()
     tiles_txt = os.path.join(cfg['out_dir'],'tiles.txt')
-    create_masks = 'initialisation' in steps
-    tiles = initialization.tiles_full_info(tw, th, tiles_txt, create_masks)
+    tiles = initialization.tiles_full_info(tw, th, tiles_txt, create_masks=True)
 
-    if 'initialisation' in steps:
-        # Write the list of json files to outdir/tiles.txt
-        with open(tiles_txt,'w') as f:
-            for t in tiles:
-                f.write(t['json']+os.linesep)
+    # initialisation step:
+    # Write the list of json files to outdir/tiles.txt
+    with open(tiles_txt,'w') as f:
+        for t in tiles:
+            f.write(t['json']+os.linesep)
 
     n = len(cfg['images'])
     tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
 
-    if 'local-pointing' in steps:
-        print('correcting pointing locally...')
-        parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers)
+    # local-pointing step:
+    print('correcting pointing locally...')
+    parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers)
 
-    if 'global-pointing' in steps:
-        print('correcting pointing globally...')
-        global_pointing_correction(tiles)
-        common.print_elapsed_time()
+    # global-pointing step:
+    print('correcting pointing globally...')
+    global_pointing_correction(tiles)
+    common.print_elapsed_time()
 
-    if 'rectification' in steps:
-        print('rectifying tiles...')
-        parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers)
+    # rectification step:
+    print('rectifying tiles...')
+    parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers)
 
-    if 'matching' in steps:
-        print('running stereo matching...')
-        parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
+    # matching step:
+    print('running stereo matching...')
+    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
 
     if n > 2 and cfg['triangulation_mode'] == 'pairwise':
-        if 'disparity-to-height' in steps:
-            print('computing height maps...')
-            parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
+        # disparity-to-height step:
+        print('computing height maps...')
+        parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
 
-            print('computing local pairwise height offsets...')
-            parallel.launch_calls(mean_heights, tiles, nb_workers)
+        print('computing local pairwise height offsets...')
+        parallel.launch_calls(mean_heights, tiles, nb_workers)
 
-        if 'global-mean-heights' in steps:
-            print('computing global pairwise height offsets...')
-            global_mean_heights(tiles)
+        # global-mean-heights step:
+        print('computing global pairwise height offsets...')
+        global_mean_heights(tiles)
 
-        if 'heights-to-ply' in steps:
-            print('merging height maps and computing point clouds...')
-            parallel.launch_calls(heights_to_ply, tiles, nb_workers)
-
+        # heights-to-ply step:
+        print('merging height maps and computing point clouds...')
+        parallel.launch_calls(heights_to_ply, tiles, nb_workers)
     else:
-        if 'triangulation' in steps:
-            print('triangulating tiles...')
-            if cfg['triangulation_mode'] == 'geometric':
-                parallel.launch_calls(multidisparities_to_ply, tiles, nb_workers)
-            elif cfg['triangulation_mode'] == 'pairwise':
-                parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
-            else:
-                raise ValueError("possible values for 'triangulation_mode' : 'pairwise' or 'geometric'")
+        # triangulation step:
+        print('triangulating tiles...')
+        if cfg['triangulation_mode'] == 'geometric':
+            parallel.launch_calls(multidisparities_to_ply, tiles, nb_workers)
+        elif cfg['triangulation_mode'] == 'pairwise':
+            parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
+        else:
+            raise ValueError("possible values for 'triangulation_mode' : 'pairwise' or 'geometric'")
 
-    if 'local-dsm-rasterization' in steps:
-        print('computing DSM by tile...')
-        parallel.launch_calls(plys_to_dsm, tiles, nb_workers)
+    # local-dsm-rasterization step:
+    print('computing DSM by tile...')
+    parallel.launch_calls(plys_to_dsm, tiles, nb_workers)
 
-    if 'global-dsm-rasterization' in steps:
-        print('computing global DSM...')
-        global_dsm(tiles)
-        common.print_elapsed_time()
+    # global-dsm-rasterization step:
+    print('computing global DSM...')
+    global_dsm(tiles)
+    common.print_elapsed_time()
 
     # cleanup
     common.garbage_cleanup()
@@ -844,13 +823,11 @@ if __name__ == '__main__':
                         help=('path to a json file containing the paths to '
                               'input and output files and the algorithm '
                               'parameters'))
-    parser.add_argument('--step', type=str, choices=ALL_STEPS,
-                        default=ALL_STEPS)
     args = parser.parse_args()
 
     user_cfg = read_config_file(args.config)
 
-    main(user_cfg, args.step)
+    main(user_cfg)
 
     # Backup input file for sanity check
     if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
