@@ -1,3 +1,5 @@
+// Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
+
 #include <stdlib.h>
 
 #include "Utilities/Parameters.h"
@@ -5,7 +7,14 @@
 #include "LibSift/LibSift.h"
 
 extern "C"{
-
+  /**
+   * This function is meant to be mapped to python using ctypes.
+   * 
+   * It computes sifts points of input_buffer which is interpreted as a w x h image.
+   * Keypoints are returned as a linear buffer of float of size recordSize * nbRecords. 
+   * 
+   * This buffer is the responsibiliy of the caller and should be freed by her.
+   */
   float * sift(const float * input_buffer, const size_t w, const size_t h, 
 	       const float thresh_dog, 
 	       const unsigned int ss_noct, 
@@ -59,7 +68,9 @@ extern "C"{
     }   
     return out;
   }
-
+  /**
+   * This function allows to free the float buffer from python.
+  */
   void delete_buffer(float * buffer)
   {
     if (buffer != NULL)
