@@ -94,13 +94,12 @@ def global_pointing_correction(tiles):
     """
     for i in range(1, len(cfg['images'])):
         out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
-        if not os.path.isfile(out):
-            l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
-            np.savetxt(out, pointing_accuracy.global_from_local(l),
-                       fmt='%12.6f')
-            if cfg['clean_intermediate']:
-                for d in l:
-                    common.remove(os.path.join(d, 'center_keypts_sec.txt'))
+        l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
+        np.savetxt(out, pointing_accuracy.global_from_local(l),
+                   fmt='%12.6f')
+        if cfg['clean_intermediate']:
+            for d in l:
+                common.remove(os.path.join(d, 'center_keypts_sec.txt'))
 
 
 def rectification_pair(tile, i):
