@@ -28,7 +28,7 @@ sift4ctypes_library = os.path.join(os.path.dirname(
 ctypes.CDLL(sift4ctypes_library)
 
 # Filter warnings from rasterio reading files wihtout georeferencing
-warnings.filterwarnings("ignore",category=rasterio.errors.NotGeoreferencedWarning)
+warnings.filterwarnings("ignore",category=rio.errors.NotGeoreferencedWarning)
 
 def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, offset=None):
     """
