@@ -7,6 +7,11 @@ from __future__ import print_function
 import os
 import numpy as np
 
+import rasterio as rio
+import ctypes
+from ctypes import c_uint, c_float, byref
+from numpy.ctypeslib import ndpointer
+
 from s2plib import common
 from s2plib import rpc_utils
 from s2plib import estimation
@@ -30,16 +35,31 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     Returns:
         path to the file containing the list of descriptors
     """
+    # Read file with rasterio
+    with rio.open(im) as ds:
+       in_buffer = ds.read(window=((x,x+w),(y,y+h)))
+
+    # load shared library 
+    lib = ctypes.CDLL('sift4ctypes.so')
+
+    # retrieve numpy buffer dimensions  
+    (band,h,w) = in_buffer.shape
+
+    lib.sift.argtypes = (ndpointer(dtype=c_float, shape=(band,w,h)),c_uint, c_uint, c_float,c_uint, c_uint,ctypes.POINTER(c_uint),ctypes.POINTER(c_uint))
+    lib.sift.restype = ndpointer(dtype=c_float)
+    nb_points = c_uint()
+    desc_size = c_uint()
+    keypoints = lib.sift(in_buffer.astype(np.float32),w,h,0.0133,8,3,byref(desc_size),byref(nb_points))
+
+    print("Number of points:{}".format(nb_points))
+    print("Descriptor size:{}".format(desc_size))
+    print(repr(keypoints))
+    keypoints = keypoints.reshape((nb_points.value,desc_size.value))
+
+   # print(keypoints.shape())
+
     keyfile = common.tmpfile('.txt')
-    if max_nb:
-        cmd = "sift_roi %s %d %d %d %d --max-nb-pts %d %s -o %s" % (im, x, y, w,
-                                                                    h, max_nb,
-                                                                    extra_params,
-                                                                    keyfile)
-    else:
-        cmd = "sift_roi %s %d %d %d %d %s -o %s" % (im, x, y, w, h,
-                                                    extra_params, keyfile)
-    common.run(cmd)
+    
     return keyfile
 
 

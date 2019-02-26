@@ -46,8 +46,6 @@ homography: $(BINDIR)
 
 sift: $(BINDIR)
 	$(MAKE) -j -C c/sift
-	cp c/sift/sift_roi $(BINDIR)
-	cp c/sift/matching $(BINDIR)
 
 mgm:
 	$(MAKE) -C 3rdparty/mgm
