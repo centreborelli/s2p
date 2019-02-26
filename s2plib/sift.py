@@ -70,7 +70,7 @@ def keypoints_from_nparray(arr,thresh_dog=0.0133,nb_octaves=8, nb_scales=3,offse
 
     return keypoints
 
-def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
+def image_keypoints(im, x, y, w, h, max_nb=None):
     """
     Runs SIFT (the keypoints detection and description only, no matching).
 
@@ -81,8 +81,6 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
         im: path to the input image
         max_nb (optional): maximal number of keypoints. If more keypoints are
             detected, those at smallest scales are discarded
-        extra_params (optional): extra parameters to be passed to the sift
-            binary
 
     Returns:
         path to the file containing the list of descriptors
