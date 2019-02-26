@@ -81,7 +81,7 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
     return keypoints
 
 
-def image_keypoints(im, x, y, w, h, max_nb=None):
+def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8, nb_scales=3):
     """
     Runs SIFT (the keypoints detection and description only, no matching).
 
@@ -101,7 +101,8 @@ def image_keypoints(im, x, y, w, h, max_nb=None):
         in_buffer = ds.read(window=((x, x+w), (y, y+h)))
 
     # Detect keypoints on first band
-    keypoints = keypoints_from_nparray(in_buffer[0, ], offset=(y, x))
+    keypoints = keypoints_from_nparray(
+        in_buffer[0, ], thresh_dog=thresh_dog, nb_octaves=nb_octaves, nb_scales=nb_scales, offset=(y, x))
 
     # Limit number of keypoints if needed
     if max_nb is not None:
@@ -202,9 +203,9 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     thresh_dog = 0.0133
     for i in range(2):
         p1 = image_keypoints(
-            im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
+            im1, x, y, w, h, thresh_dog=thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2,
-                             extra_params='--thresh-dog %f' % thresh_dog)
+                             thresh_dog=thresh_dog)
         matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'],
                                   F, model='fundamental',
                                   epipolar_threshold=cfg['max_pointing_error'])
