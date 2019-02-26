@@ -7,6 +7,7 @@ from __future__ import print_function
 import os
 import numpy as np
 
+import warnings
 import rasterio as rio
 import ctypes
 from numpy.ctypeslib import ndpointer
@@ -26,6 +27,8 @@ sift4ctypes_library = os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../lib/libsift4ctypes.so')
 ctypes.CDLL(sift4ctypes_library)
 
+# Filter warnings from rasterio reading files wihtout georeferencing
+warnings.filterwarnings("ignore",category=rasterio.errors.NotGeoreferencedWarning)
 
 def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, offset=None):
     """
