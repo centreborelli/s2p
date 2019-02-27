@@ -103,6 +103,15 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
 
     # Read file with rasterio
     with rio.open(im) as ds:
+        # clip roi to stay inside the image boundaries
+        # - if x and y must be positive else resize (w, h)
+        w += min(x, 0)
+        h += min(y, 0)
+        x = max(x, 0)
+        y = max(y, 0)
+        # - if extract not completely inside the full image resize (w, h)
+        w = min(w, ds.width - x)
+        h = min(h, ds.height - y)
         in_buffer = ds.read(window=rio.windows.Window(x, y, w, h))
 
     # Detect keypoints on first band
