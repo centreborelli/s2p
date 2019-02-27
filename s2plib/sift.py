@@ -43,7 +43,7 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
         thresh_dog (optional): Threshold on gaussian derivative
         nb_octaves (optional): Number of octaves
         nb_scales (optional): Number of scales
-        offset (optional): offset to apply to sift position in case arr is an extract of a bigger image (beware that keypoints are stored in y,x order)
+        offset (optional): offset to apply to sift position in case arr is an extract of a bigger image
     Returns:
         A numpy array of shape (nb_points,132) containing for each row (y,x,scale,orientation, sift_descriptor)    
     """
@@ -78,9 +78,9 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
     keypoints = keypoints.reshape((nb_points.value, desc_size.value))
 
     if offset is not None:
-        y, x = offset
-        keypoints[:, 0] += y
-        keypoints[:, 1] += x
+        x, y = offset
+        keypoints[:, 0] += x
+        keypoints[:, 1] += y
 
     return keypoints
 
@@ -107,7 +107,7 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
 
     # Detect keypoints on first band
     keypoints = keypoints_from_nparray(
-        in_buffer[0, ], thresh_dog=thresh_dog, nb_octaves=nb_octaves, nb_scales=nb_scales, offset=(y, x))
+        in_buffer[0, ], thresh_dog=thresh_dog, nb_octaves=nb_octaves, nb_scales=nb_scales, offset=(x, y))
 
     # Limit number of keypoints if needed
     if max_nb is not None:
