@@ -23,10 +23,20 @@ from s2plib import sift, config, rpc_model, rpc_utils
 import unittest
 
 class TestWithDefaultConfig(unittest.TestCase):
+    def __init__(self, name):
+        super(TestWithDefaultConfig,self).__init__(name)
+        self.test_default_cfg = s2plib.config.cfg.copy()
+
     def setUp(self):
+        s2plib.config.cfg.clear()
+        s2plib.config.cfg.update(self.test_default_cfg)
         # Ensure default temporary dir exists
         if not os.path.isdir(s2plib.config.cfg['temporary_dir']):
             os.mkdir(s2plib.config.cfg['temporary_dir'])
+
+    def tearDown(self):
+        s2plib.config.cfg.clear()
+        s2plib.config.cfg.update(self.test_default_cfg)
       
 class TestGdal(unittest.TestCase):
     def test_gdal_version(self):
@@ -156,30 +166,25 @@ def compare_dsm(computed,expected,absmean_tol,percentile_tol):
     
 
 class TestEnd2End(TestWithDefaultConfig):
-    def test_end2end(self):
-        test_default_cfg = s2plib.config.cfg.copy()
+    def test_end2end_pair(self):
         self.end2end('testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1)
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(test_default_cfg)
+    def test_end2end_triplet(self):
         self.end2end('testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2)
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(test_default_cfg)
+    def test_end2end_geo(self):
         self.end2end('testdata/input_triplet/config_geo.json', 'testdata/expected_output/triplet/dsm_geo.tif',0.05,2)
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(test_default_cfg)
+    def test_end2end_cluster(self):
         self.end2end_cluster('testdata/input_triplet/config.json')
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(test_default_cfg)
+    def test_end2end_mosaic(self):
         self.end2end_mosaic('testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.05,2)
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(test_default_cfg)
+    def test_distributed_plyflatten(self):
         self.distributed_plyflatten()
 
     def distributed_plyflatten(self):
         config = 'testdata/input_triplet/config.json'
 
         print('Running end2end with distributed plyflatten dsm ...')
-
+        s2plib.config.cfg.clear()
+        s2plib.config.cfg.update(test_default_cfg)
         test_cfg = s2p.read_config_file(config)
         test_cfg['skip_existing'] = True
         s2p.main(test_cfg)
@@ -212,7 +217,8 @@ class TestEnd2End(TestWithDefaultConfig):
 
         print('Configuration file: ',config)
         print('Reference DSM:',ref_dsm,os.linesep)
-
+        s2plib.config.cfg.clear()
+        s2plib.config.cfg.update(self.test_default_cfg)
         test_cfg = s2p.read_config_file(config)
         s2p.main(test_cfg)
 
@@ -227,7 +233,8 @@ class TestEnd2End(TestWithDefaultConfig):
         print('Configuration file: ',config)
 
         print('Running end2end in sequential mode to get reference DSM ...')
-
+        s2plib.config.cfg.clear()
+        s2plib.config.cfg.update(self.test_default_cfg)
         test_cfg = s2p.read_config_file(config)
         test_cfg['skip_existing'] = True
 
@@ -269,7 +276,8 @@ class TestEnd2End(TestWithDefaultConfig):
         compare_dsm(computed,expected,0,0)
 
     def end2end_mosaic(self,config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
-
+        s2plib.config.cfg.clear()
+        s2plib.config.cfg.update(self.test_default_cfg)
         test_cfg = s2p.read_config_file(config)
         outdir = test_cfg['out_dir']
         test_cfg['skip_existing'] = True
@@ -284,8 +292,3 @@ class TestEnd2End(TestWithDefaultConfig):
         expected = s2plib.common.gdal_read_as_array_with_nans(ref_height_map)
 
         compare_dsm(computed,expected,absmean_tol,percentile_tol)
-
-############### Tests main  #######################
-
-#if __name__ == '__main__':
-#    unittest.main()
