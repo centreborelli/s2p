@@ -169,11 +169,6 @@ extern "C"{
             const float * curr_k2_desc = &k2[j*(length_desc+offset_desc)];
             float dist = keypoints_distance_overloaded(curr_k1_desc, curr_k2_desc, length_desc,
                          s1, s2, epi_thresh, offset_desc);
-            /*float dist = 0.0;
-            for (int ll = 0; ll < length_desc; ll++) {
-                float t = (curr_k1_desc[ll] - curr_k2_desc[ll]);
-                dist += t*t;
-            }*/
             // find_the_two_nearest_keys
             if (dist < distA) {
                 distB = distA;
