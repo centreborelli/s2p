@@ -45,7 +45,7 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
         nb_scales (optional): Number of scales
         offset (optional): offset to apply to sift position in case arr is an extract of a bigger image
     Returns:
-        A numpy array of shape (nb_points,132) containing for each row (y,x,scale,orientation, sift_descriptor)    
+        A numpy array of shape (nb_points,132) containing for each row (y,x,scale,orientation, sift_descriptor)
     """
     # retrieve numpy buffer dimensions
     (h, w) = arr.shape
@@ -157,17 +157,27 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         if any, a numpy 2D array containing the list of inliers matches.
     """
     # compute matches
+    # Open k1 and k2 files containing the two lists of SIFTs
+    k1_keys_descriptors = list()
+    with open(k1) as f:
+        for line in f:
+            ll = [float(val) for val in line.split(' ')[:-1]]
+            k1_keys_descriptors.append(ll)
+    k2_keys_descriptors = list()
+    with open(k2) as f:
+        for line in f:
+            ll = [float(val) for val in line.split(' ')[:-1]]
+            k2_keys_descriptors.append(ll)
+    k1_keys_descriptors = np.asarray(k1_keys_descriptors, dtype=np.float32)
+    k2_keys_descriptors = np.asarray(k2_keys_descriptors, dtype=np.float32)
+
+    matches = keypoints_match_from_nparray(k1_keys_descriptors, k2_keys_descriptors, method, sift_thresh,
+                                           epipolar_threshold)
+
+    # Write this to file
     mfile = common.tmpfile('.txt')
-    cmd = "matching %s %s -o %s --sift-threshold %f" % (
-        k1, k2, mfile, sift_thresh)
-    if method == 'absolute':
-        cmd += " --absolute"
-    if F is not None:
-        fij = ' '.join(str(x) for x in [F[0, 2], F[1, 2], F[2, 0],
-                                        F[2, 1], F[2, 2]])
-        cmd = "%s -f \"%s\"" % (cmd, fij)
-        cmd += " --epipolar-threshold {}".format(epipolar_threshold)
-    common.run(cmd)
+    with open(mfile, 'w') as f:
+        np.savetxt(f, matches, delimiter=' ')
 
     matches = np.loadtxt(mfile)
     if matches.ndim == 2:  # filter outliers with ransac
@@ -183,6 +193,52 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
 
     if os.stat(mfile).st_size > 0:  # return numpy array of matches
         return np.loadtxt(mfile)
+
+
+def keypoints_match_from_nparray(k1, k2, method, sift_threshold, epi_threshold ):
+    # load shared library
+    lib = ctypes.CDLL(sift4ctypes_library)
+
+    # Set expected args and return types
+    lib.matching.argtypes = (ndpointer(dtype=ctypes.c_float, shape=k1.shape),
+                             ndpointer(dtype=ctypes.c_float, shape=k2.shape),
+                             ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
+                             ctypes.c_float, ctypes.c_float,
+                             ctypes.c_bool,
+                             ctypes.POINTER(ctypes.c_uint))
+    lib.matching.restype = ctypes.POINTER(ctypes.c_float)
+
+    # Get info of descriptor size
+    nb_sift_k1, descr = k1.shape
+    sift_offset = 4
+    length_descr = descr - sift_offset
+
+    # Transform information of method into boolean
+    use_relative_method = False
+    if method == 'relative':
+        use_relative_method = True
+
+    # Create variables to be updated by function call
+    nb_matches = ctypes.c_uint()
+
+    # Call sift fonction from sift4ctypes.so
+    matches_ptr = lib.matching(k1, k2, length_descr, sift_offset, nb_sift_k1, len(k2),
+                 sift_threshold, epi_threshold,
+                 use_relative_method,
+                 ctypes.byref(nb_matches)
+                 )
+
+    # Transform result into a numpy array
+    matches = np.asarray([matches_ptr[i] for i in range(0, nb_matches.value * 4)])
+
+    # Delete results to release memory
+    lib.delete_buffer.argtypes = (ctypes.POINTER(ctypes.c_float)),
+    lib.delete_buffer(matches_ptr)
+
+    # Reshape keypoints array
+    matches = matches.reshape((nb_matches.value, 4))
+
+    return matches
 
 
 def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
