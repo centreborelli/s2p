@@ -6,7 +6,58 @@
 #include "Utilities/Parameters.h"
 #include "LibImages/LibImages.h"
 #include "LibSift/LibSift.h"
-#include "sift_anatomy_20141201/lib_util.h"
+#include "linalg.c"
+
+
+// Compute the SQUARE Euclidean distance.
+float euclidean_distance_square(const float* x, const float* y, int length)
+{
+    float d = 0.0;
+    for (int i = 0; i < length; i++) {
+        float t = (x[i] - y[i]);
+        d += t*t;
+    }
+    return d;
+}
+
+float distance_epipolar(const float* k1, const float* k2, int length, const float* s1, const float * s2,
+                        const float epi_thresh, const unsigned int offset_desc)
+{
+    float a = s1[0];
+    float b = s1[1];
+    float c = s1[2];
+    float d = s2[0];
+    float e = s2[1];
+    float f = s2[2];
+
+    // Naming follows Ives' convention in which x is the row index
+    float x1 = k1[0];
+    float y1 = k1[1];
+    float x2 = k2[0];
+    float y2 = k2[1];
+
+    // rectified x coordinates (in Ives' conventions x is the row index)
+    float xx1 = b * y1 + a * x1 + c; // scalar product of (b, a, c) and (x1, y1, 1)
+    float xx2 = e * y2 + d * x2 + f; // scalar product of (e, d, f) and (x2, y2, 1)
+
+    // points satisfy the epipolar constraint when the rectified x are equal
+    if (fabs(xx1 - xx2) < epi_thresh)
+        return euclidean_distance_square(&k1[offset_desc], &k2[offset_desc], length);
+    else
+        return INFINITY;
+}
+
+float distance(const float* k1, const float* k2, int length, const float* s1, const float * s2,
+               const float epi_thresh, const unsigned int offset_desc)
+{
+    // parameters used in distance_epipolar
+    (void) s1;
+    (void) s2;
+    (void) epi_thresh;
+
+    return euclidean_distance_square(&k1[offset_desc], &k2[offset_desc], length);
+
+}
 
 extern "C"{
   /**
@@ -79,6 +130,8 @@ extern "C"{
                 const unsigned int nb_sift_k2,
                 const float sift_thresh,
                 const float epi_thresh,
+                double * fund_mat,
+                const bool use_fundamental_mat,
                 const bool use_relative_method,
                 unsigned int & nb_match){
     // Structure of k1 and k2 is supposed to be the following one :
@@ -87,22 +140,40 @@ extern "C"{
     nb_match = 0;
     const float sift_thresh_square = sift_thresh*sift_thresh;
     float * matches = new float[nb_sift_k1 * 4];
-    // TODO : add the fundamental matrix
+
+    float (*keypoints_distance_overloaded)(const float *,
+                                           const float *,
+                                           int,
+                                           const float*, const float*,
+                                           const float,
+                                           const unsigned int);
+
+    // Use fundamental matrix if given
+    float s1[3]; float s2[3];
+    if (use_fundamental_mat){
+        rectifying_similarities_from_affine_fundamental_matrix(s1, s2, fund_mat);
+        keypoints_distance_overloaded = distance_epipolar;
+    }
+    else{
+        keypoints_distance_overloaded = distance;
+    }
+
     // Compute the Euclidian distance for every pairs of points
     for (int i = 0; i < nb_sift_k1; i++) {
         float distA = INFINITY;
         float distB = INFINITY;
         int indexA = -1;
 
-        const float * curr_k1_desc = &k1[i*(length_desc+offset_desc) + offset_desc];
+        const float * curr_k1_desc = &k1[i*(length_desc+offset_desc)];
         for (int j = 0; j < nb_sift_k2; j++) {
-            const float * curr_k2_desc = &k2[j*(length_desc+offset_desc) + offset_desc];
-            //float dist = euclidean_distance_square(curr_k1_desc, curr_k2_desc, length_desc);
-            float dist = 0.0;
+            const float * curr_k2_desc = &k2[j*(length_desc+offset_desc)];
+            float dist = keypoints_distance_overloaded(curr_k1_desc, curr_k2_desc, length_desc,
+                         s1, s2, epi_thresh, offset_desc);
+            /*float dist = 0.0;
             for (int ll = 0; ll < length_desc; ll++) {
                 float t = (curr_k1_desc[ll] - curr_k2_desc[ll]);
                 dist += t*t;
-            }
+            }*/
             // find_the_two_nearest_keys
             if (dist < distA) {
                 distB = distA;

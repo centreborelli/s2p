@@ -172,7 +172,7 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
     k2_keys_descriptors = np.asarray(k2_keys_descriptors, dtype=np.float32)
 
     matches = keypoints_match_from_nparray(k1_keys_descriptors, k2_keys_descriptors, method, sift_thresh,
-                                           epipolar_threshold)
+                                           epipolar_threshold, F)
 
     # Write this to file
     mfile = common.tmpfile('.txt')
@@ -195,7 +195,7 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         return np.loadtxt(mfile)
 
 
-def keypoints_match_from_nparray(k1, k2, method, sift_threshold, epi_threshold ):
+def keypoints_match_from_nparray(k1, k2, method, sift_threshold, epi_threshold, F):
     # load shared library
     lib = ctypes.CDLL(sift4ctypes_library)
 
@@ -204,6 +204,7 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold, epi_threshold )
                              ndpointer(dtype=ctypes.c_float, shape=k2.shape),
                              ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
                              ctypes.c_float, ctypes.c_float,
+                             ctypes.POINTER(ctypes.c_double), ctypes.c_bool,
                              ctypes.c_bool,
                              ctypes.POINTER(ctypes.c_uint))
     lib.matching.restype = ctypes.POINTER(ctypes.c_float)
@@ -218,12 +219,20 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold, epi_threshold )
     if method == 'relative':
         use_relative_method = True
 
+    # Format fundamental matrix
+    use_fundamental_matrix = False
+    coeff_mat = None
+    if F:
+        coeff_mat = np.asarray([F[0, 2], F[1, 2], F[2, 0], F[2, 1], F[2, 2]])
+        use_fundamental_matrix = True
+
     # Create variables to be updated by function call
     nb_matches = ctypes.c_uint()
 
     # Call sift fonction from sift4ctypes.so
     matches_ptr = lib.matching(k1, k2, length_descr, sift_offset, nb_sift_k1, len(k2),
                  sift_threshold, epi_threshold,
+                 coeff_mat, use_fundamental_matrix,
                  use_relative_method,
                  ctypes.byref(nb_matches)
                  )
