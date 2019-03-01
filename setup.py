@@ -8,21 +8,21 @@ def readme():
         return f.read()
 
 
-class CustomDevelop(develop.develop):
+class CustomDevelop(develop.develop, object):
     """
     Class needed for "pip install -e ."
     """
     def run(self):
-        subprocess.check_call("make CC=gcc-8 CXX=g++-8", shell=True)
-        super().run()
+        subprocess.check_call("make", shell=True)
+        super(CustomDevelop, self).run()
 
 
-class CustomBuildPy(build_py.build_py):
+class CustomBuildPy(build_py.build_py, object):
     """
     Class needed for "pip install pys2p"
     """
     def run(self):
-        super().run()
+        super(CustomBuildPy, self).run()
         subprocess.check_call("make", shell=True)
         subprocess.check_call("cp -r bin build/lib/", shell=True)
 
