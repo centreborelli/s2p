@@ -202,50 +202,6 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
-def end2end_cluster(config):
-    print('Configuration file: ',config)
-
-    print('Running end2end in sequential mode to get reference DSM ...')
-
-    test_cfg = s2p.read_config_file(config)
-    test_cfg['skip_existing'] = True
-    s2p.main(test_cfg)
-
-    outdir = test_cfg['out_dir']
-    expected = s2p.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
-    print('Running end2end in cluster mode ...')
-    test_cfg_cluster = dict()
-    test_cfg_cluster.update(test_cfg)
-    test_cfg_cluster['out_dir'] = test_cfg_cluster['out_dir'] + "_cluster"
-    test_cfg_cluster['skip_existing'] = True
-
-    print("Running initialisation step ...")
-    s2p.main(test_cfg_cluster,["initialisation"])
-
-    # Retrieve tiles list
-    outdir = test_cfg_cluster['out_dir']
-    tiles_file = os.path.join(outdir,'tiles.txt')
-
-    tiles = s2p.read_tiles(tiles_file)
-
-    print('Found '+str(len(tiles))+' tiles to process')
-
-    for step in s2p.ALL_STEPS:
-        if s2p.ALL_STEPS[step] is True:
-            print('Running %s on each tile...' % step)
-            for tile in tiles:
-                print('tile : %s' % tile)
-                tile_cfg_cluster = s2p.read_config_file(tile)
-                s2p.main(tile_cfg_cluster, [step])
-        else:
-            print('Running %s...' % step)
-            print('test_cfg_cluster : %s' % test_cfg_cluster)
-            s2p.main(test_cfg_cluster, [step])
-
-    computed = s2p.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
-
-    end2end_compare_dsm(computed,expected,0,0)
-
 def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
     test_cfg = s2p.read_config_file(config)
@@ -273,7 +229,6 @@ registered_tests = [('unit_gdal_version', (unit_gdal_version,[])),
                     ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
                     ('end2end_pair', (end2end, ['tests/data/input_pair/config.json','tests/data/expected_output/pair/dsm.tif',0.025,1])),
                     ('end2end_triplet', (end2end, ['tests/data/input_triplet/config.json','tests/data/expected_output/triplet/dsm.tif',0.05,2])),
-                    ('end2end_cluster', (end2end_cluster, ['tests/data/input_triplet/config.json'])),
                     ('end2end_mosaic', (end2end_mosaic, ['tests/data/input_triplet/config.json','tests/data/expected_output/triplet/height_map.tif',0.05,2])),
                     ('end2end_geometric', (end2end, ['tests/data/input_triplet/config_geo.json', 'tests/data/expected_output/triplet/dsm_geo.tif',0.05,2])),
                     ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['tests/data/input_triplet/config.json']))]
