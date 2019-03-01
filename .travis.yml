@@ -34,5 +34,5 @@ install:
 
 script:
   - make
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage -s s2plib -m unittest discover -s tests/ -p "*_test.py"; converage report -m; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then coverage -s s2plib -m unittest discover -s tests/ -p "*_test.py"; coverage report -m; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage --source s2plib -m unittest discover -s tests/ -p "*_test.py"; coverage report -m; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then coverage --source s2plib -m unittest discover -s tests/ -p "*_test.py"; coverage report -m; fi
