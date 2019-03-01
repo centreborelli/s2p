@@ -58,8 +58,6 @@ class TestEnd2End(TestWithDefaultConfig):
         self.end2end(data_path('testdata/input_triplet/config.json'),data_path('testdata/expected_output/triplet/dsm.tif'),0.05,2)
     def test_end2end_geo(self):
         self.end2end(data_path('testdata/input_triplet/config_geo.json'), data_path('testdata/expected_output/triplet/dsm_geo.tif'),0.05,2)
-    def test_end2end_cluster(self):
-        self.end2end_cluster(data_path('testdata/input_triplet/config.json'))
     def test_end2end_mosaic(self):
         self.end2end_mosaic(data_path('testdata/input_triplet/config.json'),data_path('testdata/expected_output/triplet/height_map.tif'),0.05,2)
     def test_distributed_plyflatten(self):
@@ -111,50 +109,6 @@ class TestEnd2End(TestWithDefaultConfig):
         expected = common.gdal_read_as_array_with_nans(ref_dsm)
 
         compare_dsm(computed,expected,absmean_tol,percentile_tol)
-
-    def end2end_cluster(self,config_file):
-        print('Configuration file: ',config_file)
-
-        print('Running end2end in sequential mode to get reference DSM ...')
-        test_cfg = s2p.read_config_file(config_file)
-        test_cfg['skip_existing'] = True
-
-        s2p.main(test_cfg)
-        outdir = test_cfg['out_dir']
-
-        expected = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
-        
-        print('Running end2end in cluster mode ...')
-        test_cfg_cluster = dict()
-        test_cfg_cluster.update(test_cfg)
-        test_cfg_cluster['skip_existing'] = True
-
-        print("Running initialisation step ...")
-        s2p.main(test_cfg_cluster,["initialisation"])
-
-        # Retrieve tiles list
-        outdir = test_cfg_cluster['out_dir']
-        tiles_file = os.path.join(outdir,'tiles.txt')
-
-        tiles = s2p.read_tiles(tiles_file)
-
-        print('Found '+str(len(tiles))+' tiles to process')
-
-        for step in ALL_STEPS:
-            if ALL_STEPS[step] is True:
-                print('Running %s on each tile...' % step)
-                for tile in tiles:
-                    print('tile : %s' % tile)
-                    tile_cfg_cluster = s2p.read_config_file(tile)
-                    s2p.main(tile_cfg_cluster, [step])
-            else:
-                print('Running %s...' % step)
-                print('test_cfg_cluster : %s' % test_cfg_cluster)
-                s2p.main(test_cfg_cluster, [step])
-
-        computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
-
-        compare_dsm(computed,expected,0,0)
 
     def end2end_mosaic(self,config_file,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
         test_cfg = s2p.read_config_file(config_file)
