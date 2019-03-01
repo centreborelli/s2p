@@ -29,7 +29,7 @@ class CustomBuildPy(build_py.build_py, object):
 
 requirements = ['numpy',
                 'scipy',
-                'rasterio[s3]',
+                'rasterio[s3,test]',
                 'utm',
                 'pyproj',
                 'bs4',
