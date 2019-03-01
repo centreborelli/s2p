@@ -33,17 +33,17 @@ import shutil
 import rasterio
 
 
-from s2plib.config import cfg
-from s2plib import common
-from s2plib import parallel
-from s2plib import initialization
-from s2plib import pointing_accuracy
-from s2plib import rectification
-from s2plib import block_matching
-from s2plib import masking
-from s2plib import triangulation
-from s2plib import fusion
-from s2plib import visualisation
+from s2p.config import cfg
+from s2p import common
+from s2p import parallel
+from s2p import initialization
+from s2p import pointing_accuracy
+from s2p import rectification
+from s2p import block_matching
+from s2p import masking
+from s2p import triangulation
+from s2p import fusion
+from s2p import visualisation
 
 
 def pointing_correction(tile, i):
@@ -812,21 +812,3 @@ def read_config_file(config_file):
                 img[d] = make_path_relative_to_file(img[d], config_file)
 
     return user_cfg
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
-                                                  'Pipeline'))
-    parser.add_argument('config', metavar='config.json',
-                        help=('path to a json file containing the paths to '
-                              'input and output files and the algorithm '
-                              'parameters'))
-    args = parser.parse_args()
-
-    user_cfg = read_config_file(args.config)
-
-    main(user_cfg)
-
-    # Backup input file for sanity check
-    if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
-        shutil.copy2(args.config,os.path.join(cfg['out_dir'],'config.json.orig'))

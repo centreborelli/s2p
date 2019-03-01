@@ -8,10 +8,10 @@ import subprocess
 import numpy as np
 import rasterio
 
-from s2plib import common
-from s2plib import rpc_model
-from s2plib import rpc_utils
-from s2plib.config import cfg
+from s2p import common
+from s2p import rpc_model
+from s2p import rpc_utils
+from s2p.config import cfg
 
 
 def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
