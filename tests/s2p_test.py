@@ -189,7 +189,7 @@ class TestEnd2End(TestWithDefaultConfig):
 
         print('Running end2end with distributed plyflatten dsm ...')
         s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(test_default_cfg)
+        s2plib.config.cfg.update(self.test_default_cfg)
         test_cfg = s2p.read_config_file(config)
         test_cfg['skip_existing'] = True
         s2p.main(test_cfg)
