@@ -136,7 +136,7 @@ class TestEnd2End(TestWithDefaultConfig):
         outdir = test_cfg_cluster['out_dir']
         tiles_file = os.path.join(outdir,'tiles.txt')
 
-        tiles = read_tiles(tiles_file)
+        tiles = s2p.read_tiles(tiles_file)
 
         print('Found '+str(len(tiles))+' tiles to process')
 
