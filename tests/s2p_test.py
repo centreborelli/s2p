@@ -18,7 +18,6 @@ import glob
 
 import s2p
 from utils import s2p_mosaic
-import s2plib
 from s2plib import sift, config, rpc_model, rpc_utils
 import unittest
 
@@ -30,18 +29,18 @@ def data_path(data_path):
 class TestWithDefaultConfig(unittest.TestCase):
     def __init__(self, name):
         super(TestWithDefaultConfig,self).__init__(name)
-        self.test_default_cfg = s2plib.config.cfg.copy()
+        self.test_default_cfg = config.cfg.copy()
 
     def setUp(self):
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(self.test_default_cfg)
+        config.cfg.clear()
+        config.cfg.update(self.test_default_cfg)
         # Ensure default temporary dir exists
-        if not os.path.isdir(s2plib.config.cfg['temporary_dir']):
-            os.mkdir(s2plib.config.cfg['temporary_dir'])
+        if not os.path.isdir(config.cfg['temporary_dir']):
+            os.mkdir(config.cfg['temporary_dir'])
 
     def tearDown(self):
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(self.test_default_cfg)
+        config.cfg.clear()
+        config.cfg.update(self.test_default_cfg)
       
 class TestGdal(unittest.TestCase):
     def test_gdal_version(self):
@@ -110,7 +109,7 @@ class TestSifts(TestWithDefaultConfig):
 
     def test_matching(self):
 
-        test_matches = s2plib.sift.keypoints_match(data_path('testdata/units/sift1.txt'),data_path('testdata/units/sift2.txt'))
+        test_matches = sift.keypoints_match(data_path('testdata/units/sift1.txt'),data_path('testdata/units/sift2.txt'))
         expected_matches = np.loadtxt(data_path('testdata/expected_output/units/unit_keypoints_match.txt'))
 
         # Check that numbers of matches are the same
@@ -124,14 +123,14 @@ class TestSifts(TestWithDefaultConfig):
     def test_plyflatten(self):
         f = data_path("testdata/input_ply/cloud.ply")                       # input cloud
         e = data_path("testdata/expected_output/plyflatten/dsm_40cm.tiff")  # expected output
-        o = s2plib.common.tmpfile(".tiff")                       # actual output
-        s2plib.common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
+        o = common.tmpfile(".tiff")                       # actual output
+        common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
         s = "\"%w %h %v %Y\n\"" # statistics to compare: width,height,avg,numnans
-        X = s2plib.common.tmpfile(".txt")
-        Y = s2plib.common.tmpfile(".txt")
-        s2plib.common.run("imprintf %s %s > %s" % (s, o, X))     # actual stats
-        s2plib.common.run("imprintf %s %s > %s" % (s, e, Y))     # expected stats
-        s2plib.common.run("diff %s %s" % (X, Y)) # compare stats
+        X = common.tmpfile(".txt")
+        Y = common.tmpfile(".txt")
+        common.run("imprintf %s %s > %s" % (s, o, X))     # actual stats
+        common.run("imprintf %s %s > %s" % (s, e, Y))     # expected stats
+        common.run("diff %s %s" % (X, Y)) # compare stats
 
 
     def test_matches_from_rpc(self):
@@ -185,17 +184,15 @@ class TestEnd2End(TestWithDefaultConfig):
         self.distributed_plyflatten()
 
     def distributed_plyflatten(self):
-        config = 'testdata/input_triplet/config.json'
+        config_file = data_path('testdata/input_triplet/config.json')
 
         print('Running end2end with distributed plyflatten dsm ...')
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(self.test_default_cfg)
-        test_cfg = s2p.read_config_file(config)
+        test_cfg = s2p.read_config_file(config_file)
         test_cfg['skip_existing'] = True
         s2p.main(test_cfg)
 
         outdir = test_cfg['out_dir']
-        computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+        computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
 
         print('Running plyflatten dsm reference ...')
 
@@ -212,41 +209,38 @@ class TestEnd2End(TestWithDefaultConfig):
                                                     global_xsize, global_ysize)]
 
         run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-        s2plib.common.run(run_cmd)
+        common.run(run_cmd)
 
-        expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm_ref.tif'))
+        expected = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm_ref.tif'))
 
         compare_dsm(computed,expected,0,0)
 
-    def end2end(self,config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
+    def end2end(self,config_file,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
-        print('Configuration file: ',config)
+        print('Configuration file: ',config_file)
         print('Reference DSM:',ref_dsm,os.linesep)
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(self.test_default_cfg)
-        test_cfg = s2p.read_config_file(config)
+     
+        test_cfg = s2p.read_config_file(config_file)
         s2p.main(test_cfg)
 
         outdir = test_cfg['out_dir']
 
-        computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
-        expected = s2plib.common.gdal_read_as_array_with_nans(ref_dsm)
+        computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+        expected = common.gdal_read_as_array_with_nans(ref_dsm)
 
         compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
-    def end2end_cluster(self,config):
-        print('Configuration file: ',config)
+    def end2end_cluster(self,config_file):
+        print('Configuration file: ',config_file)
 
         print('Running end2end in sequential mode to get reference DSM ...')
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(self.test_default_cfg)
-        test_cfg = s2p.read_config_file(config)
+        test_cfg = s2p.read_config_file(config_file)
         test_cfg['skip_existing'] = True
 
         s2p.main(test_cfg)
         outdir = test_cfg['out_dir']
 
-        expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+        expected = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
         
         print('Running end2end in cluster mode ...')
         test_cfg_cluster = dict()
@@ -276,14 +270,12 @@ class TestEnd2End(TestWithDefaultConfig):
                 print('test_cfg_cluster : %s' % test_cfg_cluster)
                 s2p.main(test_cfg_cluster, [step])
 
-        computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+        computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
 
         compare_dsm(computed,expected,0,0)
 
-    def end2end_mosaic(self,config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
-        s2plib.config.cfg.clear()
-        s2plib.config.cfg.update(self.test_default_cfg)
-        test_cfg = s2p.read_config_file(config)
+    def end2end_mosaic(self,config_file,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
+        test_cfg = s2p.read_config_file(config_file)
         outdir = test_cfg['out_dir']
         test_cfg['skip_existing'] = True
         s2p.main(test_cfg)
@@ -293,7 +285,7 @@ class TestEnd2End(TestWithDefaultConfig):
 
         s2p_mosaic.main(tiles_file,global_height_map,'pair_1/height_map.tif')
 
-        computed = s2plib.common.gdal_read_as_array_with_nans(global_height_map)
-        expected = s2plib.common.gdal_read_as_array_with_nans(ref_height_map)
+        computed = common.gdal_read_as_array_with_nans(global_height_map)
+        expected = common.gdal_read_as_array_with_nans(ref_height_map)
 
         compare_dsm(computed,expected,absmean_tol,percentile_tol)
