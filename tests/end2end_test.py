@@ -6,8 +6,9 @@ from __future__ import print_function
 
 import numpy as np
 import os
+import glob
 
-from s2p import read_config_file, main
+import s2p
 from s2plib import common
 from utils import s2p_mosaic
 from tests_utils import TestWithDefaultConfig, data_path
@@ -68,9 +69,9 @@ class TestEnd2End(TestWithDefaultConfig):
         config_file = data_path('testdata/input_triplet/config.json')
 
         print('Running end2end with distributed plyflatten dsm ...')
-        test_cfg = read_config_file(config_file)
+        test_cfg = s2p.read_config_file(config_file)
         test_cfg['skip_existing'] = True
-        main(test_cfg)
+        s2p.main(test_cfg)
 
         outdir = test_cfg['out_dir']
         computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
@@ -101,8 +102,8 @@ class TestEnd2End(TestWithDefaultConfig):
         print('Configuration file: ',config_file)
         print('Reference DSM:',ref_dsm,os.linesep)
      
-        test_cfg = read_config_file(config_file)
-        main(test_cfg)
+        test_cfg = s2p.read_config_file(config_file)
+        s2p.main(test_cfg)
 
         outdir = test_cfg['out_dir']
 
@@ -115,10 +116,10 @@ class TestEnd2End(TestWithDefaultConfig):
         print('Configuration file: ',config_file)
 
         print('Running end2end in sequential mode to get reference DSM ...')
-        test_cfg = read_config_file(config_file)
+        test_cfg = s2p.read_config_file(config_file)
         test_cfg['skip_existing'] = True
 
-        main(test_cfg)
+        s2p.main(test_cfg)
         outdir = test_cfg['out_dir']
 
         expected = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
@@ -129,7 +130,7 @@ class TestEnd2End(TestWithDefaultConfig):
         test_cfg_cluster['skip_existing'] = True
 
         print("Running initialisation step ...")
-        main(test_cfg_cluster,["initialisation"])
+        s2p.main(test_cfg_cluster,["initialisation"])
 
         # Retrieve tiles list
         outdir = test_cfg_cluster['out_dir']
@@ -144,22 +145,22 @@ class TestEnd2End(TestWithDefaultConfig):
                 print('Running %s on each tile...' % step)
                 for tile in tiles:
                     print('tile : %s' % tile)
-                    tile_cfg_cluster = read_config_file(tile)
-                    main(tile_cfg_cluster, [step])
+                    tile_cfg_cluster = s2p.read_config_file(tile)
+                    s2p.main(tile_cfg_cluster, [step])
             else:
                 print('Running %s...' % step)
                 print('test_cfg_cluster : %s' % test_cfg_cluster)
-                main(test_cfg_cluster, [step])
+                s2p.main(test_cfg_cluster, [step])
 
         computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
 
         compare_dsm(computed,expected,0,0)
 
     def end2end_mosaic(self,config_file,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
-        test_cfg = read_config_file(config_file)
+        test_cfg = s2p.read_config_file(config_file)
         outdir = test_cfg['out_dir']
         test_cfg['skip_existing'] = True
-        main(test_cfg)
+        s2p.main(test_cfg)
 
         tiles_file = os.path.join(outdir,'tiles.txt')
         global_height_map = os.path.join(outdir,'height_map.tif')
