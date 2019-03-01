@@ -43,8 +43,7 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
     return keyfile
 
 
-def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
-                    model=None, epipolar_threshold=10):
+def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None, epipolar_threshold=10):
     """
     Find matches among two lists of sift keypoints.
 
@@ -60,9 +59,6 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
             (ie ratio between distance to nearest and distance to second
             nearest), the commonly used value for the threshold is 0.6.
         F (optional): affine fundamental matrix
-        model (optional, default is None): model imposed by RANSAC when
-            searching the set of inliers. If None all matches are considered as
-            inliers.
         epipolar_threshold (optional, default is 10): maximum distance allowed for
             a point to the epipolar line of its match.
 
@@ -71,7 +67,8 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
     """
     # compute matches
     mfile = common.tmpfile('.txt')
-    cmd = "matching %s %s -o %s --sift-threshold %f" % (k1, k2, mfile, sift_thresh)
+    cmd = "matching %s %s -o %s --sift-threshold %f" % (
+        k1, k2, mfile, sift_thresh)
     if method == 'absolute':
         cmd += " --absolute"
     if F is not None:
@@ -80,18 +77,6 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         cmd = "%s -f \"%s\"" % (cmd, fij)
         cmd += " --epipolar-threshold {}".format(epipolar_threshold)
     common.run(cmd)
-
-    matches = np.loadtxt(mfile)
-    if matches.ndim == 2:  # filter outliers with ransac
-        if model == 'fundamental' and len(matches) >= 7:
-            common.run("ransac fmn 1000 .3 7 %s < %s" % (mfile, mfile))
-        elif model == 'homography' and len(matches) >= 4:
-            common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                            mfile))
-        elif model == 'hom_fund' and len(matches) >= 7:
-            common.run("ransac hom 1000 2 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                            mfile))
-            common.run("ransac fmn 1000 .2 7 %s < %s" % (mfile, mfile))
 
     if os.stat(mfile).st_size > 0:  # return numpy array of matches
         return np.loadtxt(mfile)
@@ -128,11 +113,12 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
     for i in range(2):
-        p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
-        p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
+        p1 = image_keypoints(
+            im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
+        p2 = image_keypoints(im2, x2, y2, w2, h2,
+                             extra_params='--thresh-dog %f' % thresh_dog)
         matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'],
-                                  F, model='fundamental',
-                                  epipolar_threshold=cfg['max_pointing_error'])
+                                  F, epipolar_threshold=cfg['max_pointing_error'])
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
             break
         thresh_dog /= 2.0
