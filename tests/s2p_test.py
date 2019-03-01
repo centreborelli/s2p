@@ -18,7 +18,7 @@ import glob
 
 import s2p
 from utils import s2p_mosaic
-from s2plib import sift, config, rpc_model, rpc_utils
+from s2plib import sift, config, rpc_model, rpc_utils, common
 import unittest
 
 
@@ -41,6 +41,7 @@ class TestWithDefaultConfig(unittest.TestCase):
     def tearDown(self):
         config.cfg.clear()
         config.cfg.update(self.test_default_cfg)
+        common.garbage_cleanup()
       
 class TestGdal(unittest.TestCase):
     def test_gdal_version(self):
