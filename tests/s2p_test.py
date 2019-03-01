@@ -22,6 +22,11 @@ import s2plib
 from s2plib import sift, config, rpc_model, rpc_utils
 import unittest
 
+
+def data_path(data_path):
+    here = os.path.abspath(os.path.dirname(__file__))
+    return os.path.join(here,data_path)
+
 class TestWithDefaultConfig(unittest.TestCase):
     def __init__(self, name):
         super(TestWithDefaultConfig,self).__init__(name)
@@ -55,10 +60,10 @@ class TestGdal(unittest.TestCase):
 class TestSifts(TestWithDefaultConfig):
     def test_image_keypoints(self):
         #from s2plib import sift
-        kpts = sift.image_keypoints('testdata/input_triplet/img_02.tif',100,100,200,200)
+        kpts = sift.image_keypoints(data_path('testdata/input_triplet/img_02.tif'),100,100,200,200)
 
         test_kpts = np.loadtxt(kpts)
-        ref_kpts  = np.loadtxt('testdata/expected_output/units/unit_image_keypoints.txt')
+        ref_kpts  = np.loadtxt(data_path('testdata/expected_output/units/unit_image_keypoints.txt'))
 
         test_set = set(map(tuple,test_kpts[:,0:2]))
         ref_set = set(map(tuple,ref_kpts[:,0:2]))
@@ -105,8 +110,8 @@ class TestSifts(TestWithDefaultConfig):
 
     def test_matching(self):
 
-        test_matches = s2plib.sift.keypoints_match('testdata/units/sift1.txt','testdata/units/sift2.txt')
-        expected_matches = np.loadtxt('testdata/expected_output/units/unit_keypoints_match.txt')
+        test_matches = s2plib.sift.keypoints_match(data_path('testdata/units/sift1.txt'),data_path('testdata/units/sift2.txt'))
+        expected_matches = np.loadtxt(data_path('testdata/expected_output/units/unit_keypoints_match.txt'))
 
         # Check that numbers of matches are the same
         np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0],verbose=True)
@@ -117,8 +122,8 @@ class TestSifts(TestWithDefaultConfig):
 
     # test the plyflatten executable
     def test_plyflatten(self):
-        f = "testdata/input_ply/cloud.ply"                       # input cloud
-        e = "testdata/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
+        f = data_path("testdata/input_ply/cloud.ply")                       # input cloud
+        e = data_path("testdata/expected_output/plyflatten/dsm_40cm.tiff")  # expected output
         o = s2plib.common.tmpfile(".tiff")                       # actual output
         s2plib.common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
         s = "\"%w %h %v %Y\n\"" # statistics to compare: width,height,avg,numnans
@@ -131,11 +136,11 @@ class TestSifts(TestWithDefaultConfig):
 
     def test_matches_from_rpc(self):
 
-        rpc1 = rpc_model.RPCModel('testdata/input_pair/rpc_01.xml')
-        rpc2 = rpc_model.RPCModel('testdata/input_pair/rpc_02.xml')
+        rpc1 = rpc_model.RPCModel(data_path('testdata/input_pair/rpc_01.xml'))
+        rpc2 = rpc_model.RPCModel(data_path('testdata/input_pair/rpc_02.xml'))
 
         test_matches = rpc_utils.matches_from_rpc(rpc1,rpc2,100,100,200,200,5)
-        expected_matches = np.loadtxt('testdata/expected_output/units/unit_matches_from_rpc.txt')
+        expected_matches = np.loadtxt(data_path('testdata/expected_output/units/unit_matches_from_rpc.txt'))
 
         np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
         np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
@@ -167,15 +172,15 @@ def compare_dsm(computed,expected,absmean_tol,percentile_tol):
 
 class TestEnd2End(TestWithDefaultConfig):
     def test_end2end_pair(self):
-        self.end2end('testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1)
+        self.end2end(data_path('testdata/input_pair/config.json'),data_path('testdata/expected_output/pair/dsm.tif'),0.025,1)
     def test_end2end_triplet(self):
-        self.end2end('testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2)
+        self.end2end(data_path('testdata/input_triplet/config.json'),data_path('testdata/expected_output/triplet/dsm.tif'),0.05,2)
     def test_end2end_geo(self):
-        self.end2end('testdata/input_triplet/config_geo.json', 'testdata/expected_output/triplet/dsm_geo.tif',0.05,2)
+        self.end2end(data_path('testdata/input_triplet/config_geo.json'), data_path('testdata/expected_output/triplet/dsm_geo.tif'),0.05,2)
     def test_end2end_cluster(self):
-        self.end2end_cluster('testdata/input_triplet/config.json')
+        self.end2end_cluster(data_path('testdata/input_triplet/config.json'))
     def test_end2end_mosaic(self):
-        self.end2end_mosaic('testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.05,2)
+        self.end2end_mosaic(data_path('testdata/input_triplet/config.json'),data_path('testdata/expected_output/triplet/height_map.tif'),0.05,2)
     def test_distributed_plyflatten(self):
         self.distributed_plyflatten()
 
