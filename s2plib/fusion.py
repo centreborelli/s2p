@@ -10,8 +10,8 @@ import shutil
 import numpy as np
 import rasterio
 
-from s2plib import piio
 from s2plib.config import cfg
+from s2plib import common
 
 
 def average_if_close(x, threshold):
@@ -49,8 +49,8 @@ def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
         with rasterio.open(img, 'r') as f:
             x[:, :, i] = f.read(1) - offsets[i]
         if cfg['debug']:
-            piio.write('{}_registered.tif'.format(os.path.splitext(img)[0]),
-                       x[:, :, i] + np.mean(offsets))
+            common.rasterio_write('{}_registered.tif'.format(os.path.splitext(img)[0]),
+                                  x[:, :, i] + np.mean(offsets))
 
     # apply the averaging operator
     if averaging.startswith(('np.', 'numpy.')):
