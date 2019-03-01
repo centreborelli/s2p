@@ -290,14 +290,13 @@ def rectification_homographies(matches, x, y, w, h):
     return np.dot(T, S1), np.dot(T, S2), F
 
 
-def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
-                 sift_matches=None, method='rpc', hmargin=0, vmargin=0):
+def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
+                 method='rpc', hmargin=0, vmargin=0):
     """
     Rectify a ROI in a pair of images.
 
     Args:
-        im1, im2: paths to two image files
-        rpc1, rpc2: paths to the two xml files containing RPC data
+        im1, im2: paths to two GeoTIFF image files
         x, y, w, h: four integers defining the rectangular ROI in the first
             image.  (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
@@ -318,8 +317,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         disp_min, disp_max: horizontal disparity range
     """
     # read RPC data
-    rpc1 = rpc_model.RPCModel(rpc1)
-    rpc2 = rpc_model.RPCModel(rpc2)
+    rpc1 = rpc_utils.rpc_from_geotiff(rpc1)
+    rpc2 = rpc_utils.rpc_from_geotiff(rpc2)
 
     # compute real or virtual matches
     if method == 'rpc':
@@ -341,8 +340,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         # compose H2 with a horizontal shear to reduce the disparity range
         a = np.mean(rpc_utils.altitude_range(rpc1, x, y, w, h))
         lon, lat, alt = rpc_utils.ground_control_points(rpc1, x, y, w, h, a, a, 4)
-        x1, y1 = rpc1.inverse_estimate(lon, lat, alt)[:2]
-        x2, y2 = rpc2.inverse_estimate(lon, lat, alt)[:2]
+        x1, y1 = rpc1.projection(lon, lat, alt)[:2]
+        x2, y2 = rpc2.projection(lon, lat, alt)[:2]
         m = np.vstack([x1, y1, x2, y2]).T
         m = np.vstack({tuple(row) for row in m})  # remove duplicates due to no alt range
         H2 = register_horizontally_shear(m, H1, H2)

@@ -168,8 +168,8 @@ def rectification_pair(tile, i):
 
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
-    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
-                                                            rpc2, x, y, w, h,
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2,
+                                                            x, y, w, h,
                                                             rect1, rect2, A, m,
                                                             hmargin=cfg['horizontal_margin'],
                                                             vmargin=cfg['vertical_margin'])
