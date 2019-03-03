@@ -131,10 +131,6 @@ def disparity_range_from_matches(matches, H1, H2, w, h):
     """
     Compute the disparity range of a ROI from a list of point matches.
 
-    The estimation is based on the extrapolation of the affine registration
-    estimated from the matches. The extrapolation is done on the whole region of
-    interest.
-
     Args:
         matches: Nx4 numpy array containing a list of matches, in the full
             image coordinates frame, before rectification
@@ -149,16 +145,14 @@ def disparity_range_from_matches(matches, H1, H2, w, h):
     x1 = p1[:, 0]
     p2 = common.points_apply_homography(H2, matches[:, 2:])
     x2 = p2[:, 0]
-    y2 = p2[:, 1]
-
 
     # compute the final disparity range
     disp_min = np.floor(np.min(x2 - x1))
     disp_max = np.ceil(np.max(x2 - x1))
 
     # add a security margin to the disparity range
-    disp_min *= (1 - np.sign(disp_min) * cfg['disp_range_extra_margin'])
-    disp_max *= (1 + np.sign(disp_max) * cfg['disp_range_extra_margin'])
+    disp_min -= (disp_max - disp_min) * cfg['disp_range_extra_margin'])
+    disp_max += (disp_max - disp_min) * cfg['disp_range_extra_margin'])
     return disp_min, disp_max
 
 
@@ -190,7 +184,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     exogenous_disp = None
     sift_disp = None
     alt_disp  = None
-    
+
     # Compute exogenous disparity range if needed
     if (cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']):
         exogenous_disp = rpc_utils.exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h,
@@ -199,7 +193,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
                                                               cfg['disp_range_exogenous_low_margin'])
 
         print("exogenous disparity range: [%f, %f]" % (exogenous_disp[0], exogenous_disp[1]))
-        
+
     # Compute SIFT disparity range if needed
     if (cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']):
         if matches is not None and len(matches)>=2:
