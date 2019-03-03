@@ -563,7 +563,7 @@ def plys_to_dsm(tile):
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         global_xoff = bbx[0]
-        global_yoff = bbx[3]
+        global_yoff = bbx[2]
     else:
         global_xoff = 0 # arbitrary reference
         global_yoff = 0 # arbitrary reference
