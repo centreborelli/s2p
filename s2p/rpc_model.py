@@ -258,3 +258,35 @@ class RPCModel:
                                self.lat_scale,
                                self.lon_scale,
                                self.alt_scale)
+
+
+    def write_to_file(self, path):
+        """
+        Write RPC coefficients to a txt file in IKONOS txt format.
+
+        Args:
+            path (str): path to the output txt file
+        """
+        with open(path, 'w') as f:
+
+            # scale and offset
+            f.write('LINE_OFF: {:.12f} pixels\n'.format(self.row_offset))
+            f.write('SAMP_OFF: {:.12f} pixels\n'.format(self.col_offset))
+            f.write('LAT_OFF: {:.12f} degrees\n'.format(self.lat_offset))
+            f.write('LONG_OFF: {:.12f} degrees\n'.format(self.lon_offset))
+            f.write('HEIGHT_OFF: {:.12f} meters\n'.format(self.alt_offset))
+            f.write('LINE_SCALE: {:.12f} pixels\n'.format(self.row_scale))
+            f.write('SAMP_SCALE: {:.12f} pixels\n'.format(self.col_scale))
+            f.write('LAT_SCALE: {:.12f} degrees\n'.format(self.lat_scale))
+            f.write('LONG_SCALE: {:.12f} degrees\n'.format(self.lon_scale))
+            f.write('HEIGHT_SCALE: {:.12f} meters\n'.format(self.alt_scale))
+
+            # projection function coefficients
+            for i in range(20):
+                f.write('LINE_NUM_COEFF_{:d}: {:.12f}\n'.format(i+1, self.row_num[i]))
+            for i in range(20):
+                f.write('LINE_DEN_COEFF_{:d}: {:.12f}\n'.format(i+1, self.row_den[i]))
+            for i in range(20):
+                f.write('SAMP_NUM_COEFF_{:d}: {:.12f}\n'.format(i+1, self.col_num[i]))
+            for i in range(20):
+                f.write('SAMP_DEN_COEFF_{:d}: {:.12f}\n'.format(i+1, self.col_den[i]))

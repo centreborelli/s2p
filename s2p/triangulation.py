@@ -104,7 +104,7 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors, extr
     Args:
         out: path to the output ply file
         disp, mask: paths to the diparity and mask maps
-        rpc1, rpc2: paths to the xml files
+        rpc1, rpc2: instances of the rpc_model.RPCModel class
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
         A: path to txt file containing the pointing correction matrix
@@ -119,11 +119,19 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors, extr
     xbb = "--col-m %s --col-M %s --row-m %s --row-M %s" % xybbx if xybbx else ""
     msk = "--mask-orig %s" % xymsk if xymsk else ""
 
-    command = 'disp2ply {} {} {} {} {}'.format(out, disp, mask, rpc1, rpc2)
+    # write rpc coefficients to txt files
+    rpcfile1 = common.tmpfile('.txt')
+    rpcfile2 = common.tmpfile('.txt')
+    rpc1.write_to_file(rpcfile1)
+    rpc2.write_to_file(rpcfile2)
+
+    # run disp2ply
+    command = 'disp2ply {} {} {} {} {}'.format(out, disp, mask, rpcfile1, rpcfile2)
     # extra: is an optinonal extra data channel in the ply its default value '' ignores it
     command += ' {} {} -href "{}" -hsec "{}"'.format(colors, extra, href, hsec)
     command += ' {} {} {} {}'.format(utm, lbb, xbb, msk)
     common.run(command)
+
 
 def multidisp_map_to_point_cloud(out, disp_list, rpc_ref, rpc_list, colors,
                                  utm_zone=None, llbbx=None, xybbx=None):
