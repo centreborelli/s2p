@@ -151,8 +151,8 @@ def disparity_range_from_matches(matches, H1, H2, w, h):
     disp_max = np.ceil(np.max(x2 - x1))
 
     # add a security margin to the disparity range
-    disp_min -= (disp_max - disp_min) * cfg['disp_range_extra_margin'])
-    disp_max += (disp_max - disp_min) * cfg['disp_range_extra_margin'])
+    disp_min -= (disp_max - disp_min) * cfg['disp_range_extra_margin']
+    disp_max += (disp_max - disp_min) * cfg['disp_range_extra_margin']
     return disp_min, disp_max
 
 
