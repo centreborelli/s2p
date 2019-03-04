@@ -317,8 +317,8 @@ def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
         disp_min, disp_max: horizontal disparity range
     """
     # read RPC data
-    rpc1 = rpc_utils.rpc_from_geotiff(rpc1)
-    rpc2 = rpc_utils.rpc_from_geotiff(rpc2)
+    rpc1 = rpc_utils.rpc_from_geotiff(im1)
+    rpc2 = rpc_utils.rpc_from_geotiff(im2)
 
     # compute real or virtual matches
     if method == 'rpc':

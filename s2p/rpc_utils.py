@@ -36,8 +36,8 @@ def find_corresponding_point(model_a, model_b, x, y, z):
             yp contains the coordinates of the projection of the 3D point in image
             b.
     """
-    t1, t2, t3 = model_a.localization(x, y, z)
-    xp, yp, zp = model_b.projection(t1, t2, z)
+    t1, t2 = model_a.localization(x, y, z)
+    xp, yp = model_b.projection(t1, t2, z)
     return (xp, yp, z)
 
 
@@ -122,7 +122,7 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     a = np.array([m, M,   m,   M,   m,   M,   m,   M])
 
     # compute geodetic coordinates of corresponding world points
-    lon, lat, alt = rpc.localization(x, y, a)
+    lon, lat = rpc.localization(x, y, a)
 
     # extract extrema
     # TODO: handle the case where longitudes pass over -180 degrees
@@ -388,7 +388,8 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
     row_range = [y+(1.0/(2*n))*h, y+((2*n-1.0)/(2*n))*h, n]
     alt_range = [m, M, n]
     col, row, alt = generate_point_mesh(col_range, row_range, alt_range)
-    return rpc.localization(col, row, alt)
+    lon, lat = rpc.localization(col, row, alt)
+    return lon, lat, alt
 
 
 def corresponding_roi(rpc1, rpc2, x, y, w, h):
@@ -445,8 +446,8 @@ def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
     """
     m, M = altitude_range(rpc1, x, y, w, h, 100, -100)
     lon, lat, alt = ground_control_points(rpc1, x, y, w, h, m, M, n)
-    x1, y1, h1 = rpc1.projection(lon, lat, alt)
-    x2, y2, h2 = rpc2.projection(lon, lat, alt)
+    x1, y1 = rpc1.projection(lon, lat, alt)
+    x2, y2 = rpc2.projection(lon, lat, alt)
 
     return np.vstack([x1, y1, x2, y2]).T
 
