@@ -25,7 +25,7 @@ from s2p.config import cfg
 # Calling json.dump(..,default=workaround_json_int64) fixes this
 # https://bugs.python.org/issue24313
 def workaround_json_int64(o):
-    if isinstance(o,np.integer) : return int(o)
+    if isinstance(o, np.integer) : return int(o)
     raise TypeError
 
 def dict_has_keys(d, l):
@@ -52,10 +52,7 @@ def check_parameters(d):
             print('ERROR: missing img paths for image', img)
             sys.exit(1)
         if not dict_has_keys(img, ['rpc']) or img['rpc'] == '':
-            import tempfile     # TODO: fix for common.tmpfile failure
-            img['rpc'] = tempfile.mktemp('.rpc')
-            rpc_utils.rpc_from_geotiff(img['img'], img['rpc'])
-            print('INFO: trying reading rpc from image', img)
+            img['rpc'] = rpc_utils.rpc_from_geotiff(img['img'])
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:
@@ -122,8 +119,8 @@ def build_cfg(user_cfg):
     cfg['images'][0].setdefault('wat')
 
     # Make sure that input data have absolute paths
-    for i in range(0,len(cfg['images'])):
-        for d in ['clr','cld','roi','wat','img','rpc']:
+    for i in range(len(cfg['images'])):
+        for d in ['clr', 'cld', 'roi', 'wat', 'img']:
             if d in cfg['images'][i] and cfg['images'][i][d] is not None and not os.path.isabs(cfg['images'][i][d]):
                 cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
 
@@ -131,7 +128,7 @@ def build_cfg(user_cfg):
     y = cfg['roi']['y']
     w = cfg['roi']['w']
     h = cfg['roi']['h']
-    
+
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
     # get utm zone
@@ -149,12 +146,10 @@ def make_dirs():
     # store a json dump of the config.cfg dictionary
     with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
         cfg_copy = copy.deepcopy(cfg)
-        cfg_copy['out_dir']='.'
+        cfg_copy['out_dir'] = '.'
+        for img in cfg_copy['images']:
+            img.pop('rpc', None)
         json.dump(cfg_copy, f, indent=2, default=workaround_json_int64)
-
-    # copy RPC xml files in the output directory
-    for img in cfg['images']:
-        shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
 def adjust_tile_size():
@@ -287,6 +282,8 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                 # save a json dump of the tile configuration
                 tile_cfg = copy.deepcopy(cfg)
                 x, y, w, h = tile['coordinates']
+                for img in tile_cfg['images']:
+                    img.pop('rpc', None)
                 tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
                 tile_cfg['full_img'] = False
                 tile_cfg['max_processes'] = 1

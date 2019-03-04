@@ -118,8 +118,8 @@ def unit_plyflatten():
 
 def unit_matches_from_rpc():
 
-    rpc1 = s2p.rpc_model.RPCModel('tests/data/input_pair/rpc_01.xml')
-    rpc2 = s2p.rpc_model.RPCModel('tests/data/input_pair/rpc_02.xml')
+    rpc1 = s2p.rpc_utils.rpc_from_geotiff('tests/data/input_pair/img_01.tif')
+    rpc2 = s2p.rpc_utils.rpc_from_geotiff('tests/data/input_pair/img_02.tif')
 
     test_matches = s2p.rpc_utils.matches_from_rpc(rpc1,rpc2,100,100,200,200,5)
     expected_matches = np.loadtxt('tests/data/expected_output/units/unit_matches_from_rpc.txt')
