@@ -61,11 +61,6 @@ def pointing_correction(tile, i):
     img2 = cfg['images'][i]['img']
     rpc2 = cfg['images'][i]['rpc']
 
-    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
-                                                            'pointing.txt')):
-        print('pointing correction done on tile {} {} pair {}'.format(x, y, i))
-        return
-
     # correct pointing error
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
     try:
@@ -98,13 +93,12 @@ def global_pointing_correction(tiles):
     """
     for i in range(1, len(cfg['images'])):
         out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
-        if not (os.path.isfile(out) and cfg['skip_existing']):
-            l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
-            np.savetxt(out, pointing_accuracy.global_from_local(l),
-                       fmt='%12.6f')
-            if cfg['clean_intermediate']:
-                for d in l:
-                    common.remove(os.path.join(d, 'center_keypts_sec.txt'))
+        l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
+        np.savetxt(out, pointing_accuracy.global_from_local(l),
+                   fmt='%12.6f')
+        if cfg['clean_intermediate']:
+            for d in l:
+                common.remove(os.path.join(d, 'center_keypts_sec.txt'))
 
 
 def rectification_pair(tile, i):
@@ -129,11 +123,6 @@ def rectification_pair(tile, i):
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
         print('rectification: stderr.log exists')
         print('pair_{} not processed on tile {} {}'.format(i, x, y))
-        return
-
-    if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
-                                    f in outputs):
-        print('rectification done on tile {} {} pair {}'.format(x, y, i))
         return
 
     print('rectifying tile {} {} pair {}...'.format(x, y, i))
@@ -201,11 +190,6 @@ def stereo_matching(tile,i):
         print('pair_{} not processed on tile {} {}'.format(i, x, y))
         return
 
-    if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
-                                    f in outputs):
-        print('disparity estimation done on tile {} {} pair {}'.format(x, y, i))
-        return
-
     print('estimating disparity on tile {} {} pair {}...'.format(x, y, i))
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
@@ -242,10 +226,6 @@ def disparity_to_height(tile, i):
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
         print('triangulation: stderr.log exists')
         print('pair_{} not processed on tile {} {}'.format(i, x, y))
-        return
-
-    if cfg['skip_existing'] and os.path.isfile(height_map):
-        print('triangulation done on tile {} {} pair {}'.format(x, y, i))
         return
 
     print('triangulating tile {} {} pair {}...'.format(x, y, i))
@@ -288,10 +268,6 @@ def disparity_to_ply(tile):
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
         print('triangulation: stderr.log exists')
         print('pair_1 not processed on tile {} {}'.format(x, y))
-        return
-
-    if cfg['skip_existing'] and os.path.isfile(ply_file):
-        print('triangulation done on tile {} {}'.format(x, y))
         return
 
     print('triangulating tile {} {}...'.format(x, y))
@@ -358,10 +334,6 @@ def multidisparities_to_ply(tile):
     rpc_ref = cfg['images'][0]['rpc']
     disp_list = list()
     rpc_list = list()
-
-    if cfg['skip_existing'] and os.path.isfile(ply_file):
-        print('triangulation done on tile {} {}'.format(x, y))
-        return
 
     mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
 
@@ -525,9 +497,6 @@ def heights_to_ply(tile):
     plyfile = os.path.join(out_dir, 'cloud.ply')
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     height_map = os.path.join(out_dir, 'height_map.tif')
-    if cfg['skip_existing'] and os.path.isfile(plyfile):
-        print('ply file already exists for tile {} {}'.format(x, y))
-        return
 
     # H is the homography transforming the coordinates system of the original
     # full size image into the coordinates system of the crop
@@ -538,7 +507,7 @@ def heights_to_ply(tile):
     else:
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
-        
+
     triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpc'], H, colors,
                                             utm_zone=cfg['utm_zone'],
@@ -600,7 +569,7 @@ def plys_to_dsm(tile):
         raise common.RunFailure({"command": run_cmd, "environment": os.environ,
                                  "output": q})
 
-    # export confidence (optional) 
+    # export confidence (optional)
     # call to plyflatten might fail, but it won't abort the process
     # or affect the following steps
     cmd = ['plyflatten', str(cfg['dsm_resolution']), out_conf]
@@ -671,13 +640,13 @@ def global_dsm(tiles):
     input_file_list = os.path.join(cfg['out_dir'], 'gdalbuildvrt_input_file_list2.txt')
 
     if len(dems_list_ok) > 0:
-    
+
         with open(input_file_list, 'w') as f:
             f.write(dsms)
-    
+
         common.run("gdalbuildvrt -vrtnodata nan -input_file_list %s %s" % (input_file_list,
                                                                            out_conf_vrt))
-    
+
         common.run(" ".join(["gdal_translate",
                              "-co TILED=YES -co BIGTIFF=IF_SAFER",
                              "%s %s %s" % (projwin, out_conf_vrt, out_conf_tif)]))
