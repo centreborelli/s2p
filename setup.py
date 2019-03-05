@@ -1,10 +1,11 @@
 import subprocess
+from codecs import open
 from setuptools import setup, find_packages
 from setuptools.command import develop, build_py
 
 
 def readme():
-    with open('README.md') as f:
+    with open("README.md", "r", "utf-8") as f:
         return f.read()
 
 
@@ -36,7 +37,7 @@ requirements = ['numpy',
                 'requests']
 
 setup(name="s2p",
-      version="1.0a1",
+      version="1.0a2",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       url='https://github.com/miss3d/s2p',
