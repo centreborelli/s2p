@@ -60,24 +60,24 @@ def unit_image_keypoints():
     for i in range(test_kpts.shape[0]):
         found = False
         for j in range(ref_kpts.shape[0]):
-            dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
+            dist = np.linalg.norm(test_kpts[i,0:2]-ref_kpts[j,0:2])
             if dist<dist_tol:
                 found = True
         if not found:
-            print("KeyPoint not found: "+str((test_kpts[i,0:1])))
+            print("KeyPoint not found: "+str((test_kpts[i,0:2])))
             nb_test_not_in_ref+=1
 
     print(str(nb_test_not_in_ref)+" test kpts have no spatially close match in ref")
 
     nb_ref_not_in_test = 0
-    for i in range(test_kpts.shape[0]):
+    for i in range(ref_kpts.shape[0]):
         found = False
-        for j in range(ref_kpts.shape[0]):
-            dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
+        for j in range(test_kpts.shape[0]):
+            dist = np.linalg.norm(ref_kpts[i,0:2]-test_kpts[j,0:2])
             if dist<dist_tol:
                 found = True
         if not found:
-            print("KeyPoint not found: "+str((test_kpts[i,0:1])))
+            print("KeyPoint not found: "+str((test_kpts[i,0:2])))
             nb_ref_not_in_test+=1
 
     print(str(nb_ref_not_in_test)+" ref kpts have no spatially close match in test")
