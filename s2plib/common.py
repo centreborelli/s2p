@@ -201,10 +201,10 @@ def rasterio_write(path, array, profile={}, tags={}):
                    dtype=array.dtype)
 
     # write to file
-    with rasterio.open(path, 'w', **profile) as dst:
-        dst.write(np.transpose(array, (2, 0, 1)))
-        dst.update_tags(**tags)
-
+    with rasterio.Env():
+        with rasterio.open(path, 'w', **profile) as dst:
+            dst.write(np.transpose(array, (2, 0, 1)))
+            dst.update_tags(**tags)
 
 def image_apply_homography(out, im, H, w, h):
     """

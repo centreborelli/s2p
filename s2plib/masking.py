@@ -6,6 +6,7 @@
 import os
 import subprocess
 import numpy as np
+import warnings
 import rasterio
 
 from s2plib import common
@@ -41,9 +42,10 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                roi_gml, tmp),
                               shell=True)
-
-        with rasterio.open(tmp, 'r') as f:
-            mask = np.logical_and(mask, f.read().squeeze())
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning, message='Dataset has no geotransform set')
+            with rasterio.open(tmp, 'r') as f:
+                mask = np.logical_and(mask, f.read().squeeze())
 
     if not mask.any():
         return mask
@@ -53,16 +55,20 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                cld_gml, tmp),
                               shell=True)
-        with rasterio.open(tmp, 'r') as f:
-            mask = np.logical_and(mask, ~f.read().squeeze().astype(bool))
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning, message='Dataset has no geotransform set')
+            with rasterio.open(tmp, 'r') as f:
+                mask = np.logical_and(mask, ~f.read().squeeze().astype(bool))
 
     if not mask.any():
         return mask
 
     if wat_msk is not None:  # water mask (raster)
         x, y, w, h = map(int, (x, y, w, h))
-        with rasterio.open(wat_msk, 'r') as f:
-            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w))).squeeze())
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning, message='Dataset has no geotransform set')
+            with rasterio.open(wat_msk, 'r') as f:
+                mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w))).squeeze())
 
     return mask
 

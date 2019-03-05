@@ -10,6 +10,7 @@ import utm
 import json
 import copy
 import shutil
+import warnings
 import numpy as np
 
 from s2plib import common
@@ -297,9 +298,11 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                     json.dump(tile_cfg, f, indent=2,default=workaround_json_int64)
 
                 # save the mask
-                common.rasterio_write(os.path.join(tile['dir'],
-                                                   'cloud_water_image_domain_mask.png'),
-                                      mask.astype(np.uint8))
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', category=UserWarning, message='Dataset has no geotransform set')
+                    common.rasterio_write(os.path.join(tile['dir'],
+                                                       'cloud_water_image_domain_mask.png'),
+                                          mask.astype(np.uint8))
     else:
         if len(tiles_coords) == 1:
             tiles.append(create_tile(tiles_coords[0], neighborhood_coords_dict))
