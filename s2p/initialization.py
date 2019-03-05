@@ -10,6 +10,7 @@ import utm
 import json
 import copy
 import shutil
+import warnings
 import numpy as np
 
 from s2p import common

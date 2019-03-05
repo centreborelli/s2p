@@ -6,12 +6,17 @@
 import os
 import subprocess
 import numpy as np
+import warnings
 import rasterio
 
 from s2p import common
 from s2p import rpc_model
 from s2p import rpc_utils
 from s2p.config import cfg
+
+# silent rasterio NotGeoreferencedWarning
+warnings.filterwarnings("ignore",
+                        category=rasterio.errors.NotGeoreferencedWarning)
 
 
 def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
@@ -41,7 +46,6 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                roi_gml, tmp),
                               shell=True)
-
         with rasterio.open(tmp, 'r') as f:
             mask = np.logical_and(mask, f.read().squeeze())
 
