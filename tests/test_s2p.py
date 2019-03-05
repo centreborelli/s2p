@@ -134,7 +134,6 @@ def unit_distributed_plyflatten(config):
     print('Running end2end with distributed plyflatten dsm ...')
 
     test_cfg = s2p.read_config_file(config)
-    test_cfg['skip_existing'] = True
     s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
@@ -202,11 +201,11 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
+
 def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
     test_cfg = s2p.read_config_file(config)
     outdir = test_cfg['out_dir']
-    test_cfg['skip_existing'] = True
     s2p.main(test_cfg)
 
     tiles_file = os.path.join(outdir,'tiles.txt')
