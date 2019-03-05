@@ -9,6 +9,7 @@ import os
 import sys
 import errno
 import datetime
+import warnings
 import tempfile
 import subprocess
 import numpy as np
@@ -17,6 +18,10 @@ import rasterio
 
 from s2plib.config import cfg
 
+
+# silent rasterio NotGeoreferencedWarning
+warnings.filterwarnings("ignore",
+                        category=rasterio.errors.NotGeoreferencedWarning)
 
 # add the bin folder to system path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -205,6 +210,7 @@ def rasterio_write(path, array, profile={}, tags={}):
         with rasterio.open(path, 'w', **profile) as dst:
             dst.write(np.transpose(array, (2, 0, 1)))
             dst.update_tags(**tags)
+
 
 def image_apply_homography(out, im, H, w, h):
     """

@@ -14,6 +14,10 @@ from s2plib import rpc_model
 from s2plib import rpc_utils
 from s2plib.config import cfg
 
+# silent rasterio NotGeoreferencedWarning
+warnings.filterwarnings("ignore",
+                        category=rasterio.errors.NotGeoreferencedWarning)
+
 
 def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
                              wat_msk=None):
@@ -42,10 +46,8 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                roi_gml, tmp),
                               shell=True)
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning, message='Dataset has no geotransform set')
-            with rasterio.open(tmp, 'r') as f:
-                mask = np.logical_and(mask, f.read().squeeze())
+        with rasterio.open(tmp, 'r') as f:
+            mask = np.logical_and(mask, f.read().squeeze())
 
     if not mask.any():
         return mask
@@ -55,20 +57,16 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
                                                                cld_gml, tmp),
                               shell=True)
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning, message='Dataset has no geotransform set')
-            with rasterio.open(tmp, 'r') as f:
-                mask = np.logical_and(mask, ~f.read().squeeze().astype(bool))
+        with rasterio.open(tmp, 'r') as f:
+            mask = np.logical_and(mask, ~f.read().squeeze().astype(bool))
 
     if not mask.any():
         return mask
 
     if wat_msk is not None:  # water mask (raster)
         x, y, w, h = map(int, (x, y, w, h))
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning, message='Dataset has no geotransform set')
-            with rasterio.open(wat_msk, 'r') as f:
-                mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w))).squeeze())
+        with rasterio.open(wat_msk, 'r') as f:
+            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w))).squeeze())
 
     return mask
 
