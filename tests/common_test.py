@@ -9,8 +9,8 @@ class TestCommon(TestWithDefaultConfig):
     Test for the common module
     """
     def test_plyflatten(self):
-        f = data_path("testdata/input_ply/cloud.ply")                       # input cloud
-        e = data_path("testdata/expected_output/plyflatten/dsm_40cm.tiff")  # expected output
+        f = data_path("input_ply/cloud.ply")                       # input cloud
+        e = data_path("expected_output/plyflatten/dsm_40cm.tiff")  # expected output
         o = common.tmpfile(".tiff")                       # actual output
         common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
         s = "\"%w %h %v %Y\n\"" # statistics to compare: width,height,avg,numnans

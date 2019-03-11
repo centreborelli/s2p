@@ -14,7 +14,7 @@ def data_path(data_path):
         absolute path to that data file
     """
     here = os.path.abspath(os.path.dirname(__file__))
-    return os.path.join(here,data_path)
+    return os.path.join(here,'data',data_path)
 
 class TestWithDefaultConfig(unittest.TestCase):
     """

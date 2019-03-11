@@ -53,18 +53,18 @@ class TestEnd2End(TestWithDefaultConfig):
     Class for end2end tests
     """
     def test_end2end_pair(self):
-        self.end2end(data_path('testdata/input_pair/config.json'),data_path('testdata/expected_output/pair/dsm.tif'),0.025,1)
+        self.end2end(data_path('input_pair/config.json'),data_path('expected_output/pair/dsm.tif'),0.025,1)
     def test_end2end_triplet(self):
-        self.end2end(data_path('testdata/input_triplet/config.json'),data_path('testdata/expected_output/triplet/dsm.tif'),0.05,2)
+        self.end2end(data_path('input_triplet/config.json'),data_path('expected_output/triplet/dsm.tif'),0.05,2)
     def test_end2end_geo(self):
-        self.end2end(data_path('testdata/input_triplet/config_geo.json'), data_path('testdata/expected_output/triplet/dsm_geo.tif'),0.05,2)
+        self.end2end(data_path('input_triplet/config_geo.json'), data_path('expected_output/triplet/dsm_geo.tif'),0.05,2)
     def test_end2end_mosaic(self):
-        self.end2end_mosaic(data_path('testdata/input_triplet/config.json'),data_path('testdata/expected_output/triplet/height_map.tif'),0.05,2)
+        self.end2end_mosaic(data_path('input_triplet/config.json'),data_path('expected_output/triplet/height_map.tif'),0.05,2)
     def test_distributed_plyflatten(self):
         self.distributed_plyflatten()
 
     def distributed_plyflatten(self):
-        config_file = data_path('testdata/input_triplet/config.json')
+        config_file = data_path('input_triplet/config.json')
 
         print('Running end2end with distributed plyflatten dsm ...')
         test_cfg = s2p.read_config_file(config_file)

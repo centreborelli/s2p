@@ -11,10 +11,10 @@ class TestSifts(TestWithDefaultConfig):
     """
     def test_image_keypoints(self):
         #from s2plib import sift
-        kpts = sift.image_keypoints(data_path('testdata/input_triplet/img_02.tif'),100,100,200,200)
+        kpts = sift.image_keypoints(data_path('input_triplet/img_02.tif'),100,100,200,200)
 
         test_kpts = np.loadtxt(kpts)
-        ref_kpts  = np.loadtxt(data_path('testdata/expected_output/units/unit_image_keypoints.txt'))
+        ref_kpts  = np.loadtxt(data_path('expected_output/units/unit_image_keypoints.txt'))
 
         test_set = set(map(tuple,test_kpts[:,0:2]))
         ref_set = set(map(tuple,ref_kpts[:,0:2]))
@@ -61,8 +61,8 @@ class TestSifts(TestWithDefaultConfig):
 
     def test_matching(self):
 
-        test_matches = sift.keypoints_match(data_path('testdata/units/sift1.txt'),data_path('testdata/units/sift2.txt'))
-        expected_matches = np.loadtxt(data_path('testdata/expected_output/units/unit_keypoints_match.txt'))
+        test_matches = sift.keypoints_match(data_path('units/sift1.txt'),data_path('units/sift2.txt'))
+        expected_matches = np.loadtxt(data_path('expected_output/units/unit_keypoints_match.txt'))
 
         # Check that numbers of matches are the same
         np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0],verbose=True)
