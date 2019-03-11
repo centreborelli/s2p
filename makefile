@@ -23,7 +23,7 @@ SRCDIR = c
 BINDIR = bin
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) homography sift imscript mgm mgm_multi piio tvl1 lsd
+default: $(BINDIR) homography sift imscript mgm mgm_multi tvl1 lsd
 
 # the "all" rule builds four further correlators
 all: default msmw3 sgbm mgm_multi
@@ -62,13 +62,6 @@ mgm_multi:
 lsd:
 	$(MAKE) -C 3rdparty/lsd
 	cp 3rdparty/lsd/lsd $(BINDIR)
-
-# piio: a required python extension
-piio: s2plib/piio/libiio.so
-
-s2plib/piio/libiio.so: s2plib/piio/setup.py s2plib/piio/freemem.c s2plib/piio/iio.c s2plib/piio/iio.h
-	$(MAKE) -C s2plib/piio
-
 
 #
 # rules for optional "modules": msmw, asift, sgbm, tvl1, etc
@@ -183,7 +176,7 @@ depend:
 
 # rules for cleaning, nothing interesting below this point
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
-	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio\
+	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm \
 	clean_depend
 
 clean_depend:
@@ -234,8 +227,5 @@ clean_mgm:
 	$(MAKE) -C 3rdparty/mgm clean
 	$(RM) $(BINDIR)/mgm
 
-clean_piio:
-	$(MAKE) -C s2plib/piio clean
-
 .PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_piio test
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test
