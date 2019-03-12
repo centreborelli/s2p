@@ -1,19 +1,91 @@
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
-
+# Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
 from __future__ import print_function
 import os
 import numpy as np
+
+import warnings
+import rasterio as rio
+import ctypes
+from numpy.ctypeslib import ndpointer
 
 from s2plib import common
 from s2plib import rpc_utils
 from s2plib import estimation
 from s2plib.config import cfg
 
+# Locate sift4ctypes library and raise an ImportError if it can not be
+# found This call will raise an exception if library can not be found,
+# at import time
 
-def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
+# TODO: This is kind of ugly. Cleaner way to do this is to update
+# LD_LIBRARY_PATH, which we should do once we have a proper config file
+sift4ctypes_library = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), '../lib/libsift4ctypes.so')
+ctypes.CDLL(sift4ctypes_library)
+
+# Filter warnings from rasterio reading files wihtout georeferencing
+warnings.filterwarnings("ignore", category=rio.errors.NotGeoreferencedWarning)
+
+
+def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, offset=None):
+    """
+    Runs SIFT (the keypoints detection and description only, no matching) on an image stored in a 2D numpy array
+
+    It uses Ives Rey Otero's implementation published in IPOL:
+    http://www.ipol.im/pub/pre/82/
+
+    Args:
+        arr: A 2D numpy array respresenting the input image
+        thresh_dog (optional): Threshold on gaussian derivative
+        nb_octaves (optional): Number of octaves
+        nb_scales (optional): Number of scales
+        offset (optional): offset to apply to sift position in case arr is an extract of a bigger image
+    Returns:
+        A numpy array of shape (nb_points,132) containing for each row (y,x,scale,orientation, sift_descriptor)    
+    """
+    # retrieve numpy buffer dimensions
+    (h, w) = arr.shape
+
+    # load shared library
+    lib = ctypes.CDLL(sift4ctypes_library)
+
+    # Set expected args and return types
+    lib.sift.argtypes = (ndpointer(dtype=ctypes.c_float, shape=(h, w)), ctypes.c_uint, ctypes.c_uint, ctypes.c_float,
+                         ctypes.c_uint, ctypes.c_uint, ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint))
+    lib.sift.restype = ctypes.POINTER(ctypes.c_float)
+
+    # Create variables to be updated by function call
+    nb_points = ctypes.c_uint()
+    desc_size = ctypes.c_uint()
+
+    # Call sift fonction from sift4ctypes.so
+    keypoints_ptr = lib.sift(arr.astype(np.float32), w, h, thresh_dog,
+                             nb_octaves, nb_scales, ctypes.byref(desc_size), ctypes.byref(nb_points))
+
+    # Transform result into a numpy array
+    keypoints = np.asarray([keypoints_ptr[i]
+                            for i in range(0, nb_points.value*desc_size.value)])
+
+    # Delete results to release memory
+    lib.delete_buffer.argtypes = (ctypes.POINTER(ctypes.c_float)),
+    lib.delete_buffer(keypoints_ptr)
+
+    # Reshape keypoints array
+    keypoints = keypoints.reshape((nb_points.value, desc_size.value))
+
+    if offset is not None:
+        x, y = offset
+        keypoints[:, 0] += x
+        keypoints[:, 1] += y
+
+    return keypoints
+
+
+def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8, nb_scales=3):
     """
     Runs SIFT (the keypoints detection and description only, no matching).
 
@@ -24,22 +96,37 @@ def image_keypoints(im, x, y, w, h, max_nb=None, extra_params=''):
         im: path to the input image
         max_nb (optional): maximal number of keypoints. If more keypoints are
             detected, those at smallest scales are discarded
-        extra_params (optional): extra parameters to be passed to the sift
-            binary
 
     Returns:
         path to the file containing the list of descriptors
     """
+
+    # Read file with rasterio
+    with rio.open(im) as ds:
+        # clip roi to stay inside the image boundaries
+        # - if x and y must be positive else resize (w, h)
+        w += min(x, 0)
+        h += min(y, 0)
+        x = max(x, 0)
+        y = max(y, 0)
+        # - if extract not completely inside the full image resize (w, h)
+        w = min(w, ds.width - x)
+        h = min(h, ds.height - y)
+        in_buffer = ds.read(window=rio.windows.Window(x, y, w, h))
+
+    # Detect keypoints on first band
+    keypoints = keypoints_from_nparray(
+        in_buffer[0, ], thresh_dog=thresh_dog, nb_octaves=nb_octaves, nb_scales=nb_scales, offset=(x, y))
+
+    # Limit number of keypoints if needed
+    if max_nb is not None:
+        keypoints = keypoints[:max_nb, ]
+
     keyfile = common.tmpfile('.txt')
-    if max_nb:
-        cmd = "sift_roi %s %d %d %d %d --max-nb-pts %d %s -o %s" % (im, x, y, w,
-                                                                    h, max_nb,
-                                                                    extra_params,
-                                                                    keyfile)
-    else:
-        cmd = "sift_roi %s %d %d %d %d %s -o %s" % (im, x, y, w, h,
-                                                    extra_params, keyfile)
-    common.run(cmd)
+
+    with open(keyfile, 'w') as f:
+        np.savetxt(f, keypoints, delimiter=' ', fmt='%.3f')
+
     return keyfile
 
 
@@ -71,7 +158,8 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
     """
     # compute matches
     mfile = common.tmpfile('.txt')
-    cmd = "matching %s %s -o %s --sift-threshold %f" % (k1, k2, mfile, sift_thresh)
+    cmd = "matching %s %s -o %s --sift-threshold %f" % (
+        k1, k2, mfile, sift_thresh)
     if method == 'absolute':
         cmd += " --absolute"
     if F is not None:
@@ -128,8 +216,10 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
     for i in range(2):
-        p1 = image_keypoints(im1, x, y, w, h, extra_params='--thresh-dog %f' % thresh_dog)
-        p2 = image_keypoints(im2, x2, y2, w2, h2, extra_params='--thresh-dog %f' % thresh_dog)
+        p1 = image_keypoints(
+            im1, x, y, w, h, thresh_dog=thresh_dog)
+        p2 = image_keypoints(im2, x2, y2, w2, h2,
+                             thresh_dog=thresh_dog)
         matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'],
                                   F, model='fundamental',
                                   epipolar_threshold=cfg['max_pointing_error'])
