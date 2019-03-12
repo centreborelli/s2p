@@ -30,7 +30,7 @@ all: default msmw3 sgbm mgm_multi
 
 # test for the default configuration
 test: default
-	python -u s2p_test.py --all
+	python -m unittest discover -c -s tests/ -p "*_test.py"
 
 # make sure that the destination directory is built
 $(BINDIR):
