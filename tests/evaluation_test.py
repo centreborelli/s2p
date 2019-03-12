@@ -8,7 +8,7 @@ from s2plib import evaluation
 
 import unittest
 
-class TestEstimation(unittest.TestCase):
+class TestEvaluation(unittest.TestCase):
     def test_finite_distances(self):
         x = np.array([1, 1, 1])
         l = np.array([0, 1, 0])
