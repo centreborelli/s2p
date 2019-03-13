@@ -81,9 +81,7 @@ comes with a Command Line Interface (CLI).
 The `s2p` CLI has an extensive help that can be printed with the `-h` and `--help` switches.
 
     $ s2p -h
-    usage: s2p.py [-h]
-              [--step {initialisation, local-pointing, global-pointing, rectification, matching, triangulation, disparity-to-height, global-mean-heights, heights-to-ply, local-dsm-rasterization, global-dsm-rasterization}]
-              config.json
+    usage: s2p.py [-h] config.json
 
     S2P: Satellite Stereo Pipeline
 
@@ -93,7 +91,6 @@ The `s2p` CLI has an extensive help that can be printed with the `-h` and `--hel
 
     optional arguments:
       -h, --help            show this help message and exit
-      --step {initialisation, local-pointing, global-pointing, rectification, matching, triangulation, disparity-to-height, global-mean-heights, heights-to-ply, local-dsm-rasterization, global-dsm-rasterization}
 
 To run the whole pipeline, call `s2p` with a json configuration file as unique argument:
 
