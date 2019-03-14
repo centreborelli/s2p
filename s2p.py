@@ -31,6 +31,9 @@ import multiprocessing
 import collections
 import shutil
 import rasterio
+from plyfile import PlyData, PlyElement
+import pyproj
+import affine
 
 
 from s2plib.config import cfg
@@ -43,6 +46,7 @@ from s2plib import block_matching
 from s2plib import masking
 from s2plib import triangulation
 from s2plib import fusion
+from s2plib import rasterization
 from s2plib import visualisation
 
 
@@ -524,6 +528,10 @@ def heights_to_ply(tile):
 
 def plys_to_dsm(tile):
     """
+    Generates DSM from plyfiles (cloud.ply)
+
+    Args:
+        tile: a dictionary that provides all you need to process a tile
     """
     out_dsm  = os.path.join(tile['dir'], 'dsm.tif')
     out_conf = os.path.join(tile['dir'], 'confidence.tif')
@@ -548,50 +556,45 @@ def plys_to_dsm(tile):
     local_yoff = global_yoff + np.ceil((ymax - global_yoff) / res) * res
     local_ysize = int(1 - np.floor((ymin - local_yoff) / res))
 
-    clouds = '\n'.join(os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
+    clouds = [os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
 
-    cmd = ['plyflatten', str(cfg['dsm_resolution']), out_dsm]
-    cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
-                                            local_xsize, local_ysize)]
+    # read points clouds
+    full_cloud = list()
+    for cloud in clouds:
+        plydata = PlyData.read(cloud)
+        cloud_data = np.array(plydata.elements[0].data)
+        proj = "projection:"
+        utm_zone = [comment.split(proj)[-1] for comment in plydata.comments \
+                    if proj in comment][0].split()[-1]
 
-    cmd += ['-radius', str(cfg['dsm_radius'])]
+        # nb_extra_columns: z, r, b, g (all columns except x, y)
+        nb_extra_columns = len(cloud_data.dtype)-2
+        full_cloud += [np.array([cloud_data[el] for el in cloud_data.dtype.names]).astype(float).T]
 
-    if cfg['dsm_sigma'] is not None:
-        cmd += ['-sigma', str(cfg['dsm_sigma'])]
+    full_cloud = np.concatenate(full_cloud)
+    nb_points = np.shape(full_cloud)[0]
 
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    q = p.communicate(input=clouds.encode())
+    # The copy() method will reorder to C-contiguous order by default:
+    full_cloud = full_cloud.copy()
+    dsm_radius = cfg['dsm_radius']
+    dsm_sigma = float("inf")  if cfg['dsm_sigma'] is None else cfg['dsm_sigma']
+    dsm = rasterization.plyflatten(full_cloud, nb_points, nb_extra_columns,
+                                   local_xoff, local_yoff, res, local_xsize, local_ysize,
+                                   dsm_radius, dsm_sigma)
 
-    run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-    print ("\nRUN: %s" % run_cmd)
+    # save_output_image_with_utm_georeferencing
+    utm = pyproj.Proj(proj='utm', zone=utm_zone[:-1], ellps='WGS84', datum='WGS84',
+                      south=(utm_zone[-1]=='S'))
+    profile = dict()
+    profile['crs'] = utm.srs
+    profile['transform'] = affine.Affine(res, 0.0, local_xoff,
+                                         0.0, -res, local_yoff)
 
-    if p.returncode != 0:
-        raise common.RunFailure({"command": run_cmd, "environment": os.environ,
-                                 "output": q})
+    common.rasterio_write(out_dsm, dsm[:,:,0], profile=profile)
 
     # export confidence (optional)
-    # call to plyflatten might fail, but it won't abort the process
-    # or affect the following steps
-    cmd = ['plyflatten', str(cfg['dsm_resolution']), out_conf]
-    cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
-                                            local_xsize, local_ysize)]
-
-    cmd += ['-radius', str(cfg['dsm_radius'])]
-    cmd += ['-c', str(6) ]
-
-    if cfg['dsm_sigma'] is not None:
-        cmd += ['-sigma', str(cfg['dsm_sigma'])]
-
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    q = p.communicate(input=clouds.encode())
-
-    run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-    print ("\nRUN: %s" % run_cmd)
-
-    if p.returncode != 0:
-        raise common.RunFailure({"command": run_cmd, "environment": os.environ,
-                                 "output": q})
-    # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
+    if nb_extra_columns == 5:
+        common.rasterio_write(out_conf, dsm[:,:,4], profile=profile)
 
 
 def global_dsm(tiles):

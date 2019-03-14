@@ -114,12 +114,14 @@ tvl1:
 #
 
 PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
+LIBRARIES = $(addprefix $(LIBDIR)/,$(LIB))
 SRC = $(SRCIIO) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf qauto morsi\
 	morphoop cldmask remove_small_cc plambda homwarp pview
-SRCKKK = disp_to_h colormesh disp2ply multidisp2ply bin2asc ransac plyflatten plyextrema
+SRCKKK = disp_to_h colormesh disp2ply multidisp2ply bin2asc ransac plyextrema
+LIB = libplyflatten.so
 
-imscript: $(BINDIR) $(PROGRAMS)
+imscript: $(BINDIR) $(LIBDIR) $(PROGRAMS) $(LIBRARIES)
 
 $(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
@@ -158,8 +160,9 @@ $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrap
 $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
 
-$(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) $(GDAL_CFLAGS) $^ -o $@ $(IIOLIBS) $(GDAL_LIBS)
+$(LIBDIR)/libplyflatten.so: $(SRCDIR)/plyflatten.c
+	$(CC) $(CFLAGS) -fPIC -shared $^ -o $(SRCDIR)/libplyflatten.so -lm
+	cp $(SRCDIR)/libplyflatten.so $@
 
 # Geographiclib wrappers
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
@@ -199,6 +202,7 @@ clean_asift:
 
 clean_imscript:
 	$(RM) $(PROGRAMS)
+	$(RM) $(LIBRARIES)
 	$(RM) $(SRCDIR)/iio.o
 	$(RM) $(SRCDIR)/rpc.o
 	$(RM) $(SRCDIR)/geographiclib_wrapper.o
