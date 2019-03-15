@@ -31,9 +31,6 @@ import multiprocessing
 import collections
 import shutil
 import rasterio
-from plyfile import PlyData, PlyElement
-import pyproj
-import affine
 
 
 from s2plib.config import cfg
@@ -557,44 +554,20 @@ def plys_to_dsm(tile):
     local_ysize = int(1 - np.floor((ymin - local_yoff) / res))
 
     clouds = [os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
+    roi = (local_xoff, local_yoff, local_xsize, local_ysize)
 
-    # read points clouds
-    full_cloud = list()
-    for cloud in clouds:
-        plydata = PlyData.read(cloud)
-        cloud_data = np.array(plydata.elements[0].data)
-        proj = "projection:"
-        utm_zone = [comment.split(proj)[-1] for comment in plydata.comments \
-                    if proj in comment][0].split()[-1]
-
-        # nb_extra_columns: z, r, b, g (all columns except x, y)
-        nb_extra_columns = len(cloud_data.dtype)-2
-        full_cloud += [np.array([cloud_data[el] for el in cloud_data.dtype.names]).astype(float).T]
-
-    full_cloud = np.concatenate(full_cloud)
-    nb_points = np.shape(full_cloud)[0]
-
-    # The copy() method will reorder to C-contiguous order by default:
-    full_cloud = full_cloud.copy()
-    dsm_radius = cfg['dsm_radius']
-    dsm_sigma = float("inf")  if cfg['dsm_sigma'] is None else cfg['dsm_sigma']
-    dsm = rasterization.plyflatten(full_cloud, nb_points, nb_extra_columns,
-                                   local_xoff, local_yoff, res, local_xsize, local_ysize,
-                                   dsm_radius, dsm_sigma)
+    raster, profile = rasterization.plyflatten_from_plyfiles_list(clouds,
+                                                                  resolution=res,
+                                                                  roi=roi,
+                                                                  radius=cfg['dsm_radius'],
+                                                                  sigma=cfg['dsm_sigma'])
 
     # save_output_image_with_utm_georeferencing
-    utm = pyproj.Proj(proj='utm', zone=utm_zone[:-1], ellps='WGS84', datum='WGS84',
-                      south=(utm_zone[-1]=='S'))
-    profile = dict()
-    profile['crs'] = utm.srs
-    profile['transform'] = affine.Affine(res, 0.0, local_xoff,
-                                         0.0, -res, local_yoff)
-
-    common.rasterio_write(out_dsm, dsm[:,:,0], profile=profile)
+    common.rasterio_write(out_dsm, raster[:,:,0], profile=profile)
 
     # export confidence (optional)
     if nb_extra_columns == 5:
-        common.rasterio_write(out_conf, dsm[:,:,4], profile=profile)
+        common.rasterio_write(out_conf, raster[:,:,4], profile=profile)
 
 
 def global_dsm(tiles):

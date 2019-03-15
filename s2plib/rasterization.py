@@ -7,6 +7,10 @@ import numpy as np
 import ctypes
 from numpy.ctypeslib import ndpointer
 
+from plyfile import PlyData, PlyElement
+import affine
+import pyproj
+
 # TODO: This is kind of ugly. Cleaner way to do this is to update
 # LD_LIBRARY_PATH, which we should do once we have a proper config file
 plyflatten_library = os.path.join(os.path.dirname(
@@ -75,3 +79,65 @@ def plyflatten(cloud,
     lib.delete_buffer(raster_ptr)
 
     return raster
+
+def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, sigma=None):
+    """
+    Projects a points cloud into the raster band(s) of a raster image (points clouds as files)
+    Args:
+        clouds_list: list of cloud.ply files
+        resolution: resolution of the georeferenced output raster file
+        roi: region of interest: (xoff, yoff, xsize, ysize), compute plyextrema if None
+    Returns:
+        raster: georeferenced raster
+        profile: profile for rasterio
+    """
+    # read points clouds
+    full_cloud = list()
+    for cloud in clouds_list:
+        plydata = PlyData.read(cloud)
+        cloud_data = np.array(plydata.elements[0].data)
+        proj = "projection:"
+        utm_zone = [comment.split(proj)[-1] for comment in plydata.comments \
+                    if proj in comment][0].split()[-1]
+
+        # nb_extra_columns: z, r, b, g (all columns except x, y)
+        nb_extra_columns = len(cloud_data.dtype)-2
+        full_cloud += [np.array([cloud_data[el] for el in cloud_data.dtype.names]).astype(np.float64).T]
+
+    full_cloud = np.concatenate(full_cloud)
+    nb_points = np.shape(full_cloud)[0]
+
+    # region of interest (compute plyextrema if roi is None)
+    if roi is not None:
+        xoff, yoff, xsize, ysize = roi
+    else:
+        xx = full_cloud[:,0]
+        yy = full_cloud[:,1]
+        xmin = np.amin(xx)
+        xmax = np.amax(xx)
+        ymin = np.amin(yy)
+        ymax = np.amax(yy)
+
+        xsize = int(1 + np.floor((xmax - xmin) / resolution))
+        ysize = int(1 + np.floor((ymax - ymin) / resolution))
+        xoff = (xmax + xmin - resolution * xsize) / 2
+        yoff = (ymax + ymin + resolution * ysize) / 2
+
+    # The copy() method will reorder to C-contiguous order by default:
+    full_cloud = full_cloud.copy()
+    sigma = float("inf")  if sigma is None else sigma
+    raster = plyflatten(full_cloud, nb_points, nb_extra_columns,
+                        xoff, yoff, resolution,
+                        xsize, ysize,
+                        radius, sigma)
+
+    utm = pyproj.Proj(proj='utm', zone=utm_zone[:-1], ellps='WGS84', datum='WGS84',
+                      south=(utm_zone[-1]=='S'))
+
+    # construct profile dict
+    profile = dict()
+    profile['crs'] = utm.srs
+    profile['transform'] = affine.Affine(resolution, 0.0, xoff,
+                                         0.0, -resolution, yoff)
+
+    return raster, profile
