@@ -102,8 +102,8 @@ def unit_matching():
 
 # test the plyflatten executable
 def unit_plyflatten():
-    f = "testdata/input_ply/cloud.ply"                       # input cloud
-    e = "testdata/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
+    f = "tests/data/input_ply/cloud.ply"                       # input cloud
+    e = "tests/data/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
     o = s2p.common.tmpfile(".tiff")                          # actual output
     raster, profile = s2p.rasterization.plyflatten_from_plyfiles_list([f], resolution=0.4) # compute dsm
     s2p.common.rasterio_write(o, raster[:,:,0], profile=profile) # write dsm
