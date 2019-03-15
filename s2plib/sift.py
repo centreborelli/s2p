@@ -100,32 +100,31 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
     Returns:
         path to the file containing the list of descriptors
     """
-
     # Read file with rasterio
     with rio.open(im) as ds:
         # clip roi to stay inside the image boundaries
-        # - if x and y must be positive else resize (w, h)
-        w += min(x, 0)
-        h += min(y, 0)
-        x = max(x, 0)
-        y = max(y, 0)
-        # - if extract not completely inside the full image resize (w, h)
+        if x < 0:  # if x is negative then replace it with 0 and reduce w
+            w += x
+            x = 0
+        if y < 0:
+            h += y
+            y = 0
+        # if extract not completely inside the full image then resize (w, h)
         w = min(w, ds.width - x)
         h = min(h, ds.height - y)
         in_buffer = ds.read(window=rio.windows.Window(x, y, w, h))
 
     # Detect keypoints on first band
-    keypoints = keypoints_from_nparray(
-        in_buffer[0, ], thresh_dog=thresh_dog, nb_octaves=nb_octaves, nb_scales=nb_scales, offset=(x, y))
+    keypoints = keypoints_from_nparray(in_buffer[0], thresh_dog=thresh_dog,
+                                       nb_octaves=nb_octaves,
+                                       nb_scales=nb_scales, offset=(x, y))
 
     # Limit number of keypoints if needed
     if max_nb is not None:
-        keypoints = keypoints[:max_nb, ]
+        keypoints = keypoints[:max_nb]
 
     keyfile = common.tmpfile('.txt')
-
-    with open(keyfile, 'w') as f:
-        np.savetxt(f, keypoints, delimiter=' ', fmt='%.3f')
+    np.savetxt(keyfile, keypoints, delimiter=' ', fmt='%.3f')
 
     return keyfile
 
@@ -281,10 +280,8 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
     for i in range(2):
-        p1 = image_keypoints(
-            im1, x, y, w, h, thresh_dog=thresh_dog)
-        p2 = image_keypoints(im2, x2, y2, w2, h2,
-                             thresh_dog=thresh_dog)
+        p1 = image_keypoints(im1, x, y, w, h, thresh_dog=thresh_dog)
+        p2 = image_keypoints(im2, x2, y2, w2, h2, thresh_dog=thresh_dog)
         matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'],
                                   F, model='fundamental',
                                   epipolar_threshold=cfg['max_pointing_error'])

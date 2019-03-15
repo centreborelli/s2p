@@ -10,9 +10,9 @@ import utm
 import json
 import copy
 import shutil
+import warnings
 import numpy as np
 
-from s2plib import piio
 from s2plib import common
 from s2plib import rpc_utils
 from s2plib import masking
@@ -298,9 +298,9 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                     json.dump(tile_cfg, f, indent=2,default=workaround_json_int64)
 
                 # save the mask
-                piio.write(os.path.join(tile['dir'],
-                                        'cloud_water_image_domain_mask.png'),
-                           mask.astype(np.uint8))
+                common.rasterio_write(os.path.join(tile['dir'],
+                                                   'cloud_water_image_domain_mask.png'),
+                                      mask.astype(np.uint8))
     else:
         if len(tiles_coords) == 1:
             tiles.append(create_tile(tiles_coords[0], neighborhood_coords_dict))
