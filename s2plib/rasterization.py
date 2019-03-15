@@ -55,8 +55,8 @@ def plyflatten(cloud,
                                               shape=np.shape(cloud)),
                                     ctypes.c_int,
                                     ctypes.c_int,
-                                    ctypes.c_float, ctypes.c_float,
-                                    ctypes.c_float,
+                                    ctypes.c_double, ctypes.c_double,
+                                    ctypes.c_double,
                                     ctypes.c_int, ctypes.c_int,
                                     ctypes.c_int, ctypes.c_float)
     lib.rasterize_cloud.restype = ctypes.POINTER(ctypes.c_float)

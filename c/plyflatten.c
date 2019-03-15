@@ -79,8 +79,8 @@ float *rasterize_cloud(
 		const double * input_buffer,
 		const int nb_points,
 		const int nb_extra_columns, // z, r, g, b, ...
-		const float xoff, const float yoff,
-		const float resolution,
+		const double xoff, const double yoff,
+		const double resolution,
 		const int xsize, const int ysize,
 		const int radius, const float sigma)
 {
