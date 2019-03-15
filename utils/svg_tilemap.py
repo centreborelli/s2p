@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import sys
 import os.path
 import json
 import argparse
@@ -24,11 +23,10 @@ import numpy as np
 import datetime
 
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import s2p
-from s2plib.config import cfg
-from s2plib import common
-from s2plib import initialization
+from s2p.config import cfg
+from s2p import common
+from s2p import initialization
 
 
 def write_svg_tilemap(filename, cfg, tiles):
@@ -71,7 +69,7 @@ def write_svg_tilemap(filename, cfg, tiles):
 
 def main(user_cfg):
     """
-    Recompute the s2p tile geometry for the config file 
+    Recompute the s2p tile geometry for the config file
     and produce an svg representing the tiles
 
     Args:
