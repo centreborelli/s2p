@@ -31,7 +31,7 @@ all: default msmw3 sgbm mgm_multi
 
 # test for the default configuration
 test: default
-	python -u s2p_test.py --all
+	python -u tests/test_s2p.py --all
 
 # make sure that the destination directory is built
 $(BINDIR):

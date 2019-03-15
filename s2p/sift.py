@@ -5,17 +5,17 @@
 
 from __future__ import print_function
 import os
-import numpy as np
-
-import warnings
-import rasterio as rio
 import ctypes
+import warnings
+
+import numpy as np
+import rasterio as rio
 from numpy.ctypeslib import ndpointer
 
-from s2plib import common
-from s2plib import rpc_utils
-from s2plib import estimation
-from s2plib.config import cfg
+from s2p import common
+from s2p import rpc_utils
+from s2p import estimation
+from s2p.config import cfg
 
 # Locate sift4ctypes library and raise an ImportError if it can not be
 # found This call will raise an exception if library can not be found,
@@ -44,11 +44,12 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
         nb_octaves (optional): Number of octaves
         nb_scales (optional): Number of scales
         offset (optional): offset to apply to sift position in case arr is an extract of a bigger image
+
     Returns:
-        A numpy array of shape (nb_points,132) containing for each row (y,x,scale,orientation, sift_descriptor)    
+        A numpy array of shape (nb_points, 132) containing for each row (y, x, scale, orientation, sift_descriptor)
     """
     # retrieve numpy buffer dimensions
-    (h, w) = arr.shape
+    h, w = arr.shape
 
     # load shared library
     lib = ctypes.CDLL(sift4ctypes_library)
