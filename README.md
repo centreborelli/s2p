@@ -30,11 +30,15 @@ Required dependencies (Ubuntu 16.04):
 
     add-apt-repository -y ppa:ubuntugis/ppa  # The repository is added so that the version >= 2.1 of gdal is installed (requirement)
     apt-get update
-    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-gdal python-numpy python-pip
+    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-numpy python-pip
 
 `gdal` version must be 2.1.0 or newer.
 
-## Install s2p from sources with pip
+## For users: install s2p from PyPI
+
+    pip install s2p
+
+## For developers: install s2p from sources
 
     git clone https://github.com/MISS3D/s2p.git --recursive
     cd s2p
@@ -64,11 +68,11 @@ You can test if S2P is correctly working using:
     make test
 
 ## Docker image
-[![Docker Status](http://dockeri.co/image/carlodef/s2p)](https://hub.docker.com/r/carlodef/s2p/)
+[![Docker Status](http://dockeri.co/image/cmla/s2p)](https://hub.docker.com/r/cmla/s2p/)
 
 A precompiled docker image is available and ready to use:
 
-    docker pull carlodef/s2p
+    docker pull cmla/s2p
 
 
 # Usage
