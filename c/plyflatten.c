@@ -108,8 +108,8 @@ float *rasterize_cloud(
 	// accumulate points of cloud to the image
 	for (uint64_t k = 0; k < (uint64_t) nb_points; k++) {
 		int ind = k * (2 + nb_extra_columns);
-		float xx = input_buffer[ind];
-		float yy = input_buffer[ind+1];
+		double xx = input_buffer[ind];
+		double yy = input_buffer[ind+1];
 		int i = rescale_double_to_int(xx, xoff, resolution);
 		int j = rescale_double_to_int(-yy, -yoff, resolution);
 
