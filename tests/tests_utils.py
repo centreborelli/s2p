@@ -16,6 +16,7 @@ def data_path(data_path):
     here = os.path.abspath(os.path.dirname(__file__))
     return os.path.join(here,'data',data_path)
 
+
 class TestWithDefaultConfig(unittest.TestCase):
     """
     Base class for all tests classes requiring to reset config between each test
@@ -42,4 +43,3 @@ class TestWithDefaultConfig(unittest.TestCase):
         config.cfg.clear()
         config.cfg.update(self.test_default_cfg)
         common.garbage_cleanup()
-      
