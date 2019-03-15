@@ -27,10 +27,9 @@ import simplekml
 import gdal
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import s2p
-from s2plib import rpc_model
-from s2plib import common
+from s2p import rpc_model
+from s2p import common
 
 def pix_2_latlon(gt, px, py, zone_number, northern):
     x = px * gt[1] + gt[0]

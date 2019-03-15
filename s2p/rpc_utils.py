@@ -11,10 +11,10 @@ import pyproj
 import rasterio
 import numpy as np
 
-from s2plib import geographiclib
-from s2plib import common
-from s2plib import rpc_model
-from s2plib.config import cfg
+from s2p import geographiclib
+from s2p import common
+from s2p import rpc_model
+from s2p.config import cfg
 
 
 def find_corresponding_point(model_a, model_b, x, y, z):
