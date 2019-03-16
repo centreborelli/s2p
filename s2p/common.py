@@ -9,14 +9,19 @@ import os
 import sys
 import errno
 import datetime
+import warnings
 import tempfile
 import subprocess
 import numpy as np
-from osgeo import gdal
+import rasterio
 
 
-from s2plib.config import cfg
+from s2p.config import cfg
 
+
+# silent rasterio NotGeoreferencedWarning
+warnings.filterwarnings("ignore",
+                        category=rasterio.errors.NotGeoreferencedWarning)
 
 # add the bin folder to system path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -118,7 +123,7 @@ def matrix_translation(x, y):
 
 def image_size_gdal(im):
     """
-    Read the width, height and pixel dimension of an image using gdal.
+    Read the width, height and pixel dimension of an image using rasterio.
 
     Args:
         im: path to the input image file
@@ -126,11 +131,9 @@ def image_size_gdal(im):
     Returns:
         w, h, pd: a tuple of length 3
     """
-    f = gdal.Open(im)
-    x = f.RasterXSize
-    y = f.RasterYSize
-    pd = f.RasterCount
-    f = None
+    with rasterio.open(im, 'r') as f:
+        y, x = f.shape
+        pd = f.count
     return x, y, pd
 
 
@@ -144,21 +147,15 @@ def gdal_read_as_array_with_nans(im):
     Returns:
         array: raster as numpy array
     """
-    raster = gdal.Open(im)
-    array = raster.ReadAsArray()
+    with rasterio.open(im, 'r') as src:
+        array = src.read()
+        nodata_values = src.nodatavals
 
-    # replace gdal NoDataValue with np.nan for the np.isfinite counting
-    noDataValues = [raster.GetRasterBand(b+1).GetNoDataValue() for b in range(raster.RasterCount)]
-    if len(noDataValues) == 1:
-        if noDataValues[0] is not None:
-            array[array == noDataValues[0]] = np.nan
-    else:
-        for b in range(raster.RasterCount):
-            if noDataValues[b] is not None:
-                array_band = array[b, :, :]
-                array_band[array_band == noDataValues[b]] = np.nan
+    for band, nodata in zip(array, nodata_values):
+        if nodata is not None:
+            band[band == nodata] = np.nan
 
-    return array
+    return array.squeeze()
 
 
 def image_zoom_out_morpho(im, f):
@@ -179,6 +176,40 @@ def image_zoom_out_morpho(im, f):
     out = tmpfile('.tif')
     run('downsa e %d %s %s' % (f, im, out))
     return out
+
+
+def rasterio_write(path, array, profile={}, tags={}):
+    """
+    Write a numpy array in a tiff or png file with rasterio.
+
+    Args:
+        path (str): path to the output tiff/png file
+        array (numpy array): 2D or 3D array containing the image to write.
+        profile (dict): rasterio profile (ie dictionary of metadata)
+        tags (dict): dictionary with additional geotiff tags
+    """
+    # determine the driver based on the file extension
+    extension = os.path.splitext(path)[1].lower()
+    if extension in ['.tif', '.tiff']:
+        driver = 'GTiff'
+    elif extension in ['.png']:
+        driver = 'png'
+    else:
+        raise NotImplementedError('format {} not supported'.format(extension))
+
+    # read image size and number of bands
+    array = np.atleast_3d(array)
+    height, width, nbands = array.shape
+
+    # define image metadata dict
+    profile.update(driver=driver, count=nbands, width=width, height=height,
+                   dtype=array.dtype)
+
+    # write to file
+    with rasterio.Env():
+        with rasterio.open(path, 'w', **profile) as dst:
+            dst.write(np.transpose(array, (2, 0, 1)))
+            dst.update_tags(**tags)
 
 
 def image_apply_homography(out, im, H, w, h):
@@ -346,7 +377,7 @@ def get_rectangle_coordinates(im):
             rectangle.
     """
     points_file = tmpfile('.txt')
-    run('python s2plib/viewGL.py %s > %s' % (shellquote(im), points_file))
+    run('python s2p/viewGL.py %s > %s' % (shellquote(im), points_file))
     x1, y1, x2, y2 = map(int, open(points_file).read().split())
     # viewGL.py returns the coordinates of two corners defining the rectangle.
     # We can's make any assumption on the ordering of these coordinates.

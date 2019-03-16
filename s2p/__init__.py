@@ -28,23 +28,22 @@ import argparse
 import numpy as np
 import subprocess
 import multiprocessing
-from osgeo import gdal
 import collections
 import shutil
+import rasterio
 
-gdal.UseExceptions()
 
-from s2plib.config import cfg
-from s2plib import common
-from s2plib import parallel
-from s2plib import initialization
-from s2plib import pointing_accuracy
-from s2plib import rectification
-from s2plib import block_matching
-from s2plib import masking
-from s2plib import triangulation
-from s2plib import fusion
-from s2plib import visualisation
+from s2p.config import cfg
+from s2p import common
+from s2p import parallel
+from s2p import initialization
+from s2p import pointing_accuracy
+from s2p import rectification
+from s2p import block_matching
+from s2p import masking
+from s2p import triangulation
+from s2p import fusion
+from s2p import visualisation
 
 
 def pointing_correction(tile, i):
@@ -61,11 +60,6 @@ def pointing_correction(tile, i):
     rpc1 = cfg['images'][0]['rpc']
     img2 = cfg['images'][i]['img']
     rpc2 = cfg['images'][i]['rpc']
-
-    if cfg['skip_existing'] and os.path.isfile(os.path.join(out_dir,
-                                                            'pointing.txt')):
-        print('pointing correction done on tile {} {} pair {}'.format(x, y, i))
-        return
 
     # correct pointing error
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
@@ -99,13 +93,12 @@ def global_pointing_correction(tiles):
     """
     for i in range(1, len(cfg['images'])):
         out = os.path.join(cfg['out_dir'], 'global_pointing_pair_%d.txt' % i)
-        if not (os.path.isfile(out) and cfg['skip_existing']):
-            l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
-            np.savetxt(out, pointing_accuracy.global_from_local(l),
-                       fmt='%12.6f')
-            if cfg['clean_intermediate']:
-                for d in l:
-                    common.remove(os.path.join(d, 'center_keypts_sec.txt'))
+        l = [os.path.join(t['dir'], 'pair_%d' % i) for t in tiles]
+        np.savetxt(out, pointing_accuracy.global_from_local(l),
+                   fmt='%12.6f')
+        if cfg['clean_intermediate']:
+            for d in l:
+                common.remove(os.path.join(d, 'center_keypts_sec.txt'))
 
 
 def rectification_pair(tile, i):
@@ -130,11 +123,6 @@ def rectification_pair(tile, i):
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
         print('rectification: stderr.log exists')
         print('pair_{} not processed on tile {} {}'.format(i, x, y))
-        return
-
-    if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
-                                    f in outputs):
-        print('rectification done on tile {} {} pair {}'.format(x, y, i))
         return
 
     print('rectifying tile {} {} pair {}...'.format(x, y, i))
@@ -202,11 +190,6 @@ def stereo_matching(tile,i):
         print('pair_{} not processed on tile {} {}'.format(i, x, y))
         return
 
-    if cfg['skip_existing'] and all(os.path.isfile(os.path.join(out_dir, f)) for
-                                    f in outputs):
-        print('disparity estimation done on tile {} {} pair {}'.format(x, y, i))
-        return
-
     print('estimating disparity on tile {} {} pair {}...'.format(x, y, i))
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
@@ -243,10 +226,6 @@ def disparity_to_height(tile, i):
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
         print('triangulation: stderr.log exists')
         print('pair_{} not processed on tile {} {}'.format(i, x, y))
-        return
-
-    if cfg['skip_existing'] and os.path.isfile(height_map):
-        print('triangulation done on tile {} {} pair {}'.format(x, y, i))
         return
 
     print('triangulating tile {} {} pair {}...'.format(x, y, i))
@@ -289,10 +268,6 @@ def disparity_to_ply(tile):
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
         print('triangulation: stderr.log exists')
         print('pair_1 not processed on tile {} {}'.format(x, y))
-        return
-
-    if cfg['skip_existing'] and os.path.isfile(ply_file):
-        print('triangulation done on tile {} {}'.format(x, y))
         return
 
     print('triangulating tile {} {}...'.format(x, y))
@@ -359,10 +334,6 @@ def multidisparities_to_ply(tile):
     rpc_ref = cfg['images'][0]['rpc']
     disp_list = list()
     rpc_list = list()
-
-    if cfg['skip_existing'] and os.path.isfile(ply_file):
-        print('triangulation done on tile {} {}'.format(x, y))
-        return
 
     mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
 
@@ -451,10 +422,9 @@ def mean_heights(tile):
     maps = np.empty((h, w, n))
     for i in range(n):
         try:
-            f = gdal.Open(os.path.join(tile['dir'], 'pair_{}'.format(i + 1),
-                                       'height_map.tif'))
-            maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
-            f = None  # this is the gdal way of closing files
+            with rasterio.open(os.path.join(tile['dir'], 'pair_{}'.format(i + 1),
+                                            'height_map.tif'), 'r') as f:
+                maps[:, :, i] = f.read(1)
         except RuntimeError:  # the file is not there
             maps[:, :, i] *= np.nan
 
@@ -527,9 +497,6 @@ def heights_to_ply(tile):
     plyfile = os.path.join(out_dir, 'cloud.ply')
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     height_map = os.path.join(out_dir, 'height_map.tif')
-    if cfg['skip_existing'] and os.path.isfile(plyfile):
-        print('ply file already exists for tile {} {}'.format(x, y))
-        return
 
     # H is the homography transforming the coordinates system of the original
     # full size image into the coordinates system of the crop
@@ -540,7 +507,7 @@ def heights_to_ply(tile):
     else:
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
-        
+
     triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpc'], H, colors,
                                             utm_zone=cfg['utm_zone'],
@@ -565,7 +532,7 @@ def plys_to_dsm(tile):
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         global_xoff = bbx[0]
-        global_yoff = bbx[3]
+        global_yoff = bbx[2]
     else:
         global_xoff = 0 # arbitrary reference
         global_yoff = 0 # arbitrary reference
@@ -602,7 +569,7 @@ def plys_to_dsm(tile):
         raise common.RunFailure({"command": run_cmd, "environment": os.environ,
                                  "output": q})
 
-    # export confidence (optional) 
+    # export confidence (optional)
     # call to plyflatten might fail, but it won't abort the process
     # or affect the following steps
     cmd = ['plyflatten', str(cfg['dsm_resolution']), out_conf]
@@ -673,13 +640,13 @@ def global_dsm(tiles):
     input_file_list = os.path.join(cfg['out_dir'], 'gdalbuildvrt_input_file_list2.txt')
 
     if len(dems_list_ok) > 0:
-    
+
         with open(input_file_list, 'w') as f:
             f.write(dsms)
-    
+
         common.run("gdalbuildvrt -vrtnodata nan -input_file_list %s %s" % (input_file_list,
                                                                            out_conf_vrt))
-    
+
         common.run(" ".join(["gdal_translate",
                              "-co TILED=YES -co BIGTIFF=IF_SAFER",
                              "%s %s %s" % (projwin, out_conf_vrt, out_conf_tif)]))
@@ -814,21 +781,3 @@ def read_config_file(config_file):
                 img[d] = make_path_relative_to_file(img[d], config_file)
 
     return user_cfg
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=('S2P: Satellite Stereo '
-                                                  'Pipeline'))
-    parser.add_argument('config', metavar='config.json',
-                        help=('path to a json file containing the paths to '
-                              'input and output files and the algorithm '
-                              'parameters'))
-    args = parser.parse_args()
-
-    user_cfg = read_config_file(args.config)
-
-    main(user_cfg)
-
-    # Backup input file for sanity check
-    if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
-        shutil.copy2(args.config,os.path.join(cfg['out_dir'],'config.json.orig'))

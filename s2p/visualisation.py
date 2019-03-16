@@ -5,15 +5,15 @@
 from __future__ import print_function
 import numpy as np
 import os
-from osgeo import gdal
+import rasterio
 
-from s2plib import piio
-from s2plib import common
-from s2plib import sift
-from s2plib import estimation
-from s2plib import rpc_model
-from s2plib import rpc_utils
-import s2plib.pointing_accuracy
+from s2p import common
+from s2p import sift
+from s2p import estimation
+from s2p import rpc_model
+from s2p import rpc_utils
+import s2p.pointing_accuracy
+
 
 def plot_line(im, x1, y1, x2, y2, colour):
     """
@@ -68,8 +68,10 @@ def plot_matches_low_level(im1, im2, matches):
         path to the resulting image, to be displayed
     """
     # load images
-    img1 = gdal.Open(im1).ReadAsArray()
-    img2 = gdal.Open(im2).ReadAsArray()
+    with rasterio.open(im1, 'r') as f:
+        img1 = f.read().squeeze()
+    with rasterio.open(im2, 'r') as f:
+        img2 = f.read().squeeze()
 
     # transform single channel to 3-channels
     if img1.ndim < 3:
@@ -114,7 +116,7 @@ def plot_matches_low_level(im1, im2, matches):
             pass
     # save the output image, and return its path
     outfile = common.tmpfile('.png')
-    piio.write(outfile, out)
+    common.rasterio_write(outfile, out)
     return outfile
 
 

@@ -25,14 +25,13 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew unlink gdal && (brew install gcc || brew link --overwrite gcc) && brew install geographiclib fftw; fi
 
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install numpy utm bs4 requests; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}'); fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install numpy; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install .; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.1.dmg; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then X=$(echo `hdiutil mount GDAL_Complete-2.1.dmg | tail -1 | awk '{$1=$2=""; print $0}'` | xargs -0 echo) && sudo installer -pkg "${X}/"GDAL\ Complete.pkg -target /; export PATH="/Library/Frameworks/GDAL.framework/Programs:$PATH"; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip2 install numpy utm bs4 requests; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip2 install GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}') --global-option build_ext --global-option=`gdal-config --cflags` --global-option build_ext --global-option=-L`gdal-config  --prefix`/unix/lib/; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip2 install numpy; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then pip2 install .; fi
 
 script:
-  - make
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python -u s2p_test.py --all; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python2 -u s2p_test.py --all; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python -u tests/test_s2p.py --all; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python2 -u tests/test_s2p.py --all; fi

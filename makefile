@@ -21,20 +21,23 @@ endif
 # names of source and destination directories
 SRCDIR = c
 BINDIR = bin
+LIBDIR = lib
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) homography sift imscript mgm mgm_multi piio tvl1 lsd
+default: $(BINDIR) $(LIBDIR) homography sift imscript mgm mgm_multi tvl1 lsd
 
 # the "all" rule builds four further correlators
 all: default msmw3 sgbm mgm_multi
 
 # test for the default configuration
 test: default
-	python -u s2p_test.py --all
+	python -u tests/test_s2p.py --all
 
 # make sure that the destination directory is built
 $(BINDIR):
 	mkdir -p $(BINDIR)
+$(LIBDIR):
+	mkdir -p $(LIBDIR)
 
 #
 # four standard "modules": homography, sift, mgm, and mgm_multi
@@ -46,9 +49,8 @@ homography: $(BINDIR)
 
 sift: $(BINDIR)
 	$(MAKE) -j -C c/sift
-	cp c/sift/sift_roi $(BINDIR)
-	cp c/sift/matching $(BINDIR)
-
+	cp c/sift/libsift4ctypes.so $(LIBDIR)
+	cp c/sift/matching ${BINDIR}
 mgm:
 	$(MAKE) -C 3rdparty/mgm
 	#cp 3rdparty/mgm/mgm $(BINDIR)
@@ -62,13 +64,6 @@ mgm_multi:
 lsd:
 	$(MAKE) -C 3rdparty/lsd
 	cp 3rdparty/lsd/lsd $(BINDIR)
-
-# piio: a required python extension
-piio: s2plib/piio/libiio.so
-
-s2plib/piio/libiio.so: s2plib/piio/setup.py s2plib/piio/freemem.c s2plib/piio/iio.c s2plib/piio/iio.h
-	$(MAKE) -C s2plib/piio
-
 
 #
 # rules for optional "modules": msmw, asift, sgbm, tvl1, etc
@@ -179,7 +174,7 @@ depend:
 
 # rules for cleaning, nothing interesting below this point
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
-	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_piio\
+	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm \
 	clean_depend
 
 clean_depend:
@@ -191,7 +186,7 @@ clean_homography:
 
 clean_sift:
 	$(MAKE) -C c/sift clean
-	$(RM) $(BINDIR)/sift_roi
+	$(RM) $(LIBDIR)/libsift4ctypes.so
 	$(RM) $(BINDIR)/matching
 
 clean_asift:
@@ -230,8 +225,5 @@ clean_mgm:
 	$(MAKE) -C 3rdparty/mgm clean
 	$(RM) $(BINDIR)/mgm
 
-clean_piio:
-	$(MAKE) -C s2plib/piio clean
-
 .PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_piio test
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test
