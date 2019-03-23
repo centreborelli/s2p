@@ -34,6 +34,7 @@ requirements = ['numpy',
                 'utm',
                 'pyproj',
                 'bs4',
+                'ransac',
                 'requests']
 
 setup(name="s2p",
