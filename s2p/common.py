@@ -228,6 +228,10 @@ def image_apply_affinity(out, input_path, A, w, h):
     rasterio_write(out, img)
 
 
+# for backwards compatibility with the tests module
+image_apply_homography = image_apply_affinity
+
+
 def affine_crop(input_path, A, w, h):
     """
     Apply an affine transform to an image.
