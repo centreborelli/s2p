@@ -8,11 +8,11 @@ from __future__ import print_function
 import os
 import numpy as np
 
-from s2plib import sift
-from s2plib import rpc_utils
-from s2plib import rpc_model
-from s2plib import estimation
-from s2plib.config import cfg
+from s2p import sift
+from s2p import rpc_utils
+from s2p import rpc_model
+from s2p import estimation
+from s2p.config import cfg
 
 
 def error_vectors(m, F, ind='ref'):

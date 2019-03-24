@@ -6,8 +6,8 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-from s2plib import estimation
-from s2plib import common
+from s2p import estimation
+from s2p import common
 
 def rotation_matrix(t):
     R = np.eye(3)

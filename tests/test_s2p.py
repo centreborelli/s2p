@@ -8,6 +8,7 @@ from __future__ import print_function
 import numpy as np
 import argparse
 import os
+import sys
 import json
 import shutil
 import multiprocessing
@@ -16,8 +17,9 @@ import subprocess
 import glob
 
 import s2p
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import s2p_mosaic
-import s2plib
 
 
 ############### Tests functions  #######################
@@ -38,10 +40,10 @@ def unit_gdal_version():
 
 def unit_image_keypoints():
 
-    kpts = s2plib.sift.image_keypoints('testdata/input_triplet/img_02.tif',100,100,200,200)
+    kpts = s2p.sift.image_keypoints('tests/data/input_triplet/img_02.tif', 100, 100, 200, 200)
 
     test_kpts = np.loadtxt(kpts)
-    ref_kpts  = np.loadtxt('testdata/expected_output/units/unit_image_keypoints.txt')
+    ref_kpts  = np.loadtxt('tests/data/expected_output/units/unit_image_keypoints.txt')
 
     test_set = set(map(tuple,test_kpts[:,0:2]))
     ref_set = set(map(tuple,ref_kpts[:,0:2]))
@@ -60,24 +62,24 @@ def unit_image_keypoints():
     for i in range(test_kpts.shape[0]):
         found = False
         for j in range(ref_kpts.shape[0]):
-            dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
+            dist = np.linalg.norm(test_kpts[i,0:2]-ref_kpts[j,0:2])
             if dist<dist_tol:
                 found = True
         if not found:
-            print("KeyPoint not found: "+str((test_kpts[i,0:1])))
+            print("KeyPoint not found: "+str((test_kpts[i,0:2])))
             nb_test_not_in_ref+=1
 
     print(str(nb_test_not_in_ref)+" test kpts have no spatially close match in ref")
 
     nb_ref_not_in_test = 0
-    for i in range(test_kpts.shape[0]):
+    for i in range(ref_kpts.shape[0]):
         found = False
-        for j in range(ref_kpts.shape[0]):
-            dist = np.linalg.norm(test_kpts[i,0:1]-ref_kpts[j,0:1])
+        for j in range(test_kpts.shape[0]):
+            dist = np.linalg.norm(ref_kpts[i,0:2]-test_kpts[j,0:2])
             if dist<dist_tol:
                 found = True
         if not found:
-            print("KeyPoint not found: "+str((test_kpts[i,0:1])))
+            print("KeyPoint not found: "+str((test_kpts[i,0:2])))
             nb_ref_not_in_test+=1
 
     print(str(nb_ref_not_in_test)+" ref kpts have no spatially close match in test")
@@ -88,8 +90,8 @@ def unit_image_keypoints():
 
 def unit_matching():
 
-    test_matches = s2plib.sift.keypoints_match('testdata/units/sift1.txt','testdata/units/sift2.txt')
-    expected_matches = np.loadtxt('testdata/expected_output/units/unit_keypoints_match.txt')
+    test_matches = s2p.sift.keypoints_match('tests/data/units/sift1.txt','tests/data/units/sift2.txt')
+    expected_matches = np.loadtxt('tests/data/expected_output/units/unit_keypoints_match.txt')
 
     # Check that numbers of matches are the same
     np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0],verbose=True)
@@ -100,27 +102,27 @@ def unit_matching():
 
 # test the plyflatten executable
 def unit_plyflatten():
-    f = "testdata/input_ply/cloud.ply"                       # input cloud
-    e = "testdata/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
-    o = s2plib.common.tmpfile(".tiff")                       # actual output
-    s2plib.common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
+    f = "tests/data/input_ply/cloud.ply"                       # input cloud
+    e = "tests/data/expected_output/plyflatten/dsm_40cm.tiff"  # expected output
+    o = s2p.common.tmpfile(".tiff")                       # actual output
+    s2p.common.run("echo %s | plyflatten 0.4 %s" % (f,o)) # compute dsm
     s = "\"%w %h %v %Y\n\"" # statistics to compare: width,height,avg,numnans
-    X = s2plib.common.tmpfile(".txt")
-    Y = s2plib.common.tmpfile(".txt")
-    s2plib.common.run("imprintf %s %s > %s" % (s, o, X))     # actual stats
-    s2plib.common.run("imprintf %s %s > %s" % (s, e, Y))     # expected stats
-    s2plib.common.run("diff %s %s" % (X, Y)) # compare stats
+    X = s2p.common.tmpfile(".txt")
+    Y = s2p.common.tmpfile(".txt")
+    s2p.common.run("imprintf %s %s > %s" % (s, o, X))     # actual stats
+    s2p.common.run("imprintf %s %s > %s" % (s, e, Y))     # expected stats
+    s2p.common.run("diff %s %s" % (X, Y)) # compare stats
 
 
 
 
 def unit_matches_from_rpc():
 
-    rpc1 = s2plib.rpc_model.RPCModel('testdata/input_pair/rpc_01.xml')
-    rpc2 = s2plib.rpc_model.RPCModel('testdata/input_pair/rpc_02.xml')
+    rpc1 = s2p.rpc_model.RPCModel('tests/data/input_pair/rpc_01.xml')
+    rpc2 = s2p.rpc_model.RPCModel('tests/data/input_pair/rpc_02.xml')
 
-    test_matches = s2plib.rpc_utils.matches_from_rpc(rpc1,rpc2,100,100,200,200,5)
-    expected_matches = np.loadtxt('testdata/expected_output/units/unit_matches_from_rpc.txt')
+    test_matches = s2p.rpc_utils.matches_from_rpc(rpc1,rpc2,100,100,200,200,5)
+    expected_matches = np.loadtxt('tests/data/expected_output/units/unit_matches_from_rpc.txt')
 
     np.testing.assert_equal(test_matches.shape[0],125,verbose=True)
     np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
@@ -135,7 +137,7 @@ def unit_distributed_plyflatten(config):
     s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
-    computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+    computed = s2p.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
 
     print('Running plyflatten dsm reference ...')
 
@@ -152,9 +154,9 @@ def unit_distributed_plyflatten(config):
                                                   global_xsize, global_ysize)]
 
     run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-    s2plib.common.run(run_cmd)
+    s2p.common.run(run_cmd)
 
-    expected = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm_ref.tif'))
+    expected = s2p.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm_ref.tif'))
 
     end2end_compare_dsm(computed,expected,0,0)
 
@@ -194,8 +196,8 @@ def end2end(config,ref_dsm,absmean_tol=0.025,percentile_tol=1.):
 
     outdir = test_cfg['out_dir']
 
-    computed = s2plib.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
-    expected = s2plib.common.gdal_read_as_array_with_nans(ref_dsm)
+    computed = s2p.common.gdal_read_as_array_with_nans(os.path.join(outdir,'dsm.tif'))
+    expected = s2p.common.gdal_read_as_array_with_nans(ref_dsm)
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
@@ -211,8 +213,8 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
     s2p_mosaic.main(tiles_file,global_height_map,'pair_1/height_map.tif')
 
-    computed = s2plib.common.gdal_read_as_array_with_nans(global_height_map)
-    expected = s2plib.common.gdal_read_as_array_with_nans(ref_height_map)
+    computed = s2p.common.gdal_read_as_array_with_nans(global_height_map)
+    expected = s2p.common.gdal_read_as_array_with_nans(ref_height_map)
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
@@ -224,11 +226,11 @@ registered_tests = [('unit_gdal_version', (unit_gdal_version,[])),
                     ('unit_matching', (unit_matching,[])),
                     ('unit_plyflatten', (unit_plyflatten,[])),
                     ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
-                    ('end2end_pair', (end2end, ['testdata/input_pair/config.json','testdata/expected_output/pair/dsm.tif',0.025,1])),
-                    ('end2end_triplet', (end2end, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/dsm.tif',0.05,2])),
-                    ('end2end_mosaic', (end2end_mosaic, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.05,2])),
-                    ('end2end_geometric', (end2end, ['testdata/input_triplet/config_geo.json', 'testdata/expected_output/triplet/dsm_geo.tif',0.05,2])),
-                    ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['testdata/input_triplet/config.json']))]
+                    ('end2end_pair', (end2end, ['tests/data/input_pair/config.json','tests/data/expected_output/pair/dsm.tif',0.025,1])),
+                    ('end2end_triplet', (end2end, ['tests/data/input_triplet/config.json','tests/data/expected_output/triplet/dsm.tif',0.05,2])),
+                    ('end2end_mosaic', (end2end_mosaic, ['tests/data/input_triplet/config.json','tests/data/expected_output/triplet/height_map.tif',0.05,2])),
+                    ('end2end_geometric', (end2end, ['tests/data/input_triplet/config_geo.json', 'tests/data/expected_output/triplet/dsm_geo.tif',0.05,2])),
+                    ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['tests/data/input_triplet/config.json']))]
 
 registered_tests = collections.OrderedDict(registered_tests)
 
@@ -261,8 +263,8 @@ if __name__ == '__main__':
     print('The following tests will be run: '+str(tests_to_run))
 
     # First, export the default config to start each test from a clean config
-    s2plib.config.cfg["temporary_dir"] = "/tmp"
-    test_default_cfg = s2plib.config.cfg.copy()
+    s2p.config.cfg["temporary_dir"] = "/tmp"
+    test_default_cfg = s2p.config.cfg.copy()
 
     # Ensure default temporary dir exists
     if not os.path.isdir(test_default_cfg['temporary_dir']):
@@ -276,8 +278,8 @@ if __name__ == '__main__':
             command,args = registered_tests[test]
             try:
                 # Ensure each test starts from the default cfg
-                s2plib.config.cfg.clear()
-                s2plib.config.cfg.update(test_default_cfg)
+                s2p.config.cfg.clear()
+                s2p.config.cfg.update(test_default_cfg)
                 command(*args)
                 print('Success.'+os.linesep)
             except AssertionError as e:

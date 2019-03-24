@@ -21,20 +21,23 @@ endif
 # names of source and destination directories
 SRCDIR = c
 BINDIR = bin
+LIBDIR = lib
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) sift imscript mgm mgm_multi tvl1 lsd
+default: $(BINDIR) $(LIBDIR) sift imscript mgm mgm_multi tvl1 lsd
 
 # the "all" rule builds four further correlators
 all: default msmw3 sgbm mgm_multi
 
 # test for the default configuration
 test: default
-	python -u s2p_test.py --all
+	python -u tests/test_s2p.py --all
 
 # make sure that the destination directory is built
 $(BINDIR):
 	mkdir -p $(BINDIR)
+$(LIBDIR):
+	mkdir -p $(LIBDIR)
 
 #
 # three standard "modules": sift, mgm, and mgm_multi
@@ -42,9 +45,8 @@ $(BINDIR):
 
 sift: $(BINDIR)
 	$(MAKE) -j -C c/sift
-	cp c/sift/sift_roi $(BINDIR)
-	cp c/sift/matching $(BINDIR)
-
+	cp c/sift/libsift4ctypes.so $(LIBDIR)
+	cp c/sift/matching ${BINDIR}
 mgm:
 	$(MAKE) -C 3rdparty/mgm
 	#cp 3rdparty/mgm/mgm $(BINDIR)
@@ -179,7 +181,7 @@ clean_depend:
 
 clean_sift:
 	$(MAKE) -C c/sift clean
-	$(RM) $(BINDIR)/sift_roi
+	$(RM) $(LIBDIR)/libsift4ctypes.so
 	$(RM) $(BINDIR)/matching
 
 clean_asift:
