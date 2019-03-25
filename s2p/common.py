@@ -261,6 +261,7 @@ def affine_crop(input_path, A, w, h):
     B = np.dot(A, matrix_translation(x, y))
 
     # apply the affine transform
+    aoi = aoi.astype('float32')
     out = ndimage.affine_transform(aoi.T, np.linalg.inv(B), output_shape=(w, h)).T
     return out
 
