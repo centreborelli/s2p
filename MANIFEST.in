@@ -19,7 +19,7 @@ include c/sift/linalg.c
 include c/sift/matching.c
 include c/sift/pickopt.c
 include c/sift/timing.c
-include c/sift/sift_roi.cpp
+include c/sift/sift4ctypes.cpp
 include c/sift/sift_anatomy_20141201/*
 include c/sift/Utilities/*.cpp
 include c/sift/Utilities/*.h
