@@ -40,9 +40,7 @@ def unit_gdal_version():
 
 def unit_image_keypoints():
 
-    kpts = s2p.sift.image_keypoints('tests/data/input_triplet/img_02.tif', 100, 100, 200, 200)
-
-    test_kpts = np.loadtxt(kpts)
+    test_kpts = s2p.sift.image_keypoints('tests/data/input_triplet/img_02.tif', 100, 100, 200, 200)
     ref_kpts  = np.loadtxt('tests/data/expected_output/units/unit_image_keypoints.txt')
 
     test_set = set(map(tuple,test_kpts[:,0:2]))
@@ -90,7 +88,9 @@ def unit_image_keypoints():
 
 def unit_matching():
 
-    test_matches = s2p.sift.keypoints_match('tests/data/units/sift1.txt','tests/data/units/sift2.txt')
+    k1 = np.loadtxt('tests/data/units/sift1.txt')
+    k2 = np.loadtxt('tests/data/units/sift2.txt')
+    test_matches = s2p.sift.keypoints_match(k1, k2)
     expected_matches = np.loadtxt('tests/data/expected_output/units/unit_keypoints_match.txt')
 
     # Check that numbers of matches are the same
