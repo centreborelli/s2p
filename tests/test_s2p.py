@@ -114,7 +114,7 @@ def test_image_apply_homography():
         computed = f.read()
     with rasterio.open("tests/data/expected_output/units/stripes_resampled.tif", "r") as f:
         expected = f.read()
-    np.testing.assert_allclose(computed, expected)
+    np.testing.assert_allclose(computed, expected, atol=1e-2, rtol=1e-2)
 
 
 # test the plyflatten executable
