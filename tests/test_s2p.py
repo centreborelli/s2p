@@ -106,11 +106,11 @@ def test_image_apply_homography():
     Test the function common.image_apply_homography.
     """
     H = np.array([[0.51, 0, -20], [0, 1, -20], [0, 0, 1]])
-    s2p.common.image_apply_homography("tests/testoutput/stripes_resampled.tif",
+    s2p.common.image_apply_homography("tests/stripes_resampled.tif",
                                       "tests/data/units/stripes.tif", H,
                                       200, 200)
 
-    with rasterio.open("tests/testoutput/stripes_resampled.tif", "r") as f:
+    with rasterio.open("tests/stripes_resampled.tif", "r") as f:
         computed = f.read()
     with rasterio.open("tests/data/expected_output/units/stripes_resampled.tif", "r") as f:
         expected = f.read()
