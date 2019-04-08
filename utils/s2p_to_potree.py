@@ -17,6 +17,7 @@ from __future__ import print_function
 import os
 import json
 import argparse
+from codecs import open
 
 import s2p
 from s2p import common
@@ -159,7 +160,7 @@ def produce_potree(s2poutdir, potreeoutdir):
 
 
     def plyvertex(fname):
-        with open(fname) as f:
+        with open(fname, 'r', 'utf-8') as f:
             for x in f:
                 if x.split()[0] == 'element' and x.split()[1] == 'vertex':
                     return int(x.split()[2])
