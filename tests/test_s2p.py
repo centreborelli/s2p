@@ -86,18 +86,39 @@ def unit_image_keypoints():
     np.testing.assert_equal(nb_test_not_in_ref,0)
 
 
+def assert_arrays_are_equal(a, b, rtol=0.01, atol=0.1, verbose=True):
+    """
+    Test if two numpy arrays are equal up to tolerance.
+    """
+    # check that the shapes are the same
+    np.testing.assert_equal(a.shape, b.shape, verbose=verbose)
+
+    # check that the arrays elements are the same
+    np.testing.assert_allclose(a, b, rtol=rtol, atol=atol, verbose=verbose)
+
+
 def unit_matching():
+    """
+    Test matching of two SIFT keypoints lists.
+    """
+    computed = s2p.sift.keypoints_match(np.loadtxt('tests/data/units/sift1.txt'),
+                                        np.loadtxt('tests/data/units/sift2.txt'))
+    expected = np.loadtxt('tests/data/expected_output/units/unit_keypoints_match.txt')
+    assert_arrays_are_equal(computed, expected)
 
-    k1 = np.loadtxt('tests/data/units/sift1.txt')
-    k2 = np.loadtxt('tests/data/units/sift2.txt')
-    test_matches = s2p.sift.keypoints_match(k1, k2)
-    expected_matches = np.loadtxt('tests/data/expected_output/units/unit_keypoints_match.txt')
 
-    # Check that numbers of matches are the same
-    np.testing.assert_equal(test_matches.shape[0],expected_matches.shape[0],verbose=True)
+def test_matches_on_rpc_roi():
+    """
+    Test SIFT matching of two image ROIs.
+    """
+    img1 = 'tests/data/input_triplet/img_01.tif'
+    img2 = 'tests/data/input_triplet/img_02.tif'
+    rpc1 = s2p.rpc_model.RPCModel('tests/data/input_triplet/rpc_01.xml')
+    rpc2 = s2p.rpc_model.RPCModel('tests/data/input_triplet/rpc_02.xml')
+    computed = s2p.sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, 100, 100, 200, 200)
 
-    # Check that all matches are the same
-    np.testing.assert_allclose(test_matches,expected_matches,rtol=0.01,atol=0.1,verbose=True)
+    expected = np.loadtxt('tests/data/expected_output/units/matches_on_rpc_roi.txt')
+    assert_arrays_are_equal(computed, expected)
 
 
 # test the plyflatten executable
@@ -224,6 +245,7 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 registered_tests = [('unit_gdal_version', (unit_gdal_version,[])),
                     ('unit_image_keypoints', (unit_image_keypoints,[])),
                     ('unit_matching', (unit_matching,[])),
+                    ('test_matches_on_rpc_roi', (test_matches_on_rpc_roi, [])),
                     ('unit_plyflatten', (unit_plyflatten,[])),
                     ('unit_matches_from_rpc', (unit_matches_from_rpc,[])),
                     ('end2end_pair', (end2end, ['tests/data/input_pair/config.json','tests/data/expected_output/pair/dsm.tif',0.025,1])),
