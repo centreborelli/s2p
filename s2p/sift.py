@@ -178,16 +178,18 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         return np.loadtxt(mfile)
 
 
-def keypoints_match_from_nparray(k1, k2, method, sift_threshold, epi_threshold, F):
+def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
+                                 epi_threshold=10, F=None):
     """
+    Wrapper for the sift keypoints matching function of libsift4ctypes.so.
     """
     # Set expected args and return types
     lib.matching.argtypes = (ndpointer(dtype=ctypes.c_float, shape=k1.shape),
                              ndpointer(dtype=ctypes.c_float, shape=k2.shape),
-                             ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
-                             ctypes.c_float, ctypes.c_float,
-                             ctypes.POINTER(ctypes.c_double), ctypes.c_bool,
-                             ctypes.c_bool,
+                             ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
+                             ctypes.c_uint, ctypes.c_float, ctypes.c_float,
+                             ndpointer(dtype=ctypes.c_double, shape=(5,)),
+                             ctypes.c_bool, ctypes.c_bool,
                              ctypes.POINTER(ctypes.c_uint))
     lib.matching.restype = ctypes.POINTER(ctypes.c_float)
 
@@ -201,8 +203,8 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold, epi_threshold, 
 
     # Format fundamental matrix
     use_fundamental_matrix = False
-    coeff_mat = None
-    if F:
+    coeff_mat = np.zeros(5)
+    if F is not None:
         coeff_mat = np.asarray([F[0, 2], F[1, 2], F[2, 0], F[2, 1], F[2, 2]])
         use_fundamental_matrix = True
 
