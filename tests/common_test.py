@@ -11,7 +11,7 @@ def test_plyflatten():
     f = data_path("input_ply/cloud.ply")                       # input cloud
     e = data_path("expected_output/plyflatten/dsm_40cm.tiff")  # expected output
 
-    os.makedirs(s2p.config.cfg['temporary_dir'], exist_ok=True)
+    s2p.common.mkdir_p(s2p.config.cfg['temporary_dir'])
     o = s2p.common.tmpfile(".tiff")                       # actual output
     s2p.common.run("echo %s | plyflatten 0.4 %s" % (f, o)) # compute dsm
     s = "\"%w %h %v %Y\n\"" # statistics to compare: width, height, avg, numnans

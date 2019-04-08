@@ -13,7 +13,7 @@ from tests_utils import data_path
 def test_image_keypoints():
     """
     """
-    os.makedirs(config.cfg['temporary_dir'], exist_ok=True)
+    s2p.common.mkdir_p(s2p.config.cfg['temporary_dir'])
     kpts = sift.image_keypoints(data_path('input_triplet/img_02.tif'), 100,
                                 100, 200, 200)
 
@@ -77,7 +77,7 @@ def assert_arrays_are_equal(a, b, rtol=0.01, atol=0.1, verbose=True):
 def test_matching():
     """
     """
-    os.makedirs(config.cfg['temporary_dir'], exist_ok=True)
+    s2p.common.mkdir_p(s2p.config.cfg['temporary_dir'])
 
     computed = sift.keypoints_match(data_path('units/sift1.txt'),
                                     data_path('units/sift2.txt'))
