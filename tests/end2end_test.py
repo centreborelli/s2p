@@ -9,7 +9,7 @@ import glob
 import numpy as np
 
 import s2p
-from s2plib import common
+from s2p import common
 from utils import s2p_mosaic
 from tests_utils import data_path
 

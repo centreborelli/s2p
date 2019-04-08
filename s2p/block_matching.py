@@ -6,8 +6,8 @@
 import os
 import numpy as np
 
-from s2plib import common
-from s2plib.config import cfg
+from s2p import common
+from s2p.config import cfg
 
 def rectify_secondary_tile_only(algo):
     if algo in ['tvl1_2d']:

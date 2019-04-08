@@ -4,8 +4,9 @@
 import os
 import numpy as np
 
-from s2plib import sift
-from s2plib import config
+import s2p
+from s2p import sift
+from s2p import config
 from tests_utils import data_path
 
 
@@ -62,16 +63,37 @@ def test_image_keypoints():
     np.testing.assert_equal(nb_test_not_in_ref, 0)
 
 
+def assert_arrays_are_equal(a, b, rtol=0.01, atol=0.1, verbose=True):
+    """
+    Test if two numpy arrays are equal up to tolerance.
+    """
+    # check that the shapes are the same
+    np.testing.assert_equal(a.shape, b.shape, verbose=verbose)
+
+    # check that the arrays elements are the same
+    np.testing.assert_allclose(a, b, rtol=rtol, atol=atol, verbose=verbose)
+
+
 def test_matching():
     """
     """
     os.makedirs(config.cfg['temporary_dir'], exist_ok=True)
 
-    test_matches = sift.keypoints_match(data_path('units/sift1.txt'), data_path('units/sift2.txt'))
-    expected_matches = np.loadtxt(data_path('expected_output/units/unit_keypoints_match.txt'))
+    computed = sift.keypoints_match(data_path('units/sift1.txt'),
+                                    data_path('units/sift2.txt'))
+    expected = np.loadtxt(data_path('expected_output/units/unit_keypoints_match.txt'))
+    assert_arrays_are_equal(computed, expected)
 
-    # Check that numbers of matches are the same
-    np.testing.assert_equal(test_matches.shape[0], expected_matches.shape[0], verbose=True)
 
-    # Check that all matches are the same
-    np.testing.assert_allclose(test_matches, expected_matches, rtol=0.01, atol=0.1, verbose=True)
+def test_matches_on_rpc_roi():
+    """
+    Test SIFT matching of two image ROIs.
+    """
+    img1 = data_path('input_triplet/img_01.tif')
+    img2 = data_path('input_triplet/img_02.tif')
+    rpc1 = s2p.rpc_model.RPCModel(data_path('input_triplet/rpc_01.xml'))
+    rpc2 = s2p.rpc_model.RPCModel(data_path('input_triplet/rpc_02.xml'))
+    computed = s2p.sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, 100, 100,
+                                           200, 200)
+    expected = np.loadtxt(data_path('expected_output/units/matches_on_rpc_roi.txt'))
+    assert_arrays_are_equal(computed, expected)

@@ -17,9 +17,8 @@ import sys
 import os
 import tempfile
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from s2plib import rpc_model
-from s2plib import common
+from s2p import rpc_model
+from s2p import common
 
 available_filters = ['near', 'bilinear',
                      'cubic', 'cubicspline', 'lanczos', 'average']

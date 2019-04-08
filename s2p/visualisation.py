@@ -7,12 +7,13 @@ import numpy as np
 import os
 import rasterio
 
-from s2plib import common
-from s2plib import sift
-from s2plib import estimation
-from s2plib import rpc_model
-from s2plib import rpc_utils
-import s2plib.pointing_accuracy
+from s2p import common
+from s2p import sift
+from s2p import estimation
+from s2p import rpc_model
+from s2p import rpc_utils
+import s2p.pointing_accuracy
+
 
 def plot_line(im, x1, y1, x2, y2, colour):
     """

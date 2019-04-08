@@ -6,7 +6,7 @@
 from __future__ import print_function
 import numpy as np
 
-from s2plib import common
+from s2p import common
 
 
 def fundamental_matrix_cameras(P1, P2):

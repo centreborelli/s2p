@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import os
 import argparse
 import sys
@@ -27,10 +28,9 @@ import simplekml
 import gdal
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import s2p
-from s2plib import rpc_model
-from s2plib import common
+from s2p import rpc_model
+from s2p import common
 
 def pix_2_latlon(gt, px, py, zone_number, northern):
     x = px * gt[1] + gt[0]
@@ -165,6 +165,7 @@ def get_polygon_description(dico):
 
     return "".join(descr)
 
+
 def write_tiles_polygon(tile, kml, m=None, M=None, message=None, error_mode=False):
     dsm = os.path.join(tile, 'dsm.tif')
     dico = []
@@ -235,7 +236,7 @@ def write_tiles_polygon(tile, kml, m=None, M=None, message=None, error_mode=Fals
     if message != None:
         dico += [('message', {"value": message,
                               "style": None})]
-    
+
     pol = kml.newpolygon(name=tile)
     pol.outerboundaryis = latlon
     pol.style.linestyle.color = color
@@ -244,26 +245,25 @@ def write_tiles_polygon(tile, kml, m=None, M=None, message=None, error_mode=Fals
 
     dico = collections.OrderedDict(dico)
     pol.description = get_polygon_description(dico)
-    
+
 
 def get_min_max(im):
     ds = gdal.Open(im)
 
-    print "Compute %s statistics..." % im
+    print("Compute %s statistics..." % im)
     try:
         stats = ds.GetRasterBand(1).GetStatistics(0, 1)
         M = stats[2] + stats[3]
         m = stats[2] - stats[3]
     except RuntimeError:
-        print "no valid pixels found in sampling"
+        print("no valid pixels found in sampling")
         return 0, 0
     return m, M
 
 def write_overlay(tiles, outdir, m, M, key):
-    print ("Rescale the input pixels values")
-    print ("from the range %f to %f to the range 0 to 255" % (m,
-                                                              M))
-    print ("Create ground overlay...")
+    print("Rescale the input pixels values")
+    print("from the range %f to %f to the range 0 to 255" % (m, M))
+    print("Create ground overlay...")
     kml = simplekml.Kml()
     add = 1
     add_tot = len(tiles)
@@ -275,11 +275,12 @@ def write_overlay(tiles, outdir, m, M, key):
         gdal_to_ground_overlay(dsm, "_".join(dsm.split(os.sep)[-3:-1]),
                                kml, outdir, M, m)
     kml.save(os.path.join(outdir, "%s_ground_overlay.kml" % key))
-    print
-    print "kml saved"
+    print()
+    print("kml saved")
+
 
 def write_tiles_info(tiles, outdir, key):
-    print ("Create tiles info...")
+    print("Create tiles info...")
     add = 1
     add_tot = len(tiles)
 
@@ -291,8 +292,8 @@ def write_tiles_info(tiles, outdir, key):
         write_tiles_polygon(tile, kml)
 
     kml.save(os.path.join(outdir, "%s_info.kml" % key))
-    print
-    print "kml saved"
+    print()
+    print("kml saved")
 
 
 def main(tiles_file, outdir, key, with_overlay=False):
@@ -308,12 +309,12 @@ def main(tiles_file, outdir, key, with_overlay=False):
         m, M = get_min_max(final_dsm)
     else:
         m, M = 0, 0
-    print "min : %s, max : %s" % (m, M)
+    print("min : %s, max : %s" % (m, M))
 
     # Read the tiles file
     tiles = read_tiles(tiles_file, outdir, m, M, key)
     add_tot = len(tiles)
-    print (str(add_tot)+' tiles found')
+    print(str(add_tot)+' tiles found')
 
     # overlay
     if with_overlay is True:

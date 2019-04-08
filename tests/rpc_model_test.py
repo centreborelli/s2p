@@ -4,7 +4,7 @@
 import os
 import numpy as np
 
-from s2plib import rpc_model, rpc_utils
+from s2p import rpc_model, rpc_utils
 from tests_utils import data_path
 
 
