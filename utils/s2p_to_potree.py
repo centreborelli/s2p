@@ -13,14 +13,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import os
 import json
 import argparse
 
 import s2p
 from s2p import common
-
-
 
 
 ## temp files
@@ -134,11 +133,11 @@ def test_for_potree(basedir):
     ply2ascii       = os.path.join(basedir, 'plytool/ply2ascii')
     txt2las         = os.path.join(basedir, 'PotreeConverter/LAStools/bin/txt2las')
     PotreeConverter = os.path.join(basedir, 'PotreeConverter/build/PotreeConverter/PotreeConverter')
-    print ('looking for:\n    %s\n    %s\n    %s'%(txt2las, ply2ascii, PotreeConverter) )
+    print('looking for:\n    %s\n    %s\n    %s'%(txt2las, ply2ascii, PotreeConverter))
 
     if (not os.path.exists(ply2ascii)) or (not os.path.exists(txt2las)) or (not os.path.exists(PotreeConverter)) :
-        print ('not found\n')
-	raise common.RunFailure
+        print('not found\n')
+        raise common.RunFailure
 
 
 def produce_potree(s2poutdir, potreeoutdir):
@@ -177,7 +176,7 @@ def produce_potree(s2poutdir, potreeoutdir):
 
     # produce the potree point cloud
     plys_to_potree(plys, os.path.join(potreeoutdir, 'cloud.potree'),
-		os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'))
+        os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'))
 
 
 
@@ -191,11 +190,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-    	produce_potree(args.s2pout,args.potreeoutdir)
+        produce_potree(args.s2pout,args.potreeoutdir)
     except common.RunFailure:
         basedir = os.path.dirname(os.path.abspath(__file__))
-        print ('You must download and compile PotreeConverter. Run the following commands:')
-	print ('    > cd %s'%basedir)
-	print ('    > git clone https://github.com/gfacciol/PotreeConverter_PLY_toolchain --recurse-submodules')
-	print ('    > cd PotreeConverter_PLY_toolchain')
-	print ('    > CC=gcc CXX=g++ make')
+        print('You must download and compile PotreeConverter. Run the following commands:')
+        print('    > cd %s'%basedir)
+        print('    > git clone https://github.com/gfacciol/PotreeConverter_PLY_toolchain --recurse-submodules')
+        print('    > cd PotreeConverter_PLY_toolchain')
+        print('    > CC=gcc CXX=g++ make')
