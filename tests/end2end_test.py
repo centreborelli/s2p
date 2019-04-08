@@ -5,13 +5,17 @@
 from __future__ import print_function
 
 import os
+import sys
 import glob
 import numpy as np
 
 import s2p
 from s2p import common
-from utils import s2p_mosaic
 from tests_utils import data_path
+
+here = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.dirname(here)))
+from utils import s2p_mosaic
 
 
 def compare_dsm(computed, expected, absmean_tol, percentile_tol):
@@ -55,7 +59,7 @@ def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
     print('Configuration file: ', config_file)
     print('Reference DSM:', ref_dsm, os.linesep)
 
-    # TODO this is ugly, and will be fixed once we'll have implemented a better
+    # TODO: this is ugly, and will be fixed once we'll have implemented a better
     # way to control the config parameters
     if 'utm_zone' in s2p.cfg: del s2p.cfg['utm_zone']
 
@@ -73,7 +77,6 @@ def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
 def end2end_mosaic(config_file, ref_height_map, absmean_tol=0.025, percentile_tol=1.):
     test_cfg = s2p.read_config_file(config_file)
     outdir = test_cfg['out_dir']
-    test_cfg['skip_existing'] = True
     s2p.main(test_cfg)
 
     tiles_file = os.path.join(outdir, 'tiles.txt')
@@ -112,7 +115,6 @@ def test_distributed_plyflatten():
 
     print('Running end2end with distributed plyflatten dsm ...')
     test_cfg = s2p.read_config_file(config_file)
-    test_cfg['skip_existing'] = True
     s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
