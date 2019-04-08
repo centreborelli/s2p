@@ -31,10 +31,10 @@ float distance_epipolar(const float* k1, const float* k2, int length, const floa
     float f = s2[2];
 
     // Naming follows Ives' convention in which x is the row index
-    float x1 = k1[0];
-    float y1 = k1[1];
-    float x2 = k2[0];
-    float y2 = k2[1];
+    float x1 = k1[1];
+    float y1 = k1[0];
+    float x2 = k2[1];
+    float y2 = k2[0];
 
     // rectified x coordinates (in Ives' conventions x is the row index)
     float xx1 = b * y1 + a * x1 + c; // scalar product of (b, a, c) and (x1, y1, 1)
