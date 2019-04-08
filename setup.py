@@ -33,7 +33,7 @@ requirements = ['numpy',
                 'rasterio[s3,test]',
                 'utm',
                 'pyproj',
-                'bs4',
+                'beautifulsoup4[lxml]',
                 'requests']
 
 setup(name="s2p",
