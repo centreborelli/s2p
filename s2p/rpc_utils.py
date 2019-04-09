@@ -6,6 +6,7 @@
 from __future__ import print_function
 import bs4
 import utm
+import json
 import datetime
 import pyproj
 import rasterio
@@ -299,12 +300,66 @@ def utm_roi_to_img_roi(rpc, roi):
 
 def kml_roi_process(rpc, kml):
     """
+    Define a rectangular bounding box in image coordinates
+    from a polygon in a KML file
+
+    Args:
+        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        kml: file path to a KML file containing a single polygon
+
+    Returns:
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
     """
     # extract lon lat from kml
     with open(kml, 'r') as f:
         a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
     ll_bbx = np.array([list(map(float, x.split(','))) for x in a])[:4, :2]
+    box_d = roi_process(rpc, ll_bbx)
+    return box_d
 
+
+def geojson_roi_process(rpc, geojson):
+    """
+    Define a rectangular bounding box in image coordinates
+    from a polygon in a geojson file
+
+    Args:
+        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        geojson: file path to a geojson file containing a single polygon
+
+    Returns:
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
+    """
+    # extract lon lat from geojson
+    with open(geojson, 'r') as f:
+        a = json.load(f)
+
+    if a["type"] == "FeatureCollection":
+        a = a["features"][0]
+
+    ll_bbx = np.array(a["geometry"]["coordinates"][0][:4])
+    box_d = roi_process(rpc, ll_bbx)
+    return box_d
+
+
+def roi_process(rpc, ll_bbx):
+    """
+    Convert a longitude/latitude bounding box into a rectangular
+    bounding box in image coordinates
+
+    Args:
+        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        ll_bbx: numpy array of (longitude, latitude) defining the bounding box
+
+    Returns:
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
+    """
     # save lon lat bounding box to cfg dictionary
     lon_min = min(ll_bbx[:, 0])
     lon_max = max(ll_bbx[:, 0])
