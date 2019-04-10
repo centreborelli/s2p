@@ -315,8 +315,8 @@ def kml_roi_process(rpc, kml):
     # extract lon lat from kml
     with open(kml, 'r') as f:
         a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
-    ll_bbx = np.array([list(map(float, x.split(','))) for x in a])[:4, :2]
-    box_d = roi_process(rpc, ll_bbx)
+    ll_poly = np.array([list(map(float, x.split(','))) for x in a])[:, :2]
+    box_d = roi_process(rpc, ll_poly)
     return box_d
 
 
@@ -341,19 +341,19 @@ def geojson_roi_process(rpc, geojson):
     if a["type"] == "FeatureCollection":
         a = a["features"][0]
 
-    ll_bbx = np.array(a["geometry"]["coordinates"][0][:4])
-    box_d = roi_process(rpc, ll_bbx)
+    ll_poly = np.array(a["geometry"]["coordinates"][0])
+    box_d = roi_process(rpc, ll_poly)
     return box_d
 
 
-def roi_process(rpc, ll_bbx):
+def roi_process(rpc, ll_poly):
     """
-    Convert a longitude/latitude bounding box into a rectangular
+    Convert a longitude/latitude polygon into a rectangular
     bounding box in image coordinates
 
     Args:
         rpc: instance of the rpc_model.RPCModel class, or path to the xml file
-        ll_bbx: numpy array of (longitude, latitude) defining the bounding box
+        ll_poly: numpy array of (longitude, latitude) defining the polygon
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
@@ -361,27 +361,27 @@ def roi_process(rpc, ll_bbx):
             are the dimensions of the rectangle.
     """
     # save lon lat bounding box to cfg dictionary
-    lon_min = min(ll_bbx[:, 0])
-    lon_max = max(ll_bbx[:, 0])
-    lat_min = min(ll_bbx[:, 1])
-    lat_max = max(ll_bbx[:, 1])
+    lon_min = min(ll_poly[:, 0])
+    lon_max = max(ll_poly[:, 0])
+    lat_min = min(ll_poly[:, 1])
+    lat_max = max(ll_poly[:, 1])
     cfg['ll_bbx'] = (lon_min, lon_max, lat_min, lat_max)
 
     # convert lon lat bbox to utm
     z = utm.conversion.latlon_to_zone_number((lat_min + lat_max) * .5,
                                              (lon_min + lon_max) * .5)
-    utm_bbx = np.array([utm.from_latlon(p[1], p[0], force_zone_number=z)[:2] for
-                        p in ll_bbx])
-    east_min = min(utm_bbx[:, 0])
-    east_max = max(utm_bbx[:, 0])
-    nort_min = min(utm_bbx[:, 1])
-    nort_max = max(utm_bbx[:, 1])
+    utm_poly = np.array([utm.from_latlon(p[1], p[0], force_zone_number=z)[:2] for
+                        p in ll_poly])
+    east_min = min(utm_poly[:, 0])
+    east_max = max(utm_poly[:, 0])
+    nort_min = min(utm_poly[:, 1])
+    nort_max = max(utm_poly[:, 1])
     cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.inverse_estimate(p[0], p[1], rpc.altOff)[:2] for p in ll_bbx]
+    img_pts = [rpc.inverse_estimate(p[0], p[1], rpc.altOff)[:2] for p in ll_poly]
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
