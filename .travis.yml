@@ -13,21 +13,15 @@ matrix:
       python: 3.7
       env: CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
     - os: osx
-      language: generic
-      python: 3.7
-      env: PATH=/Library/Frameworks/GDAL.framework/Versions/2.4/unix/bin:$PATH
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:ubuntugis/ppa; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev geographiclib-tools libgeographic-dev; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew unlink gdal && (brew install gcc || brew link --overwrite gcc) && brew install geographiclib fftw; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.4.dmg; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then X=$(echo `hdiutil mount GDAL_Complete-2.4.dmg | tail -1 | awk '{$1=$2=""; print $0}'` | xargs -0 echo) && sudo installer -pkg "${X}/"Install\ GDAL\ Complete\ 2.4.pkg -target /; export PATH="/Library/Frameworks/GDAL.framework/Programs:$PATH"; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev geographiclib-tools libgeographic-dev; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then HOMEBREW_NO_AUTO_UPDATE=1 brew install geographiclib fftw; fi
 
 install:
-  - pip install numpy pytest pytest-cov
-  - pip install .
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then pip install -e .; else pip3 install -e .; fi
 
 script:
   - pytest --cov=s2p tests
