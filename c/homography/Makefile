@@ -1,5 +1,5 @@
 CXXFLAGS ?= -march=native -O3
-override CXXFLAGS := $(CXXFLAGS) `gdal-config --cflags`
+override CXXFLAGS := $(CXXFLAGS) `gdal-config --cflags` -std=c++11
 override CXXLIBS  := $(CXXLIBS) `gdal-config --libs`
 
 OBJ = main.o \
