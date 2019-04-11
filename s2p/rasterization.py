@@ -13,9 +13,8 @@ import pyproj
 
 # TODO: This is kind of ugly. Cleaner way to do this is to update
 # LD_LIBRARY_PATH, which we should do once we have a proper config file
-plyflatten_library = os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), '../lib/libplyflatten.so')
-ctypes.CDLL(plyflatten_library)
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+lib = ctypes.CDLL(os.path.join(parent_dir, 'lib', 'libplyflatten.so'))
 
 def plyflatten(cloud,
                nb_points,
@@ -46,10 +45,6 @@ def plyflatten(cloud,
     Returns;
         A numpy array of shape (ysize, xsize, nb_extra_columns)
     """
-
-    # load shared library
-    lib = ctypes.CDLL(plyflatten_library)
-    
     # Set expected args and return types
     lib.rasterize_cloud.argtypes = (ndpointer(dtype=ctypes.c_double,
                                               shape=np.shape(cloud)),
