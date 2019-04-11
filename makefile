@@ -161,8 +161,7 @@ $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
 
 $(LIBDIR)/libplyflatten.so: $(SRCDIR)/plyflatten.c
-	$(CC) $(CFLAGS) -fPIC -shared $^ -o $(SRCDIR)/libplyflatten.so -lm
-	cp $(SRCDIR)/libplyflatten.so $@
+	$(CC) $(CFLAGS) -fPIC -shared $^ -o $@ -lm
 
 # Geographiclib wrappers
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
