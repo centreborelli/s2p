@@ -774,6 +774,11 @@ def read_config_file(config_file):
                                                          config_file)
         print('out_dir is: {}'.format(user_cfg['out_dir']))
 
+    # ROI paths
+    for k in ["roi_kml", "roi_geojson"]:
+        if k in user_cfg and not os.path.isabs(user_cfg[k]):
+            user_cfg[k] = make_path_relative_to_file(user_cfg[k], config_file)
+
     # input paths
     for img in user_cfg['images']:
         for d in ['img', 'rpc', 'clr', 'cld', 'roi', 'wat']:
