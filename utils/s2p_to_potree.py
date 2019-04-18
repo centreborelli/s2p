@@ -141,21 +141,19 @@ def test_for_potree(basedir):
         raise common.RunFailure
 
 
-def produce_potree(s2poutdir, potreeoutdir):
+def produce_potree(s2p_outdirs_list, potreeoutdir):
     """
     Produce a single multiscale point cloud for the whole processed region.
 
     Args:
-        tiles: list of tiles dictionaries
+        s2poutdirs_list: list of s2p output directories
     """
-
     basedir = os.path.dirname(os.path.abspath(__file__))
-    test_for_potree(os.path.join(basedir,'PotreeConverter_PLY_toolchain/'))
+    test_for_potree(os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'))
 
-    tiles_file = os.path.join(s2poutdir, 'tiles.txt')
-
-    # Read the tiles file
-    tiles = s2p.read_tiles(tiles_file)
+    tiles = []
+    for s2p_outdir in s2p_outdirs_list:
+        tiles += s2p.read_tiles(os.path.join(s2p_outdir, 'tiles.txt'))
     print(str(len(tiles))+' tiles found')
 
 
@@ -184,14 +182,14 @@ def produce_potree(s2poutdir, potreeoutdir):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: potree generation tool'))
 
-    parser.add_argument('s2pout',metavar='s2poutdir',
-                        help=('path to the s2p output directory'))
-    parser.add_argument('potreeoutdir',metavar='potreeoutdir', default='',nargs='?',
-                        help=('path to output potree (default: current dir)'))
+    parser.add_argument('s2pout', nargs='+',
+                        help=('path(s) to the s2p output directory(ies)'))
+    parser.add_argument('--outdir', metavar='potree_outdir', default='.',
+                        help=('path to output directory'))
     args = parser.parse_args()
 
     try:
-        produce_potree(args.s2pout,args.potreeoutdir)
+        produce_potree(args.s2pout, args.outdir)
     except common.RunFailure:
         basedir = os.path.dirname(os.path.abspath(__file__))
         print('You must download and compile PotreeConverter. Run the following commands:')
