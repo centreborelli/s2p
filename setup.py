@@ -37,11 +37,11 @@ requirements = ['numpy',
                 'requests']
 
 setup(name="s2p",
-      version="1.0b6",
+      version="1.0b8",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
-      url='https://github.com/miss3d/s2p',
+      url='https://github.com/cmla/s2p',
       packages=['s2p'],
       install_requires=requirements,
       cmdclass={'develop': CustomDevelop,
