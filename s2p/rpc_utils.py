@@ -326,25 +326,34 @@ def kml_roi_process(rpc, kml):
 def geojson_roi_process(rpc, geojson):
     """
     Define a rectangular bounding box in image coordinates
-    from a polygon in a geojson file
+    from a polygon in a geojson file or dict
 
     Args:
         rpc: instance of the rpc_model.RPCModel class, or path to the xml file
-        geojson: file path to a geojson file containing a single polygon
+        geojson: file path to a geojson file containing a single polygon,
+            or content of the file as a dict.
+            The geojson's top-level type should be either FeatureCollection,
+            Feature, or Polygon.
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
     """
-    # extract lon lat from geojson
-    with open(geojson, 'r') as f:
-        a = json.load(f)
+    # extract lon lat from geojson file or dict
+    if isinstance(geojson, str):
+        with open(geojson, 'r') as f:
+            a = json.load(f)
+    else:
+        a = geojson
 
     if a["type"] == "FeatureCollection":
         a = a["features"][0]
 
-    ll_poly = np.array(a["geometry"]["coordinates"][0])
+    if a["type"] == "Feature":
+        a = a["geometry"]
+
+    ll_poly = np.array(a["coordinates"][0])
     box_d = roi_process(rpc, ll_poly)
     return box_d
 
