@@ -67,6 +67,10 @@ cfg['sift_match_thresh'] = 0.6
 # disp range expansion facto
 cfg['disp_range_extra_margin'] = 0.2
 
+# estimate rectification homographies either blindly using the rpc data or from
+# the images actual content thanks to sift matches
+cfg['rectification_method'] = 'rpc'  # either 'rpc' or 'sift'
+
 # register the rectified images with a shear estimated from the rpc data
 cfg['register_with_shear'] = False
 

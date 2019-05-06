@@ -160,6 +160,7 @@ def rectification_pair(tile, i):
     H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2,
                                                             x, y, w, h,
                                                             rect1, rect2, A, m,
+                                                            method=cfg['rectification_method'],
                                                             hmargin=cfg['horizontal_margin'],
                                                             vmargin=cfg['vertical_margin'])
     np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')

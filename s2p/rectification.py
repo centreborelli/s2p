@@ -324,8 +324,11 @@ def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
         if A is not None:
             matches[:, 2:] = common.points_apply_homography(np.linalg.inv(A),
                                                             matches[:, 2:])
-    else:
+    elif method == 'sift':
         matches = sift_matches
+
+    else:
+        raise Exception("Unknown value {} for argument 'method'".format(method))
 
     # compute rectifying homographies
     H1, H2, F = rectification_homographies(matches, x, y, w, h)
