@@ -14,7 +14,7 @@ def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None
     Computes a height map from a disparity map, using rpc.
 
     Args:
-        rpc1, rpc2: paths to the xml files
+        rpc1, rpc2: instances of the rpc_model.RPCModel class
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
         disp, mask: paths to the diparity and mask maps
@@ -29,7 +29,13 @@ def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None
     else:
         HH2 = H2
 
-    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, HH2, disp,
+    # write rpc coefficients to txt files
+    rpcfile1 = common.tmpfile('.txt')
+    rpcfile2 = common.tmpfile('.txt')
+    rpc1.write_to_file(rpcfile1)
+    rpc2.write_to_file(rpcfile2)
+
+    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpcfile1, rpcfile2, H1, HH2, disp,
                                                       mask, height, rpc_err))
 
 
@@ -80,7 +86,7 @@ def height_map(out, x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        rpc1, rpc2: paths to the xml files
+        rpc1, rpc2: instances of the rpc_model.RPCModel class
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
         disp, mask: paths to the diparity and mask maps
