@@ -313,15 +313,10 @@ def image_crop_gdal(im, x, y, w, h, out=None):
     if out is None:
         out = tmpfile('.tif')
 
-    try:
-        with open(im, 'r'):
-            # do the crop with gdal_translate
-            run(('gdal_translate -ot Float32 -co TILED=YES -co BIGTIFF=IF_NEEDED '
-                 '-srcwin %d %d %d %d %s %s') % (x, y, w, h, shellquote(im),
-                                                 shellquote(out)))
-    except IOError:
-        print("image_crop_gdal: input image %s not found" % shellquote(im))
-        sys.exit()
+    # do the crop with gdal_translate
+    run(('gdal_translate -ot Float32 -co TILED=YES -co BIGTIFF=IF_NEEDED '
+         '-srcwin %d %d %d %d %s %s') % (x, y, w, h, shellquote(im),
+                                         shellquote(out)))
 
     return out
 
