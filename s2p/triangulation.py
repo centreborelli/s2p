@@ -176,7 +176,7 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
         cloud: path to the output points cloud (ply format)
         heights: height map, sampled on the same grid as the crop_colorized
             image. In particular, its size is the same as crop_colorized.
-        rpc: path to xml file containing RPC data for the current Pleiade image
+        rpc: instances of the rpc_model.RPCModel class
         H (optional, default None): numpy array of size 3x3 defining the
             homography transforming the coordinates system of the original full
             size image into the coordinates system of the crop we are dealing
@@ -189,6 +189,10 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
             ply file should be encoded in plain text (ascii).
         utm_zone (optional, default None):
     """
+    # write rpc coefficients to txt file
+    rpcfile = common.tmpfile('.txt')
+    rpc.write_to_file(rpcfile)
+
     if not os.path.exists(crop_colorized):
         crop_colorized = ''
     hij = " ".join(str(x) for x in H.flatten()) if H is not None else ""
@@ -197,7 +201,7 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     utm = "--utm-zone %s" % utm_zone if utm_zone else ""
     lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
     command = "colormesh %s %s %s %s -h \"%s\" %s %s %s %s" % (cloud, heights,
-                                                               rpc,
+                                                               rpcfile,
                                                                crop_colorized,
                                                                hij, asc, nrm,
                                                                utm, lbb)
