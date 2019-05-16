@@ -115,8 +115,8 @@ def test_matches_on_rpc_roi():
     """
     img1 = 'tests/data/input_triplet/img_01.tif'
     img2 = 'tests/data/input_triplet/img_02.tif'
-    rpc1 = s2p.rpc_model.RPCModel('tests/data/input_triplet/rpc_01.xml')
-    rpc2 = s2p.rpc_model.RPCModel('tests/data/input_triplet/rpc_02.xml')
+    rpc1 = s2p.rpc_utils.rpc_from_geotiff(img1)
+    rpc2 = s2p.rpc_utils.rpc_from_geotiff(img2)
     computed = s2p.sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, 100, 100, 200, 200)
 
     expected = np.loadtxt('tests/data/expected_output/units/matches_on_rpc_roi.txt')

@@ -254,7 +254,7 @@ def utm_zone(rpc, x, y, w, h):
     Compute the UTM zone where the ROI probably falls (or close to its border).
 
     Args:
-        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        rpc: instance of the rpc_model.RPCModel class, or path to a GeoTIFF file
         x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
@@ -265,7 +265,7 @@ def utm_zone(rpc, x, y, w, h):
     """
     # read rpc file
     if not isinstance(rpc, rpc_model.RPCModel):
-        rpc = rpc_model.RPCModel(rpc)
+        rpc = rpc_from_geotiff(rpc)
 
     # determine lat lon of the center of the roi, assuming median altitude
     lon, lat = rpc.localization(x + .5*w, y + .5*h, rpc.alt_offset)[:2]

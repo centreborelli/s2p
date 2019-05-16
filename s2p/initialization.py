@@ -138,7 +138,7 @@ def build_cfg(user_cfg):
 
     # get utm zone
     if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
-        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
+        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['img'], x, y, w, h)
 
 
 def make_dirs():
