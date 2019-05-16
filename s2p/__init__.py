@@ -577,7 +577,7 @@ def plys_to_dsm(tile):
                                             local_xsize, local_ysize)]
 
     cmd += ['-radius', str(cfg['dsm_radius'])]
-    cmd += ['-c', str(6) ]
+#    cmd += ['-c', str(6) ]
 
     if cfg['dsm_sigma'] is not None:
         cmd += ['-sigma', str(cfg['dsm_sigma'])]
