@@ -2,6 +2,7 @@ import subprocess
 from codecs import open
 from setuptools import setup, find_packages
 from setuptools.command import develop, build_py
+from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
 
 
 def readme():
@@ -28,6 +29,15 @@ class CustomBuildPy(build_py.build_py, object):
         subprocess.check_call("cp -r bin lib build/lib/", shell=True)
 
 
+class BdistWheel(_bdist_wheel):
+    """
+    Class needed to build platform dependent binary wheels
+    """
+    def finalize_options(self):
+        _bdist_wheel.finalize_options(self)
+        self.root_is_pure = False
+
+
 requirements = ['numpy',
                 'scipy',
                 'rasterio[s3,test]',
@@ -45,7 +55,8 @@ setup(name="s2p",
       packages=['s2p'],
       install_requires=requirements,
       cmdclass={'develop': CustomDevelop,
-                'build_py': CustomBuildPy},
+                'build_py': CustomBuildPy,
+                'bdist_wheel': BdistWheel},
       entry_points="""
           [console_scripts]
           s2p=s2p.cli:main
