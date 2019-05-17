@@ -221,7 +221,7 @@ class RPCModel:
         satellite_direction = (p1 - p0) / np.linalg.norm(p1 - p0)
 
         # return incidence angles
-        zenith = np.degrees(np.arccos(satellite_direction @ [0, 0, 1]))
+        zenith = np.degrees(np.arccos(np.dot(satellite_direction, [0, 0, 1])))
         azimut = np.degrees(np.mod(np.pi/2 - np.angle(np.complex(*satellite_direction[:2])), 2*np.pi))
         return zenith, azimut
 
