@@ -40,7 +40,7 @@ Required dependencies (Ubuntu 16.04):
 
 ## For developers: install s2p from sources
 
-    git clone https://github.com/MISS3D/s2p.git --recursive
+    git clone https://github.com/cmla/s2p.git --recursive
     cd s2p
     pip install -e .
 
