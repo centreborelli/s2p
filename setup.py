@@ -2,7 +2,6 @@ import subprocess
 from codecs import open
 from setuptools import setup, find_packages
 from setuptools.command import develop, build_py
-from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
 
 
 def readme():
@@ -29,13 +28,18 @@ class CustomBuildPy(build_py.build_py, object):
         subprocess.check_call("cp -r bin lib build/lib/", shell=True)
 
 
-class BdistWheel(_bdist_wheel):
-    """
-    Class needed to build platform dependent binary wheels
-    """
-    def finalize_options(self):
-        _bdist_wheel.finalize_options(self)
-        self.root_is_pure = False
+try:
+    from wheel.bdist_wheel import bdist_wheel
+    class BdistWheel(bdist_wheel):
+        """
+        Class needed to build platform dependent binary wheels
+        """
+        def finalize_options(self):
+            bdist_wheel.finalize_options(self)
+            self.root_is_pure = False
+
+except ImportError:
+    BdistWheel = None
 
 
 requirements = ['numpy',
@@ -48,7 +52,7 @@ requirements = ['numpy',
                 'requests']
 
 setup(name="s2p",
-      version="1.0b11",
+      version="1.0b13",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
