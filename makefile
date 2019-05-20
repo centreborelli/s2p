@@ -50,7 +50,6 @@ homography: $(BINDIR)
 sift: $(BINDIR)
 	$(MAKE) -j -C c/sift
 	cp c/sift/libsift4ctypes.so $(LIBDIR)
-	cp c/sift/matching ${BINDIR}
 mgm:
 	$(MAKE) -C 3rdparty/mgm
 	#cp 3rdparty/mgm/mgm $(BINDIR)
@@ -187,7 +186,6 @@ clean_homography:
 clean_sift:
 	$(MAKE) -C c/sift clean
 	$(RM) $(LIBDIR)/libsift4ctypes.so
-	$(RM) $(BINDIR)/matching
 
 clean_asift:
 	$(RM) -r $(BINDIR)/build_asift
