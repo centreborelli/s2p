@@ -185,7 +185,7 @@ int main(int c, char *v[])
     }
 
     // open disp and mask input images
-    int w, h, nch, ww, hh, pd;
+    int w, h, nch, ww, hh, pd, pd_extr;
     float *dispy;
     float *dispx = iio_read_image_float_split(v[2], &w, &h, &nch);
     if (nch > 1) dispy = dispx + w*h;
@@ -204,7 +204,7 @@ int main(int c, char *v[])
     // open extra channel image if provided
     uint8_t *extr = NULL;
     if (c > 7) {
-        extr = iio_read_image_uint8_vec(v[7], &ww, &hh, &pd);
+        extr = iio_read_image_uint8_vec(v[7], &ww, &hh, &pd_extr);
         if (w != ww || h != hh) fail("disp and extra image size mismatch\n");
     }
 
