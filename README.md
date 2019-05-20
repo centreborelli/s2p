@@ -1,6 +1,6 @@
 # S2P - Satellite Stereo Pipeline
 
-[![Build Status](https://travis-ci.com/cmla/s2p.svg?branch=dev)](https://travis-ci.org/cmla/s2p)
+[![Build Status](https://travis-ci.com/cmla/s2p.svg?branch=dev)](https://travis-ci.com/cmla/s2p)
 
 S2P is a Python library and command line tool that implements a stereo
 pipeline which produces elevation models from images taken by high resolution
