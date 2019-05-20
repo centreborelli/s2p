@@ -11,6 +11,7 @@ import warnings
 import numpy as np
 import rasterio as rio
 from numpy.ctypeslib import ndpointer
+import ransac
 
 from s2p import common
 from s2p import rpc_utils
@@ -131,7 +132,7 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
 
 
 def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
-                    model=None, epipolar_threshold=10):
+                    epipolar_threshold=10, model=None, ransac_max_err=0.3):
     """
     Find matches among two lists of sift keypoints.
 
@@ -147,11 +148,13 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
             (ie ratio between distance to nearest and distance to second
             nearest), the commonly used value for the threshold is 0.6.
         F (optional): affine fundamental matrix
+        epipolar_threshold (optional, default is 10): maximum distance allowed for
+            a point to the epipolar line of its match.
         model (optional, default is None): model imposed by RANSAC when
             searching the set of inliers. If None all matches are considered as
             inliers.
-        epipolar_threshold (optional, default is 10): maximum distance allowed for
-            a point to the epipolar line of its match.
+        ransac_max_err (float): maximum allowed epipolar error for
+            RANSAC inliers. Optional, default is 0.3.
 
     Returns:
         if any, a numpy 2D array containing the list of inliers matches.
@@ -169,20 +172,13 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         cmd += " --epipolar-threshold {}".format(epipolar_threshold)
     common.run(cmd)
 
-    matches = np.loadtxt(mfile)
-    if matches.ndim == 2:  # filter outliers with ransac
-        if model == 'fundamental' and len(matches) >= 7:
-            common.run("ransac fmn 1000 .3 7 %s < %s" % (mfile, mfile))
-        elif model == 'homography' and len(matches) >= 4:
-            common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                            mfile))
-        elif model == 'hom_fund' and len(matches) >= 7:
-            common.run("ransac hom 1000 2 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                            mfile))
-            common.run("ransac fmn 1000 .2 7 %s < %s" % (mfile, mfile))
+    matches = np.atleast_2d(np.loadtxt(mfile))
+    if model == 'fundamental' and len(matches) >= 7:
+        inliers = ransac.find_fundamental_matrix(matches, ntrials=1000,
+                                                 max_err=ransac_max_err)[0]
+        matches = matches[inliers]
 
-    if os.stat(mfile).st_size > 0:  # return numpy array of matches
-        return np.loadtxt(mfile)
+    return matches
 
 
 def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -218,9 +214,9 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     for i in range(2):
         p1 = image_keypoints(im1, x, y, w, h, thresh_dog=thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, thresh_dog=thresh_dog)
-        matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'],
-                                  F, model='fundamental',
-                                  epipolar_threshold=cfg['max_pointing_error'])
+        matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'], F,
+                                  epipolar_threshold=cfg['max_pointing_error'],
+                                  model='fundamental')
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
             break
         thresh_dog /= 2.0

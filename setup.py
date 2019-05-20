@@ -44,6 +44,7 @@ requirements = ['numpy',
                 'utm',
                 'pyproj',
                 'beautifulsoup4[lxml]',
+                'ransac',
                 'requests']
 
 setup(name="s2p",

@@ -117,7 +117,7 @@ PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
 SRC = $(SRCIIO) $(SRCKKK)
 SRCIIO = downsa backflow synflow imprintf qauto morsi\
 	morphoop cldmask remove_small_cc plambda homwarp pview
-SRCKKK = disp_to_h colormesh disp2ply multidisp2ply bin2asc ransac plyflatten plyextrema
+SRCKKK = disp_to_h colormesh disp2ply multidisp2ply bin2asc plyflatten plyextrema
 
 imscript: $(BINDIR) $(PROGRAMS)
 
@@ -132,10 +132,6 @@ $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
 
 $(BINDIR)/bin2asc: c/bin2asc.c
 	$(CC) $(CFLAGS) $^ -o $@
-
-$(BINDIR)/ransac: c/ransac.c c/fail.c c/xmalloc.c c/xfopen.c c/homographies.c\
-	c/ransac_cases.c c/parsenumbers.c c/random.c
-	$(CC) $(CFLAGS) $< -lm -o $@
 
 $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
