@@ -2,6 +2,8 @@ language: python
 sudo: required
 fast_finish: true
 
+if: tag IS blank
+
 matrix:
   include:
     - os: linux
