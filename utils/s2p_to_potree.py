@@ -78,16 +78,19 @@ def plys_to_potree(input_plys, output, bin_dir='.', cloud_name="cloud"):
     garbage = []
 
     for p in input_plys:
-        # make ascii ply if needed
-        ap = tmpfile('.ply', outdir)
-        garbage.append(ap)
-        lp = tmpfile('.las', outdir)
-        garbage.append(lp)
 
-        las.append(lp)
+        # convert binary ply to ascii if needed
+        ap = tmpfile('.ply', outdir)
         common.run("%s < %s > %s" % (ply2ascii, p, ap))
+
         # convert ply to las because PotreeConverter is not able to read PLY
+        lp = tmpfile('.las', outdir)
+        las.append(lp)
+        garbage.append(lp)
         common.run("%s -parse xyzRGB -verbose -i  %s -o %s 2>/dev/null" % (txt2las, ap, lp))
+
+        # remove intermediate ascii ply
+        common.run("rm %s" % ap)
 
     # generate potree output
     listfile = tmpfile('.txt', outdir)
