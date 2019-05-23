@@ -44,6 +44,7 @@ except ImportError:
 
 requirements = ['numpy',
                 'scipy',
+                'urllib3<1.25',  # This is a temporary hack to fix https://github.com/boto/botocore/issues/1733 until next release of botocore
                 'rasterio[s3,test]',
                 'utm',
                 'pyproj',
