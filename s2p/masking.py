@@ -66,7 +66,7 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
     if wat_msk is not None:  # water mask (raster)
         x, y, w, h = map(int, (x, y, w, h))
         with rasterio.open(wat_msk, 'r') as f:
-            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w))).squeeze())
+            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w)), boundless=True).squeeze())
 
     return mask
 
