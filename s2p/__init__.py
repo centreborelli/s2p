@@ -287,11 +287,10 @@ def disparity_to_ply(tile):
     colors = os.path.join(out_dir, 'rectified_ref.png')
     if cfg['images'][0]['clr']:
         hom = np.loadtxt(H_ref)
-        roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
-        ww, hh = common.bounding_box2D(common.points_apply_homography(hom, roi))[2:]
-        common.image_apply_homography(colors, cfg['images'][0]['clr'], hom,
-                                      ww + 2*cfg['horizontal_margin'],
-                                      hh + 2*cfg['vertical_margin'])
+        # We want rectified_ref.png and rectified_ref.tif to have the same size
+        with rasterio.open(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif')) as f:
+            ww, hh = f.width, f.height
+        common.image_apply_homography(colors, cfg['images'][0]['clr'], hom, ww, hh)
     else:
         common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)
 
