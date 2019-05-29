@@ -293,6 +293,33 @@ def bounding_box2D(pts):
     return bb_min[0], bb_min[1], bb_max[0] - bb_min[0], bb_max[1] - bb_min[1]
 
 
+def crop_array(img, x, y, w, h, fill_value=0):
+    """
+    Crop an image represented as an array.
+
+    Args:
+        img (array): 2D input image
+        x, y (ints): coordinate of the top-left corner of the crop
+        w, h (ints): width and height of the crop
+        fill_value (img.dtype): constant value used for filling the crop
+            outside the input image domain
+
+    Returns:
+        array with the cropped image
+    """
+    crop = fill_value * np.ones((h, w), dtype=img.dtype)
+
+    y0 = max(y, 0)
+    y1 = min(y + h, img.shape[0])
+    x0 = max(x, 0)
+    x1 = min(x + w, img.shape[1])
+
+    if y0 < y1 and x0 < x1:  # the requested crop overlaps the image
+        crop[y0 - y:y1 - y, x0 - x:x1 - x] = img[y0:y1, x0:x1]
+
+    return crop
+
+
 def image_crop_gdal(im, x, y, w, h, out=None):
     """
     Crop an image using gdal_translate.
