@@ -10,6 +10,7 @@ import utm
 import json
 import copy
 import shutil
+import rasterio
 import warnings
 import numpy as np
 
@@ -268,10 +269,12 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     if os.path.exists(tiles_txt) is False or create_masks is True:
         print('\ndiscarding masked tiles...')
         # compute all masks in parallel as numpy arrays
+        with rasterio.open(cfg['images'][0]['img'], 'r') as f:
+            ref_shape = f.shape
         tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
                                                    tiles_coords,
                                                    cfg['max_processes'],
-                                                   roi_msk, cld_msk, wat_msk)
+                                                   roi_msk, cld_msk, wat_msk, ref_shape)
 
         for coords, mask in zip(tiles_coords,
                                 tiles_masks):
