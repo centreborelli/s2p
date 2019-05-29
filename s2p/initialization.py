@@ -271,7 +271,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
         # compute all masks in parallel as numpy arrays
         with rasterio.open(cfg['images'][0]['img'], 'r') as f:
             ref_shape = f.shape
-        tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
+        tiles_masks = parallel.launch_calls_simple(masking.image_tile_mask,
                                                    tiles_coords,
                                                    cfg['max_processes'],
                                                    roi_msk, cld_msk, wat_msk, ref_shape)
@@ -302,8 +302,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                     json.dump(tile_cfg, f, indent=2,default=workaround_json_int64)
 
                 # save the mask
-                common.rasterio_write(os.path.join(tile['dir'],
-                                                   'cloud_water_image_domain_mask.png'),
+                common.rasterio_write(os.path.join(tile['dir'], 'mask.png'),
                                       mask.astype(np.uint8))
     else:
         if len(tiles_coords) == 1:

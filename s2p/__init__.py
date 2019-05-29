@@ -237,7 +237,7 @@ def disparity_to_height(tile, i):
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-    out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
+    out_mask = os.path.join(tile['dir'], 'mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
     triangulation.height_map(height_map, x, y, w, h,
@@ -281,7 +281,7 @@ def disparity_to_ply(tile):
     if not os.path.exists(extra):
         extra = ''
     mask_rect = os.path.join(out_dir, 'pair_1', 'rectified_mask.png')
-    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+    mask_orig = os.path.join(out_dir, 'mask.png')
 
     # prepare the image needed to colorize point cloud
     colors = os.path.join(out_dir, 'rectified_ref.png')
@@ -333,7 +333,7 @@ def multidisparities_to_ply(tile):
     disp_list = list()
     rpc_list = list()
 
-    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+    mask_orig = os.path.join(out_dir, 'mask.png')
 
     print('triangulating tile {} {}...'.format(x, y))
     n = len(cfg['images']) - 1
@@ -517,8 +517,7 @@ def heights_to_ply(tile):
     if cfg['clean_intermediate']:
         common.remove(height_map)
         common.remove(colors)
-        common.remove(os.path.join(out_dir,
-                                   'cloud_water_image_domain_mask.png'))
+        common.remove(os.path.join(out_dir, 'mask.png'))
 
 def plys_to_dsm(tile):
     """
