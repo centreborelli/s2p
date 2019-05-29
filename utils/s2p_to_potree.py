@@ -189,10 +189,11 @@ def produce_potree(s2p_outdirs_list, potreeoutdir):
         # to the point cloud
         cloud_html = os.path.join(cloudoutdir, "{}.html".format(cloud_name))
         with open(cloud_html) as f:
-            soup = BeautifulSoup(f)
+            soup = BeautifulSoup(f, features="lxml")
         script = soup.find_all("script")[-1]
         js_script = re.search(regex, script.text).group(0)
         js_scripts.append(js_script)
+        os.remove(cloud_html)
 
     # The "main.html" file will contain a concatenation of all the js
     # scripts that were gathered in the loop above.
