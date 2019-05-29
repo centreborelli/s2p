@@ -270,7 +270,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
         # compute all masks in parallel as numpy arrays
         tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
                                                    tiles_coords,
-                                                   cfg['max_processes'], rpc,
+                                                   cfg['max_processes'],
                                                    roi_msk, cld_msk, wat_msk)
 
         for coords, mask in zip(tiles_coords,

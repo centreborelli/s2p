@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore",
                         category=rasterio.errors.NotGeoreferencedWarning)
 
 
-def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
+def cloud_water_image_domain(x, y, w, h, roi_gml=None, cld_gml=None,
                              wat_msk=None):
     """
     Compute a mask for pixels masked by clouds, water, or out of image domain.
