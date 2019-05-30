@@ -78,7 +78,7 @@ def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
     if img_shape is not None:
         m = np.ones(img_shape, dtype=np.bool)
         m[:border_margin] = 0  # first rows
-        m[-border_margin] = 0  # last rows
+        m[-border_margin:] = 0  # last rows
         m[:, :border_margin] = 0  # first columns
         m[:, -border_margin:] = 0  # last columns
         mask = np.logical_and(mask, common.crop_array(m, x, y, w, h))
