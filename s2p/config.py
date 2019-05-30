@@ -97,6 +97,8 @@ cfg['disp_max'] = None
 cfg['alt_min'] = None
 cfg['alt_max'] = None
 
+# width of a stripe of pixels to be masked along the reference input image borders
+cfg['border_margin'] = 10
 
 # radius for erosion of valid disparity areas. Ignored if less than 2
 cfg['msk_erosion'] = 2

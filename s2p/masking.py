@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore",
 
 
 def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
-                    img_shape=None, border_margin=5):
+                    img_shape=None, border_margin=10):
     """
     Compute a validity mask for an image tile from vector/raster image masks.
 

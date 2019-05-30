@@ -273,8 +273,9 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
             ref_shape = f.shape
         tiles_masks = parallel.launch_calls_simple(masking.image_tile_mask,
                                                    tiles_coords,
-                                                   cfg['max_processes'],
-                                                   roi_msk, cld_msk, wat_msk, ref_shape)
+                                                   cfg['max_processes'], roi_msk,
+                                                   cld_msk, wat_msk, ref_shape,
+                                                   cfg['border_margin'])
 
         for coords, mask in zip(tiles_coords,
                                 tiles_masks):
