@@ -19,3 +19,7 @@
 	path = 3rdparty/lsd
 	url = https://github.com/cmla/lsd.git
 	ignore = untracked
+[submodule "3rdparty/imscript"]
+	path = 3rdparty/imscript
+	url = https://github.com/mnhrdt/imscript.git
+	ignore = untracked
