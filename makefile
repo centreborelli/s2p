@@ -24,7 +24,7 @@ BINDIR = bin
 LIBDIR = lib
 
 # default rule builds only the programs necessary for the test
-default: $(BINDIR) $(LIBDIR) homography sift imscript mgm mgm_multi tvl1 lsd
+default: $(BINDIR) $(LIBDIR) homography sift imscript s2p mgm mgm_multi tvl1 lsd
 
 # the "all" rule builds four further correlators
 all: default msmw3 sgbm mgm_multi
@@ -107,21 +107,25 @@ tvl1:
 	cp 3rdparty/tvl1flow/callTVL1.sh $(BINDIR)
 
 
+#
+# rules to build a subset of imscript
+#
+
+IMSCRIPT = downsa backflow synflow imprintf qauto morsi cldmask remove_small_cc\
+		   plambda homwarp pview
+
+imscript: $(BINDIR)
+	$(MAKE) -j -C 3rdparty/imscript $(addprefix bin/,$(IMSCRIPT))
+	cp 3rdparty/imscript/bin/* $(BINDIR)
+
 
 #
-# rules to build the programs under the source directory
+# rules to build s2p C/C++ programs
 #
 
-PROGRAMS = $(addprefix $(BINDIR)/,$(SRC))
-SRC = $(SRCIIO) $(SRCKKK)
-SRCIIO = downsa backflow synflow imprintf qauto morsi\
-	morphoop cldmask remove_small_cc plambda homwarp pview
-SRCKKK = disp_to_h colormesh disp2ply multidisp2ply bin2asc plyflatten plyextrema
+PROGRAMS = disp_to_h disp2ply colormesh multidisp2ply bin2asc plyflatten plyextrema morphoop
 
-imscript: $(BINDIR) $(PROGRAMS)
-
-$(addprefix $(BINDIR)/,$(SRCIIO)) : $(BINDIR)/% : $(SRCDIR)/%.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) $^ -o $@ $(IIOLIBS)
+s2p: $(BINDIR) $(addprefix $(BINDIR)/,$(PROGRAMS))
 
 $(SRCDIR)/iio.o: c/iio.c c/iio.h
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -131,6 +135,9 @@ $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
 
 $(BINDIR)/bin2asc: c/bin2asc.c
 	$(CC) $(CFLAGS) $^ -o $@
+
+$(BINDIR)/morphoop: $(SRCDIR)/iio.o $(SRCDIR)/morphoop.c
+	$(CC) $(CFLAGS) $^ $(IIOLIBS) -o $@
 
 $(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
@@ -173,8 +180,8 @@ depend:
 
 # rules for cleaning, nothing interesting below this point
 clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
-	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm \
-	clean_depend
+	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_mgm_multi\
+	clean_lsd clean_s2p clean_depend
 
 clean_depend:
 	$(RM) makefile.dep
@@ -192,7 +199,11 @@ clean_asift:
 	$(RM) $(BINDIR)/demo_ASIFT
 
 clean_imscript:
-	$(RM) $(PROGRAMS)
+	$(MAKE) -C 3rdparty/imscript clean
+	$(RM) $(addprefix $(BINDIR)/,$(IMSCRIPT))
+
+clean_s2p:
+	$(RM) $(addprefix $(BINDIR)/,$(PROGRAMS))
 	$(RM) $(SRCDIR)/iio.o
 	$(RM) $(SRCDIR)/rpc.o
 	$(RM) $(SRCDIR)/geographiclib_wrapper.o
@@ -223,5 +234,15 @@ clean_mgm:
 	$(MAKE) -C 3rdparty/mgm clean
 	$(RM) $(BINDIR)/mgm
 
-.PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm test
+clean_mgm_multi:
+	$(MAKE) -C 3rdparty/mgm_multi clean
+	$(RM) -r $(BINDIR)/build_mgm_multi
+	$(RM) $(BINDIR)/mgm_multi
+
+clean_lsd:
+	$(MAKE) -C 3rdparty/lsd clean
+	$(RM) $(BINDIR)/lsd
+
+.PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript s2p clean clean_sift\
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_mgm\
+	clean_mgm_multi clean_lsd clean_s2p test
