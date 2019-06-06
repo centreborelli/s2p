@@ -83,12 +83,6 @@ cfg['epipolar_thresh'] = 0.5
 # maximal pointing error, in pixels
 cfg['max_pointing_error'] = 10
 
-# triangulation mode : 'pairwise'or 'geometric'
-cfg['triangulation_mode'] = 'pairwise'
-
-# use global pointing for geometric triangulation
-cfg['use_global_pointing_for_geometric_triangulation'] = False
-
 # set these params if you want to impose the disparity range manually (cfg['disp_range_method'] == 'fixed_pixel_range')
 cfg['disp_min'] = None
 cfg['disp_max'] = None

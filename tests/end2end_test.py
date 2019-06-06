@@ -100,11 +100,6 @@ def test_end2end_triplet():
             data_path('expected_output/triplet/dsm.tif'), 0.05, 2)
 
 
-def test_end2end_geo():
-    end2end(data_path('input_triplet/config_geo.json'),
-            data_path('expected_output/triplet/dsm_geo.tif'), 0.05, 2)
-
-
 def test_end2end_mosaic():
     end2end_mosaic(data_path('input_triplet/config.json'),
                    data_path('expected_output/triplet/height_map.tif'), 0.05, 2)
