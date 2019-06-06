@@ -137,13 +137,30 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
         env['TSGM'] = '3'
+
+        nb_dir = cfg['mgm_nb_directions']
+
         conf = '{}_confidence.tif'.format(os.path.splitext(disp)[0])
-        common.run('{0} -r {1} -R {2} -s vfit -t census -O 8 {3} {4} {5} -confidence_consensusL {6}'.format('mgm',
-                                                                                 disp_min,
-                                                                                 disp_max,
-                                                                                 im1, im2,
-                                                                                 disp, conf),
-                   env)
+
+        common.run(
+            '{executable} '
+            '-r {disp_min} -R {disp_max} '
+            '-s vfit '
+            '-t census '
+            '-O {nb_dir} '
+            '-confidence_consensusL {conf} '
+            '{im1} {im2} {disp}'.format(
+                executable='mgm',
+                disp_min=disp_min,
+                disp_max=disp_max,
+                nb_dir=nb_dir,
+                conf=conf,
+                im1=im1,
+                im2=im2,
+                disp=disp,
+            ),
+            env,
+        )
 
         # create rejection mask (0 means rejected, 1 means accepted)
         # keep only the points that are matched and present in both input images
@@ -183,18 +200,39 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         # it is required that p2 > p1. The larger p1, p2, the smoother the disparity
         regularity_multiplier = cfg['stereo_regularity_multiplier']
 
+        nb_dir = cfg['mgm_nb_directions']
+
         # increasing these numbers compensates the loss of regularity after incorporating LSD weights
         P1 = 12*regularity_multiplier   # penalizes disparity changes of 1 between neighbor pixels
         P2 = 48*regularity_multiplier  # penalizes disparity changes of more than 1
         conf = disp+'.confidence.tif'
-        common.run('{0} -r {1} -R {2} -S 6 -s vfit -t census -O 8 -P1 {7} -P2 {8} -wl {3} -wr {4} -confidence_consensusL {10} {5} {6} {9}'.format('mgm_multi',
-                                                                                 disp_min,
-                                                                                 disp_max,
-                                                                                 wref,wsec,
-                                                                                 im1, im2,
-                                                                                 P1, P2,
-                                                                                 disp, conf),
-                   env)
+
+        common.run(
+            '{executable} '
+            '-r {disp_min} -R {disp_max} '
+            '-S 6 '
+            '-s vfit '
+            '-t census '
+            '-O {nb_dir} '
+            '-wl {wref} -wr {wsec} '
+            '-P1 {P1} -P2 {P2} '
+            '-confidence_consensusL {conf} '
+            '{im1} {im2} {disp}'.format(
+                executable='mgm_multi',
+                disp_min=disp_min,
+                disp_max=disp_max,
+                nb_dir=nb_dir,
+                wref=wref,
+                wsec=wsec,
+                P1=P1,
+                P2=P2,
+                conf=conf,
+                im1=im1,
+                im2=im2,
+                disp=disp,
+            ),
+            env,
+        )
 
         # create rejection mask (0 means rejected, 1 means accepted)
         # keep only the points that are matched and present in both input images
@@ -208,15 +246,36 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         env['SUBPIX'] = '2'
         # it is required that p2 > p1. The larger p1, p2, the smoother the disparity
         regularity_multiplier = cfg['stereo_regularity_multiplier']
+
+        nb_dir = cfg['mgm_nb_directions']
+
         P1 = 8*regularity_multiplier   # penalizes disparity changes of 1 between neighbor pixels
         P2 = 32*regularity_multiplier  # penalizes disparity changes of more than 1
         conf = '{}_confidence.tif'.format(os.path.splitext(disp)[0])
-        common.run('{0} -r {1} -R {2} -S 6 -s vfit -t census {3} {4} {5} -confidence_consensusL {6}'.format('mgm_multi',
-                                                                                 disp_min,
-                                                                                 disp_max,
-                                                                                 im1, im2,
-                                                                                 disp, conf),
-                   env)
+
+        common.run(
+            '{executable} '
+            '-r {disp_min} -R {disp_max} '
+            '-S 6 '
+            '-s vfit '
+            '-t census '
+            '-O {nb_dir} '
+            '-P1 {P1} -P2 {P2} '
+            '-confidence_consensusL {conf} '
+            '{im1} {im2} {disp}'.format(
+                executable='mgm_multi',
+                disp_min=disp_min,
+                disp_max=disp_max,
+                nb_dir=nb_dir,
+                P1=P1,
+                P2=P2,
+                conf=conf,
+                im1=im1,
+                im2=im2,
+                disp=disp,
+            ),
+            env,
+        )
 
         # create rejection mask (0 means rejected, 1 means accepted)
         # keep only the points that are matched and present in both input images
