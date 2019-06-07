@@ -463,11 +463,11 @@ def plys_to_dsm(tile):
                                                                   sigma=cfg['dsm_sigma'])
 
     # save_output_image_with_utm_georeferencing
-    common.rasterio_write(out_dsm, raster[:,:,0], profile=profile)
+    common.rasterio_write(out_dsm, raster[:, :, 0], profile=profile)
 
     # export confidence (optional)
-    if nb_extra_columns == 5:
-        common.rasterio_write(out_conf, raster[:,:,4], profile=profile)
+    if raster.shape[-1] == 5:
+        common.rasterio_write(out_conf, raster[:, :, 4], profile=profile)
 
 
 def global_dsm(tiles):
