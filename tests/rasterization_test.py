@@ -1,5 +1,4 @@
 # s2p (Satellite Stereo Pipeline) testing module
-# Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
 import numpy as np
 import rasterio
