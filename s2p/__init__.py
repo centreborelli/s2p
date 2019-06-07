@@ -43,6 +43,7 @@ from s2p import block_matching
 from s2p import masking
 from s2p import triangulation
 from s2p import fusion
+from s2p import rasterization
 from s2p import visualisation
 
 
@@ -424,6 +425,10 @@ def heights_to_ply(tile):
 
 def plys_to_dsm(tile):
     """
+    Generates DSM from plyfiles (cloud.ply)
+
+    Args:
+        tile: a dictionary that provides all you need to process a tile
     """
     out_dsm  = os.path.join(tile['dir'], 'dsm.tif')
     out_conf = os.path.join(tile['dir'], 'confidence.tif')
@@ -448,50 +453,21 @@ def plys_to_dsm(tile):
     local_yoff = global_yoff + np.ceil((ymax - global_yoff) / res) * res
     local_ysize = int(1 - np.floor((ymin - local_yoff) / res))
 
-    clouds = '\n'.join(os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs'])
+    clouds = [os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
+    roi = (local_xoff, local_yoff, local_xsize, local_ysize)
 
-    cmd = ['plyflatten', str(cfg['dsm_resolution']), out_dsm]
-    cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
-                                            local_xsize, local_ysize)]
+    raster, profile = rasterization.plyflatten_from_plyfiles_list(clouds,
+                                                                  resolution=res,
+                                                                  roi=roi,
+                                                                  radius=cfg['dsm_radius'],
+                                                                  sigma=cfg['dsm_sigma'])
 
-    cmd += ['-radius', str(cfg['dsm_radius'])]
-
-    if cfg['dsm_sigma'] is not None:
-        cmd += ['-sigma', str(cfg['dsm_sigma'])]
-
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    q = p.communicate(input=clouds.encode())
-
-    run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-    print ("\nRUN: %s" % run_cmd)
-
-    if p.returncode != 0:
-        raise common.RunFailure({"command": run_cmd, "environment": os.environ,
-                                 "output": q})
+    # save_output_image_with_utm_georeferencing
+    common.rasterio_write(out_dsm, raster[:, :, 0], profile=profile)
 
     # export confidence (optional)
-    # call to plyflatten might fail, but it won't abort the process
-    # or affect the following steps
-    cmd = ['plyflatten', str(cfg['dsm_resolution']), out_conf]
-    cmd += ['-srcwin', '{} {} {} {}'.format(local_xoff, local_yoff,
-                                            local_xsize, local_ysize)]
-
-    cmd += ['-radius', str(cfg['dsm_radius'])]
-#    cmd += ['-c', str(6) ]
-
-    if cfg['dsm_sigma'] is not None:
-        cmd += ['-sigma', str(cfg['dsm_sigma'])]
-
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    q = p.communicate(input=clouds.encode())
-
-    run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-    print ("\nRUN: %s" % run_cmd)
-
-    if p.returncode != 0:
-        raise common.RunFailure({"command": run_cmd, "environment": os.environ,
-                                 "output": q})
-    # ls files | ./bin/plyflatten [-c column] [-srcwin "xoff yoff xsize ysize"] resolution out.tif
+    if raster.shape[-1] == 5:
+        common.rasterio_write(out_conf, raster[:, :, 4], profile=profile)
 
 
 def global_dsm(tiles):

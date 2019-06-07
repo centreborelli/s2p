@@ -118,21 +118,24 @@ def test_distributed_plyflatten():
 
     print('Running plyflatten dsm reference ...')
 
-    clouds = '\n'.join(glob.glob(os.path.join(outdir, "tiles", "*", "*",
-                                              "cloud.ply")))
+    clouds_list = glob.glob(os.path.join(outdir, "tiles", "*", "*", "cloud.ply"))
     out_dsm = os.path.join(outdir, "dsm_ref.tif")
-    cmd = ['plyflatten', str(test_cfg['dsm_resolution']), out_dsm]
+
+    res = test_cfg['dsm_resolution']
+    roi = None
+
     if 'utm_bbx' in test_cfg:
         bbx = test_cfg['utm_bbx']
         global_xoff = bbx[0]
         global_yoff = bbx[3]
         global_xsize = int(np.ceil((bbx[1]-bbx[0]) / test_cfg['dsm_resolution']))
         global_ysize = int(np.ceil((bbx[3]-bbx[2]) / test_cfg['dsm_resolution']))
-        cmd += ['-srcwin', '"{} {} {} {}"'.format(global_xoff, global_yoff,
-                                                  global_xsize, global_ysize)]
+        roi = (global_xoff, global_yoff, global_xsize, global_ysize)
 
-    run_cmd = "ls %s | %s" % (clouds.replace('\n', ' '), " ".join(cmd))
-    common.run(run_cmd)
+    raster, profile = s2p.rasterization.plyflatten_from_plyfiles_list(clouds_list,
+                                                                      resolution=res,
+                                                                      roi=roi)
+    s2p.common.rasterio_write(out_dsm, raster[:,:,0], profile=profile)
 
     expected = common.gdal_read_as_array_with_nans(os.path.join(outdir, 'dsm_ref.tif'))
 

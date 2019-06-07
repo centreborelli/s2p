@@ -123,9 +123,11 @@ imscript: $(BINDIR)
 # rules to build s2p C/C++ programs
 #
 
-PROGRAMS = disp_to_h disp2ply colormesh bin2asc plyflatten plyextrema morphoop
+PROGRAMS = disp_to_h disp2ply colormesh bin2asc plyextrema morphoop
+LIB = libplyflatten.so
+LIBRARIES = $(addprefix $(LIBDIR)/,$(LIB))
 
-s2p: $(BINDIR) $(addprefix $(BINDIR)/,$(PROGRAMS))
+s2p: $(BINDIR) $(addprefix $(BINDIR)/,$(PROGRAMS)) $(LIBRARIES)
 
 $(SRCDIR)/iio.o: c/iio.c c/iio.h
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -157,8 +159,8 @@ $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrap
 $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
 
-$(BINDIR)/plyflatten: $(SRCDIR)/plyflatten.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS) $(GDAL_CFLAGS) $^ -o $@ $(IIOLIBS) $(GDAL_LIBS)
+$(LIBDIR)/libplyflatten.so: $(SRCDIR)/plyflatten.c
+	$(CC) $(CFLAGS) -fPIC -shared $^ -o $@ -lm
 
 # Geographiclib wrappers
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
@@ -201,6 +203,7 @@ clean_imscript:
 
 clean_s2p:
 	$(RM) $(addprefix $(BINDIR)/,$(PROGRAMS))
+	$(RM) $(LIBRARIES)
 	$(RM) $(SRCDIR)/iio.o
 	$(RM) $(SRCDIR)/rpc.o
 	$(RM) $(SRCDIR)/geographiclib_wrapper.o
