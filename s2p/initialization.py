@@ -10,6 +10,7 @@ import utm
 import json
 import copy
 import shutil
+import rasterio
 import warnings
 import numpy as np
 
@@ -26,7 +27,7 @@ from s2p.config import cfg
 # Calling json.dump(..,default=workaround_json_int64) fixes this
 # https://bugs.python.org/issue24313
 def workaround_json_int64(o):
-    if isinstance(o,np.integer) : return int(o)
+    if isinstance(o, np.integer) : return int(o)
     raise TypeError
 
 def dict_has_keys(d, l):
@@ -53,10 +54,7 @@ def check_parameters(d):
             print('ERROR: missing img paths for image', img)
             sys.exit(1)
         if not dict_has_keys(img, ['rpc']) or img['rpc'] == '':
-            import tempfile     # TODO: fix for common.tmpfile failure
-            img['rpc'] = tempfile.mktemp('.rpc')
-            rpc_utils.rpc_from_geotiff(img['img'], img['rpc'])
-            print('INFO: trying reading rpc from image', img)
+            img['rpc'] = rpc_utils.rpc_from_geotiff(img['img'])
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:
@@ -73,6 +71,10 @@ def check_parameters(d):
         # this call defines cfg['ll_bbx'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpc'],
                                              d['roi_kml'])
+    elif 'roi_geojson' in d:
+        # this call defines cfg['ll_bbx'] and cfg['utm_bbx'] as side effects
+        d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpc'],
+                                                 d['roi_geojson'])
     elif 'prv' in d['images'][0]:
         x, y, w, h = common.get_roi_coordinates(d['images'][0]['img'],
                                                 d['images'][0]['prv'])
@@ -91,7 +93,7 @@ def check_parameters(d):
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
     # 'roi_utm'
     for k in d.keys():
-        if k not in ['images', 'roi', 'roi_kml', 'roi_utm', 'utm_zone']:
+        if k not in ['images', 'roi', 'roi_kml', 'roi_geojson', 'roi_utm', 'utm_zone']:
             if k not in cfg:
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
@@ -123,8 +125,8 @@ def build_cfg(user_cfg):
     cfg['images'][0].setdefault('wat')
 
     # Make sure that input data have absolute paths
-    for i in range(0,len(cfg['images'])):
-        for d in ['clr','cld','roi','wat','img','rpc']:
+    for i in range(len(cfg['images'])):
+        for d in ['clr', 'cld', 'roi', 'wat', 'img']:
             if d in cfg['images'][i] and cfg['images'][i][d] is not None and not os.path.isabs(cfg['images'][i][d]):
                 cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
 
@@ -132,12 +134,12 @@ def build_cfg(user_cfg):
     y = cfg['roi']['y']
     w = cfg['roi']['w']
     h = cfg['roi']['h']
-    
+
     cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
 
     # get utm zone
     if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
-        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpc'], x, y, w, h)
+        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['img'], x, y, w, h)
 
 
 def make_dirs():
@@ -150,12 +152,10 @@ def make_dirs():
     # store a json dump of the config.cfg dictionary
     with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
         cfg_copy = copy.deepcopy(cfg)
-        cfg_copy['out_dir']='.'
+        cfg_copy['out_dir'] = '.'
+        for img in cfg_copy['images']:
+            img.pop('rpc', None)
         json.dump(cfg_copy, f, indent=2, default=workaround_json_int64)
-
-    # copy RPC xml files in the output directory
-    for img in cfg['images']:
-        shutil.copy2(img['rpc'], cfg['out_dir'])
 
 
 def adjust_tile_size():
@@ -269,10 +269,13 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     if os.path.exists(tiles_txt) is False or create_masks is True:
         print('\ndiscarding masked tiles...')
         # compute all masks in parallel as numpy arrays
-        tiles_masks = parallel.launch_calls_simple(masking.cloud_water_image_domain,
+        with rasterio.open(cfg['images'][0]['img'], 'r') as f:
+            ref_shape = f.shape
+        tiles_masks = parallel.launch_calls_simple(masking.image_tile_mask,
                                                    tiles_coords,
-                                                   cfg['max_processes'], rpc,
-                                                   roi_msk, cld_msk, wat_msk)
+                                                   cfg['max_processes'], roi_msk,
+                                                   cld_msk, wat_msk, ref_shape,
+                                                   cfg['border_margin'])
 
         for coords, mask in zip(tiles_coords,
                                 tiles_masks):
@@ -288,6 +291,8 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                 # save a json dump of the tile configuration
                 tile_cfg = copy.deepcopy(cfg)
                 x, y, w, h = tile['coordinates']
+                for img in tile_cfg['images']:
+                    img.pop('rpc', None)
                 tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
                 tile_cfg['full_img'] = False
                 tile_cfg['max_processes'] = 1
@@ -298,8 +303,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                     json.dump(tile_cfg, f, indent=2,default=workaround_json_int64)
 
                 # save the mask
-                common.rasterio_write(os.path.join(tile['dir'],
-                                                   'cloud_water_image_domain_mask.png'),
+                common.rasterio_write(os.path.join(tile['dir'], 'mask.png'),
                                       mask.astype(np.uint8))
     else:
         if len(tiles_coords) == 1:

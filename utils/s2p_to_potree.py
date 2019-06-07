@@ -15,16 +15,16 @@
 
 from __future__ import print_function
 import os
-import json
 import argparse
 from codecs import open
+import re
+
+from bs4 import BeautifulSoup
 
 import s2p
 from s2p import common
 
 
-## temp files
-garbage = list()
 def tmpfile(ext='', tmpdir='tmp'):
     """
     Creates a temporary file in the cfg['temporary_dir'] directory.
@@ -34,9 +34,6 @@ def tmpfile(ext='', tmpdir='tmp'):
 
     Returns:
         absolute path to the created file
-
-    The path of the created file is added to the garbage list to allow cleaning
-    at the end of the pipeline.
     """
     import tempfile
 
@@ -48,12 +45,11 @@ def tmpfile(ext='', tmpdir='tmp'):
     fd, out = tempfile.mkstemp(suffix=ext, prefix='s2p_',
                                dir=os.path.expandvars(tmpdir))
     os.close(fd)           # http://www.logilab.org/blogentry/17873
-    garbage.append(out)
     return out
 
 
 
-def plys_to_potree(input_plys, output, bin_dir='.'):
+def plys_to_potree(input_plys, output, bin_dir='.', cloud_name="cloud"):
     """
     Compute a multi-scale representation of a large point cloud.
 
@@ -79,20 +75,26 @@ def plys_to_potree(input_plys, output, bin_dir='.'):
     plys = ' '.join(input_plys)
 
     las = []
-    trash = []
+    garbage = []
 
     for p in input_plys:
-        # make ascii ply if needed
-        ap = tmpfile('.ply', outdir)
-        lp = tmpfile('.las', outdir)
 
-        las.append(lp)
+        # convert binary ply to ascii if needed
+        ap = tmpfile('.ply', outdir)
         common.run("%s < %s > %s" % (ply2ascii, p, ap))
+
         # convert ply to las because PotreeConverter is not able to read PLY
+        lp = tmpfile('.las', outdir)
+        las.append(lp)
+        garbage.append(lp)
         common.run("%s -parse xyzRGB -verbose -i  %s -o %s 2>/dev/null" % (txt2las, ap, lp))
+
+        # remove intermediate ascii ply
+        common.run("rm %s" % ap)
 
     # generate potree output
     listfile = tmpfile('.txt', outdir)
+    garbage.append(listfile)
     ff = open(listfile, 'w')
     for item in las:
         ff.write("%s\n" % item)
@@ -100,11 +102,11 @@ def plys_to_potree(input_plys, output, bin_dir='.'):
 
     common.run("mkdir -p %s" % output)
     resourcedir = os.path.join(bin_dir, 'PotreeConverter/PotreeConverter/resources/page_template')
-    common.run("LC_ALL=C %s --list-of-files %s -o %s -p cloud --edl-enabled --material ELEVATION --overwrite --page-template %s" % (PotreeConverter, listfile, output, resourcedir) )
+    common.run("LC_ALL=C %s --list-of-files %s -o %s -p %s --edl-enabled --material RGB --overwrite --page-template %s" % (PotreeConverter, listfile, output, cloud_name, resourcedir) )
 
     # clean intermediate files
     for p in garbage:
-        common.run("rm %s"%p)
+        common.run("rm %s" % p)
 
 
 def read_tiles(tile_files):
@@ -141,23 +143,15 @@ def test_for_potree(basedir):
         raise common.RunFailure
 
 
-def produce_potree(s2poutdir, potreeoutdir):
+def produce_potree(s2p_outdirs_list, potreeoutdir):
     """
     Produce a single multiscale point cloud for the whole processed region.
 
     Args:
-        tiles: list of tiles dictionaries
+        s2poutdirs_list: list of s2p output directories
     """
-
     basedir = os.path.dirname(os.path.abspath(__file__))
-    test_for_potree(os.path.join(basedir,'PotreeConverter_PLY_toolchain/'))
-
-    tiles_file = os.path.join(s2poutdir, 'tiles.txt')
-
-    # Read the tiles file
-    tiles = s2p.read_tiles(tiles_file)
-    print(str(len(tiles))+' tiles found')
-
+    test_for_potree(os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'))
 
     def plyvertex(fname):
         with open(fname, 'r', 'utf-8') as f:
@@ -165,33 +159,64 @@ def produce_potree(s2poutdir, potreeoutdir):
                 if x.split()[0] == 'element' and x.split()[1] == 'vertex':
                     return int(x.split()[2])
 
+    js_scripts = []
+    regex = re.compile("Potree\.loadPointCloud\(.*\);", re.DOTALL)
+    cloudoutdir = os.path.join(potreeoutdir, "cloud.potree")
 
-    # collect all plys
-    plys = []
-    for t in tiles:
-        clo = os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply')
-        if os.path.isfile(clo):
-            if plyvertex(clo) > 0 :
-                plys.append(clo)
-#    plys = [os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply') for t in tiles if os.path.isfile(os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply'))]
+    # Produce a "cloud_?.html" file for all given s2p outdirs
+    for i, s2p_outdir in enumerate(s2p_outdirs_list):
+        tiles = s2p.read_tiles(os.path.join(s2p_outdir, 'tiles.txt'))
+        print(str(len(tiles))+' tiles found')
 
-    # produce the potree point cloud
-    plys_to_potree(plys, os.path.join(potreeoutdir, 'cloud.potree'),
-        os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'))
+        # collect all plys
+        plys = []
+        for t in tiles:
+            clo = os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply')
+            if os.path.isfile(clo):
+                if plyvertex(clo) > 0:
+                    plys.append(clo)
 
+        # produce the potree point cloud
+        cloud_name = "cloud_{}".format(i)
+        plys_to_potree(
+            plys,
+            cloudoutdir,
+            os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'),
+            cloud_name,
+        )
+
+        # Gather the js script inside the HTML file that is relevant
+        # to the point cloud
+        cloud_html = os.path.join(cloudoutdir, "{}.html".format(cloud_name))
+        with open(cloud_html) as f:
+            soup = BeautifulSoup(f, features="lxml")
+        script = soup.find_all("script")[-1]
+        js_script = re.search(regex, script.text).group(0)
+        js_scripts.append(js_script)
+        os.remove(cloud_html)
+
+    # The "main.html" file will contain a concatenation of all the js
+    # scripts that were gathered in the loop above.
+
+    # Use the last HTML file as a basis for the "main.html", and replace
+    # its js script by all the js scripts
+    main_html = os.path.join(cloudoutdir, "main.html")
+    script.string = re.sub(regex, "\n".join(js_scripts), script.text)
+    with open(main_html, "w") as f:
+        f.write(soup.prettify())
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: potree generation tool'))
 
-    parser.add_argument('s2pout',metavar='s2poutdir',
-                        help=('path to the s2p output directory'))
-    parser.add_argument('potreeoutdir',metavar='potreeoutdir', default='',nargs='?',
-                        help=('path to output potree (default: current dir)'))
+    parser.add_argument('s2pout', nargs='+',
+                        help=('path(s) to the s2p output directory(ies)'))
+    parser.add_argument('--outdir', metavar='potree_outdir', default='.',
+                        help=('path to output directory'))
     args = parser.parse_args()
 
     try:
-        produce_potree(args.s2pout,args.potreeoutdir)
+        produce_potree(args.s2pout, args.outdir)
     except common.RunFailure:
         basedir = os.path.dirname(os.path.abspath(__file__))
         print('You must download and compile PotreeConverter. Run the following commands:')

@@ -101,17 +101,13 @@ def local_translation(r1, r2, x, y, w, h, m):
     return A
 
 
-def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h):
+def compute_correction(img1, img2, x, y, w, h):
     """
     Computes pointing correction matrix for specific ROI
 
     Args:
         img1: path to the reference image.
-        rpc1: paths to the xml file containing the rpc coefficients of the
-            reference image
         img2: path to the secondary image.
-        rpc2: paths to the xml file containing the rpc coefficients of the
-            secondary image
         x, y, w, h: four integers defining the rectangular ROI in the reference
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want. If bigger than
@@ -123,8 +119,8 @@ def compute_correction(img1, rpc1, img2, rpc2, x, y, w, h):
         to compute this correction.
     """
     # read rpcs
-    r1 = rpc_model.RPCModel(rpc1)
-    r2 = rpc_model.RPCModel(rpc2)
+    r1 = rpc_utils.rpc_from_geotiff(img1)
+    r2 = rpc_utils.rpc_from_geotiff(img2)
 
     m = sift.matches_on_rpc_roi(img1, img2, r1, r2, x, y, w, h)
 

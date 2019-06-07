@@ -145,9 +145,9 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                                                                                  disp, conf),
                    env)
 
-        # produce the mask: rejected pixels are marked with nan of inf in disp
-        # map
-        common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
+        # create rejection mask (0 means rejected, 1 means accepted)
+        # keep only the points that are matched and present in both input images
+        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
 
 
     if algo == 'mgm_multi_lsd':
@@ -156,7 +156,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         ref = im1
         sec = im2
 
-      
+
         wref = common.tmpfile('.tif')
         wsec = common.tmpfile('.tif')
         # TODO TUNE LSD PARAMETERS TO HANDLE DIRECTLY 12 bits images?
@@ -196,11 +196,11 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                                                                                  disp, conf),
                    env)
 
-        # produce the mask: rejected pixels are marked with nan of inf in disp
-        # map
-        common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
+        # create rejection mask (0 means rejected, 1 means accepted)
+        # keep only the points that are matched and present in both input images
+        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
 
-        
+
     if algo == 'mgm_multi':
         env['REMOVESMALLCC'] = str(cfg['stereo_speckle_filter'])
         env['MINDIFF'] = '1'
@@ -218,9 +218,9 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                                                                                  disp, conf),
                    env)
 
-        # produce the mask: rejected pixels are marked with nan of inf in disp
-        # map
-        common.run('plambda {0} "isfinite" -o {1}'.format(disp, mask))
+        # create rejection mask (0 means rejected, 1 means accepted)
+        # keep only the points that are matched and present in both input images
+        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
 
     if (algo == 'micmac'):
         # add micmac binaries to the PATH environment variable

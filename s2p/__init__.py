@@ -65,7 +65,7 @@ def pointing_correction(tile, i):
     # correct pointing error
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
     try:
-        A, m = pointing_accuracy.compute_correction(img1, rpc1, img2, rpc2, x, y, w, h)
+        A, m = pointing_accuracy.compute_correction(img1, img2, x, y, w, h)
     except common.RunFailure as e:
         stderr = os.path.join(out_dir, 'stderr.log')
         with open(stderr, 'w') as f:
@@ -158,9 +158,10 @@ def rectification_pair(tile, i):
 
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
-    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2, rpc1,
-                                                            rpc2, x, y, w, h,
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2,
+                                                            x, y, w, h,
                                                             rect1, rect2, A, m,
+                                                            method=cfg['rectification_method'],
                                                             hmargin=cfg['horizontal_margin'],
                                                             vmargin=cfg['vertical_margin'])
     np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
@@ -237,7 +238,7 @@ def disparity_to_height(tile, i):
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-    out_mask = os.path.join(tile['dir'], 'cloud_water_image_domain_mask.png')
+    out_mask = os.path.join(tile['dir'], 'mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
     triangulation.height_map(height_map, x, y, w, h,
@@ -281,19 +282,16 @@ def disparity_to_ply(tile):
     if not os.path.exists(extra):
         extra = ''
     mask_rect = os.path.join(out_dir, 'pair_1', 'rectified_mask.png')
-    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
+    mask_orig = os.path.join(out_dir, 'mask.png')
 
     # prepare the image needed to colorize point cloud
     colors = os.path.join(out_dir, 'rectified_ref.png')
     if cfg['images'][0]['clr']:
         hom = np.loadtxt(H_ref)
-        roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
-        ww, hh = common.bounding_box2D(common.points_apply_homography(hom, roi))[2:]
-        tmp = common.tmpfile('.tif')
-        common.image_apply_homography(tmp, cfg['images'][0]['clr'], hom,
-                                      ww + 2*cfg['horizontal_margin'],
-                                      hh + 2*cfg['vertical_margin'])
-        common.image_qauto(tmp, colors)
+        # We want rectified_ref.png and rectified_ref.tif to have the same size
+        with rasterio.open(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif')) as f:
+            ww, hh = f.width, f.height
+        common.image_apply_homography(colors, cfg['images'][0]['clr'], hom, ww, hh)
     else:
         common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)
 
@@ -317,103 +315,6 @@ def disparity_to_ply(tile):
         common.remove(colors)
         common.remove(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'))
 
-
-def multidisparities_to_ply(tile):
-    """
-    Compute a point cloud from the disparity maps of N-pairs of image tiles.
-
-    Args:
-        tile: dictionary containing the information needed to process a tile.
-
-    # There is no guarantee that this function works with z!=1
-    """
-    out_dir = os.path.join(tile['dir'])
-    ply_file = os.path.join(out_dir, 'cloud.ply')
-    plyextrema = os.path.join(out_dir, 'plyextrema.txt')
-    x, y, w, h = tile['coordinates']
-
-    rpc_ref = cfg['images'][0]['rpc']
-    disp_list = list()
-    rpc_list = list()
-
-    mask_orig = os.path.join(out_dir, 'cloud_water_image_domain_mask.png')
-
-    print('triangulating tile {} {}...'.format(x, y))
-    n = len(cfg['images']) - 1
-    for i in range(n):
-        pair = 'pair_%d' % (i+1)
-        H_ref = os.path.join(out_dir, pair, 'H_ref.txt')
-        H_sec = os.path.join(out_dir, pair, 'H_sec.txt')
-        disp = os.path.join(out_dir, pair, 'rectified_disp.tif')
-        mask_rect = os.path.join(out_dir, pair, 'rectified_mask.png')
-        disp2D = os.path.join(out_dir, pair, 'disp2D.tif')
-        rpc_sec = cfg['images'][i+1]['rpc']
-
-        if os.path.exists(disp):
-            # homography for warp
-            T = common.matrix_translation(x, y)
-            hom_ref = np.loadtxt(H_ref)
-            hom_ref_shift = np.dot(hom_ref, T)
-
-            # homography for 1D to 2D conversion
-            hom_sec = np.loadtxt(H_sec)
-            if cfg["use_global_pointing_for_geometric_triangulation"] is True:
-                pointing = os.path.join(cfg['out_dir'], 'global_pointing_%s.txt' % pair)
-                hom_pointing = np.loadtxt(pointing)
-                hom_sec = np.dot(hom_sec,np.linalg.inv(hom_pointing))
-            hom_sec_shift_inv = np.linalg.inv(hom_sec)
-
-            h1 = " ".join(str(x) for x in hom_ref_shift.flatten())
-            h2 = " ".join(str(x) for x in hom_sec_shift_inv.flatten())
-
-            # relative disparity map to absolute disparity map
-            tmp_abs = common.tmpfile('.tif')
-            os.environ["PLAMBDA_GETPIXEL"] = "0"
-            common.run('plambda %s %s "y 0 = nan x[0] :i + x[1] :j + 1 3 njoin if" -o %s' % (disp, mask_rect, tmp_abs))
-
-            # 1d to 2d conversion
-            tmp_1d_to_2d = common.tmpfile('.tif')
-            common.run('plambda %s "%s 9 njoin x mprod" -o %s' % (tmp_abs, h2, tmp_1d_to_2d))
-
-            # warp
-            tmp_warp = common.tmpfile('.tif')
-            common.run('homwarp -o 2 "%s" %d %d %s %s' % (h1, w, h, tmp_1d_to_2d, tmp_warp))
-
-            # set masked value to NaN
-            exp = 'y 0 = nan x if'
-            common.run('plambda %s %s "%s" -o %s' % (tmp_warp, mask_orig, exp, disp2D))
-            # disp2D contains positions in the secondary image
-
-            # added input data for triangulation module
-            disp_list.append(disp2D)
-            rpc_list.append(rpc_sec)
-
-            if cfg['clean_intermediate']:
-                common.remove(H_ref)
-                common.remove(H_sec)
-                common.remove(disp)
-                common.remove(mask_rect)
-                common.remove(mask_orig)
-
-    colors = os.path.join(out_dir, 'ref.png')
-    if cfg['images'][0]['clr']:
-        common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
-    else:
-        common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
-                                                 w, h), colors)
-
-    # compute the point cloud
-    triangulation.multidisp_map_to_point_cloud(ply_file, disp_list, rpc_ref, rpc_list,
-                                               colors,
-                                               utm_zone=cfg['utm_zone'],
-                                               llbbx=tuple(cfg['ll_bbx']),
-                                               xybbx=(x, x+w, y, y+h))
-
-    # compute the point cloud extrema (xmin, xmax, xmin, ymax)
-    common.run("plyextrema %s %s" % (ply_file, plyextrema))
-
-    if cfg['clean_intermediate']:
-        common.remove(colors)
 
 def mean_heights(tile):
     """
@@ -520,8 +421,7 @@ def heights_to_ply(tile):
     if cfg['clean_intermediate']:
         common.remove(height_map)
         common.remove(colors)
-        common.remove(os.path.join(out_dir,
-                                   'cloud_water_image_domain_mask.png'))
+        common.remove(os.path.join(out_dir, 'mask.png'))
 
 def plys_to_dsm(tile):
     """
@@ -537,7 +437,7 @@ def plys_to_dsm(tile):
     if 'utm_bbx' in cfg:
         bbx = cfg['utm_bbx']
         global_xoff = bbx[0]
-        global_yoff = bbx[2]
+        global_yoff = bbx[3]
     else:
         global_xoff = 0 # arbitrary reference
         global_yoff = 0 # arbitrary reference
@@ -674,7 +574,7 @@ def main(user_cfg):
     print('running stereo matching...')
     parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
 
-    if n > 2 and cfg['triangulation_mode'] == 'pairwise':
+    if n > 2:
         # disparity-to-height step:
         print('computing height maps...')
         parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
@@ -692,12 +592,7 @@ def main(user_cfg):
     else:
         # triangulation step:
         print('triangulating tiles...')
-        if cfg['triangulation_mode'] == 'geometric':
-            parallel.launch_calls(multidisparities_to_ply, tiles, nb_workers)
-        elif cfg['triangulation_mode'] == 'pairwise':
-            parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
-        else:
-            raise ValueError("possible values for 'triangulation_mode' : 'pairwise' or 'geometric'")
+        parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
 
     # local-dsm-rasterization step:
     print('computing DSM by tile...')
@@ -749,6 +644,11 @@ def read_config_file(config_file):
         user_cfg['out_dir'] = make_path_relative_to_file(user_cfg['out_dir'],
                                                          config_file)
         print('out_dir is: {}'.format(user_cfg['out_dir']))
+
+    # ROI paths
+    for k in ["roi_kml", "roi_geojson"]:
+        if k in user_cfg and isinstance(user_cfg[k], str) and not os.path.isabs(user_cfg[k]):
+            user_cfg[k] = make_path_relative_to_file(user_cfg[k], config_file)
 
     # input paths
     for img in user_cfg['images']:

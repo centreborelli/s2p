@@ -67,6 +67,10 @@ cfg['sift_match_thresh'] = 0.6
 # disp range expansion facto
 cfg['disp_range_extra_margin'] = 0.2
 
+# estimate rectification homographies either blindly using the rpc data or from
+# the images actual content thanks to sift matches
+cfg['rectification_method'] = 'rpc'  # either 'rpc' or 'sift'
+
 # register the rectified images with a shear estimated from the rpc data
 cfg['register_with_shear'] = False
 
@@ -79,12 +83,6 @@ cfg['epipolar_thresh'] = 0.5
 # maximal pointing error, in pixels
 cfg['max_pointing_error'] = 10
 
-# triangulation mode : 'pairwise'or 'geometric'
-cfg['triangulation_mode'] = 'pairwise'
-
-# use global pointing for geometric triangulation
-cfg['use_global_pointing_for_geometric_triangulation'] = False
-
 # set these params if you want to impose the disparity range manually (cfg['disp_range_method'] == 'fixed_pixel_range')
 cfg['disp_min'] = None
 cfg['disp_max'] = None
@@ -93,6 +91,8 @@ cfg['disp_max'] = None
 cfg['alt_min'] = None
 cfg['alt_max'] = None
 
+# width of a stripe of pixels to be masked along the reference input image borders
+cfg['border_margin'] = 10
 
 # radius for erosion of valid disparity areas. Ignored if less than 2
 cfg['msk_erosion'] = 2

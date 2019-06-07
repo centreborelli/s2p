@@ -14,7 +14,7 @@ def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None
     Computes a height map from a disparity map, using rpc.
 
     Args:
-        rpc1, rpc2: paths to the xml files
+        rpc1, rpc2: instances of the rpc_model.RPCModel class
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
         disp, mask: paths to the diparity and mask maps
@@ -29,7 +29,13 @@ def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None
     else:
         HH2 = H2
 
-    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpc1, rpc2, H1, HH2, disp,
+    # write rpc coefficients to txt files
+    rpcfile1 = common.tmpfile('.txt')
+    rpcfile2 = common.tmpfile('.txt')
+    rpc1.write_to_file(rpcfile1)
+    rpc2.write_to_file(rpcfile2)
+
+    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpcfile1, rpcfile2, H1, HH2, disp,
                                                       mask, height, rpc_err))
 
 
@@ -80,7 +86,7 @@ def height_map(out, x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
         x, y, w, h: four integers defining the rectangular ROI in the original
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
-        rpc1, rpc2: paths to the xml files
+        rpc1, rpc2: instances of the rpc_model.RPCModel class
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
         disp, mask: paths to the diparity and mask maps
@@ -104,7 +110,7 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors, extr
     Args:
         out: path to the output ply file
         disp, mask: paths to the diparity and mask maps
-        rpc1, rpc2: paths to the xml files
+        rpc1, rpc2: instances of the rpc_model.RPCModel class
         H1, H2: path to txt files containing two 3x3 numpy arrays defining
             the rectifying homographies
         A: path to txt file containing the pointing correction matrix
@@ -119,38 +125,19 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors, extr
     xbb = "--col-m %s --col-M %s --row-m %s --row-M %s" % xybbx if xybbx else ""
     msk = "--mask-orig %s" % xymsk if xymsk else ""
 
-    command = 'disp2ply {} {} {} {} {}'.format(out, disp, mask, rpc1, rpc2)
-    # extra: is an optinonal extra data channel in the ply its default value '' ignores it
+    # write rpc coefficients to txt files
+    rpcfile1 = common.tmpfile('.txt')
+    rpcfile2 = common.tmpfile('.txt')
+    rpc1.write_to_file(rpcfile1)
+    rpc2.write_to_file(rpcfile2)
+
+    # run disp2ply
+    command = 'disp2ply {} {} {} {} {}'.format(out, disp, mask, rpcfile1, rpcfile2)
+    # extra is an optional additional channel in the ply. Its default value '' ignores it
     command += ' {} {} -href "{}" -hsec "{}"'.format(colors, extra, href, hsec)
     command += ' {} {} {} {}'.format(utm, lbb, xbb, msk)
     common.run(command)
 
-def multidisp_map_to_point_cloud(out, disp_list, rpc_ref, rpc_list, colors,
-                                 utm_zone=None, llbbx=None, xybbx=None):
-    """
-    Computes a 3D point cloud from N disparity maps.
-
-    Args:
-        out: path to the output ply file
-        disp_list: paths to the diparity maps
-        rpc_ref, rpc_list: paths to the xml files
-        colors: path to the png image containing the colors
-    """
-
-    disp_command = ['--disp%d %s' % (i+1, disp) for i, disp in enumerate(disp_list)]
-    rpc_command = ['--rpc_sec%d %s' % (i+1, rpc) for i, rpc in enumerate(rpc_list)]
-
-    utm = "--utm-zone %s" % utm_zone if utm_zone else ""
-    lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
-    xbb = "--col-m %s --col-M %s --row-m %s --row-M %s" % xybbx if xybbx else ""
-
-    command = 'multidisp2ply {} {} {} {} {}'.format(out, len(disp_list),
-                                                    " ".join(disp_command),
-                                                    "--rpc_ref %s" % rpc_ref,
-                                                    " ".join(rpc_command))
-    command += ' --color {}'.format(colors)
-    command += ' {} {} {}'.format(utm, lbb, xbb)
-    common.run(command)
 
 def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
                               off_x=None, off_y=None, ascii_ply=False,
@@ -162,7 +149,7 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
         cloud: path to the output points cloud (ply format)
         heights: height map, sampled on the same grid as the crop_colorized
             image. In particular, its size is the same as crop_colorized.
-        rpc: path to xml file containing RPC data for the current Pleiade image
+        rpc: instances of the rpc_model.RPCModel class
         H (optional, default None): numpy array of size 3x3 defining the
             homography transforming the coordinates system of the original full
             size image into the coordinates system of the crop we are dealing
@@ -175,6 +162,10 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
             ply file should be encoded in plain text (ascii).
         utm_zone (optional, default None):
     """
+    # write rpc coefficients to txt file
+    rpcfile = common.tmpfile('.txt')
+    rpc.write_to_file(rpcfile)
+
     if not os.path.exists(crop_colorized):
         crop_colorized = ''
     hij = " ".join(str(x) for x in H.flatten()) if H is not None else ""
@@ -183,7 +174,7 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     utm = "--utm-zone %s" % utm_zone if utm_zone else ""
     lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
     command = "colormesh %s %s %s %s -h \"%s\" %s %s %s %s" % (cloud, heights,
-                                                               rpc,
+                                                               rpcfile,
                                                                crop_colorized,
                                                                hij, asc, nrm,
                                                                utm, lbb)

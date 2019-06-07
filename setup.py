@@ -28,25 +28,42 @@ class CustomBuildPy(build_py.build_py, object):
         subprocess.check_call("cp -r bin lib build/lib/", shell=True)
 
 
+try:
+    from wheel.bdist_wheel import bdist_wheel
+    class BdistWheel(bdist_wheel):
+        """
+        Class needed to build platform dependent binary wheels
+        """
+        def finalize_options(self):
+            bdist_wheel.finalize_options(self)
+            self.root_is_pure = False
+
+except ImportError:
+    BdistWheel = None
+
+
 requirements = ['numpy',
                 'scipy',
+                'urllib3<1.25',  # This is a temporary hack to fix https://github.com/boto/botocore/issues/1733 until next release of botocore
                 'rasterio[s3,test]',
                 'utm',
                 'pyproj',
                 'beautifulsoup4[lxml]',
-                'requests',
-                'plyfile']
+                'plyfile',
+                'ransac',
+                'requests']
 
 setup(name="s2p",
-      version="1.0b6",
+      version="1.0b14",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
-      url='https://github.com/miss3d/s2p',
+      url='https://github.com/cmla/s2p',
       packages=['s2p'],
       install_requires=requirements,
       cmdclass={'develop': CustomDevelop,
-                'build_py': CustomBuildPy},
+                'build_py': CustomBuildPy,
+                'bdist_wheel': BdistWheel},
       entry_points="""
           [console_scripts]
           s2p=s2p.cli:main

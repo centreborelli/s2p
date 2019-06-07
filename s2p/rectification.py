@@ -131,10 +131,6 @@ def disparity_range_from_matches(matches, H1, H2, w, h):
     """
     Compute the disparity range of a ROI from a list of point matches.
 
-    The estimation is based on the extrapolation of the affine registration
-    estimated from the matches. The extrapolation is done on the whole region of
-    interest.
-
     Args:
         matches: Nx4 numpy array containing a list of matches, in the full
             image coordinates frame, before rectification
@@ -149,16 +145,14 @@ def disparity_range_from_matches(matches, H1, H2, w, h):
     x1 = p1[:, 0]
     p2 = common.points_apply_homography(H2, matches[:, 2:])
     x2 = p2[:, 0]
-    y2 = p2[:, 1]
-
 
     # compute the final disparity range
     disp_min = np.floor(np.min(x2 - x1))
     disp_max = np.ceil(np.max(x2 - x1))
 
     # add a security margin to the disparity range
-    disp_min *= (1 - np.sign(disp_min) * cfg['disp_range_extra_margin'])
-    disp_max *= (1 + np.sign(disp_max) * cfg['disp_range_extra_margin'])
+    disp_min -= (disp_max - disp_min) * cfg['disp_range_extra_margin']
+    disp_max += (disp_max - disp_min) * cfg['disp_range_extra_margin']
     return disp_min, disp_max
 
 
@@ -190,7 +184,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     exogenous_disp = None
     sift_disp = None
     alt_disp  = None
-    
+
     # Compute exogenous disparity range if needed
     if (cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']):
         exogenous_disp = rpc_utils.exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h,
@@ -199,7 +193,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
                                                               cfg['disp_range_exogenous_low_margin'])
 
         print("exogenous disparity range: [%f, %f]" % (exogenous_disp[0], exogenous_disp[1]))
-        
+
     # Compute SIFT disparity range if needed
     if (cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']):
         if matches is not None and len(matches)>=2:
@@ -290,14 +284,13 @@ def rectification_homographies(matches, x, y, w, h):
     return np.dot(T, S1), np.dot(T, S2), F
 
 
-def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
-                 sift_matches=None, method='rpc', hmargin=0, vmargin=0):
+def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
+                 method='rpc', hmargin=0, vmargin=0):
     """
     Rectify a ROI in a pair of images.
 
     Args:
-        im1, im2: paths to two image files
-        rpc1, rpc2: paths to the two xml files containing RPC data
+        im1, im2: paths to two GeoTIFF image files
         x, y, w, h: four integers defining the rectangular ROI in the first
             image.  (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
@@ -318,8 +311,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         disp_min, disp_max: horizontal disparity range
     """
     # read RPC data
-    rpc1 = rpc_model.RPCModel(rpc1)
-    rpc2 = rpc_model.RPCModel(rpc2)
+    rpc1 = rpc_utils.rpc_from_geotiff(im1)
+    rpc2 = rpc_utils.rpc_from_geotiff(im2)
 
     # compute real or virtual matches
     if method == 'rpc':
@@ -331,8 +324,11 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         if A is not None:
             matches[:, 2:] = common.points_apply_homography(np.linalg.inv(A),
                                                             matches[:, 2:])
-    else:
+    elif method == 'sift':
         matches = sift_matches
+
+    else:
+        raise Exception("Unknown value {} for argument 'method'".format(method))
 
     # compute rectifying homographies
     H1, H2, F = rectification_homographies(matches, x, y, w, h)
@@ -341,8 +337,8 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None,
         # compose H2 with a horizontal shear to reduce the disparity range
         a = np.mean(rpc_utils.altitude_range(rpc1, x, y, w, h))
         lon, lat, alt = rpc_utils.ground_control_points(rpc1, x, y, w, h, a, a, 4)
-        x1, y1 = rpc1.inverse_estimate(lon, lat, alt)[:2]
-        x2, y2 = rpc2.inverse_estimate(lon, lat, alt)[:2]
+        x1, y1 = rpc1.projection(lon, lat, alt)[:2]
+        x2, y2 = rpc2.projection(lon, lat, alt)[:2]
         m = np.vstack([x1, y1, x2, y2]).T
         m = np.vstack({tuple(row) for row in m})  # remove duplicates due to no alt range
         H2 = register_horizontally_shear(m, H1, H2)

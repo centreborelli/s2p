@@ -6,8 +6,10 @@
 from __future__ import print_function
 import bs4
 import utm
+import json
 import datetime
 import pyproj
+import warnings
 import rasterio
 import numpy as np
 
@@ -15,6 +17,8 @@ from s2p import geographiclib
 from s2p import common
 from s2p import rpc_model
 from s2p.config import cfg
+
+warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
 
 def find_corresponding_point(model_a, model_b, x, y, z):
@@ -33,8 +37,8 @@ def find_corresponding_point(model_a, model_b, x, y, z):
             yp contains the coordinates of the projection of the 3D point in image
             b.
     """
-    t1, t2, t3 = model_a.direct_estimate(x, y, z)
-    xp, yp, zp = model_b.inverse_estimate(t1, t2, z)
+    t1, t2 = model_a.localization(x, y, z)
+    xp, yp = model_b.projection(t1, t2, z)
     return (xp, yp, z)
 
 
@@ -110,8 +114,8 @@ def geodesic_bounding_box(rpc, x, y, w, h):
         max latitudes.
     """
     # compute altitude coarse extrema from rpc data
-    m = rpc.altOff - rpc.altScale
-    M = rpc.altOff + rpc.altScale
+    m = rpc.alt_offset - rpc.alt_scale
+    M = rpc.alt_offset + rpc.alt_scale
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
     x = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
@@ -119,7 +123,7 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     a = np.array([m, M,   m,   M,   m,   M,   m,   M])
 
     # compute geodetic coordinates of corresponding world points
-    lon, lat, alt = rpc.direct_estimate(x, y, a)
+    lon, lat = rpc.localization(x, y, a)
 
     # extract extrema
     # TODO: handle the case where longitudes pass over -180 degrees
@@ -139,8 +143,8 @@ def altitude_range_coarse(rpc, scale_factor=1):
     Returns:
         the altitude validity range of the RPC.
     """
-    m = rpc.altOff - scale_factor * rpc.altScale
-    M = rpc.altOff + scale_factor * rpc.altScale
+    m = rpc.alt_offset - scale_factor * rpc.alt_scale
+    M = rpc.alt_offset + scale_factor * rpc.alt_scale
     return m, M
 
 
@@ -250,7 +254,7 @@ def utm_zone(rpc, x, y, w, h):
     Compute the UTM zone where the ROI probably falls (or close to its border).
 
     Args:
-        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        rpc: instance of the rpc_model.RPCModel class, or path to a GeoTIFF file
         x, y, w, h: four integers defining a rectangular region of interest
             (ROI) in the image. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
@@ -261,10 +265,10 @@ def utm_zone(rpc, x, y, w, h):
     """
     # read rpc file
     if not isinstance(rpc, rpc_model.RPCModel):
-        rpc = rpc_model.RPCModel(rpc)
+        rpc = rpc_from_geotiff(rpc)
 
     # determine lat lon of the center of the roi, assuming median altitude
-    lon, lat = rpc.direct_estimate(x + .5*w, y + .5*h, rpc.altOff)[:2]
+    lon, lat = rpc.localization(x + .5*w, y + .5*h, rpc.alt_offset)[:2]
 
     # compute the utm zone number and add the hemisphere letter
     zone = utm.conversion.latlon_to_zone_number(lat, lon)
@@ -289,7 +293,7 @@ def utm_roi_to_img_roi(rpc, roi):
     # project lon/lat vertices into the image
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.inverse_estimate(p[1], p[0], rpc.altOff)[:2] for p in
+    img_pts = [rpc.projection(p[1], p[0], rpc.alt_offset)[:2] for p in
                box_latlon]
 
     # return image roi
@@ -299,34 +303,97 @@ def utm_roi_to_img_roi(rpc, roi):
 
 def kml_roi_process(rpc, kml):
     """
+    Define a rectangular bounding box in image coordinates
+    from a polygon in a KML file
+
+    Args:
+        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        kml: file path to a KML file containing a single polygon
+
+    Returns:
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
     """
     # extract lon lat from kml
     with open(kml, 'r') as f:
         a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
-    ll_bbx = np.array([list(map(float, x.split(','))) for x in a])[:4, :2]
+    ll_poly = np.array([list(map(float, x.split(','))) for x in a])[:, :2]
+    box_d = roi_process(rpc, ll_poly)
+    return box_d
 
+
+def geojson_roi_process(rpc, geojson):
+    """
+    Define a rectangular bounding box in image coordinates
+    from a polygon in a geojson file or dict
+
+    Args:
+        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        geojson: file path to a geojson file containing a single polygon,
+            or content of the file as a dict.
+            The geojson's top-level type should be either FeatureCollection,
+            Feature, or Polygon.
+
+    Returns:
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
+    """
+    # extract lon lat from geojson file or dict
+    if isinstance(geojson, str):
+        with open(geojson, 'r') as f:
+            a = json.load(f)
+    else:
+        a = geojson
+
+    if a["type"] == "FeatureCollection":
+        a = a["features"][0]
+
+    if a["type"] == "Feature":
+        a = a["geometry"]
+
+    ll_poly = np.array(a["coordinates"][0])
+    box_d = roi_process(rpc, ll_poly)
+    return box_d
+
+
+def roi_process(rpc, ll_poly):
+    """
+    Convert a longitude/latitude polygon into a rectangular
+    bounding box in image coordinates
+
+    Args:
+        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
+        ll_poly: numpy array of (longitude, latitude) defining the polygon
+
+    Returns:
+        x, y, w, h: four integers defining a rectangular region of interest
+            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
+            are the dimensions of the rectangle.
+    """
     # save lon lat bounding box to cfg dictionary
-    lon_min = min(ll_bbx[:, 0])
-    lon_max = max(ll_bbx[:, 0])
-    lat_min = min(ll_bbx[:, 1])
-    lat_max = max(ll_bbx[:, 1])
+    lon_min = min(ll_poly[:, 0])
+    lon_max = max(ll_poly[:, 0])
+    lat_min = min(ll_poly[:, 1])
+    lat_max = max(ll_poly[:, 1])
     cfg['ll_bbx'] = (lon_min, lon_max, lat_min, lat_max)
 
     # convert lon lat bbox to utm
     z = utm.conversion.latlon_to_zone_number((lat_min + lat_max) * .5,
                                              (lon_min + lon_max) * .5)
-    utm_bbx = np.array([utm.from_latlon(p[1], p[0], force_zone_number=z)[:2] for
-                        p in ll_bbx])
-    east_min = min(utm_bbx[:, 0])
-    east_max = max(utm_bbx[:, 0])
-    nort_min = min(utm_bbx[:, 1])
-    nort_max = max(utm_bbx[:, 1])
+    utm_poly = np.array([utm.from_latlon(p[1], p[0], force_zone_number=z)[:2] for
+                        p in ll_poly])
+    east_min = min(utm_poly[:, 0])
+    east_max = max(utm_poly[:, 0])
+    nort_min = min(utm_poly[:, 1])
+    nort_max = max(utm_poly[:, 1])
     cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.inverse_estimate(p[0], p[1], rpc.altOff)[:2] for p in ll_bbx]
+    img_pts = [rpc.projection(p[0], p[1], rpc.alt_offset)[:2] for p in ll_poly]
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
@@ -385,7 +452,8 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
     row_range = [y+(1.0/(2*n))*h, y+((2*n-1.0)/(2*n))*h, n]
     alt_range = [m, M, n]
     col, row, alt = generate_point_mesh(col_range, row_range, alt_range)
-    return rpc.direct_estimate(col, row, alt)
+    lon, lat = rpc.localization(col, row, alt)
+    return lon, lat, alt
 
 
 def corresponding_roi(rpc1, rpc2, x, y, w, h):
@@ -442,8 +510,8 @@ def matches_from_rpc(rpc1, rpc2, x, y, w, h, n):
     """
     m, M = altitude_range(rpc1, x, y, w, h, 100, -100)
     lon, lat, alt = ground_control_points(rpc1, x, y, w, h, m, M, n)
-    x1, y1, h1 = rpc1.inverse_estimate(lon, lat, alt)
-    x2, y2, h2 = rpc2.inverse_estimate(lon, lat, alt)
+    x1, y1 = rpc1.projection(lon, lat, alt)
+    x2, y2 = rpc2.projection(lon, lat, alt)
 
     return np.vstack([x1, y1, x2, y2]).T
 
@@ -542,36 +610,14 @@ def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
     return np.min(d), np.max(d)
 
 
-def rpc_from_geotiff(geotiff_path, outrpcfile='.rpc'):
+def rpc_from_geotiff(geotiff_path):
     """
-    extracts the rpc from a geotiff file (including vsicurl)
+    Args:
+        geotiff_path (str): path or url to a GeoTIFF file
+
+    Return:
+        instance of the rpc_model.RPCModel class
     """
-    import os
-    import subprocess
-
-    env = os.environ.copy()
-    if geotiff_path.startswith(('http://', 'https://')):
-        env['CPL_VSIL_CURL_ALLOWED_EXTENSIONS'] = geotiff_path[-3:]
-        path = '/vsicurl/{}'.format(geotiff_path)
-    else:
-        path = geotiff_path
-
-    f = open(outrpcfile, 'wb')
-    x = subprocess.Popen(["gdalinfo", path], stdout=subprocess.PIPE).communicate()[0]
-    x = x.splitlines()
-    for l in x:
-
-        if (b'SAMP_' not in l) and (b'LINE_' not in l) and (b'HEIGHT_' not in l) and (b'LAT_' not in l) and (b'LONG_' not in l) and (b'MAX_' not in l) and (b'MIN_' not in l):
-              continue
-        y = l.strip().replace(b'=',b': ')
-        if b'COEFF' in y:
-              z = y.split()
-              t=1
-              for j in z[1:]:
-                      f.write(b'%s_%d: %s\n'%(z[0][:-1],t,j))
-                      t+=1
-        else:
-              f.write((y+b'\n'))
-
-    f.close()
-    return rpc_model.RPCModel(outrpcfile)
+    with rasterio.open(geotiff_path, 'r') as src:
+        rpc_dict = src.tags(ns='RPC')
+    return rpc_model.RPCModel(rpc_dict)

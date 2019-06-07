@@ -19,22 +19,28 @@ warnings.filterwarnings("ignore",
                         category=rasterio.errors.NotGeoreferencedWarning)
 
 
-def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
-                             wat_msk=None):
+def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
+                    img_shape=None, border_margin=10):
     """
-    Compute a mask for pixels masked by clouds, water, or out of image domain.
+    Compute a validity mask for an image tile from vector/raster image masks.
 
     Args:
-        x, y, w, h: coordinates of the ROI
-        roi_gml (optional): path to a gml file containing a mask
-            defining the area contained in the full image
-        cld_gml (optional): path to a gml file containing a mask
-            defining the areas covered by clouds
+        x, y, w, h (ints): top-left pixel coordinates and size of the tile
+        roi_gml (str): path to a gml file containing a mask defining the valid
+            area in the input reference image
+        cld_gml (str): path to a gml file containing a mask defining the cloudy
+            areas in the input reference image
+        raster_mask (str): path to a raster mask file
+        img_shape (tuple): height and width of the reference input (full) image
+        border_margin (int): width, in pixels, of a stripe of pixels to discard
+            along the reference input image borders
 
     Returns:
         2D array containing the output binary mask. 0 indicate masked pixels, 1
         visible pixels.
     """
+    x, y, w, h = map(int, (x, y, w, h))
+
     # coefficients of the transformation associated to the crop
     H = common.matrix_translation(-x, -y)
     hij = ' '.join([str(el) for el in H.flatten()])
@@ -47,10 +53,10 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
                                                                roi_gml, tmp),
                               shell=True)
         with rasterio.open(tmp, 'r') as f:
-            mask = np.logical_and(mask, f.read().squeeze())
+            mask = np.logical_and(mask, f.read().squeeze().astype(bool))
 
-    if not mask.any():
-        return mask
+        if not mask.any():
+            return mask
 
     if cld_gml is not None:  # cloud mask (polygons)
         tmp = common.tmpfile('.png')
@@ -60,13 +66,22 @@ def cloud_water_image_domain(x, y, w, h, rpc, roi_gml=None, cld_gml=None,
         with rasterio.open(tmp, 'r') as f:
             mask = np.logical_and(mask, ~f.read().squeeze().astype(bool))
 
-    if not mask.any():
-        return mask
+        if not mask.any():
+            return mask
 
-    if wat_msk is not None:  # water mask (raster)
-        x, y, w, h = map(int, (x, y, w, h))
-        with rasterio.open(wat_msk, 'r') as f:
-            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w))).squeeze())
+    if raster_mask is not None:
+        with rasterio.open(raster_mask, 'r') as f:
+            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w)),
+                                               boundless=True).squeeze())
+
+    # image borders mask
+    if img_shape is not None:
+        m = np.ones(img_shape, dtype=np.bool)
+        m[:border_margin] = 0  # first rows
+        m[-border_margin:] = 0  # last rows
+        m[:, :border_margin] = 0  # first columns
+        m[:, -border_margin:] = 0  # last columns
+        mask = np.logical_and(mask, common.crop_array(m, x, y, w, h))
 
     return mask
 

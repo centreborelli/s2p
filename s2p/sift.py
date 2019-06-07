@@ -11,6 +11,7 @@ import warnings
 import numpy as np
 import rasterio as rio
 from numpy.ctypeslib import ndpointer
+import ransac
 
 from s2p import common
 from s2p import rpc_utils
@@ -23,9 +24,10 @@ from s2p.config import cfg
 
 # TODO: This is kind of ugly. Cleaner way to do this is to update
 # LD_LIBRARY_PATH, which we should do once we have a proper config file
-sift4ctypes_library = os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), '../lib/libsift4ctypes.so')
-ctypes.CDLL(sift4ctypes_library)
+here = os.path.dirname(os.path.abspath(__file__))
+sift4ctypes = os.path.join(os.path.dirname(here), 'lib', 'libsift4ctypes.so')
+lib = ctypes.CDLL(sift4ctypes)
+
 
 # Filter warnings from rasterio reading files wihtout georeferencing
 warnings.filterwarnings("ignore", category=rio.errors.NotGeoreferencedWarning)
@@ -46,13 +48,10 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
         offset (optional): offset to apply to sift position in case arr is an extract of a bigger image
 
     Returns:
-        A numpy array of shape (nb_points, 132) containing for each row (y, x, scale, orientation, sift_descriptor)
+        A numpy array of shape (nb_points,132) containing for each row (y,x,scale,orientation, sift_descriptor)
     """
     # retrieve numpy buffer dimensions
     h, w = arr.shape
-
-    # load shared library
-    lib = ctypes.CDLL(sift4ctypes_library)
 
     # Set expected args and return types
     lib.sift.argtypes = (ndpointer(dtype=ctypes.c_float, shape=(h, w)), ctypes.c_uint, ctypes.c_uint, ctypes.c_float,
@@ -69,7 +68,7 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
 
     # Transform result into a numpy array
     keypoints = np.asarray([keypoints_ptr[i]
-                            for i in range(0, nb_points.value*desc_size.value)])
+                            for i in range(nb_points.value*desc_size.value)])
 
     # Delete results to release memory
     lib.delete_buffer.argtypes = (ctypes.POINTER(ctypes.c_float)),
@@ -94,12 +93,12 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
     http://www.ipol.im/pub/pre/82/
 
     Args:
-        im: path to the input image
+        im (str): path to the input image
         max_nb (optional): maximal number of keypoints. If more keypoints are
             detected, those at smallest scales are discarded
 
     Returns:
-        path to the file containing the list of descriptors
+        numpy array of shape (n, 132) containing, on each row: (y, x, s, o, 128-descriptor)
     """
     # Read file with rasterio
     with rio.open(im) as ds:
@@ -124,19 +123,19 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
     if max_nb is not None:
         keypoints = keypoints[:max_nb]
 
-    keyfile = common.tmpfile('.txt')
-    np.savetxt(keyfile, keypoints, delimiter=' ', fmt='%.3f')
-
-    return keyfile
+    return keypoints
 
 
 def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
-                    model=None, epipolar_threshold=10):
+                    epipolar_threshold=10, model=None, ransac_max_err=0.3):
     """
     Find matches among two lists of sift keypoints.
 
     Args:
-        k1, k2: paths to text files containing the lists of sift descriptors
+        k1 (array): numpy array of shape (n, 132), where each row represents a
+            sift keypoint with (y, x, scale, orientation, 128-descriptor)
+        k2 (array): numpy array of shape (m, 132), where each row represents a
+            sift keypoint
         method (optional, default is 'relative'): flag ('relative' or
             'absolute') indicating wether to use absolute distance or relative
             distance
@@ -147,42 +146,79 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
             (ie ratio between distance to nearest and distance to second
             nearest), the commonly used value for the threshold is 0.6.
         F (optional): affine fundamental matrix
+        epipolar_threshold (optional, default is 10): maximum distance allowed for
+            a point to the epipolar line of its match.
         model (optional, default is None): model imposed by RANSAC when
             searching the set of inliers. If None all matches are considered as
             inliers.
-        epipolar_threshold (optional, default is 10): maximum distance allowed for
-            a point to the epipolar line of its match.
+        ransac_max_err (float): maximum allowed epipolar error for
+            RANSAC inliers. Optional, default is 0.3.
 
     Returns:
         if any, a numpy 2D array containing the list of inliers matches.
     """
     # compute matches
-    mfile = common.tmpfile('.txt')
-    cmd = "matching %s %s -o %s --sift-threshold %f" % (k1, k2, mfile,
-                                                        sift_thresh)
-    if method == 'absolute':
-        cmd += " --absolute"
+    matches = keypoints_match_from_nparray(k1, k2, method, sift_thresh,
+                                           epipolar_threshold, F)
+
+    # filter matches with ransac
+    if model == 'fundamental' and len(matches) >= 7:
+        inliers = ransac.find_fundamental_matrix(matches, ntrials=1000,
+                                                 max_err=ransac_max_err)[0]
+        matches = matches[inliers]
+
+    return matches
+
+
+def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
+                                 epi_threshold=10, F=None):
+    """
+    Wrapper for the sift keypoints matching function of libsift4ctypes.so.
+    """
+    # Set expected args and return types
+    lib.matching.argtypes = (ndpointer(dtype=ctypes.c_float, shape=k1.shape),
+                             ndpointer(dtype=ctypes.c_float, shape=k2.shape),
+                             ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
+                             ctypes.c_uint, ctypes.c_float, ctypes.c_float,
+                             ndpointer(dtype=ctypes.c_double, shape=(5,)),
+                             ctypes.c_bool, ctypes.c_bool,
+                             ctypes.POINTER(ctypes.c_uint))
+    lib.matching.restype = ctypes.POINTER(ctypes.c_float)
+
+    # Get info of descriptor size
+    nb_sift_k1, descr = k1.shape
+    sift_offset = 4
+    length_descr = descr - sift_offset
+
+    # Transform information of method into boolean
+    use_relative_method = (method == 'relative')
+
+    # Format fundamental matrix
+    use_fundamental_matrix = False
+    coeff_mat = np.zeros(5)
     if F is not None:
-        fij = ' '.join(str(x) for x in [F[0, 2], F[1, 2], F[2, 0],
-                                        F[2, 1], F[2, 2]])
-        cmd = "%s -f \"%s\"" % (cmd, fij)
-        cmd += " --epipolar-threshold {}".format(epipolar_threshold)
-    common.run(cmd)
+        coeff_mat = np.asarray([F[0, 2], F[1, 2], F[2, 0], F[2, 1], F[2, 2]])
+        use_fundamental_matrix = True
 
-    matches = np.loadtxt(mfile)
-    if matches.ndim == 2:  # filter outliers with ransac
-        if model == 'fundamental' and len(matches) >= 7:
-            common.run("ransac fmn 1000 .3 7 %s < %s" % (mfile, mfile))
-        elif model == 'homography' and len(matches) >= 4:
-            common.run("ransac hom 1000 1 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                            mfile))
-        elif model == 'hom_fund' and len(matches) >= 7:
-            common.run("ransac hom 1000 2 4 /dev/null /dev/null %s < %s" % (mfile,
-                                                                            mfile))
-            common.run("ransac fmn 1000 .2 7 %s < %s" % (mfile, mfile))
+    # Create variables to be updated by function call
+    nb_matches = ctypes.c_uint()
 
-    if os.stat(mfile).st_size > 0:  # return numpy array of matches
-        return np.loadtxt(mfile)
+    # Call sift fonction from sift4ctypes.so
+    matches_ptr = lib.matching(k1.astype('float32'), k2.astype('float32'),
+                               length_descr, sift_offset, len(k1), len(k2),
+                               sift_threshold, epi_threshold, coeff_mat,
+                               use_fundamental_matrix, use_relative_method,
+                               ctypes.byref(nb_matches))
+
+    # Transform result into a numpy array
+    matches = np.asarray([matches_ptr[i] for i in range(nb_matches.value * 4)])
+
+    # Delete results to release memory
+    lib.delete_buffer.argtypes = ctypes.POINTER(ctypes.c_float),
+    lib.delete_buffer(matches_ptr)
+
+    # Reshape keypoints array
+    return matches.reshape((nb_matches.value, 4))
 
 
 def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
@@ -218,9 +254,9 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     for i in range(2):
         p1 = image_keypoints(im1, x, y, w, h, thresh_dog=thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, thresh_dog=thresh_dog)
-        matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'],
-                                  F, model='fundamental',
-                                  epipolar_threshold=cfg['max_pointing_error'])
+        matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'], F,
+                                  epipolar_threshold=cfg['max_pointing_error'],
+                                  model='fundamental')
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
             break
         thresh_dog /= 2.0
