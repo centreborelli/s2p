@@ -48,7 +48,6 @@ def tmpfile(ext='', tmpdir='tmp'):
     return out
 
 
-
 def plys_to_potree(input_plys, output, bin_dir='.', cloud_name="cloud"):
     """
     Compute a multi-scale representation of a large point cloud.
@@ -62,51 +61,23 @@ def plys_to_potree(input_plys, output, bin_dir='.', cloud_name="cloud"):
         output: path to the output folder
         input_plys: list of paths to ply files
     """
-    import os.path
-    ply2ascii       = os.path.join(bin_dir, 'plytool/ply2ascii')
-    txt2las         = os.path.join(bin_dir, 'PotreeConverter/LAStools/bin/txt2las')
     PotreeConverter = os.path.join(bin_dir, 'PotreeConverter/build/PotreeConverter/PotreeConverter')
-
-    #if (not os.path.exists(ply2ascii)) or (not os.path.exists(txt2las)) or (not os.path.exists(PotreeConverter)) :
-    #    return
 
     outdir = os.path.dirname(output)
 
-    plys = ' '.join(input_plys)
-
-    las = []
-    garbage = []
-
-    for p in input_plys:
-
-        # convert binary ply to ascii if needed
-        ap = tmpfile('.ply', outdir)
-        common.run("%s < %s > %s" % (ply2ascii, p, ap))
-
-        # convert ply to las because PotreeConverter is not able to read PLY
-        lp = tmpfile('.las', outdir)
-        las.append(lp)
-        garbage.append(lp)
-        common.run("%s -parse xyzRGB -verbose -i  %s -o %s 2>/dev/null" % (txt2las, ap, lp))
-
-        # remove intermediate ascii ply
-        common.run("rm %s" % ap)
-
-    # generate potree output
+    # List ply files in text file
     listfile = tmpfile('.txt', outdir)
-    garbage.append(listfile)
-    ff = open(listfile, 'w')
-    for item in las:
-        ff.write("%s\n" % item)
-    ff.close()
+    with open(listfile, 'w') as f:
+        for p in input_plys:
+            f.write("%s\n" % p)
 
+    # Run PotreeConverter
     common.run("mkdir -p %s" % output)
     resourcedir = os.path.join(bin_dir, 'PotreeConverter/PotreeConverter/resources/page_template')
-    common.run("LC_ALL=C %s --list-of-files %s -o %s -p %s --edl-enabled --material RGB --overwrite --page-template %s" % (PotreeConverter, listfile, output, cloud_name, resourcedir) )
+    common.run("LC_ALL=C %s --list-of-files %s -o %s -p %s --edl-enabled --material RGB --overwrite --page-template %s" % (PotreeConverter, listfile, output, cloud_name, resourcedir))
 
-    # clean intermediate files
-    for p in garbage:
-        common.run("rm %s" % p)
+    # Cleanup
+    os.remove(listfile)
 
 
 def read_tiles(tile_files):
@@ -132,13 +103,10 @@ def read_tiles(tile_files):
 
 
 def test_for_potree(basedir):
-    import os.path
-    ply2ascii       = os.path.join(basedir, 'plytool/ply2ascii')
-    txt2las         = os.path.join(basedir, 'PotreeConverter/LAStools/bin/txt2las')
     PotreeConverter = os.path.join(basedir, 'PotreeConverter/build/PotreeConverter/PotreeConverter')
-    print('looking for:\n    %s\n    %s\n    %s'%(txt2las, ply2ascii, PotreeConverter))
+    print('looking for:\n    %s' % PotreeConverter)
 
-    if (not os.path.exists(ply2ascii)) or (not os.path.exists(txt2las)) or (not os.path.exists(PotreeConverter)) :
+    if not os.path.exists(PotreeConverter):
         print('not found\n')
         raise common.RunFailure
 
