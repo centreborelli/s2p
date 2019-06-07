@@ -71,12 +71,13 @@ static float distance_weight(float sigma, float d)
 
 /* This function is meant to be mapped to python using ctypes. */
 /* It "rasterizes" points cloud as input_buffer which is interpreted as a list of points (x, y, [z, r, g, b, ...]) */
-/* The "columns" between square brackets [z (height), r, g, b, ...] are named as extra columns.
-/* A multiband image (x->avg) is returned as a linear buffer of float of size (xsize*ysize*nb_extra_columns).  */
-/* This buffer is the responsibiliy of the caller and should be freed by her. */
+/* The "columns" between square brackets [z (height), r, g, b, ...] are named as extra columns. */
+/* The output multiband image (x->avg) is given as an argument as a linear buffer of float of size (xsize*ysize*nb_extra_columns).  */
+/* This buffer is filled by the function. */
 
-float *rasterize_cloud(
+void rasterize_cloud(
 		const double * input_buffer,
+		float * output_buffer,
 		const int nb_points,
 		const int nb_extra_columns, // z, r, g, b, ...
 		const double xoff, const double yoff,
@@ -92,7 +93,7 @@ float *rasterize_cloud(
 	x->min = xmalloc(xsize*ysize*sizeof(float));
 	x->max = xmalloc(xsize*ysize*sizeof(float));
 	x->cnt = xmalloc(xsize*ysize*sizeof(float));
-	x->avg = xmalloc(nb_extra_columns*xsize*ysize*sizeof(float));
+	x->avg = output_buffer;
 
 	for (uint64_t i = 0; i < (uint64_t) xsize*ysize; i++) {
 		x->min[i] = INFINITY;
@@ -141,15 +142,4 @@ float *rasterize_cloud(
 	free(x->min);
 	free(x->max);
 	free(x->cnt);
-
-	return x->avg;
-}
-
-/**
- * This function allows to free the float buffer from python.
- */
-void delete_buffer(float * buffer)
-{
-	if (buffer != NULL)
-		free(buffer);
 }

@@ -41,34 +41,34 @@ def plyflatten(cloud,
     Returns;
         A numpy array of shape (ysize, xsize, nb_extra_columns)
     """
+    nb_points, nb_extra_columns = cloud.shape[0], cloud.shape[1] - 2
+    raster_shape = (xsize * ysize, nb_extra_columns)
+
     # Set expected args and return types
     lib.rasterize_cloud.argtypes = (ndpointer(dtype=ctypes.c_double,
                                               shape=np.shape(cloud)),
+                                    ndpointer(dtype=ctypes.c_float,
+                                              shape=raster_shape),
                                     ctypes.c_int,
                                     ctypes.c_int,
                                     ctypes.c_double, ctypes.c_double,
                                     ctypes.c_double,
                                     ctypes.c_int, ctypes.c_int,
                                     ctypes.c_int, ctypes.c_float)
-    lib.rasterize_cloud.restype = ctypes.POINTER(ctypes.c_float)
 
     # Call rasterize_cloud function from libplyflatten.so
-    nb_points, nb_extra_columns = cloud.shape[0], cloud.shape[1] - 2
-    raster_ptr = lib.rasterize_cloud(cloud.astype(np.float64),
-                                     nb_points,
-                                     nb_extra_columns,
-                                     xoff, yoff,
-                                     resolution,
-                                     xsize, ysize,
-                                     radius, sigma)
+    raster = np.zeros(raster_shape, dtype='float32')
+    lib.rasterize_cloud(cloud.astype(np.float64),
+                        raster,
+                        nb_points,
+                        nb_extra_columns,
+                        xoff, yoff,
+                        resolution,
+                        xsize, ysize,
+                        radius, sigma)
 
     # Transform result into a numpy array
-    raster = np.asarray([raster_ptr[i] for i in range(nb_extra_columns*xsize*ysize)])
     raster = raster.reshape((ysize, xsize, nb_extra_columns))
-
-    # Delete results to release memory
-    lib.delete_buffer.argtypes = (ctypes.POINTER(ctypes.c_float)),
-    lib.delete_buffer(raster_ptr)
 
     return raster
 
