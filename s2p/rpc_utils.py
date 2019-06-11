@@ -5,7 +5,6 @@
 
 from __future__ import print_function
 import bs4
-import utm
 import json
 import datetime
 import pyproj
@@ -270,12 +269,7 @@ def utm_zone(rpc, x, y, w, h):
     # determine lat lon of the center of the roi, assuming median altitude
     lon, lat = rpc.localization(x + .5*w, y + .5*h, rpc.alt_offset)[:2]
 
-    # compute the utm zone number and add the hemisphere letter
-    zone = utm.conversion.latlon_to_zone_number(lat, lon)
-    if lat < 0:
-        return '%dS' % zone
-    else:
-        return '%dN' % zone
+    return geographiclib.compute_utm_zone(lon, lat)
 
 
 def utm_roi_to_img_roi(rpc, roi):
@@ -286,15 +280,17 @@ def utm_roi_to_img_roi(rpc, roi):
     box = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
 
     # convert utm to lon/lat
-    utm_z = roi['utm_band']
-    north = roi['hemisphere'] == 'N'
-    box_latlon = [utm.to_latlon(p[0], p[1], utm_z, northern=north) for p in box]
+    utm_proj = geographiclib.utm_proj("{}{}".format(roi['utm_band'], roi['hemisphere']))
+    box_lon, box_lat = pyproj.transform(
+        utm_proj, pyproj.Proj(init="epsg:4326"), [p[0] for p in box], [p[1] for p in box]
+    )
 
     # project lon/lat vertices into the image
+    print("In New")
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.projection(p[1], p[0], rpc.alt_offset)[:2] for p in
-               box_latlon]
+    img_pts = [rpc.projection(lon, lat, rpc.alt_offset)[:2] for (lon, lat) in
+               zip(box_lon, box_lat)]
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
@@ -391,17 +387,11 @@ def roi_process(rpc, ll_poly, utm_zone=None):
     # convert lon lat bbox to utm
     if not utm_zone:
         utm_zone = geographiclib.compute_utm_zone(
-            (lon_min + lon_max) * 0.5, (lat_min + lat_max) * 0.5
+            (lon_min + lon_max) * .5, (lat_min + lat_max) * .5
         )
 
     cfg['utm_zone'] = utm_zone
-    utm_proj = pyproj.Proj(
-        proj='utm',
-        zone=utm_zone[:-1],
-        ellps='WGS84',
-        datum='WGS84',
-        south=(utm_zone[-1] == 'S'),
-    )
+    utm_proj = geographiclib.utm_proj(utm_zone)
     easting, northing = pyproj.transform(
         pyproj.Proj(init="epsg:4326"), utm_proj, ll_poly[:, 0], ll_poly[:, 1]
     )

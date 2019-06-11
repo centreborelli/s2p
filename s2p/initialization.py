@@ -6,7 +6,6 @@
 from __future__ import print_function
 import os
 import sys
-import utm
 import json
 import copy
 import shutil
