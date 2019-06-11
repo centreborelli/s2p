@@ -13,6 +13,7 @@
 #define M_PI 3.14159265358979323846264338328
 #endif
 
+void utm_alt_zone(double *out, double lat, double lon, int zone);
 
 void applyHom(double outv[3], double M[3][3], double v[3]) {
     MAT_DOT_VEC_3X3(outv, M, v);
@@ -22,67 +23,94 @@ void applyHom(double outv[3], double M[3][3], double v[3]) {
 }
 
 
-/*// convert geodetic coordinates to mercator using a reference longitude
-static void convert_geodetic_to_mercator(double mercator[2], double
-        geodetic[2], double reference_longitude) {
-    double lon0 = reference_longitude;
-    double R = 6378.1*1000;
-    double cte = 1/360.*2*M_PI;
-    mercator[0] = R * (geodetic[0] - lon0) * cte;
-    mercator[1] = R * log((1 + sin(geodetic[1] * cte)) / cos(geodetic[1] * cte));
+void disp_to_xyz(float *xyz, float *err,  // outputs
+                 float *dispx, float *dispy, float *msk, int nx, int ny,  // inputs
+                 double Ha[3][3], double Hb[3][3],
+                 struct rpc *rpca, struct rpc *rpcb, int zone)
+{
+    // invert homographies
+    double det;
+    double invHa[3][3];
+    double invHb[3][3];
+    INVERT_3X3(invHa, det, Ha);
+    INVERT_3X3(invHb, det, Hb);
+
+    // handle UTM zone
+    bool hem;
+
+    int npoints = 0;
+    for (int y = 0; y < ny; y++)
+    for (int x = 0; x < nx; x++) {
+        int pos = x + nx*y;
+        if (msk[pos] <= 0) {
+            for (int k = 0; k < 3; k++)
+                xyz[3 * pos + k] = NAN;
+            err[pos] = NAN;
+            continue;
+        }
+        double q0[3], q1[3];
+        double lonlat[2];
+        double utm[2];
+        double e, z;
+        double dx = dispx[pos];
+        double dy = dispy[pos];
+        double p0[3] = {x, y, 1};
+        double p1[3] = {x+dx, y+dy, 1};
+        applyHom(q0, invHa, p0);
+        applyHom(q1, invHb, p1);
+
+        // compute the coordinates
+        z = rpc_height(rpca, rpcb, q0[0], q0[1], q1[0], q1[1], &e);
+        eval_rpc(lonlat, rpca, q0[0], q0[1], z);
+
+        // convert (lon, lat, alt) to utm
+        utm_alt_zone(utm, lonlat[1], lonlat[0], zone);
+
+        // store the output values
+        xyz[3 * pos + 0] = utm[0];
+        xyz[3 * pos + 1] = utm[1];
+        xyz[3 * pos + 2] = z;
+        err[pos] = e;
+    }
 }
 
 
-// normalize in place a 3d vector
-static void normalize_vector_3d(double vec[3]) {
-    const int dim = 3;
-    double norm = 0;
-    for (int i = 0; i < dim ; i++)
-        norm += vec[i] * vec[i];
-    norm = sqrt(norm);
-    for (int i = 0; i < dim ; i++)
-        vec[i] /= norm;
+float squared_distance_between_3d_points(float a[3], float b[3])
+{
+    float x = (a[0] - b[0]);
+    float y = (a[1] - b[1]);
+    float z = (a[2] - b[2]);
+    return x*x + y*y + z*z;
 }
 
 
-// Structure that contains all the possible outputs we could wish for points of
-// the point cloud
-typedef struct world_point world_point;
-struct world_point {
-    // geodetic coordinates of the point
-    float lon;
-    float lat;
-    float h;
-    // surface normal for the geodetic coordinates
-    float normal_lon;
-    float normal_lat;
-    float normal_h;
-    // coordinates on a mercator projection
-    float x_mercator;
-    float y_mercator;
-    float exagerated_h;
-    // surface normal for the mercator projection
-    float normal_x_mercator;
-    float normal_y_mercator;
-    float normal_h_mercator;
-    // projection error
-    float rpc_error;
-    // image coordinates
-    float x;
-    float y;
-    // color of the pixel
-    float r;
-    float g;
-    float b;
-};*/
+void count_3d_neighbors(int *count, float *xyz, int nx, int ny, float r, int p)
+{
+    // count the 3d neighbors of each point
+    for (int y = p; y < ny - p; y++)
+    for (int x = p; x < nx - p; x++) {
+        int pos = x + nx * y;
+        float *v = xyz + pos * 3;
+        int c = 0;
+        for (int i = -p; i <= p; i++)
+        for (int j = -p; j <= p; j++) {
+            float *u = xyz + (x + j + nx * (y + i)) * 3;
+            float d = squared_distance_between_3d_points(u, v);
+            if (d < r*r) {
+                c++;
+            }
+        }
+        count[pos] = c;
+    }
+}
 
 
 int main_disp_to_h(int c, char *v[])
 {
     if (c != 9) {
         fprintf(stderr, "usage:\n\t"
-                "%s rpca rpcb Ha Hb dispAB mskAB out_heights RPCerr"
-              // 0   1   2    3   4   5      6       7         8
+                "%s rpca rpcb Ha Hb dispAB mskAB out_heights RPCerr utm_zone"
+              // 0   1   2    3   4   5      6       7         8      9
                 "\n", *v);
         return EXIT_FAILURE;
     }
@@ -94,105 +122,59 @@ int main_disp_to_h(int c, char *v[])
     double Ha[3][3], Hb[3][3];
     read_matrix(Ha, v[3]);
     read_matrix(Hb, v[4]);
+    char *fout_heights  = v[7];
+    char *fout_err = v[8];
+    int zone = atoi(v[9]);
 
     int nx, ny, nch;
     float *dispy;
     float *dispx = iio_read_image_float_split(v[5], &nx, &ny, &nch);
     if (nch > 1) dispy = dispx + nx*ny;
     else dispy = calloc(nx*ny, sizeof(*dispy));
-
     float *msk  = iio_read_image_float_split(v[6], &nx, &ny, &nch);
-    char *fout_heights  = v[7];
-    char *fout_err = v[8];
-    float *heightMap = calloc(nx*ny, sizeof(*heightMap));
+
+    float *xyz_map = calloc(nx*ny*3, sizeof(*xyz_map));
     float *errMap = calloc(nx*ny, sizeof(*errMap));
+    disp_to_xyz(xyz_map, errMap, dispx, dispy, msk, nx, ny, Ha, Hb, rpca, rpcb, zone);
 
-    // invert homographies
-    double det;
-    double invHa[3][3];
-    double invHb[3][3];
-    INVERT_3X3(invHa, det, Ha);
-    INVERT_3X3(invHb, det, Hb);
-
-    // allocate structure for the output data
-//    struct world_point *outbuf = malloc(nx * ny * sizeof(*outbuf));
-
-    int npoints = 0;
-    for (int y = 0; y < ny; y++) {
-        for (int x = 0; x < nx; x++) {
-            int pos = x + nx*y;
-            if (msk[pos] <= 0) {
-                heightMap[pos] = NAN;
-                errMap[pos] = NAN;
-            } else {
-                double q0[3], q1[3];
-//                double groundCoords[2], groundCoordsPlus10[2],
-//                       groundCoordsNorm[3];
-                double err, h;
-                double dx = dispx[pos];
-                double dy = dispy[pos];
-                double p0[3] = {x, y, 1};
-                double p1[3] = {x+dx, y+dy, 1};
-                applyHom(q0, invHa, p0);
-                applyHom(q1, invHb, p1);
-
-                // compute the coordinates
-                h = rpc_height(rpca, rpcb, q0[0], q0[1], q1[0], q1[1], &err);
-                heightMap[pos] = h;
-                errMap[pos] = err;
-
-//                eval_rpc(groundCoords, rpca, q0[0], q0[1], h);
-//                // compute normal
-//                eval_rpc(groundCoordsPlus10, rpca, q0[0], q0[1], h+10);
-//                groundCoordsNorm[0] = groundCoordsPlus10[0] - groundCoords[0];
-//                groundCoordsNorm[1] = groundCoordsPlus10[1] - groundCoords[1];
-//                groundCoordsNorm[2] = h+10 - h;
-//                normalize_vector_3d(groundCoordsNorm);
-//
-//                // mercator conversion
-//                double mercator[2], mercatorPlus10[2], mercatorNorm[3],
-//                       lon0 = 0.0; // reference longitude
-//                convert_geodetic_to_mercator(mercator, groundCoords, lon0);
-//                // compute normal
-//                convert_geodetic_to_mercator(mercatorPlus10, groundCoordsPlus10, lon0);
-//                mercatorNorm[0] = mercator[0] - mercatorPlus10[0];
-//                mercatorNorm[1] = mercator[1] - mercatorPlus10[1];
-//                mercatorNorm[2] = h+10 -h;
-//                normalize_vector_3d(mercatorNorm);
-//
-//                // relief exageration:
-//                // 1   --> no exageration
-//                // 0.1 --> x10 factor
-//                double reliefExagerationFactor = 1;
-//
-//                outbuf[npoints].lon          = groundCoords[0];
-//                outbuf[npoints].lat          = groundCoords[1];
-//                outbuf[npoints].h            = h;
-//                outbuf[npoints].normal_lon   = groundCoordsNorm[0];
-//                outbuf[npoints].normal_lat   = groundCoordsNorm[1];
-//                outbuf[npoints].normal_h     = groundCoordsNorm[2];
-//
-//                outbuf[npoints].x_mercator   = mercator[0];
-//                outbuf[npoints].y_mercator   = mercator[1];
-//                outbuf[npoints].exagerated_h = h/reliefExagerationFactor;
-//                outbuf[npoints].normal_x_mercator = mercatorNorm[0];
-//                outbuf[npoints].normal_y_mercator = mercatorNorm[1];
-//                outbuf[npoints].normal_h_mercator = mercatorNorm[2];
-//
-//                outbuf[npoints].rpc_error    = err;
-//                outbuf[npoints].x            = x;
-//                outbuf[npoints].y            = y;
-
-            }
-        }
-    }
     // save the height map and error map
-    iio_save_image_float_vec(fout_heights, heightMap, nx, ny, 1);
+    iio_save_image_float_vec(fout_heights, xyz_map, nx, ny, 3);
     iio_save_image_float_vec(fout_err, errMap, nx, ny, 1);
+    return 0;
+}
+
+
+int main_count_3d_neighbors(int c, char *v[])
+{
+    if (c != 5) {
+        fprintf(stderr, "usage:\n\t"
+                "%s xyz.tif r p out.tif"
+              // 0   1      2 3 4
+                "\n", *v);
+        return EXIT_FAILURE;
+    }
+
+    // read input data
+    int nx, ny, nch;
+    float *xyz = iio_read_image_float_vec(v[1], &nx, &ny, &nch);
+    if (nch != 3) fprintf(stderr, "xyz image must have 3 channels\n");
+    float r = atof(v[2]);
+    int p = atoi(v[3]);
+    char *output_filename = v[4];
+
+    // allocate output data
+    int *out = calloc(nx*ny, sizeof(*out));
+
+    // do the job
+    count_3d_neighbors(out, xyz, nx, ny, r, p);
+
+    // save output
+    iio_write_image_int(output_filename, out, nx, ny);
     return 0;
 }
 
 int main(int c, char *v[])
 {
     return main_disp_to_h(c, v);
+//    return main_count_3d_neighbors(c, v);
 }

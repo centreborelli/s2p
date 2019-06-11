@@ -3,40 +3,127 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
 import os
+import ctypes
+from ctypes import c_int, c_float, c_double, byref, POINTER
+from numpy.ctypeslib import ndpointer
 import numpy as np
 
 from s2p import common
 from s2p.config import cfg
 
 
-def height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, height, rpc_err, A=None):
+here = os.path.dirname(os.path.abspath(__file__))
+lib_path = os.path.join(os.path.dirname(here), 'lib', 'disp_to_h.so')
+lib = ctypes.CDLL(lib_path)
+
+
+class RPCStruct(ctypes.Structure):
     """
-    Computes a height map from a disparity map, using rpc.
+    ctypes version of the RPC C struct defined in rpc.h.
+    """
+    _fields_ = [("numx", c_double * 20),
+                ("denx", c_double * 20),
+                ("numy", c_double * 20),
+                ("deny", c_double * 20),
+                ("scale", c_double * 3),
+                ("offset", c_double * 3),
+                ("inumx", c_double * 20),
+                ("idenx", c_double * 20),
+                ("inumy", c_double * 20),
+                ("ideny", c_double * 20),
+                ("iscale", c_double * 3),
+                ("ioffset", c_double * 3),
+                ("dmval", c_double * 4),
+                ("imval", c_double * 4)]
+
+    def __init__(self, rpc):
+        """
+        Args:
+            rpc (rpc_model.RPCModel): rpc model
+        """
+        self.offset[0] = rpc.col_offset
+        self.offset[1] = rpc.row_offset
+        self.offset[2] = rpc.alt_offset
+        self.ioffset[0] = rpc.lon_offset
+        self.ioffset[1] = rpc.lat_offset
+        self.ioffset[2] = rpc.alt_offset
+
+        self.scale[0] = rpc.col_scale
+        self.scale[1] = rpc.row_scale
+        self.scale[2] = rpc.alt_scale
+        self.iscale[0] = rpc.lon_scale
+        self.iscale[1] = rpc.lat_scale
+        self.iscale[2] = rpc.alt_scale
+
+        for i in range(20):
+            self.inumx[i] = rpc.col_num[i]
+            self.idenx[i] = rpc.col_den[i]
+            self.inumy[i] = rpc.row_num[i]
+            self.ideny[i] = rpc.row_den[i]
+
+        if hasattr(rpc, 'lat_num'):
+            for i in range(20):
+                self.numx[i] = rpc.lon_num[i]
+                self.denx[i] = rpc.lon_den[i]
+                self.numy[i] = rpc.lat_num[i]
+                self.deny[i] = rpc.lat_den[i]
+        else:
+            for i in range(20):
+                self.numx[i] = np.nan
+                self.denx[i] = np.nan
+                self.numy[i] = np.nan
+                self.deny[i] = np.nan
+
+
+def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
+    """
+    Compute a height map from a disparity map, using RPC camera models.
 
     Args:
-        rpc1, rpc2: instances of the rpc_model.RPCModel class
-        H1, H2: path to txt files containing two 3x3 numpy arrays defining
-            the rectifying homographies
-        disp, mask: paths to the diparity and mask maps
-        height: path to the output height map
-        rpc_err: path to the output rpc_error of triangulation
-        A (optional): path to txt file containing the pointing correction matrix
-            for im2
+        rpc1, rpc2 (rpc_model.RPCModel): camera models
+        H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
+        disp, mask (array): 2D arrays of shape (h, w) representing the diparity
+            and mask maps
+        utm_zone (int): desired UTM zone number (between 1 and 60) for the
+            output xyz map
+        A (array): 3x3 array with the pointing correction matrix for im2
+
+    Returns:
+        xyz: array of shape (h, w, 3) where each pixel contains the UTM
+            easting, northing, and altitude of the triangulated point.
+        err: array of shape (h, w) where each pixel contains the triangulation
+            error
     """
-    if A is not None:
-        HH2 = common.tmpfile('.txt')
-        np.savetxt(HH2, np.dot(np.loadtxt(H2), np.linalg.inv(np.loadtxt(A))))
-    else:
-        HH2 = H2
+    if A is not None:  # apply pointing correction
+        H2 = np.dot(H2, np.linalg.inv(A))
 
-    # write rpc coefficients to txt files
-    rpcfile1 = common.tmpfile('.txt')
-    rpcfile2 = common.tmpfile('.txt')
-    rpc1.write_to_file(rpcfile1)
-    rpc2.write_to_file(rpcfile2)
+    # copy rpc coefficients to an RPCStruct object
+    rpc1_c_struct = RPCStruct(rpc1)
+    rpc2_c_struct = RPCStruct(rpc2)
 
-    common.run("disp_to_h %s %s %s %s %s %s %s %s" % (rpcfile1, rpcfile2, H1, HH2, disp,
-                                                      mask, height, rpc_err))
+    # define the argument types of the disp_to_xyz function disp_to_h.so
+    h, w = disp.shape
+    lib.disp_to_xyz.argtypes = (ndpointer(dtype=c_float, shape=(h, w, 3)),
+                                ndpointer(dtype=c_float, shape=(h, w)),
+                                ndpointer(dtype=c_float, shape=(h, w)),
+                                ndpointer(dtype=c_float, shape=(h, w)),
+                                ndpointer(dtype=c_float, shape=(h, w)),
+                                c_int, c_int,
+                                ndpointer(dtype=c_double, shape=(3, 3)),
+                                ndpointer(dtype=c_double, shape=(3, 3)),
+                                POINTER(RPCStruct), POINTER(RPCStruct), c_int)
+
+
+    # call the disp_to_xyz fonction from disp_to_h.so
+    xyz =  np.zeros((h, w, 3), dtype='float32')
+    err =  np.zeros((h, w), dtype='float32')
+    dispx = disp.astype('float32')
+    dispy = np.zeros((h, w), dtype='float32')
+    msk = mask.astype('float32')
+    lib.disp_to_xyz(xyz, err, dispx, dispy, msk, w, h, H1, H2,
+                    byref(rpc1_c_struct), byref(rpc2_c_struct), utm_zone)
+
+    return xyz, err
 
 
 def transfer_map(in_map, H, x, y, w, h, out_map):
@@ -94,9 +181,9 @@ def height_map(out, x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
         A (optional): path to txt file containing the pointing correction matrix
             for im2
     """
-    tmp = common.tmpfile('.tif')
-    height_map_rectified(rpc1, rpc2, H1, H2, disp, mask, tmp, rpc_err, A)
-    transfer_map(tmp, H1, x, y, w, h, out)
+    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A)
+    common.image_apply_homography()
+    transfer_map(xyz, H1, x, y, w, h, out)
 
     # apply output filter
     common.run('plambda {0} {1} "x 0 > y nan if" -o {1}'.format(out_filt, out))

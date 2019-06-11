@@ -45,6 +45,7 @@ from s2p import triangulation
 from s2p import fusion
 from s2p import rasterization
 from s2p import visualisation
+from s2p import ply
 
 
 def pointing_correction(tile, i):
@@ -296,11 +297,40 @@ def disparity_to_ply(tile):
         common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)
 
     # compute the point cloud
-    triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
-                                          H_ref, H_sec, pointing, colors, extra,
-                                          utm_zone=cfg['utm_zone'],
-                                          xybbx=(x, x+w, y, y+h),
-                                          xymsk=mask_orig)
+#    triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
+#                                          H_ref, H_sec, pointing, colors, extra,
+#                                          utm_zone=cfg['utm_zone'],
+#                                          llbbx=tuple(cfg['ll_bbx']),
+#                                          xybbx=(x, x+w, y, y+h),
+#                                          xymsk=mask_orig)
+    with rasterio.open(disp, 'r') as f:
+        disp_img = f.read().squeeze()
+    with rasterio.open(mask_rect, 'r') as f:
+        mask_rect_img = f.read().squeeze()
+    #TODO: add llbbx and xybbx
+    xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
+                                               np.loadtxt(H_ref), np.loadtxt(H_sec),
+                                               disp_img, mask_rect_img,
+                                               int(cfg['utm_zone'][:-1]),
+                                               np.loadtxt(pointing))
+
+
+    #TODO: add 3D filtering here
+
+    # flatten the xyz array into a list and remove nan points
+    xyz_list = xyz_array.reshape(-1, 3)
+    valid = np.all(np.isfinite(xyz_list), axis=1)
+
+    # write the point cloud to a ply file
+    with rasterio.open(colors, 'r') as f:
+        img = f.read()
+    colors_list = img.reshape(-1, img.shape[0])
+    ply.write_3d_point_cloud_to_ply(ply_file, xyz_list[valid],
+                                    colors=colors_list[valid],
+                                    extra_properties=None,
+                                    extra_properties_names=None,
+                                    comments=["created by S2P",
+                                              "projection: UTM {}".format(cfg['utm_zone'])])
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))

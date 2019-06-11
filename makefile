@@ -123,8 +123,8 @@ imscript: $(BINDIR)
 # rules to build s2p C/C++ programs
 #
 
-PROGRAMS = disp_to_h disp2ply colormesh bin2asc plyextrema morphoop
-LIB = libplyflatten.so
+PROGRAMS = disp2ply colormesh bin2asc plyextrema morphoop
+LIB = libplyflatten.so disp_to_h.so
 LIBRARIES = $(addprefix $(LIBDIR)/,$(LIB))
 
 s2p: $(BINDIR) $(addprefix $(BINDIR)/,$(PROGRAMS)) $(LIBRARIES)
@@ -141,8 +141,8 @@ $(BINDIR)/bin2asc: c/bin2asc.c
 $(BINDIR)/morphoop: $(SRCDIR)/iio.o $(SRCDIR)/morphoop.c
 	$(CC) $(CFLAGS) $^ $(IIOLIBS) -o $@
 
-$(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
-	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
+$(LIBDIR)/disp_to_h.so: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
+	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp_to_h.c $(IIOLIBS) -lGeographic -o $@ -fPIC -shared
 
 $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
