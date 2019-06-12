@@ -5,7 +5,6 @@
 
 from __future__ import print_function
 import bs4
-import utm
 import json
 import datetime
 import pyproj
@@ -270,12 +269,7 @@ def utm_zone(rpc, x, y, w, h):
     # determine lat lon of the center of the roi, assuming median altitude
     lon, lat = rpc.localization(x + .5*w, y + .5*h, rpc.alt_offset)[:2]
 
-    # compute the utm zone number and add the hemisphere letter
-    zone = utm.conversion.latlon_to_zone_number(lat, lon)
-    if lat < 0:
-        return '%dS' % zone
-    else:
-        return '%dN' % zone
+    return geographiclib.compute_utm_zone(lon, lat)
 
 
 def utm_roi_to_img_roi(rpc, roi):
@@ -286,22 +280,24 @@ def utm_roi_to_img_roi(rpc, roi):
     box = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
 
     # convert utm to lon/lat
-    utm_z = roi['utm_band']
-    north = roi['hemisphere'] == 'N'
-    box_latlon = [utm.to_latlon(p[0], p[1], utm_z, northern=north) for p in box]
+    utm_proj = geographiclib.utm_proj("{}{}".format(roi['utm_band'], roi['hemisphere']))
+    box_lon, box_lat = pyproj.transform(
+        utm_proj, pyproj.Proj(init="epsg:4326"), [p[0] for p in box], [p[1] for p in box]
+    )
 
     # project lon/lat vertices into the image
+    print("In New")
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.projection(p[1], p[0], rpc.alt_offset)[:2] for p in
-               box_latlon]
+    img_pts = [rpc.projection(lon, lat, rpc.alt_offset)[:2] for (lon, lat) in
+               zip(box_lon, box_lat)]
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
     return {'x': x, 'y': y, 'w': w, 'h': h}
 
 
-def kml_roi_process(rpc, kml):
+def kml_roi_process(rpc, kml, utm_zone=None):
     """
     Define a rectangular bounding box in image coordinates
     from a polygon in a KML file
@@ -309,6 +305,9 @@ def kml_roi_process(rpc, kml):
     Args:
         rpc: instance of the rpc_model.RPCModel class, or path to the xml file
         kml: file path to a KML file containing a single polygon
+        utm_zone: force the zone number to be used when defining `utm_bbx`.
+            If not specified, the default UTM zone for the given geography
+            is used.
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
@@ -319,11 +318,11 @@ def kml_roi_process(rpc, kml):
     with open(kml, 'r') as f:
         a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
     ll_poly = np.array([list(map(float, x.split(','))) for x in a])[:, :2]
-    box_d = roi_process(rpc, ll_poly)
+    box_d = roi_process(rpc, ll_poly, utm_zone=utm_zone)
     return box_d
 
 
-def geojson_roi_process(rpc, geojson):
+def geojson_roi_process(rpc, geojson, utm_zone=None):
     """
     Define a rectangular bounding box in image coordinates
     from a polygon in a geojson file or dict
@@ -334,6 +333,9 @@ def geojson_roi_process(rpc, geojson):
             or content of the file as a dict.
             The geojson's top-level type should be either FeatureCollection,
             Feature, or Polygon.
+        utm_zone: force the zone number to be used when defining `utm_bbx`.
+            If not specified, the default UTM zone for the given geography
+            is used.
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
@@ -354,11 +356,11 @@ def geojson_roi_process(rpc, geojson):
         a = a["geometry"]
 
     ll_poly = np.array(a["coordinates"][0])
-    box_d = roi_process(rpc, ll_poly)
+    box_d = roi_process(rpc, ll_poly, utm_zone=utm_zone)
     return box_d
 
 
-def roi_process(rpc, ll_poly):
+def roi_process(rpc, ll_poly, utm_zone=None):
     """
     Convert a longitude/latitude polygon into a rectangular
     bounding box in image coordinates
@@ -366,6 +368,9 @@ def roi_process(rpc, ll_poly):
     Args:
         rpc: instance of the rpc_model.RPCModel class, or path to the xml file
         ll_poly: numpy array of (longitude, latitude) defining the polygon
+        utm_zone: force the zone number to be used when defining `utm_bbx`.
+            If not specified, the default UTM zone for the given geography
+            is used.
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
@@ -380,14 +385,20 @@ def roi_process(rpc, ll_poly):
     cfg['ll_bbx'] = (lon_min, lon_max, lat_min, lat_max)
 
     # convert lon lat bbox to utm
-    z = utm.conversion.latlon_to_zone_number((lat_min + lat_max) * .5,
-                                             (lon_min + lon_max) * .5)
-    utm_poly = np.array([utm.from_latlon(p[1], p[0], force_zone_number=z)[:2] for
-                        p in ll_poly])
-    east_min = min(utm_poly[:, 0])
-    east_max = max(utm_poly[:, 0])
-    nort_min = min(utm_poly[:, 1])
-    nort_max = max(utm_poly[:, 1])
+    if not utm_zone:
+        utm_zone = geographiclib.compute_utm_zone(
+            (lon_min + lon_max) * .5, (lat_min + lat_max) * .5
+        )
+
+    cfg['utm_zone'] = utm_zone
+    utm_proj = geographiclib.utm_proj(utm_zone)
+    easting, northing = pyproj.transform(
+        pyproj.Proj(init="epsg:4326"), utm_proj, ll_poly[:, 0], ll_poly[:, 1]
+    )
+    east_min = min(easting)
+    east_max = max(easting)
+    nort_min = min(northing)
+    nort_max = max(northing)
     cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image

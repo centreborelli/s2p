@@ -6,6 +6,8 @@
 import os
 import subprocess
 
+import pyproj
+
 
 def geoid_above_ellipsoid(lat, lon):
     """
@@ -32,3 +34,46 @@ def geoid_above_ellipsoid(lat, lon):
                           '-n', geoid_name], stdin=p.stdout, stdout=subprocess.PIPE)
     height = float(q.stdout.readline().split()[0])
     return height
+
+
+def compute_utm_zone(lon, lat):
+    """
+    Compute the UTM zone which contains
+    the point with given longitude and latitude
+
+    Args:
+        lon (float): longitude of the point
+        lat (float): latitude of the point
+
+    Returns:
+        str: UTM zone number + hemisphere (eg: '30N')
+    """
+    # UTM zone number starts from 1 at longitude -180,
+    # and increments by 1 every 6 degrees of longitude
+    zone = int((lon + 180) // 6 + 1)
+
+    hemisphere = "N" if lat >= 0 else "S"
+    utm_zone = "{}{}".format(zone, hemisphere)
+    return utm_zone
+
+
+def utm_proj(utm_zone):
+    """
+    Return a pyproj.Proj object that corresponds
+    to the given utm_zone string
+
+    Args:
+        utm_zone (str): UTM zone number + hemisphere (eg: '30N')
+
+    Returns:
+        pyproj.Proj: object that can be used to transform coordinates
+    """
+    zone_number = utm_zone[:-1]
+    hemisphere = utm_zone[-1]
+    return pyproj.Proj(
+        proj='utm',
+        zone=zone_number,
+        ellps='WGS84',
+        datum='WGS84',
+        south=(hemisphere == 'S'),
+    )
