@@ -75,5 +75,7 @@ include 3rdparty/imscript/src/vvector.h
 include 3rdparty/imscript/src/xfopen.c
 include 3rdparty/imscript/src/xmalloc.c
 recursive-include 3rdparty/imscript/bin *
+prune 3rdparty/imscript/src/ftr
+prune 3rdparty/imscript/src/misc/older
 
-global-exclude .git .travis.yml *.png
+global-exclude .git .travis.yml *.png *.o *.so
