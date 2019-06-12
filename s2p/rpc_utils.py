@@ -286,7 +286,6 @@ def utm_roi_to_img_roi(rpc, roi):
     )
 
     # project lon/lat vertices into the image
-    print("In New")
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
     img_pts = [rpc.projection(lon, lat, rpc.alt_offset)[:2] for (lon, lat) in
