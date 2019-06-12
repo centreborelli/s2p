@@ -1,5 +1,7 @@
 # s2p (Satellite Stereo Pipeline) testing module
 
+import math
+
 import numpy as np
 import rasterio
 
@@ -19,6 +21,8 @@ def test_plyflatten():
         expected_raster = src.read(1)
         expected_crs = src.crs
         expected_transform = src.transform
+        expected_is_tiled = src.is_tiled
+        expected_nodata = src.nodata
 
     # Check that both rasters are equal pixel-wise within a tolerance
     assert np.allclose(test_raster, expected_raster, equal_nan=True)
@@ -30,3 +34,12 @@ def test_plyflatten():
     # Check that both images have the same transform
     test_transform = profile['transform']
     assert np.allclose(test_transform, expected_transform)
+
+    test_is_tiled = profile['tiled']
+    assert test_is_tiled == expected_is_tiled
+
+    test_nodata = profile.get('nodata')
+    if expected_nodata and math.isnan(expected_nodata):
+        assert math.isnan(test_nodata)
+    else:
+        assert test_nodata == expected_nodata
