@@ -1,29 +1,79 @@
 include README.md
 include makefile
 
+# c/
 recursive-include c *.c *.h *.cpp *.pgm Makefile
 prune c/msmw
 prune c/test_colormesh
 
+# 3rdparty
+
+# iio/
 include 3rdparty/iio/iio.c
 include 3rdparty/iio/iio.h
 
+# mgm_multi/
 recursive-include 3rdparty/mgm_multi *
 prune 3rdparty/mgm_multi/data
 prune 3rdparty/mgm_multi/matlab
 
+# mgm/
 recursive-include 3rdparty/mgm *
 prune 3rdparty/mgm/data
 prune 3rdparty/mgm/matlab
 
+# tvl1flow/
 recursive-include 3rdparty/tvl1flow *
 
+# lsd/
 recursive-include 3rdparty/lsd *.c *.h Makefile
 
-include 3rdparty/imscript/Makefile
+# imscript/
+recursive-include 3rdparty/imscript Makefile TARGETS
+include 3rdparty/imscript/src/backflow.c
+include 3rdparty/imscript/src/bicubic.c
+include 3rdparty/imscript/src/bicubic_gray.c
+include 3rdparty/imscript/src/bilinear_interpolation.c
+include 3rdparty/imscript/src/colorcoordsf.c
+include 3rdparty/imscript/src/downsa.c
+include 3rdparty/imscript/src/drawsegment.c
+include 3rdparty/imscript/src/extrapolators.c
+include 3rdparty/imscript/src/fail.c
+include 3rdparty/imscript/src/fancy_image.c
+include 3rdparty/imscript/src/fancy_image.h
+include 3rdparty/imscript/src/getpixel.c
+include 3rdparty/imscript/src/help_stuff.c
+include 3rdparty/imscript/src/homographies.c
+include 3rdparty/imscript/src/homwarp.c
+include 3rdparty/imscript/src/iio.c
+include 3rdparty/imscript/src/iio.h
+include 3rdparty/imscript/src/imprintf.c
+include 3rdparty/imscript/src/marching_interpolation.c
+include 3rdparty/imscript/src/misc/abstract_dsf.c
+include 3rdparty/imscript/src/misc/cldmask.c
+include 3rdparty/imscript/src/misc/drawsegment.c
+include 3rdparty/imscript/src/misc/fail.c
+include 3rdparty/imscript/src/misc/iio.h
+include 3rdparty/imscript/src/misc/parsenumbers.c
+include 3rdparty/imscript/src/misc/pickopt.c
+include 3rdparty/imscript/src/misc/remove_small_cc.c
+include 3rdparty/imscript/src/misc/xfopen.c
+include 3rdparty/imscript/src/misc/xmalloc.c
+include 3rdparty/imscript/src/morsi.c
+include 3rdparty/imscript/src/parsenumbers.c
+include 3rdparty/imscript/src/pickopt.c
+include 3rdparty/imscript/src/plambda.c
+include 3rdparty/imscript/src/pview.c
+include 3rdparty/imscript/src/qauto.c
+include 3rdparty/imscript/src/random.c
+include 3rdparty/imscript/src/smapa.h
+include 3rdparty/imscript/src/spline.c
+include 3rdparty/imscript/src/synflow.c
+include 3rdparty/imscript/src/synflow_core.c
+include 3rdparty/imscript/src/tiff_octaves_rw.c
+include 3rdparty/imscript/src/vvector.h
+include 3rdparty/imscript/src/xfopen.c
+include 3rdparty/imscript/src/xmalloc.c
 recursive-include 3rdparty/imscript/bin *
-recursive-include 3rdparty/imscript/src *
-prune 3rdparty/imscript/src/misc/older
-prune 3rdparty/imscript/src/misc/unused
 
 global-exclude .git .travis.yml *.png
