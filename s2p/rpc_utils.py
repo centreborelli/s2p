@@ -288,8 +288,7 @@ def utm_roi_to_img_roi(rpc, roi):
     # project lon/lat vertices into the image
     if not isinstance(rpc, rpc_model.RPCModel):
         rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.projection(lon, lat, rpc.alt_offset)[:2] for (lon, lat) in
-               zip(box_lon, box_lat)]
+    img_pts = rpc.projection(box_lon, box_lat, rpc.alt_offset)
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
