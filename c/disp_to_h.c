@@ -4,73 +4,108 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "vvector.h"
 #include "iio.h"
 #include "rpc.h"
-#include "read_matrix.c"
+#include "fail.c"
+#include "parsenumbers.c"
+#include "pickopt.c"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338328
-#endif
 
 void utm_alt_zone(double *out, double lat, double lon, int zone);
 
-void applyHom(double outv[3], double M[3][3], double v[3]) {
-    MAT_DOT_VEC_3X3(outv, M, v);
-    outv[0] /= outv[2];
-    outv[1] /= outv[2];
-    outv[2] /= outv[2];
+static void apply_homography(double y[2], double h[9], double x[2])
+{
+    //                    h[0] h[1] h[2]
+    // The convention is: h[3] h[4] h[5]
+    //                    h[6] h[7] h[8]
+    double z = h[6]*x[0] + h[7]*x[1] + h[8];
+    double tmp = x[0];  // to enable calls like 'apply_homography(x, h, x)'
+    y[0] = (h[0]*x[0] + h[1]*x[1] + h[2]) / z;
+    y[1] = (h[3]*tmp  + h[4]*x[1] + h[5]) / z;
+}
+
+
+static double invert_homography(double o[9], double i[9])
+{
+    double det = i[0]*i[4]*i[8] + i[2]*i[3]*i[7] + i[1]*i[5]*i[6]
+               - i[2]*i[4]*i[6] - i[1]*i[3]*i[8] - i[0]*i[5]*i[7];
+    o[0] = (i[4]*i[8] - i[5]*i[7]) / det;
+    o[1] = (i[2]*i[7] - i[1]*i[8]) / det;
+    o[2] = (i[1]*i[5] - i[2]*i[4]) / det;
+    o[3] = (i[5]*i[6] - i[3]*i[8]) / det;
+    o[4] = (i[0]*i[8] - i[2]*i[6]) / det;
+    o[5] = (i[2]*i[3] - i[0]*i[5]) / det;
+    o[6] = (i[3]*i[7] - i[4]*i[6]) / det;
+    o[7] = (i[1]*i[6] - i[0]*i[7]) / det;
+    o[8] = (i[0]*i[4] - i[1]*i[3]) / det;
+    return det;
 }
 
 
 void disp_to_xyz(float *xyz, float *err,  // outputs
                  float *dispx, float *dispy, float *msk, int nx, int ny,  // inputs
-                 double Ha[3][3], double Hb[3][3],
-                 struct rpc *rpca, struct rpc *rpcb, int zone)
+                 double ha[9], double hb[9],
+                 struct rpc *rpca, struct rpc *rpcb, int zone,
+                 float orig_img_bounding_box[4])
 {
     // invert homographies
-    double det;
-    double invHa[3][3];
-    double invHb[3][3];
-    INVERT_3X3(invHa, det, Ha);
-    INVERT_3X3(invHb, det, Hb);
+    double ha_inv[9];
+    double hb_inv[9];
+    invert_homography(ha_inv, ha);
+    invert_homography(hb_inv, hb);
 
-    // handle UTM zone
-    bool hem;
+    // read image bounding box
+    float col_min = orig_img_bounding_box[0];
+    float col_max = orig_img_bounding_box[1];
+    float row_min = orig_img_bounding_box[2];
+    float row_max = orig_img_bounding_box[3];
 
-    int npoints = 0;
-    for (int y = 0; y < ny; y++)
-    for (int x = 0; x < nx; x++) {
-        int pos = x + nx*y;
-        if (msk[pos] <= 0) {
-            for (int k = 0; k < 3; k++)
-                xyz[3 * pos + k] = NAN;
-            err[pos] = NAN;
+    // initialize output images to nan
+    for (int row = 0; row < ny; row++)
+    for (int col = 0; col < nx; col++) {
+        int pix = col + nx*row;
+        err[pix] = NAN;
+        for (int k = 0; k < 3; k++)
+            xyz[3 * pix + k] = NAN;
+    }
+
+    // intermediate buffers
+    double p[2], q[2], lonlat[2], utm[2];
+    double e, z;
+
+    // loop over all the pixels of the input disp map
+    // a 3D point is produced for each non-masked disparity
+    for (int row = 0; row < ny; row++)
+    for (int col = 0; col < nx; col++) {
+        int pix = col + nx*row;
+        if (!msk[pix])
             continue;
-        }
-        double q0[3], q1[3];
-        double lonlat[2];
-        double utm[2];
-        double e, z;
-        double dx = dispx[pos];
-        double dy = dispy[pos];
-        double p0[3] = {x, y, 1};
-        double p1[3] = {x+dx, y+dy, 1};
-        applyHom(q0, invHa, p0);
-        applyHom(q1, invHb, p1);
 
-        // compute the coordinates
-        z = rpc_height(rpca, rpcb, q0[0], q0[1], q1[0], q1[1], &e);
-        eval_rpc(lonlat, rpca, q0[0], q0[1], z);
+        // compute coordinates of pix in the full reference image
+        double a[2] = {col, row};
+        apply_homography(p, ha_inv, a);
+
+        // check that it lies in the image domain bounding box
+        if (round(p[0]) < col_min || round(p[0]) > col_max ||
+            round(p[1]) < row_min || round(p[1]) > row_max)
+            continue;
+
+        // compute (lon, lat, alt) of the 3D point
+        double dx = dispx[pix];
+        double dy = dispy[pix];
+        double b[2] = {col + dx, row + dy};
+        apply_homography(q, hb_inv, b);
+        z = rpc_height(rpca, rpcb, p[0], p[1], q[0], q[1], &e);
+        eval_rpc(lonlat, rpca, p[0], p[1], z);
 
         // convert (lon, lat, alt) to utm
         utm_alt_zone(utm, lonlat[1], lonlat[0], zone);
 
         // store the output values
-        xyz[3 * pos + 0] = utm[0];
-        xyz[3 * pos + 1] = utm[1];
-        xyz[3 * pos + 2] = z;
-        err[pos] = e;
+        xyz[3 * pix + 0] = utm[0];
+        xyz[3 * pix + 1] = utm[1];
+        xyz[3 * pix + 2] = z;
+        err[pix] = e;
     }
 }
 
@@ -105,37 +140,81 @@ void count_3d_neighbors(int *count, float *xyz, int nx, int ny, float r, int p)
 }
 
 
+static void help(char *s)
+{
+    fprintf(stderr, "usage:\n\t"
+            "%s rpc_ref.xml rpc_sec.xml disp.tif heights.tif err.tif "
+            "[--mask mask.png] "
+            "[-href \"h1 ... h9\"] [-hsec \"h1 ... h9\"] "
+            "[--utm-zone ZONE] [--mask-orig msk.png] "
+            "[--lon-m l0] [--lon-M lf] [--lat-m l0] [--lat-M lf] "
+            "[--col-m x0] [--col-M xf] [--row-m y0] [--row-M yf]\n", s);
+}
+
+
 int main_disp_to_h(int c, char *v[])
 {
-    if (c != 9) {
-        fprintf(stderr, "usage:\n\t"
-                "%s rpca rpcb Ha Hb dispAB mskAB out_heights RPCerr utm_zone"
-              // 0   1   2    3   4   5      6       7         8      9
-                "\n", *v);
+    if (c < 6 || c > 48) {
+        help(v[0]);
         return EXIT_FAILURE;
     }
 
     // read input data
+    // mask
+    char *mask_path = pick_option(&c, &v, "-mask", "");
+
+    // rectifying homographies
+    double ha[9], hb[9];
+    int n_hom;
+    const char *hom_string_ref = pick_option(&c, &v, "href", "");
+    if (*hom_string_ref) {
+        double *ha = alloc_parse_doubles(9, hom_string_ref, &n_hom);
+        if (n_hom != 9)
+            fail("can not read 3x3 matrix from \"%s\"", hom_string_ref);
+    }
+    const char *hom_string_sec = pick_option(&c, &v, "hsec", "");
+    if (*hom_string_sec) {
+        double *hb = alloc_parse_doubles(9, hom_string_sec, &n_hom);
+        if (n_hom != 9)
+            fail("can not read 3x3 matrix from \"%s\"", hom_string_sec);
+    }
+
+    // utm zone
+    int zone = atoi(pick_option(&c, &v, "-utm-zone", ""));
+
+    // longitude-latitude bounding box
+    double lon_m = atof(pick_option(&c, &v, "-lon-m", "-inf"));
+    double lon_M = atof(pick_option(&c, &v, "-lon-M", "inf"));
+    double lat_m = atof(pick_option(&c, &v, "-lat-m", "-inf"));
+    double lat_M = atof(pick_option(&c, &v, "-lat-M", "inf"));
+
+    // x-y bounding box
+    double col_m = atof(pick_option(&c, &v, "-col-m", "-inf"));
+    double col_M = atof(pick_option(&c, &v, "-col-M", "inf"));
+    double row_m = atof(pick_option(&c, &v, "-row-m", "-inf"));
+    double row_M = atof(pick_option(&c, &v, "-row-M", "inf"));
+
+    // remaining positional arguments: rpcs, disparity map, output files
     struct rpc rpca[1], rpcb[1];
     read_rpc_file_xml(rpca, v[1]);
     read_rpc_file_xml(rpcb, v[2]);
-    double Ha[3][3], Hb[3][3];
-    read_matrix(Ha, v[3]);
-    read_matrix(Hb, v[4]);
-    char *fout_heights  = v[7];
-    char *fout_err = v[8];
-    int zone = atoi(v[9]);
+    char *disp_path = v[3];
+    char *fout_heights  = v[4];
+    char *fout_err = v[5];
 
     int nx, ny, nch;
     float *dispy;
-    float *dispx = iio_read_image_float_split(v[5], &nx, &ny, &nch);
+    float *dispx = iio_read_image_float_split(disp_path, &nx, &ny, &nch);
     if (nch > 1) dispy = dispx + nx*ny;
     else dispy = calloc(nx*ny, sizeof(*dispy));
-    float *msk  = iio_read_image_float_split(v[6], &nx, &ny, &nch);
+    float *msk  = iio_read_image_float_split(mask_path, &nx, &ny, &nch);
 
+    // triangulation
     float *xyz_map = calloc(nx*ny*3, sizeof(*xyz_map));
     float *errMap = calloc(nx*ny, sizeof(*errMap));
-    disp_to_xyz(xyz_map, errMap, dispx, dispy, msk, nx, ny, Ha, Hb, rpca, rpcb, zone);
+    float img_bbx[4] = {col_m, col_M, row_m, row_M};
+    disp_to_xyz(xyz_map, errMap, dispx, dispy, msk, nx, ny, ha, hb,
+                rpca, rpcb, zone, img_bbx);
 
     // save the height map and error map
     iio_save_image_float_vec(fout_heights, xyz_map, nx, ny, 3);

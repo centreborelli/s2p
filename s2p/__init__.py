@@ -234,17 +234,26 @@ def disparity_to_height(tile, i):
     print('triangulating tile {} {} pair {}...'.format(x, y, i))
     rpc1 = cfg['images'][0]['rpc']
     rpc2 = cfg['images'][i]['rpc']
-    H_ref = os.path.join(out_dir, 'H_ref.txt')
-    H_sec = os.path.join(out_dir, 'H_sec.txt')
+    H_ref = np.loadtxt(os.path.join(out_dir, 'H_ref.txt'))
+    H_sec = np.loadtxt(os.path.join(out_dir, 'H_sec.txt'))
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     rpc_err = os.path.join(out_dir, 'rpc_err.tif')
     out_mask = os.path.join(tile['dir'], 'mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
-    triangulation.height_map(height_map, x, y, w, h,
-                             rpc1, rpc2, H_ref, H_sec, disp, mask, rpc_err,
-                             out_mask, pointing)
+
+    with rasterio.open(disp, 'r') as f:
+        disp_img = f.read().squeeze()
+    with rasterio.open(mask, 'r') as f:
+        mask_rect_img = f.read().squeeze()
+    height_map_img = triangulation.height_map(x, y, w, h, rpc1, rpc2, H_ref,
+                                              H_sec, disp_img, mask_rect_img,
+                                              int(cfg['utm_zone'][:-1]),
+                                              A=np.loadtxt(pointing))
+
+    # write height map to a file
+    common.rasterio_write(height_map, height_map_img)
 
     if cfg['clean_intermediate']:
         common.remove(H_ref)
@@ -297,22 +306,16 @@ def disparity_to_ply(tile):
         common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)
 
     # compute the point cloud
-#    triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
-#                                          H_ref, H_sec, pointing, colors, extra,
-#                                          utm_zone=cfg['utm_zone'],
-#                                          llbbx=tuple(cfg['ll_bbx']),
-#                                          xybbx=(x, x+w, y, y+h),
-#                                          xymsk=mask_orig)
     with rasterio.open(disp, 'r') as f:
         disp_img = f.read().squeeze()
     with rasterio.open(mask_rect, 'r') as f:
         mask_rect_img = f.read().squeeze()
-    #TODO: add llbbx and xybbx
     xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
                                                np.loadtxt(H_ref), np.loadtxt(H_sec),
                                                disp_img, mask_rect_img,
                                                int(cfg['utm_zone'][:-1]),
-                                               np.loadtxt(pointing))
+                                               img_bbx=(x, x+w, y, y+h),
+                                               A=np.loadtxt(pointing))
 
 
     #TODO: add 3D filtering here

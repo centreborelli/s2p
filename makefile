@@ -111,7 +111,7 @@ tvl1:
 # rules to build a subset of imscript
 #
 
-IMSCRIPT = downsa backflow synflow imprintf qauto morsi cldmask remove_small_cc\
+IMSCRIPT = downsa backflow imprintf qauto morsi cldmask remove_small_cc\
 		   plambda homwarp pview
 
 imscript: $(BINDIR)
@@ -123,7 +123,7 @@ imscript: $(BINDIR)
 # rules to build s2p C/C++ programs
 #
 
-PROGRAMS = disp2ply colormesh bin2asc plyextrema morphoop
+PROGRAMS = colormesh bin2asc plyextrema morphoop
 LIB = libplyflatten.so disp_to_h.so
 LIBRARIES = $(addprefix $(LIBDIR)/,$(LIB))
 
@@ -152,9 +152,6 @@ $(SRCDIR)/triangulation.o: c/triangulation.c c/triangulation.h
 
 $(SRCDIR)/coordconvert.o: c/coordconvert.c c/coordconvert.h
 	$(CC) $(CFLAGS) -c $< -lm -o $@
-
-$(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
 
 $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)

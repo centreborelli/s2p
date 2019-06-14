@@ -7,6 +7,7 @@ import ctypes
 from ctypes import c_int, c_float, c_double, byref, POINTER
 from numpy.ctypeslib import ndpointer
 import numpy as np
+from scipy import ndimage
 
 from s2p import common
 from s2p.config import cfg
@@ -75,7 +76,7 @@ class RPCStruct(ctypes.Structure):
                 self.deny[i] = np.nan
 
 
-def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
+def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
     """
     Compute a height map from a disparity map, using RPC camera models.
 
@@ -86,6 +87,8 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
             and mask maps
         utm_zone (int): desired UTM zone number (between 1 and 60) for the
             output xyz map
+        img_bbx (4-tuple): col_min, col_max, row_min, row_max defining the
+            unrectified image domain to process.
         A (array): 3x3 array with the pointing correction matrix for im2
 
     Returns:
@@ -94,12 +97,16 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
         err: array of shape (h, w) where each pixel contains the triangulation
             error
     """
-    if A is not None:  # apply pointing correction
-        H2 = np.dot(H2, np.linalg.inv(A))
-
     # copy rpc coefficients to an RPCStruct object
     rpc1_c_struct = RPCStruct(rpc1)
     rpc2_c_struct = RPCStruct(rpc2)
+
+    # handle optional arguments
+    if A is not None:  # apply pointing correction
+        H2 = np.dot(H2, np.linalg.inv(A))
+
+    if img_bbx is None:
+        img_bbx = (-np.inf, np.inf, -np.inf, np.inf)
 
     # define the argument types of the disp_to_xyz function disp_to_h.so
     h, w = disp.shape
@@ -109,9 +116,10 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 c_int, c_int,
-                                ndpointer(dtype=c_double, shape=(3, 3)),
-                                ndpointer(dtype=c_double, shape=(3, 3)),
-                                POINTER(RPCStruct), POINTER(RPCStruct), c_int)
+                                ndpointer(dtype=c_double, shape=(9,)),
+                                ndpointer(dtype=c_double, shape=(9,)),
+                                POINTER(RPCStruct), POINTER(RPCStruct), c_int,
+                                ndpointer(dtype=c_float, shape=(4,)))
 
 
     # call the disp_to_xyz fonction from disp_to_h.so
@@ -120,110 +128,41 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
     dispx = disp.astype('float32')
     dispy = np.zeros((h, w), dtype='float32')
     msk = mask.astype('float32')
-    lib.disp_to_xyz(xyz, err, dispx, dispy, msk, w, h, H1, H2,
-                    byref(rpc1_c_struct), byref(rpc2_c_struct), utm_zone)
+    lib.disp_to_xyz(xyz, err, dispx, dispy, msk, w, h,
+                    H1.flatten(), H2.flatten(),
+                    byref(rpc1_c_struct), byref(rpc2_c_struct), utm_zone,
+                    np.asarray(img_bbx, dtype='float32'))
 
     return xyz, err
 
 
-def transfer_map(in_map, H, x, y, w, h, out_map):
-    """
-    Transfer the heights computed on the rectified grid to the original
-    Pleiades image grid.
-
-    Args:
-        in_map: path to the input map, usually a height map or a mask, sampled
-            on the rectified grid
-        H: path to txt file containing a numpy 3x3 array representing the
-            rectifying homography
-        x, y, w, h: four integers defining the rectangular ROI in the original
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle.
-        out_map: path to the output map
-    """
-    # write the inverse of the resampling transform matrix. In brief it is:
-    # homography * translation
-    # This matrix transports the coordinates of the original cropped and
-    # grid (the one desired for out_height) to the rectified cropped and
-    # grid (the one we have for height)
-    HH = np.dot(np.loadtxt(H), common.matrix_translation(x, y))
-
-    # apply the homography
-    # write the 9 coefficients of the homography to a string, then call synflow
-    # to produce the flow, then backflow to apply it
-    # zero:256x256 is the iio way to create a 256x256 image filled with zeros
-    hij = ' '.join(['%r' % num for num in HH.flatten()])
-    common.run('synflow hom "%s" zero:%dx%d /dev/null - | BILINEAR=1 backflow - %s %s' % (
-        hij, w, h, in_map, out_map))
-
-    # replace the -inf with nan in the heights map, because colormesh filter
-    # out nans but not infs
-    # implements: if isinf(x) then nan, else x
-    # common.run('plambda %s "x isinf nan x if" > %s' % (tmp_h, out_height))
-
-
-def height_map(out, x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, rpc_err,
-               out_filt, A=None):
+def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
 
     Args:
-        out: path to the output file
-        x, y, w, h: four integers defining the rectangular ROI in the original
-            image. (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle.
-        rpc1, rpc2: instances of the rpc_model.RPCModel class
-        H1, H2: path to txt files containing two 3x3 numpy arrays defining
-            the rectifying homographies
-        disp, mask: paths to the diparity and mask maps
-        rpc_err: path to the output rpc_error of triangulation
-        A (optional): path to txt file containing the pointing correction matrix
-            for im2
+        x, y, w, h (ints): rectangular AOI in the original image. (x, y) is the
+            top-left corner, and (w, h) are the dimensions of the rectangle.
+        rpc1, rpc2 (rpc_model.RPCModel): camera models
+        H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
+        disp, mask (array): 2D arrays of shape (h, w) representing the diparity
+            and mask maps
+        utm_zone (int): desired UTM zone number (between 1 and 60) for the
+            output xyz map
+        A (array): 3x3 array with the pointing correction matrix for im2
+
+    Returns:
+        array of shape (h, w) with the height map
     """
-    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A)
-    common.image_apply_homography()
-    transfer_map(xyz, H1, x, y, w, h, out)
+    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=A)
+    height_map = xyz[:, :, 2].squeeze()
 
-    # apply output filter
-    common.run('plambda {0} {1} "x 0 > y nan if" -o {1}'.format(out_filt, out))
-
-
-def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors, extra='',
-                            utm_zone=None, llbbx=None, xybbx=None, xymsk=None):
-    """
-    Computes a 3D point cloud from a disparity map.
-
-    Args:
-        out: path to the output ply file
-        disp, mask: paths to the diparity and mask maps
-        rpc1, rpc2: instances of the rpc_model.RPCModel class
-        H1, H2: path to txt files containing two 3x3 numpy arrays defining
-            the rectifying homographies
-        A: path to txt file containing the pointing correction matrix
-            for im2
-        colors: path to the png image containing the colors
-    """
-    href = " ".join(str(x) for x in np.loadtxt(H1).flatten())
-    hsec = " ".join(str(x) for x in np.dot(np.loadtxt(H2),
-                                           np.linalg.inv(np.loadtxt(A))).flatten())
-    utm = "--utm-zone %s" % utm_zone if utm_zone else ""
-    lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
-    xbb = "--col-m %s --col-M %s --row-m %s --row-M %s" % xybbx if xybbx else ""
-    msk = "--mask-orig %s" % xymsk if xymsk else ""
-
-    # write rpc coefficients to txt files
-    rpcfile1 = common.tmpfile('.txt')
-    rpcfile2 = common.tmpfile('.txt')
-    rpc1.write_to_file(rpcfile1)
-    rpc2.write_to_file(rpcfile2)
-
-    # run disp2ply
-    command = 'disp2ply {} {} {} {} {}'.format(out, disp, mask, rpcfile1, rpcfile2)
-    # extra is an optional additional channel in the ply. Its default value '' ignores it
-    command += ' {} {} -href "{}" -hsec "{}"'.format(colors, extra, href, hsec)
-    command += ' {} {} {} {}'.format(utm, lbb, xbb, msk)
-    common.run(command)
+    # transfer the rectified height map onto an unrectified height map
+    H = np.dot(H1, common.matrix_translation(x, y))
+    out = ndimage.affine_transform(np.nan_to_num(height_map).T, H,
+                                   output_shape=(w, h), order=1).T
+    return out
 
 
 def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
