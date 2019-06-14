@@ -2,19 +2,27 @@
 
 from __future__ import print_function
 
+import re
 import os
 import numpy as np
 import ctypes
 from numpy.ctypeslib import ndpointer
 
-from plyfile import PlyData, PlyElement
+from plyfile import PlyData
 import affine
 import pyproj
+
+from s2p import geographiclib
 
 # TODO: This is kind of ugly. Cleaner way to do this is to update
 # LD_LIBRARY_PATH, which we should do once we have a proper config file
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 lib = ctypes.CDLL(os.path.join(parent_dir, 'lib', 'libplyflatten.so'))
+
+
+class InvalidPlyCommentsError(Exception):
+    pass
+
 
 def plyflatten(cloud,
                xoff, yoff,
@@ -91,16 +99,9 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
     for cloud in clouds_list:
         plydata = PlyData.read(cloud)
         cloud_data = np.array(plydata.elements[0].data)
-        proj = "projection:"
-        utm_zone = [comment.split(proj)[-1] for comment in plydata.comments \
-                    if proj in comment][0].split()[-1]
-
-        # nb_extra_columns: z, r, g, b (all columns except x, y)
-        nb_extra_columns = len(cloud_data.dtype) - 2
         full_cloud += [np.array([cloud_data[el] for el in cloud_data.dtype.names]).astype(np.float64).T]
 
     full_cloud = np.concatenate(full_cloud)
-    nb_points = np.shape(full_cloud)[0]
 
     # region of interest (compute plyextrema if roi is None)
     if roi is not None:
@@ -120,20 +121,37 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
 
     # The copy() method will reorder to C-contiguous order by default:
     full_cloud = full_cloud.copy()
-    sigma = float("inf")  if sigma is None else sigma
+    sigma = float("inf") if sigma is None else sigma
     raster = plyflatten(full_cloud, xoff, yoff, resolution,
                         xsize, ysize,
                         radius, sigma)
 
-    utm = pyproj.Proj(proj='utm', zone=utm_zone[:-1], ellps='WGS84', datum='WGS84',
-                      south=(utm_zone[-1]=='S'))
+    utm_zone = utm_zone_from_ply(clouds_list[0])
+    utm_proj = geographiclib.utm_proj(utm_zone)
 
     # construct profile dict
     profile = dict()
     profile['tiled'] = True
     profile['nodata'] = float('nan')
-    profile['crs'] = utm.srs
+    profile['crs'] = utm_proj.srs
     profile['transform'] = affine.Affine(resolution, 0.0, xoff,
                                          0.0, -resolution, yoff)
 
     return raster, profile
+
+
+def utm_zone_from_ply(ply_path):
+    plydata = PlyData.read(ply_path)
+    regex = r"^projection: UTM (\d{1,2}[NS])"
+    utm_zone = None
+    for comment in plydata.comments:
+        s = re.search(regex, comment)
+        if s:
+            utm_zone = s.group(1)
+
+    if not utm_zone:
+        raise InvalidPlyCommentsError(
+            "Invalid header comments {} for ply file {}".format(plydata.comments, ply_path)
+        )
+
+    return utm_zone
