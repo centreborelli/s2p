@@ -130,10 +130,10 @@ LIBRARIES = $(addprefix $(LIBDIR)/,$(LIB))
 s2p: $(BINDIR) $(addprefix $(BINDIR)/,$(PROGRAMS)) $(LIBRARIES)
 
 $(SRCDIR)/iio.o: c/iio.c c/iio.h
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@ -fPIC
 
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@ -fPIC
 
 $(BINDIR)/bin2asc: c/bin2asc.c
 	$(CC) $(CFLAGS) $^ -o $@
