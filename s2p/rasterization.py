@@ -7,7 +7,7 @@ import numpy as np
 import ctypes
 from numpy.ctypeslib import ndpointer
 
-from plyfile import PlyData, PlyElement
+from plyfile import PlyData
 import affine
 import pyproj
 
@@ -92,15 +92,12 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
         plydata = PlyData.read(cloud)
         cloud_data = np.array(plydata.elements[0].data)
         proj = "projection:"
-        utm_zone = [comment.split(proj)[-1] for comment in plydata.comments \
+        utm_zone = [comment.split(proj)[-1] for comment in plydata.comments
                     if proj in comment][0].split()[-1]
 
-        # nb_extra_columns: z, r, g, b (all columns except x, y)
-        nb_extra_columns = len(cloud_data.dtype) - 2
         full_cloud += [np.array([cloud_data[el] for el in cloud_data.dtype.names]).astype(np.float64).T]
 
     full_cloud = np.concatenate(full_cloud)
-    nb_points = np.shape(full_cloud)[0]
 
     # region of interest (compute plyextrema if roi is None)
     if roi is not None:
@@ -120,7 +117,7 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
 
     # The copy() method will reorder to C-contiguous order by default:
     full_cloud = full_cloud.copy()
-    sigma = float("inf")  if sigma is None else sigma
+    sigma = float("inf") if sigma is None else sigma
     raster = plyflatten(full_cloud, xoff, yoff, resolution,
                         xsize, ysize,
                         radius, sigma)
