@@ -108,7 +108,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
     if img_bbx is None:
         img_bbx = (-np.inf, np.inf, -np.inf, np.inf)
 
-    # define the argument types of the disp_to_xyz function disp_to_h.so
+    # define the argument types of the disp_to_xyz function from disp_to_h.so
     h, w = disp.shape
     lib.disp_to_xyz.argtypes = (ndpointer(dtype=c_float, shape=(h, w, 3)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
@@ -122,7 +122,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
                                 ndpointer(dtype=c_float, shape=(4,)))
 
 
-    # call the disp_to_xyz fonction from disp_to_h.so
+    # call the disp_to_xyz function from disp_to_h.so
     xyz =  np.zeros((h, w, 3), dtype='float32')
     err =  np.zeros((h, w), dtype='float32')
     dispx = disp.astype('float32')
@@ -134,6 +134,43 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
                     np.asarray(img_bbx, dtype='float32'))
 
     return xyz, err
+
+
+def count_3d_neighbors(xyz, r, p):
+    """
+    Count 3D neighbors of a gridded set of 3D points.
+
+    Args:
+        xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
+            UTM easting, northing, and altitude of a 3D point.
+        r (float): filtering radius, in meters
+        p (int): the filering window has size 2p + 1, in pixels
+
+    Returns:
+        array of shape (h, w) with the count of the number of 3D points located
+        less than r meters from the current 3D point
+    """
+    h, w, d = xyz.shape
+    assert(d == 3)
+
+    # define the argument types of the count_3d_neighbors function from disp_to_h.so
+    lib.count_3d_neighbors.argtypes = (ndpointer(dtype=c_int, shape=(h, w)),
+                                       ndpointer(dtype=c_float, shape=(h, w, 3)),
+                                       c_int, c_int, c_float, c_int)
+
+    # call the count_3d_neighbors function from disp_to_h.so
+    out = np.zeros((h, w), dtype='int32')
+    lib.count_3d_neighbors(out, xyz, w, h, r, p)
+
+    return out
+
+
+def filter_xyz(xyz, r, n, img_gsd):
+    """
+    """
+    p = np.ceil(r / img_gsd).astype(int)
+    count = count_3d_neighbors(xyz, r, p)
+    xyz[count < n] = np.nan
 
 
 def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):

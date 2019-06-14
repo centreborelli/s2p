@@ -317,8 +317,8 @@ def disparity_to_ply(tile):
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
-
-    #TODO: add 3D filtering here
+    # 3D filtering
+    triangulation.filter_xyz(xyz_array, 10, 50, 0.72)
 
     # flatten the xyz array into a list and remove nan points
     xyz_list = xyz_array.reshape(-1, 3)
