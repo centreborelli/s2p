@@ -130,15 +130,9 @@ def build_cfg(user_cfg):
             if d in cfg['images'][i] and cfg['images'][i][d] is not None and not os.path.isabs(cfg['images'][i][d]):
                 cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
 
-    x = cfg['roi']['x']
-    y = cfg['roi']['y']
-    w = cfg['roi']['w']
-    h = cfg['roi']['h']
-
-    cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
-
     # get utm zone
     if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
+        x, y, w, h = [cfg['roi'][k] for k in ['x', 'y', 'w', 'h']]
         cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['img'], x, y, w, h)
 
 
