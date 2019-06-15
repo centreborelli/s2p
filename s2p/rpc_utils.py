@@ -621,3 +621,18 @@ def rpc_from_geotiff(geotiff_path):
     with rasterio.open(geotiff_path, 'r') as src:
         rpc_dict = src.tags(ns='RPC')
     return rpc_model.RPCModel(rpc_dict)
+
+
+def gsd_from_rpc(rpc):
+    """
+    Compute the ground sampling distance from an RPC camera model.
+
+    Args:
+        rpc (rpc_model.RPCModel): camera model
+
+    Returns:
+        float (meters per pixel)
+    """
+    a = geographiclib.lonlat_to_geocentric(*rpc.localization(0, 0, 0), 0)
+    b = geographiclib.lonlat_to_geocentric(*rpc.localization(1, 0, 0), 0)
+    return np.linalg.norm(np.asarray(b) - np.asarray(a))

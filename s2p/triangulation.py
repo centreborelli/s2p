@@ -167,6 +167,14 @@ def count_3d_neighbors(xyz, r, p):
 
 def filter_xyz(xyz, r, n, img_gsd):
     """
+    Discard (in place) points that have less than n points closer than r meters.
+
+    Args:
+        xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
+            UTM easting, northing, and altitude of a 3D point.
+        r (float): filtering radius, in meters
+        n (int): filtering threshold, in number of points
+        img_gsd (float): ground sampling distance, in meters / pix
     """
     p = np.ceil(r / img_gsd).astype(int)
     count = count_3d_neighbors(xyz, r, p)

@@ -132,5 +132,9 @@ cfg['stereo_regularity_multiplier'] = 1.0
 # MGM parameter: number of directions explored for regularization
 cfg['mgm_nb_directions'] = 8
 
+# remove isolated 3d points in height maps
+cfg['3d_filtering_r'] = 10  # radius in meters
+cfg['3d_filtering_n'] = 50  # number of points
+
 # clean height maps outliers
 cfg['cargarse_basura'] = True

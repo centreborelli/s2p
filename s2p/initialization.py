@@ -115,7 +115,7 @@ def build_cfg(user_cfg):
     # with the content of the user_cfg dictionary
     cfg.update(user_cfg)
 
-    # sets keys 'clr', 'cld' and 'roi' of the reference image to None if they
+    # set keys 'clr', 'cld' and 'roi' of the reference image to None if they
     # are not already defined. The default values of these optional arguments
     # can not be defined directly in the config.py module. They would be
     # overwritten by the previous update, because they are in a nested dict.
@@ -124,7 +124,7 @@ def build_cfg(user_cfg):
     cfg['images'][0].setdefault('roi')
     cfg['images'][0].setdefault('wat')
 
-    # Make sure that input data have absolute paths
+    # make sure that input data have absolute paths
     for i in range(len(cfg['images'])):
         for d in ['clr', 'cld', 'roi', 'wat', 'img']:
             if d in cfg['images'][i] and cfg['images'][i][d] is not None and not os.path.isabs(cfg['images'][i][d]):
@@ -134,6 +134,9 @@ def build_cfg(user_cfg):
     if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
         x, y, w, h = [cfg['roi'][k] for k in ['x', 'y', 'w', 'h']]
         cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['img'], x, y, w, h)
+
+    # get image ground sampling distance
+    cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpc'])
 
 
 def make_dirs():
