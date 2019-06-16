@@ -318,8 +318,9 @@ def disparity_to_ply(tile):
                                                A=np.loadtxt(pointing))
 
     # 3D filtering
-    triangulation.filter_xyz(xyz_array, cfg['3d_filtering_r'],
-                             cfg['3d_filtering_n'], cfg['gsd'])
+    if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
+        triangulation.filter_xyz(xyz_array, cfg['3d_filtering_r'],
+                                 cfg['3d_filtering_n'], cfg['gsd'])
 
     # flatten the xyz array into a list and remove nan points
     xyz_list = xyz_array.reshape(-1, 3)
