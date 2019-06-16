@@ -68,11 +68,11 @@ def check_parameters(d):
         d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpc'],
                                                 d['roi_utm'])
     elif 'roi_kml' in d:
-        # this call defines cfg['utm_zone'], cfg['ll_bbx'] and cfg['utm_bbx'] as side effects
+        # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpc'],
                                              d['roi_kml'], d.get('utm_zone'))
     elif 'roi_geojson' in d:
-        # this call defines cfg['utm_zone'], cfg['ll_bbx'] and cfg['utm_bbx'] as side effects
+        # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpc'],
                                                  d['roi_geojson'], d.get('utm_zone'))
     elif 'prv' in d['images'][0]:

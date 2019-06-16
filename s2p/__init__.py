@@ -299,7 +299,6 @@ def disparity_to_ply(tile):
     triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
                                           H_ref, H_sec, pointing, colors, extra,
                                           utm_zone=cfg['utm_zone'],
-                                          llbbx=tuple(cfg['ll_bbx']),
                                           xybbx=(x, x+w, y, y+h),
                                           xymsk=mask_orig)
 
@@ -412,8 +411,7 @@ def heights_to_ply(tile):
 
     triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpc'], H, colors,
-                                            utm_zone=cfg['utm_zone'],
-                                            llbbx=tuple(cfg['ll_bbx']))
+                                            utm_zone=cfg['utm_zone'])
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (plyfile, plyextrema))

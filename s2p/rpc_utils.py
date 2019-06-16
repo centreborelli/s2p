@@ -364,8 +364,9 @@ def roi_process(rpc, ll_poly, utm_zone=None):
     bounding box in image coordinates
 
     Args:
-        rpc: instance of the rpc_model.RPCModel class, or path to the xml file
-        ll_poly: numpy array of (longitude, latitude) defining the polygon
+        rpc (rpc_model.RPCModel): camera model
+        ll_poly (array): 2D array of shape (n, 2) containing the vertices
+            (longitude, latitude) of the polygon
         utm_zone: force the zone number to be used when defining `utm_bbx`.
             If not specified, the default UTM zone for the given geography
             is used.
@@ -375,20 +376,11 @@ def roi_process(rpc, ll_poly, utm_zone=None):
             (ROI) in the image. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
     """
-    # save lon lat bounding box to cfg dictionary
-    lon_min = min(ll_poly[:, 0])
-    lon_max = max(ll_poly[:, 0])
-    lat_min = min(ll_poly[:, 1])
-    lat_max = max(ll_poly[:, 1])
-    cfg['ll_bbx'] = (lon_min, lon_max, lat_min, lat_max)
-
-    # convert lon lat bbox to utm
     if not utm_zone:
-        utm_zone = geographiclib.compute_utm_zone(
-            (lon_min + lon_max) * .5, (lat_min + lat_max) * .5
-        )
-
+        utm_zone = geographiclib.compute_utm_zone(*ll_poly.mean(axis=0))
     cfg['utm_zone'] = utm_zone
+
+    # convert lon lat polygon to utm
     utm_proj = geographiclib.utm_proj(utm_zone)
     easting, northing = pyproj.transform(
         pyproj.Proj(init="epsg:4326"), utm_proj, ll_poly[:, 0], ll_poly[:, 1]
@@ -400,9 +392,7 @@ def roi_process(rpc, ll_poly, utm_zone=None):
     cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image
-    if not isinstance(rpc, rpc_model.RPCModel):
-        rpc = rpc_model.RPCModel(rpc)
-    img_pts = [rpc.projection(p[0], p[1], rpc.alt_offset)[:2] for p in ll_poly]
+    img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], rpc.alt_offset)
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
@@ -435,7 +425,7 @@ def generate_point_mesh(col_range, row_range, alt_range):
             (0*cols+  rows[:,np.newaxis]+0*alts[:,np.newaxis,np.newaxis]).reshape(-1),\
             (0*cols+0*rows[:,np.newaxis]+  alts[:,np.newaxis,np.newaxis]).reshape(-1)
 
-    return (cols, rows, alts)
+    return cols, rows, alts
 
 
 def ground_control_points(rpc, x, y, w, h, m, M, n):

@@ -134,6 +134,3 @@ cfg['mgm_nb_directions'] = 8
 
 # clean height maps outliers
 cfg['cargarse_basura'] = True
-
-# longitude/latitude bounding box
-cfg['ll_bbx'] = ("-inf", "inf", "-inf", "inf")
