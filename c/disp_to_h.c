@@ -122,13 +122,17 @@ float squared_distance_between_3d_points(float a[3], float b[3])
 void count_3d_neighbors(int *count, float *xyz, int nx, int ny, float r, int p)
 {
     // count the 3d neighbors of each point
-    for (int y = p; y < ny - p; y++)
-    for (int x = p; x < nx - p; x++) {
+    for (int y = 0; y < ny; y++)
+    for (int x = 0; x < nx; x++) {
         int pos = x + nx * y;
         float *v = xyz + pos * 3;
         int c = 0;
-        for (int i = -p; i <= p; i++)
-        for (int j = -p; j <= p; j++) {
+        int i0 = y > p ? -p : -y;
+        int i1 = y < ny - p ? p : ny - y - 1;
+        int j0 = x > p ? -p : -x;
+        int j1 = x < nx - p ? p : nx - x - 1;
+        for (int i = i0; i <= i1; i++)
+        for (int j = j0; j <= j1; j++) {
             float *u = xyz + (x + j + nx * (y + i)) * 3;
             float d = squared_distance_between_3d_points(u, v);
             if (d < r*r) {
@@ -147,7 +151,6 @@ static void help(char *s)
             "[--mask mask.png] "
             "[-href \"h1 ... h9\"] [-hsec \"h1 ... h9\"] "
             "[--utm-zone ZONE] [--mask-orig msk.png] "
-            "[--lon-m l0] [--lon-M lf] [--lat-m l0] [--lat-M lf] "
             "[--col-m x0] [--col-M xf] [--row-m y0] [--row-M yf]\n", s);
 }
 
@@ -159,8 +162,7 @@ int main_disp_to_h(int c, char *v[])
         return EXIT_FAILURE;
     }
 
-    // read input data
-    // mask
+    // read input mask
     char *mask_path = pick_option(&c, &v, "-mask", "");
 
     // rectifying homographies
@@ -181,12 +183,6 @@ int main_disp_to_h(int c, char *v[])
 
     // utm zone
     int zone = atoi(pick_option(&c, &v, "-utm-zone", ""));
-
-    // longitude-latitude bounding box
-    double lon_m = atof(pick_option(&c, &v, "-lon-m", "-inf"));
-    double lon_M = atof(pick_option(&c, &v, "-lon-M", "inf"));
-    double lat_m = atof(pick_option(&c, &v, "-lat-m", "-inf"));
-    double lat_M = atof(pick_option(&c, &v, "-lat-M", "inf"));
 
     // x-y bounding box
     double col_m = atof(pick_option(&c, &v, "-col-m", "-inf"));
@@ -211,14 +207,14 @@ int main_disp_to_h(int c, char *v[])
 
     // triangulation
     float *xyz_map = calloc(nx*ny*3, sizeof(*xyz_map));
-    float *errMap = calloc(nx*ny, sizeof(*errMap));
+    float *err_map = calloc(nx*ny, sizeof(*err_map));
     float img_bbx[4] = {col_m, col_M, row_m, row_M};
-    disp_to_xyz(xyz_map, errMap, dispx, dispy, msk, nx, ny, ha, hb,
+    disp_to_xyz(xyz_map, err_map, dispx, dispy, msk, nx, ny, ha, hb,
                 rpca, rpcb, zone, img_bbx);
 
     // save the height map and error map
     iio_save_image_float_vec(fout_heights, xyz_map, nx, ny, 3);
-    iio_save_image_float_vec(fout_err, errMap, nx, ny, 1);
+    iio_save_image_float_vec(fout_err, err_map, nx, ny, 1);
     return 0;
 }
 
