@@ -47,7 +47,7 @@ requirements = ['numpy',
                 'urllib3<1.25',  # This is a temporary hack to fix https://github.com/boto/botocore/issues/1733 until next release of botocore
                 'rasterio[s3,test]>=1.0.14',
                 'utm',
-                'pyproj',
+                'pyproj>=2.0.2',
                 'beautifulsoup4[lxml]',
                 'plyfile',
                 'ransac',
