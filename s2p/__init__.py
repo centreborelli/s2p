@@ -223,7 +223,6 @@ def disparity_to_height(tile, i):
         i: index of the processed pair.
     """
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
-    height_map = os.path.join(out_dir, 'height_map.tif')
     x, y, w, h = tile['coordinates']
 
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
@@ -238,8 +237,6 @@ def disparity_to_height(tile, i):
     H_sec = np.loadtxt(os.path.join(out_dir, 'H_sec.txt'))
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
-    rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-    out_mask = os.path.join(tile['dir'], 'mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
 
@@ -247,20 +244,19 @@ def disparity_to_height(tile, i):
         disp_img = f.read().squeeze()
     with rasterio.open(mask, 'r') as f:
         mask_rect_img = f.read().squeeze()
-    height_map_img = triangulation.height_map(x, y, w, h, rpc1, rpc2, H_ref,
-                                              H_sec, disp_img, mask_rect_img,
-                                              int(cfg['utm_zone'][:-1]),
-                                              A=np.loadtxt(pointing))
+    height_map = triangulation.height_map(x, y, w, h, rpc1, rpc2, H_ref, H_sec,
+                                          disp_img, mask_rect_img,
+                                          int(cfg['utm_zone'][:-1]),
+                                          A=np.loadtxt(pointing))
 
     # write height map to a file
-    common.rasterio_write(height_map, height_map_img)
+    common.rasterio_write(os.path.join(out_dir, 'height_map.tif'), height_map)
 
     if cfg['clean_intermediate']:
         common.remove(H_ref)
         common.remove(H_sec)
         common.remove(disp)
         common.remove(mask)
-        common.remove(rpc_err)
 
 
 def disparity_to_ply(tile):
