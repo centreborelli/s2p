@@ -207,6 +207,14 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
     H = np.dot(H1, common.matrix_translation(x, y))
     out = ndimage.affine_transform(np.nan_to_num(height_map).T, H,
                                    output_shape=(w, h), order=1).T
+
+    # nearest-neighbor interpolation of nan locations in the resampled image
+    if np.isnan(height_map).any():
+        i = ndimage.affine_transform(np.isnan(height_map).T, H,
+                                     output_shape=(w, h), order=0).T
+        i = ndimage.binary_dilation(i, structure=np.ones((3, 3)))
+        out[i] = np.nan  # put nans back in the resampled image
+
     return out
 
 
