@@ -47,13 +47,14 @@ def check_parameters(d):
     if 'images' not in d or len(d['images']) < 2:
         print('ERROR: missing paths to input images')
         sys.exit(1)
-    for i in range(len(d['images'])):
-        img = d['images'][i]
+    for img in d['images']:
         if not dict_has_keys(img, ['img']):
             print('ERROR: missing img paths for image', img)
             sys.exit(1)
-        if not dict_has_keys(img, ['rpc']) or img['rpc'] == '':
-            img['rpc'] = rpc_utils.rpc_from_geotiff(img['img'])
+
+    # read RPCs
+    for img in d['images']:
+        img['rpc'] = rpc_utils.rpc_from_geotiff(img['img'])
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:
