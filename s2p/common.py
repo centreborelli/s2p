@@ -93,7 +93,7 @@ def run(cmd, env=os.environ):
 
     except subprocess.CalledProcessError as e:
         # raise a custom exception because the CalledProcessError causes the
-        # pool to crash
+        # pool to crash in python2
         raise RunFailure({"command": e.cmd, "output": e.output})
 
 

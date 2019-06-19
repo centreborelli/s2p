@@ -92,15 +92,9 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args):
         except multiprocessing.TimeoutError:
             print("Timeout while running %s" % str(r))
             outputs.append(None)
-        except common.RunFailure as e:
-            print("FAILED call: ", e.args[0]["command"])
-            print("\toutput: ", e.args[0]["output"])
-            outputs.append(None)
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
-        except Exception as e:
-            outputs.append(None)
 
     pool.close()
     pool.join()
