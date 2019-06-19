@@ -94,8 +94,7 @@ def run(cmd, env=os.environ):
     except subprocess.CalledProcessError as e:
         # raise a custom exception because the CalledProcessError causes the
         # pool to crash
-        raise RunFailure({"command": e.cmd, "environment": env, "output":
-                          e.output})
+        raise RunFailure({"command": e.cmd, "output": e.output})
 
 
 def mkdir_p(path):
