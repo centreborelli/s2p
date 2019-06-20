@@ -1,5 +1,4 @@
 # s2p (Satellite Stereo Pipeline) testing module
-# Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
 import os
 import numpy as np
@@ -10,7 +9,7 @@ from tests_utils import data_path
 
 def test_matches_from_rpc():
     """
-    Test for the rpc_model and rpc_utils modules
+    Test for rpc_utils.matches_from_rpc().
     """
     r1 = rpc_utils.rpc_from_geotiff(data_path(os.path.join('input_pair', 'img_01.tif')))
     r2 = rpc_utils.rpc_from_geotiff(data_path(os.path.join('input_pair', 'img_02.tif')))
