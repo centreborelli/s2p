@@ -24,21 +24,45 @@ in several small tiles and process them in parallel.
 Its main source code repository is https://github.com/cmla/s2p.
 
 
-# Installation and dependencies
+# Dependencies
 
-Required dependencies (Ubuntu 16.04):
+## GDAL
+The main dependency is GDAL. Version 2.1.0 or newer is required.
 
-    add-apt-repository -y ppa:ubuntugis/ppa  # The repository is added so that the version >= 2.1 of gdal is installed (requirement)
-    apt-get update
-    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-numpy python-pip
+### On Ubuntu
+`gdal` can be installed with `apt-get`. In order to get a recent version we
+recommend adding the PPA `ubuntugis-unstable` (first command below):
 
-`gdal` version must be 2.1.0 or newer.
+    sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+    sudo apt-get update
+    sudo apt-get install libgdal-dev gdal-bin
 
-## For users: install s2p from PyPI
+### On macOS
+[Download](http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.4.dmg)
+and install the `.dmg` file. Update your `PATH` after the installation by
+running this command:
+
+    export PATH="$PATH:/Library/Frameworks/GDAL.framework/Programs"
+
+Copy it in your `~/.profile`.
+
+## Other dependencies (cmake, geographiclib, fftw, gsl)
+
+On Ubuntu:
+
+    apt-get install build-essential cmake geographiclib-tools libgeographic-dev libfftw3-dev libgeotiff-dev libtiff5-dev libgsl-dev
+
+On macOS:
+
+    brew install cmake geographiclib fftw gsl
+
+
+# Installation
 
     pip install s2p
 
-## For developers: install s2p from sources
+Alternatively, if you want to get the latest commit or want to edit the
+sources, install it in editable mode from a git clone:
 
     git clone https://github.com/cmla/s2p.git --recursive
     cd s2p
@@ -115,12 +139,6 @@ y) of its top-left corner, and its dimensions (w, h) in pixels. These four
 numbers must be given in the `json` configuration file, as in the `test.json`
 example file. They are ignored if the parameter `'full_img'` is set to `true`.
 In that case the full image will be processed.
-
-If neither the ROI definition or the `'full_img'` flag are present in the
-configuration file, then a preview of the reference image must be provided. The
-ROI will be selected interactively on that preview. The path of the preview
-file must be given by the key `'prv'` of the `'images'[0]` dictionary (as in
-the example).
 
 #### File paths in json configuration files
 
