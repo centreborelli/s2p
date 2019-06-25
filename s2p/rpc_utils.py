@@ -393,6 +393,7 @@ def roi_process(rpc, ll_poly, utm_zone=None):
 
     # project lon lat vertices into the image
     img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], rpc.alt_offset)
+    img_pts = list(zip(*img_pts))
 
     # return image roi
     x, y, w, h = common.bounding_box2D(img_pts)
