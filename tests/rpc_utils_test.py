@@ -22,3 +22,22 @@ def test_matches_from_rpc():
     np.testing.assert_equal(test_matches.shape[0], 125, verbose=True)
     np.testing.assert_allclose(test_matches, expected_matches, rtol=0.01,
                                atol=0.1, verbose=True)
+
+
+def test_roi_process():
+    """
+    Test for rpc_utils.roi_process().
+    """
+    rpc = rpc_utils.rpc_from_geotiff(data_path(os.path.join('input_pair',
+                                                            'img_01.tif')))
+    ll_poly = np.asarray([[55.649517, -21.231542],
+                          [55.651502, -21.231542],
+                          [55.651502, -21.229672],
+                          [55.649517, -21.229672]])
+    computed = [rpc_utils.roi_process(rpc, ll_poly)[k] for k in
+                ['x', 'y', 'w', 'h']]
+    expected = (271.48531909338635,
+                1.5901905457030807,
+                407.3786143153775,
+                413.5301010405019)
+    np.testing.assert_allclose(computed, expected, atol=1e-3)
