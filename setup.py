@@ -53,7 +53,7 @@ requirements = ['numpy',
                 'requests']
 
 setup(name="s2p",
-      version="1.0b16",
+      version="1.0b17",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
