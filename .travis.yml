@@ -27,4 +27,4 @@ install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then pip install -e .; else pip3 install -e .; fi
 
 script:
-  - pytest --cov=s2p tests
+  - pytest --cov=s2p --cov-report term-missing tests
