@@ -633,6 +633,6 @@ def gsd_from_rpc(rpc):
     Returns:
         float (meters per pixel)
     """
-    a = geographiclib.lonlat_to_geocentric(*rpc.localization(0, 0, 0), 0)
-    b = geographiclib.lonlat_to_geocentric(*rpc.localization(1, 0, 0), 0)
+    a = geographiclib.lonlat_to_geocentric(*rpc.localization(0, 0, 0), alt=0)
+    b = geographiclib.lonlat_to_geocentric(*rpc.localization(1, 0, 0), alt=0)
     return np.linalg.norm(np.asarray(b) - np.asarray(a))
