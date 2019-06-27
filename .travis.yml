@@ -28,3 +28,4 @@ install:
 
 script:
   - pytest --cov=s2p --cov-report term-missing tests
+  - printenv
