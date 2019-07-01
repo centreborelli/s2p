@@ -77,3 +77,37 @@ def utm_proj(utm_zone):
         datum='WGS84',
         south=(hemisphere == 'S'),
     )
+
+
+def lonlat_to_utm(lon, lat, utm_zone):
+    """
+    Compute UTM easting and northing of a given lon, lat point.
+
+    Args:
+        lon (float): longitude
+        lat (float): latitude
+        utm_zone (str): UTM zone, e.g. "14N" or "14S"
+
+    Returns:
+        easting, northing
+    """
+    e, n = pyproj.transform(pyproj.Proj(init="epsg:4326"), utm_proj(utm_zone),
+                            lon, lat)
+    return e, n
+
+
+def lonlat_to_geocentric(lon, lat, alt):
+    """
+    Compute geocentric cartesian coordinates of a given lon, lat, alt point.
+
+    Args:
+        lon (float or list): longitude(s)
+        lat (float or list): latitude(s)
+        alt (float or list): latitude(s)
+
+    Returns:
+        three floats or three lists of floats
+    """
+    x, y, z = pyproj.transform(pyproj.Proj(init="epsg:4326"),
+                               pyproj.Proj(init="epsg:4978"), lon, lat, alt)
+    return x, y, z

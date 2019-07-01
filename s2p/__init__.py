@@ -45,6 +45,7 @@ from s2p import triangulation
 from s2p import fusion
 from s2p import rasterization
 from s2p import visualisation
+from s2p import ply
 
 
 def pointing_correction(tile, i):
@@ -222,7 +223,6 @@ def disparity_to_height(tile, i):
         i: index of the processed pair.
     """
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
-    height_map = os.path.join(out_dir, 'height_map.tif')
     x, y, w, h = tile['coordinates']
 
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
@@ -233,24 +233,30 @@ def disparity_to_height(tile, i):
     print('triangulating tile {} {} pair {}...'.format(x, y, i))
     rpc1 = cfg['images'][0]['rpc']
     rpc2 = cfg['images'][i]['rpc']
-    H_ref = os.path.join(out_dir, 'H_ref.txt')
-    H_sec = os.path.join(out_dir, 'H_sec.txt')
+    H_ref = np.loadtxt(os.path.join(out_dir, 'H_ref.txt'))
+    H_sec = np.loadtxt(os.path.join(out_dir, 'H_sec.txt'))
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
-    rpc_err = os.path.join(out_dir, 'rpc_err.tif')
-    out_mask = os.path.join(tile['dir'], 'mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
-    triangulation.height_map(height_map, x, y, w, h,
-                             rpc1, rpc2, H_ref, H_sec, disp, mask, rpc_err,
-                             out_mask, pointing)
+
+    with rasterio.open(disp, 'r') as f:
+        disp_img = f.read().squeeze()
+    with rasterio.open(mask, 'r') as f:
+        mask_rect_img = f.read().squeeze()
+    height_map = triangulation.height_map(x, y, w, h, rpc1, rpc2, H_ref, H_sec,
+                                          disp_img, mask_rect_img,
+                                          int(cfg['utm_zone'][:-1]),
+                                          A=np.loadtxt(pointing))
+
+    # write height map to a file
+    common.rasterio_write(os.path.join(out_dir, 'height_map.tif'), height_map)
 
     if cfg['clean_intermediate']:
         common.remove(H_ref)
         common.remove(H_sec)
         common.remove(disp)
         common.remove(mask)
-        common.remove(rpc_err)
 
 
 def disparity_to_ply(tile):
@@ -296,11 +302,36 @@ def disparity_to_ply(tile):
         common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)
 
     # compute the point cloud
-    triangulation.disp_map_to_point_cloud(ply_file, disp, mask_rect, rpc1, rpc2,
-                                          H_ref, H_sec, pointing, colors, extra,
-                                          utm_zone=cfg['utm_zone'],
-                                          xybbx=(x, x+w, y, y+h),
-                                          xymsk=mask_orig)
+    with rasterio.open(disp, 'r') as f:
+        disp_img = f.read().squeeze()
+    with rasterio.open(mask_rect, 'r') as f:
+        mask_rect_img = f.read().squeeze()
+    xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
+                                               np.loadtxt(H_ref), np.loadtxt(H_sec),
+                                               disp_img, mask_rect_img,
+                                               int(cfg['utm_zone'][:-1]),
+                                               img_bbx=(x, x+w, y, y+h),
+                                               A=np.loadtxt(pointing))
+
+    # 3D filtering
+    if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
+        triangulation.filter_xyz(xyz_array, cfg['3d_filtering_r'],
+                                 cfg['3d_filtering_n'], cfg['gsd'])
+
+    # flatten the xyz array into a list and remove nan points
+    xyz_list = xyz_array.reshape(-1, 3)
+    valid = np.all(np.isfinite(xyz_list), axis=1)
+
+    # write the point cloud to a ply file
+    with rasterio.open(colors, 'r') as f:
+        img = f.read()
+    colors_list = img.reshape(-1, img.shape[0])
+    ply.write_3d_point_cloud_to_ply(ply_file, xyz_list[valid],
+                                    colors=colors_list[valid],
+                                    extra_properties=None,
+                                    extra_properties_names=None,
+                                    comments=["created by S2P",
+                                              "projection: UTM {}".format(cfg['utm_zone'])])
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))

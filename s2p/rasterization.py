@@ -8,11 +8,9 @@ import numpy as np
 import ctypes
 from numpy.ctypeslib import ndpointer
 
-from plyfile import PlyData
 import affine
-import pyproj
 
-from s2p import geographiclib
+from s2p import geographiclib, ply
 
 # TODO: This is kind of ugly. Cleaner way to do this is to update
 # LD_LIBRARY_PATH, which we should do once we have a proper config file
@@ -97,9 +95,8 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
     # read points clouds
     full_cloud = list()
     for cloud in clouds_list:
-        plydata = PlyData.read(cloud)
-        cloud_data = np.array(plydata.elements[0].data)
-        full_cloud += [np.array([cloud_data[el] for el in cloud_data.dtype.names]).astype(np.float64).T]
+        cloud_data, _ = ply.read_3d_point_cloud_from_ply(cloud)
+        full_cloud.append(cloud_data.astype(np.float64))
 
     full_cloud = np.concatenate(full_cloud)
 
@@ -141,17 +138,17 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
 
 
 def utm_zone_from_ply(ply_path):
-    plydata = PlyData.read(ply_path)
+    _, comments = ply.read_3d_point_cloud_from_ply(ply_path)
     regex = r"^projection: UTM (\d{1,2}[NS])"
     utm_zone = None
-    for comment in plydata.comments:
+    for comment in comments:
         s = re.search(regex, comment)
         if s:
             utm_zone = s.group(1)
 
     if not utm_zone:
         raise InvalidPlyCommentsError(
-            "Invalid header comments {} for ply file {}".format(plydata.comments, ply_path)
+            "Invalid header comments {} for ply file {}".format(comments, ply_path)
         )
 
     return utm_zone

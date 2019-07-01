@@ -111,7 +111,7 @@ tvl1:
 # rules to build a subset of imscript
 #
 
-IMSCRIPT = downsa backflow synflow imprintf qauto morsi cldmask remove_small_cc\
+IMSCRIPT = downsa backflow imprintf qauto morsi cldmask remove_small_cc\
 		   plambda homwarp pview
 
 imscript: $(BINDIR)
@@ -123,17 +123,17 @@ imscript: $(BINDIR)
 # rules to build s2p C/C++ programs
 #
 
-PROGRAMS = disp_to_h disp2ply colormesh bin2asc plyextrema morphoop
-LIB = libplyflatten.so
+PROGRAMS = colormesh bin2asc plyextrema morphoop
+LIB = libplyflatten.so disp_to_h.so
 LIBRARIES = $(addprefix $(LIBDIR)/,$(LIB))
 
 s2p: $(BINDIR) $(addprefix $(BINDIR)/,$(PROGRAMS)) $(LIBRARIES)
 
 $(SRCDIR)/iio.o: c/iio.c c/iio.h
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@ -fPIC
 
 $(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@ -fPIC
 
 $(BINDIR)/bin2asc: c/bin2asc.c
 	$(CC) $(CFLAGS) $^ -o $@
@@ -141,8 +141,8 @@ $(BINDIR)/bin2asc: c/bin2asc.c
 $(BINDIR)/morphoop: $(SRCDIR)/iio.o $(SRCDIR)/morphoop.c
 	$(CC) $(CFLAGS) $^ $(IIOLIBS) -o $@
 
-$(BINDIR)/disp_to_h: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
-	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o c/disp_to_h.c $(IIOLIBS) -o $@
+$(LIBDIR)/disp_to_h.so: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
+	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp_to_h.c $(IIOLIBS) -lGeographic -o $@ -fPIC -shared
 
 $(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
@@ -153,9 +153,6 @@ $(SRCDIR)/triangulation.o: c/triangulation.c c/triangulation.h
 $(SRCDIR)/coordconvert.o: c/coordconvert.c c/coordconvert.h
 	$(CC) $(CFLAGS) -c $< -lm -o $@
 
-$(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
-
 $(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
 	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
 
@@ -164,7 +161,7 @@ $(LIBDIR)/libplyflatten.so: $(SRCDIR)/plyflatten.c
 
 # Geographiclib wrappers
 $(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
-	$(CXX) $(CXXFLAGS) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $^ -o $@ -fPIC
 
 $(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
