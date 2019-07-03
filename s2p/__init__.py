@@ -325,7 +325,7 @@ def disparity_to_ply(tile):
     # write the point cloud to a ply file
     with rasterio.open(colors, 'r') as f:
         img = f.read()
-    colors_list = img.reshape(-1, img.shape[0])
+    colors_list = img.transpose(1, 2, 0).reshape(-1, img.shape[0])
     ply.write_3d_point_cloud_to_ply(ply_file, xyz_list[valid],
                                     colors=colors_list[valid],
                                     extra_properties=None,
