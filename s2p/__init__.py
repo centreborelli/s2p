@@ -433,7 +433,7 @@ def heights_to_ply(tile):
     # H is the homography transforming the coordinates system of the original
     # full size image into the coordinates system of the crop
     H = np.dot(np.diag([1, 1, 1]), common.matrix_translation(-x, -y))
-    colors = os.path.join(out_dir, 'ref.png')
+    colors = os.path.join(out_dir, 'ref.tif')
     if cfg['images'][0]['clr']:
         common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
     else:
