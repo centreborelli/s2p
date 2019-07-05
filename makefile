@@ -25,7 +25,7 @@ homography:
 	cp c/homography/homography bin
 
 sift:
-	$(MAKE) -j -C 3rdparty/sift/simd
+	$(MAKE) -j -C 3rdparty/sift/simd libsift4ctypes.so
 	cp 3rdparty/sift/simd/libsift4ctypes.so lib
 
 
