@@ -46,15 +46,15 @@ running this command:
 
 Copy it in your `~/.profile`.
 
-## Other dependencies (cmake, geographiclib, fftw, gsl)
+## Other dependencies (geographiclib, fftw)
 
 On Ubuntu:
 
-    apt-get install build-essential cmake geographiclib-tools libgeographic-dev libfftw3-dev libgeotiff-dev libtiff5-dev libgsl-dev
+    apt-get install build-essential geographiclib-tools libgeographic-dev libfftw3-dev libgeotiff-dev libtiff5-dev
 
 On macOS:
 
-    brew install cmake geographiclib fftw gsl
+    brew install geographiclib fftw
 
 
 # Installation

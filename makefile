@@ -1,13 +1,176 @@
 # the following two options are used to control all C and C++ compilations
-export CFLAGS =   -march=native -O3
+export CFLAGS   = -march=native -O3
 export CXXFLAGS = -march=native -O3
 
 # these options are only used for the programs directly inside "./c/"
-LDLIBS = -lstdc++
-IIOLIBS = -lz -ltiff -lpng -ljpeg -lm
-GEOLIBS = -lgeotiff -ltiff
-GDAL_LIBS=`gdal-config --libs`
-GDAL_CFLAGS=`gdal-config --cflags`
+IIOLIBS     = -lz -ltiff -lpng -ljpeg -lm
+
+
+# default rule builds only the programs necessary for the test
+default: homography sift mgm_multi tvl1 lsd executables libraries
+
+# the "all" rule builds three further correlators
+all: default msmw3 sgbm
+
+# test for the default configuration
+test: default
+	env PYTHONPATH=. pytest tests
+
+#
+# four standard "modules": homography, sift, mgm, and mgm_multi
+#
+
+homography:
+	$(MAKE) -j -C c/homography
+	cp c/homography/homography bin
+
+sift:
+	$(MAKE) -j -C 3rdparty/sift/simd
+	cp 3rdparty/sift/simd/libsift4ctypes.so lib
+
+
+mgm_multi:
+	$(MAKE) -C 3rdparty/mgm_multi
+	cp 3rdparty/mgm_multi/mgm       bin
+	cp 3rdparty/mgm_multi/mgm_multi bin
+
+lsd:
+	$(MAKE) -C 3rdparty/lsd
+	cp 3rdparty/lsd/lsd bin
+
+tvl1:
+	$(MAKE) -C 3rdparty/tvl1flow
+	cp 3rdparty/tvl1flow/tvl1flow bin
+	cp 3rdparty/tvl1flow/callTVL1.sh bin
+
+# compiled but not used (plain mgm is already included from multi_mgm)
+mgm:
+	$(MAKE) -C 3rdparty/mgm
+	#cp 3rdparty/mgm/mgm bin
+
+
+#
+# rules for optional "modules": msmw, asift, sgbm, tvl1, etc
+#
+
+asift:
+	mkdir -p bin/build_asift
+	cd bin/build_asift; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/demo_ASIFT_src; $(MAKE)
+	cp bin/build_asift/demo_ASIFT bin
+
+sgbm:
+	$(MAKE) -C 3rdparty/sgbm
+	cp 3rdparty/sgbm/sgbm bin
+
+sgbm_opencv:
+	mkdir -p bin/build_sgbm
+	cd bin/build_sgbm; cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; $(MAKE)
+	cp bin/build_sgbm/sgbm2 bin
+	cp bin/build_sgbm/SGBM bin
+	cp 3rdparty/stereo_hirschmuller_2008/callSGBM.sh bin
+	cp 3rdparty/stereo_hirschmuller_2008/callSGBM_lap.sh bin
+	cp 3rdparty/stereo_hirschmuller_2008/callSGBM_cauchy.sh bin
+
+msmw:
+	mkdir -p bin/build_msmw
+	cd bin/build_msmw; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/msmw; $(MAKE)
+	cp bin/build_msmw/libstereo/iip_stereo_correlation_multi_win2 bin
+
+msmw2:
+	mkdir -p bin/build_msmw2
+	cd bin/build_msmw2; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/msmw2; $(MAKE)
+	cp bin/build_msmw2/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion bin
+
+msmw3:
+	mkdir -p bin/build_msmw3
+	cd bin/build_msmw3; cmake -D CMAKE_BUILD_TYPE=Release ../../c/msmw; $(MAKE)
+	cp bin/build_msmw3/msmw bin
+
+
+#
+# rules to build the programs under the source directory
+#
+
+SRCIIO   = downsa backflow imprintf qauto morsi cldmask remove_small_cc\
+           plambda homwarp pview morphoop plyextrema bin2asc colormesh
+PROGRAMS = $(addprefix bin/,$(SRCIIO) $(SRCKKK))
+
+executables: $(PROGRAMS)
+
+
+# generic rule for building binary objects from C sources
+c/%.o : c/%.c
+	$(CC) -fpic $(CFLAGS) -c $< -o $@
+
+# generic rule for building binary objects from C++ sources
+c/%.o: c/%.cpp
+	$(CXX) -fpic $(CXXFLAGS) -c $^ -o $@
+
+# generic rule to build most imscript binaries
+bin/% : c/%.o c/iio.o
+	$(CC) $^ -o $@ $(IIOLIBS)
+
+# this particular object requires a hardcoded filename
+c/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
+	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
+
+# this particular program combines different objects in a non-standard way
+bin/colormesh: c/colormesh.o c/iio.o c/rpc.o c/geographiclib_wrapper.o
+	$(CC) $^ $(IIOLIBS) -lstdc++ -lGeographic -o $@
+
+
+
+#
+# rules to build the dynamic objects that are used via ctypes
+#
+
+libraries: lib/libplyflatten.so lib/disp_to_h.so
+
+lib/disp_to_h.so: c/disp_to_h.o c/geographiclib_wrapper.o c/iio.o c/rpc.o
+	$(CC) -shared $^ $(IIOLIBS) -lGeographic -o $@
+
+lib/libplyflatten.so: c/plyflatten.o
+	$(CC) -shared $^ -o $@
+
+
+
+
+# automatic dependency generation
+-include .deps.mk
+.PHONY:
+depend:
+	$(CC) -MM `ls c/*.c c/*.cpp` | sed '/^[^ ]/s/^/c\//' > .deps.mk
+
+
+# rules for cleaning, nothing interesting below this point
+clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
+       clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_mgm_multi\
+       clean_lsd clean_s2p
+	$(RM) c/*.o bin/* lib/*
+
+distclean: clean ; $(RM) .deps.mk
+
+
+# clean targets that use recursive makefiles
+clean_homography: ; $(MAKE) clean -C c/homography
+clean_sift:       ; $(MAKE) clean -C 3rdparty/sift/simd
+clean_tvl1:       ; $(MAKE) clean -C 3rdparty/tvl1flow
+clean_sgbm:       ; $(MAKE) clean -C 3rdparty/sgbm
+clean_mgm:        ; $(MAKE) clean -C 3rdparty/mgm
+clean_mgm_multi:  ; $(MAKE) clean -C 3rdparty/mgm_multi
+clean_lsd:        ; $(MAKE) clean -C 3rdparty/lsd
+
+# clean targets that use a build dir
+clean_asift:      ; $(RM) -r bin/build_asift
+clean_msmw:       ; $(RM) -r bin/build_msmw
+clean_msmw2:      ; $(RM) -r bin/build_msmw2
+clean_msmw3:      ; $(RM) -r bin/build_msmw3
+
+
+.PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
+	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_mgm\
+	clean_mgm_multi clean_lsd clean_s2p test distclean
+
 
 # The following conditional statement appends "-std=gnu99" to CFLAGS when the
 # compiler does not define __STDC_VERSION__.  The idea is that many older
@@ -17,229 +180,3 @@ CVERSION = $(shell $(CC) -dM -E - < /dev/null | grep __STDC_VERSION__)
 ifeq ($(CVERSION),)
 CFLAGS := $(CFLAGS) -std=gnu99
 endif
-
-# names of source and destination directories
-SRCDIR = c
-BINDIR = bin
-LIBDIR = lib
-
-# default rule builds only the programs necessary for the test
-default: $(BINDIR) $(LIBDIR) homography sift imscript s2p mgm mgm_multi tvl1 lsd
-
-# the "all" rule builds four further correlators
-all: default msmw3 sgbm mgm_multi
-
-# test for the default configuration
-test: default
-	pytest tests
-
-# make sure that the destination directory is built
-$(BINDIR):
-	mkdir -p $(BINDIR)
-$(LIBDIR):
-	mkdir -p $(LIBDIR)
-
-#
-# four standard "modules": homography, sift, mgm, and mgm_multi
-#
-
-homography: $(BINDIR)
-	$(MAKE) -j -C c/homography
-	cp c/homography/homography $(BINDIR)
-
-sift: $(BINDIR)
-	$(MAKE) -j -C c/sift
-	cp c/sift/libsift4ctypes.so $(LIBDIR)
-mgm:
-	$(MAKE) -C 3rdparty/mgm
-	#cp 3rdparty/mgm/mgm $(BINDIR)
-
-mgm_multi:
-	mkdir -p $(BINDIR)/build_mgm_multi
-	cd $(BINDIR)/build_mgm_multi; cmake ../../3rdparty/mgm_multi; $(MAKE)
-	cp $(BINDIR)/build_mgm_multi/mgm_multi $(BINDIR)
-	cp $(BINDIR)/build_mgm_multi/mgm $(BINDIR)
-
-lsd:
-	$(MAKE) -C 3rdparty/lsd
-	cp 3rdparty/lsd/lsd $(BINDIR)
-
-#
-# rules for optional "modules": msmw, asift, sgbm, tvl1, etc
-#
-
-asift:
-	mkdir -p $(BINDIR)/build_asift
-	cd $(BINDIR)/build_asift; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/demo_ASIFT_src; $(MAKE)
-	cp $(BINDIR)/build_asift/demo_ASIFT $(BINDIR)
-
-sgbm:
-	$(MAKE) -C 3rdparty/sgbm
-	cp 3rdparty/sgbm/sgbm $(BINDIR)
-
-sgbm_opencv:
-	mkdir -p bin/build_sgbm
-	cd bin/build_sgbm; cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_PREFIX_PATH=~/local ../../3rdparty/stereo_hirschmuller_2008; $(MAKE)
-	cp bin/build_sgbm/sgbm2 $(BINDIR)
-	cp bin/build_sgbm/SGBM $(BINDIR)
-	cp 3rdparty/stereo_hirschmuller_2008/callSGBM.sh $(BINDIR)
-	cp 3rdparty/stereo_hirschmuller_2008/callSGBM_lap.sh $(BINDIR)
-	cp 3rdparty/stereo_hirschmuller_2008/callSGBM_cauchy.sh $(BINDIR)
-
-msmw:
-	mkdir -p $(BINDIR)/build_msmw
-	cd $(BINDIR)/build_msmw; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/msmw; $(MAKE)
-	cp $(BINDIR)/build_msmw/libstereo/iip_stereo_correlation_multi_win2 $(BINDIR)
-
-msmw2:
-	mkdir -p $(BINDIR)/build_msmw2
-	cd $(BINDIR)/build_msmw2; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/msmw2; $(MAKE)
-	cp $(BINDIR)/build_msmw2/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion $(BINDIR)
-
-msmw3:
-	mkdir -p $(BINDIR)/build_msmw3
-	cd $(BINDIR)/build_msmw3; cmake -D CMAKE_BUILD_TYPE=Release ../../c/msmw; $(MAKE)
-	cp $(BINDIR)/build_msmw3/msmw $(BINDIR)
-
-tvl1:
-	$(MAKE) -C 3rdparty/tvl1flow
-	cp 3rdparty/tvl1flow/tvl1flow $(BINDIR)
-	cp 3rdparty/tvl1flow/callTVL1.sh $(BINDIR)
-
-
-#
-# rules to build a subset of imscript
-#
-
-IMSCRIPT = downsa backflow imprintf qauto morsi cldmask remove_small_cc\
-		   plambda homwarp pview
-
-imscript: $(BINDIR)
-	$(MAKE) -j -C 3rdparty/imscript $(addprefix bin/,$(IMSCRIPT))
-	cp 3rdparty/imscript/bin/* $(BINDIR)
-
-
-#
-# rules to build s2p C/C++ programs
-#
-
-PROGRAMS = colormesh bin2asc plyextrema morphoop
-LIB = libplyflatten.so disp_to_h.so
-LIBRARIES = $(addprefix $(LIBDIR)/,$(LIB))
-
-s2p: $(BINDIR) $(addprefix $(BINDIR)/,$(PROGRAMS)) $(LIBRARIES)
-
-$(SRCDIR)/iio.o: c/iio.c c/iio.h
-	$(CC) $(CFLAGS) -c $< -o $@ -fPIC
-
-$(SRCDIR)/rpc.o: c/rpc.c c/xfopen.c
-	$(CC) $(CFLAGS) -c $< -o $@ -fPIC
-
-$(BINDIR)/bin2asc: c/bin2asc.c
-	$(CC) $(CFLAGS) $^ -o $@
-
-$(BINDIR)/morphoop: $(SRCDIR)/iio.o $(SRCDIR)/morphoop.c
-	$(CC) $(CFLAGS) $^ $(IIOLIBS) -o $@
-
-$(LIBDIR)/disp_to_h.so: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp_to_h.c c/vvector.h c/rpc.h c/read_matrix.c
-	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp_to_h.c $(IIOLIBS) -lGeographic -o $@ -fPIC -shared
-
-$(BINDIR)/colormesh: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
-	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/colormesh.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
-
-$(SRCDIR)/triangulation.o: c/triangulation.c c/triangulation.h
-	$(CC) $(CFLAGS) -c $< -lm -o $@
-
-$(SRCDIR)/coordconvert.o: c/coordconvert.c c/coordconvert.h
-	$(CC) $(CFLAGS) -c $< -lm -o $@
-
-$(BINDIR)/plyextrema: $(SRCDIR)/plyextrema.c $(SRCDIR)/iio.o
-	$(CC) $(CFLAGS)  $^ -o $@ $(IIOLIBS)
-
-$(LIBDIR)/libplyflatten.so: $(SRCDIR)/plyflatten.c
-	$(CC) $(CFLAGS) -fPIC -shared $^ -o $@ -lm
-
-# Geographiclib wrappers
-$(SRCDIR)/geographiclib_wrapper.o: c/geographiclib_wrapper.cpp
-	$(CXX) $(CXXFLAGS) -c $^ -o $@ -fPIC
-
-$(SRCDIR)/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
-	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
-
-# automatic dependency generation
--include makefile.dep
-ALL_SOURCES=`ls c/*.c c/*.cc c/*.cpp`
-.PHONY:
-depend:
-	$(CC) -MM $(ALL_SOURCES) | sed '/^[^ ]/s/^/c\//' > makefile.dep
-
-
-# rules for cleaning, nothing interesting below this point
-clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
-	clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_mgm_multi\
-	clean_lsd clean_s2p clean_depend
-
-clean_depend:
-	$(RM) makefile.dep
-
-clean_homography:
-	$(MAKE) -C c/homography clean
-	$(RM) $(BINDIR)/homography
-
-clean_sift:
-	$(MAKE) -C c/sift clean
-	$(RM) $(LIBDIR)/libsift4ctypes.so
-
-clean_asift:
-	$(RM) -r $(BINDIR)/build_asift
-	$(RM) $(BINDIR)/demo_ASIFT
-
-clean_imscript:
-	$(MAKE) -C 3rdparty/imscript clean
-	$(RM) $(addprefix $(BINDIR)/,$(IMSCRIPT))
-
-clean_s2p:
-	$(RM) $(addprefix $(BINDIR)/,$(PROGRAMS))
-	$(RM) $(LIBRARIES)
-	$(RM) $(SRCDIR)/iio.o
-	$(RM) $(SRCDIR)/rpc.o
-	$(RM) $(SRCDIR)/geographiclib_wrapper.o
-	$(RM) $(SRCDIR)/geoid_height_wrapper.o
-
-clean_msmw:
-	$(RM) -r $(BINDIR)/build_msmw
-	$(RM) $(BINDIR)/iip_stereo_correlation_multi_win2
-
-clean_msmw2:
-	$(RM) -r $(BINDIR)/build_msmw2
-	$(RM) $(BINDIR)/iip_stereo_correlation_multi_win2_newversion
-
-clean_msmw3:
-	$(RM) -r $(BINDIR)/build_msmw3
-	$(RM) $(BINDIR)/msmw
-
-clean_tvl1:
-	$(MAKE) -C 3rdparty/tvl1flow clean
-	$(RM) $(BINDIR)/tvl1flow
-	$(RM) $(BINDIR)/callTVL1.sh
-
-clean_sgbm:
-	$(MAKE) -C 3rdparty/sgbm clean
-	$(RM) $(BINDIR)/sgbm
-
-clean_mgm:
-	$(MAKE) -C 3rdparty/mgm clean
-	$(RM) $(BINDIR)/mgm
-
-clean_mgm_multi:
-	$(MAKE) -C 3rdparty/mgm_multi clean
-	$(RM) -r $(BINDIR)/build_mgm_multi
-	$(RM) $(BINDIR)/mgm_multi
-
-clean_lsd:
-	$(MAKE) -C 3rdparty/lsd clean
-	$(RM) $(BINDIR)/lsd
-
-.PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript s2p clean clean_sift\
-	clean_imscript clean_msmw clean_msmw2 clean_tvl1 clean_sgbm clean_mgm\
-	clean_mgm_multi clean_lsd clean_s2p test
