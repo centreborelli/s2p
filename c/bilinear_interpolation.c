@@ -1,1 +1,0 @@
-../3rdparty/imscript/src/bilinear_interpolation.c

@@ -91,8 +91,8 @@ msmw2:
 # rules to build the programs under the source directory
 #
 
-SRCIIO   = downsa backflow imprintf qauto morsi cldmask remove_small_cc\
-           plambda homwarp pview morphoop plyextrema bin2asc colormesh
+SRCIIO   = downsa backflow qauto morsi cldmask remove_small_cc\
+           plambda pview morphoop plyextrema colormesh
 PROGRAMS = $(addprefix bin/,$(SRCIIO) $(SRCKKK))
 
 executables: $(PROGRAMS)
