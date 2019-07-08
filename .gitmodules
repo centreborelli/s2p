@@ -29,3 +29,6 @@
 [submodule "3rdparty/homography"]
 	path = 3rdparty/homography
 	url = https://github.com/cmla/homography
+[submodule "3rdparty/msmw3"]
+	path = 3rdparty/msmw3
+	url = https://github.com/cmla/msmw3

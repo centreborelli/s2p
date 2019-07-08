@@ -53,6 +53,10 @@ mgm:
 # rules for optional "modules": msmw, asift, sgbm, tvl1, etc
 #
 
+msmw3:
+	make -C 3rdparty/msmw3
+	cp 3rdparty/msmw3/msmw bin
+
 asift:
 	mkdir -p bin/build_asift
 	cd bin/build_asift; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/demo_ASIFT_src; $(MAKE)
@@ -81,10 +85,6 @@ msmw2:
 	cd bin/build_msmw2; cmake -D CMAKE_BUILD_TYPE=Release ../../3rdparty/msmw2; $(MAKE)
 	cp bin/build_msmw2/libstereo_newversion/iip_stereo_correlation_multi_win2_newversion bin
 
-msmw3:
-	mkdir -p bin/build_msmw3
-	cd bin/build_msmw3; cmake -D CMAKE_BUILD_TYPE=Release ../../c/msmw; $(MAKE)
-	cp bin/build_msmw3/msmw bin
 
 
 #
@@ -160,12 +160,12 @@ clean_sgbm:       ; $(MAKE) clean -C 3rdparty/sgbm
 clean_mgm:        ; $(MAKE) clean -C 3rdparty/mgm
 clean_mgm_multi:  ; $(MAKE) clean -C 3rdparty/mgm_multi
 clean_lsd:        ; $(MAKE) clean -C 3rdparty/lsd
+clean_msmw3:      ; $(MAKE) clean -C 3rdparty/msmw3
 
 # clean targets that use a build dir
 clean_asift:      ; $(RM) -r bin/build_asift
 clean_msmw:       ; $(RM) -r bin/build_msmw
 clean_msmw2:      ; $(RM) -r bin/build_msmw2
-clean_msmw3:      ; $(RM) -r bin/build_msmw3
 
 
 .PHONY: default all sift sgbm sgbm_opencv msmw tvl1 imscript clean clean_sift\
