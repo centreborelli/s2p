@@ -21,8 +21,8 @@ test: default
 #
 
 homography:
-	$(MAKE) -j -C c/homography
-	cp c/homography/homography bin
+	$(MAKE) -j -C 3rdparty/homography
+	cp 3rdparty/homography/homography bin
 
 sift:
 	$(MAKE) -j -C 3rdparty/sift/simd libsift4ctypes.so
@@ -153,7 +153,7 @@ distclean: clean ; $(RM) .deps.mk
 
 
 # clean targets that use recursive makefiles
-clean_homography: ; $(MAKE) clean -C c/homography
+clean_homography: ; $(MAKE) clean -C 3rdparty/homography
 clean_sift:       ; $(MAKE) clean -C 3rdparty/sift/simd
 clean_tvl1:       ; $(MAKE) clean -C 3rdparty/tvl1flow
 clean_sgbm:       ; $(MAKE) clean -C 3rdparty/sgbm

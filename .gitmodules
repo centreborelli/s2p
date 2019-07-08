@@ -26,3 +26,6 @@
 [submodule "3rdparty/sift"]
 	path = 3rdparty/sift
 	url = https://github.com/cmla/sift
+[submodule "3rdparty/homography"]
+	path = 3rdparty/homography
+	url = https://github.com/cmla/homography
