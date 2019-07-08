@@ -147,6 +147,7 @@ clean: clean_homography clean_asift clean_sift clean_imscript clean_msmw\
        clean_msmw2 clean_msmw3 clean_tvl1 clean_sgbm clean_mgm clean_mgm_multi\
        clean_lsd clean_s2p
 	$(RM) c/*.o bin/* lib/*
+	$(RM) -r s2p_tmp
 
 distclean: clean ; $(RM) .deps.mk
 

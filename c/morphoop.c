@@ -217,7 +217,7 @@ int main (int argc, char **argv)
       morphoop(in + nc*nr*i,nc,nr, se, se_nc, se_nr, ctr_c, ctr_r, operation, out + nc*nr*i);
 
 
-   iio_save_image_float_split(argv[4], out, nc, nr, nch);
+   iio_write_image_float_split(argv[4], out, nc, nr, nch);
 
    free(in);
    free(out);
