@@ -93,7 +93,7 @@ msmw2:
 
 SRCIIO   = downsa backflow qauto morsi cldmask remove_small_cc\
            plambda pview morphoop plyextrema colormesh
-PROGRAMS = $(addprefix bin/,$(SRCIIO) $(SRCKKK))
+PROGRAMS = $(addprefix bin/,$(SRCIIO))
 
 executables: $(PROGRAMS)
 
