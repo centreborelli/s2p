@@ -21,7 +21,7 @@ before_install:
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       sudo apt-add-repository -y ppa:ubuntugis/ppa
       sudo apt-get -qq update
-      sudo apt-get install gdal-bin libfftw3-dev libgdal-dev geographiclib-tools libgeographic-dev libgsl-dev
+      sudo apt-get install gdal-bin libfftw3-dev libgdal-dev geographiclib-tools libgeographic-dev
     fi
   - |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
