@@ -1,0 +1,1 @@
+../3rdparty/imscript/src/help_stuff.c

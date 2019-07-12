@@ -9,22 +9,34 @@ matrix:
     - os: linux
       dist: xenial
       python: 2.7
-      env: CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
     - os: linux
       dist: xenial
       python: 3.7
-      env: CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
     - os: osx
       language: generic
 
+
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:ubuntugis/ppa; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev geographiclib-tools libgeographic-dev libgsl-dev; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then HOMEBREW_NO_AUTO_UPDATE=1 brew install geographiclib fftw gsl; fi
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo apt-add-repository -y ppa:ubuntugis/ppa
+      sudo apt-get -qq update
+      sudo apt-get install gdal-bin libfftw3-dev libgdal-dev geographiclib-tools libgeographic-dev
+    fi
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install geographiclib fftw
+    fi
+
 
 install:
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then pip install -e .; else pip3 install -e .; fi
+  - |
+    if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      pip install -e .
+    else
+      pip3 install -e .
+    fi
+
 
 script:
   - pytest --cov=s2p --cov-report term-missing tests
