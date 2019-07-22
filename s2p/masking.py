@@ -10,9 +10,6 @@ import warnings
 import rasterio
 
 from s2p import common
-from s2p import rpc_model
-from s2p import rpc_utils
-from s2p.config import cfg
 
 # silent rasterio NotGeoreferencedWarning
 warnings.filterwarnings("ignore",

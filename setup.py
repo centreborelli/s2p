@@ -50,6 +50,7 @@ requirements = ['numpy',
                 'beautifulsoup4[lxml]',
                 'plyfile',
                 'ransac',
+                'rpcm>=1.3',
                 'requests']
 
 setup(name="s2p",

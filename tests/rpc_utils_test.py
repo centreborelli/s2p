@@ -2,8 +2,9 @@
 
 import os
 import numpy as np
+import rpcm
 
-from s2p import rpc_model, rpc_utils
+from s2p import rpc_utils
 from tests_utils import data_path
 
 
@@ -11,8 +12,8 @@ def test_matches_from_rpc():
     """
     Test for rpc_utils.matches_from_rpc().
     """
-    r1 = rpc_utils.rpc_from_geotiff(data_path(os.path.join('input_pair', 'img_01.tif')))
-    r2 = rpc_utils.rpc_from_geotiff(data_path(os.path.join('input_pair', 'img_02.tif')))
+    r1 = rpcm.rpc_from_geotiff(data_path(os.path.join('input_pair', 'img_01.tif')))
+    r2 = rpcm.rpc_from_geotiff(data_path(os.path.join('input_pair', 'img_02.tif')))
 
     test_matches = rpc_utils.matches_from_rpc(r1, r2, 100, 100, 200, 200, 5)
     expected_matches = np.loadtxt(data_path(os.path.join('expected_output',
@@ -28,7 +29,7 @@ def test_roi_process():
     """
     Test for rpc_utils.roi_process().
     """
-    rpc = rpc_utils.rpc_from_geotiff(data_path(os.path.join('input_pair',
+    rpc = rpcm.rpc_from_geotiff(data_path(os.path.join('input_pair',
                                                             'img_01.tif')))
     ll_poly = np.asarray([[55.649517, -21.231542],
                           [55.651502, -21.231542],

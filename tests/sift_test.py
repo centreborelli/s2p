@@ -4,6 +4,7 @@
 
 import os
 import numpy as np
+import rpcm
 
 import s2p
 from s2p import sift
@@ -88,8 +89,8 @@ def test_matches_on_rpc_roi():
     """
     img1 = data_path('input_triplet/img_01.tif')
     img2 = data_path('input_triplet/img_02.tif')
-    rpc1 = s2p.rpc_utils.rpc_from_geotiff(data_path('input_triplet/img_01.tif'))
-    rpc2 = s2p.rpc_utils.rpc_from_geotiff(data_path('input_triplet/img_02.tif'))
+    rpc1 = rpcm.rpc_from_geotiff(data_path('input_triplet/img_01.tif'))
+    rpc2 = rpcm.rpc_from_geotiff(data_path('input_triplet/img_02.tif'))
     computed = s2p.sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, 100, 100,
                                            200, 200)
     expected = np.loadtxt(data_path('expected_output/units/matches_on_rpc_roi.txt'))

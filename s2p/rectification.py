@@ -6,8 +6,8 @@
 from __future__ import print_function
 import os
 import numpy as np
+import rpcm
 
-from s2p import rpc_model
 from s2p import rpc_utils
 from s2p import estimation
 from s2p import evaluation
@@ -165,7 +165,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     interest.
 
     Args:
-        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        rpc1, rpc2: two instances of the rpcm.RPCModel class
         x, y, w, h: four integers defining the rectangular ROI in the first
             image.  (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
@@ -311,8 +311,8 @@ def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
         disp_min, disp_max: horizontal disparity range
     """
     # read RPC data
-    rpc1 = rpc_utils.rpc_from_geotiff(im1)
-    rpc2 = rpc_utils.rpc_from_geotiff(im2)
+    rpc1 = rpcm.rpc_from_geotiff(im1)
+    rpc2 = rpcm.rpc_from_geotiff(im2)
 
     # compute real or virtual matches
     if method == 'rpc':
