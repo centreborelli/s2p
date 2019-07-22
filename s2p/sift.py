@@ -230,7 +230,7 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
 
     Args:
         im1, im2: paths to two large tif images
-        rpc1, rpc2: two instances of the rpc_model.RPCModel class
+        rpc1, rpc2: two instances of the rpcm.RPCModel class
         x, y, w, h: four integers defining the rectangular ROI in the first
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.

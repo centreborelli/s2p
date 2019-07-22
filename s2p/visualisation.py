@@ -10,7 +10,6 @@ import rasterio
 from s2p import common
 from s2p import sift
 from s2p import estimation
-from s2p import rpc_model
 from s2p import rpc_utils
 import s2p.pointing_accuracy
 
@@ -143,8 +142,8 @@ def plot_matches(im1, im2, matches, x=None, y=None, w=None, h=None,
         return
 
     # read rpcs
-    rpc1 = rpc_utils.rpc_from_geotiff(im1)
-    rpc2 = rpc_utils.rpc_from_geotiff(im2)
+    rpc1 = rpcm.rpc_from_geotiff(im1)
+    rpc2 = rpcm.rpc_from_geotiff(im2)
 
     # determine regions to crop in im1 and im2
     if x is not None:

@@ -7,10 +7,10 @@
 from __future__ import print_function
 import os
 import numpy as np
+import rpcm
 
 from s2p import sift
 from s2p import rpc_utils
-from s2p import rpc_model
 from s2p import estimation
 from s2p.config import cfg
 
@@ -68,7 +68,7 @@ def local_translation(r1, r2, x, y, w, h, m):
     on a given tile.
 
     Args:
-        r1, r2: two instances of the rpc_model.RPCModel class
+        r1, r2: two instances of the rpcm.RPCModel class
         x, y, w, h: region of interest in the reference image (r1)
         m: Nx4 numpy array containing a list of matches, one per line. Each
             match is given by (p1, p2, q1, q2) where (p1, p2) is a point of the
@@ -119,8 +119,8 @@ def compute_correction(img1, img2, x, y, w, h):
         to compute this correction.
     """
     # read rpcs
-    r1 = rpc_utils.rpc_from_geotiff(img1)
-    r2 = rpc_utils.rpc_from_geotiff(img2)
+    r1 = rpcm.rpc_from_geotiff(img1)
+    r2 = rpcm.rpc_from_geotiff(img2)
 
     m = sift.matches_on_rpc_roi(img1, img2, r1, r2, x, y, w, h)
 

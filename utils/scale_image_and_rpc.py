@@ -17,7 +17,7 @@ import sys
 import os
 import tempfile
 
-from s2p import rpc_model
+import rpcm
 from s2p import common
 
 available_filters = ['near', 'bilinear',
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # generate rpc file
     print("Generating {} ...".format(out_rcp_file))
 
-    r = rpc_model.RPCModel(in_rpc_file)
+    r = rpcm.rpc_from_geotiff(in_img_file)
     r.linScale /= scale_y
     r.linOff /= scale_y
     r.colScale /= scale_x

@@ -40,7 +40,7 @@ class RPCStruct(ctypes.Structure):
     def __init__(self, rpc):
         """
         Args:
-            rpc (rpc_model.RPCModel): rpc model
+            rpc (rpcm.RPCModel): rpc model
         """
         self.offset[0] = rpc.col_offset
         self.offset[1] = rpc.row_offset
@@ -81,7 +81,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
     Compute a height map from a disparity map, using RPC camera models.
 
     Args:
-        rpc1, rpc2 (rpc_model.RPCModel): camera models
+        rpc1, rpc2 (rpcm.RPCModel): camera models
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
@@ -189,7 +189,7 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
     Args:
         x, y, w, h (ints): rectangular AOI in the original image. (x, y) is the
             top-left corner, and (w, h) are the dimensions of the rectangle.
-        rpc1, rpc2 (rpc_model.RPCModel): camera models
+        rpc1, rpc2 (rpcm.RPCModel): camera models
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
@@ -228,7 +228,7 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
         cloud: path to the output points cloud (ply format)
         heights: height map, sampled on the same grid as the crop_colorized
             image. In particular, its size is the same as crop_colorized.
-        rpc: instances of the rpc_model.RPCModel class
+        rpc: instances of the rpcm.RPCModel class
         H (optional, default None): numpy array of size 3x3 defining the
             homography transforming the coordinates system of the original full
             size image into the coordinates system of the crop we are dealing

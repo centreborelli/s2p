@@ -27,9 +27,9 @@ import utm
 import simplekml
 import gdal
 import numpy as np
+import rpcm
 
 import s2p
-from s2p import rpc_model
 from s2p import common
 
 def pix_2_latlon(gt, px, py, zone_number, northern):
@@ -104,8 +104,7 @@ def get_coordinates_with_config(tile, m, M):
     w = tile_cfg['roi']['w']
     h = tile_cfg['roi']['h']
 
-    rpcfile = tile_cfg['images'][0]['rpc']
-    rpc = rpc_model.RPCModel(rpcfile)
+    rpc = rpcm.rpc_from_geotiff(tile_cfg['images'][0]['img'])
 
     a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
     b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])

@@ -12,6 +12,7 @@ import shutil
 import rasterio
 import warnings
 import numpy as np
+import rpcm
 
 from s2p import common
 from s2p import rpc_utils
@@ -54,7 +55,7 @@ def check_parameters(d):
 
     # read RPCs
     for img in d['images']:
-        img['rpc'] = rpc_utils.rpc_from_geotiff(img['img'])
+        img['rpc'] = rpcm.rpc_from_geotiff(img['img'])
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:
