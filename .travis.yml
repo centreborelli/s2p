@@ -1,42 +1,49 @@
+os: linux
+dist: xenial
 language: python
+python: 3.7
 sudo: required
 fast_finish: true
 
 if: tag IS blank
 
-matrix:
+addons:
+  apt:
+    sources:
+      - sourceline: 'ppa:ubuntugis/ppa'
+    packages:
+      - gdal-bin
+      - geographiclib-tools
+      - libfftw3-dev
+      - libgdal-dev
+      - libgeographic-dev
+
+install: pip install -e .
+
+jobs:
   include:
-    - os: linux
-      dist: xenial
+    - stage: packaging
+      name: "Python sdist installation"
+      install: skip
+      script:
+        - python setup.py sdist
+        - pip install dist/*.tar.gz
+    - stage: packaging
+      name: "Docker build"
+      addons: skip
+      install: skip
+      script: docker build .
+
+    - stage: test
+      script: pytest --cov=s2p --cov-report term-missing tests
+    - stage: test
       python: 2.7
-    - os: linux
-      dist: xenial
-      python: 3.7
-    - os: osx
+      script: pytest --cov=s2p --cov-report term-missing tests
+    - stage: test
+      os: osx
       language: generic
-
-
-before_install:
-  - |
-    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      sudo apt-add-repository -y ppa:ubuntugis/ppa
-      sudo apt-get -qq update
-      sudo apt-get install gdal-bin libfftw3-dev libgdal-dev geographiclib-tools libgeographic-dev
-    fi
-  - |
-    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      HOMEBREW_NO_AUTO_UPDATE=1 brew install geographiclib fftw
-    fi
-
-
-install:
-  - |
-    if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      pip install -e .
-    else
-      pip3 install -e .
-    fi
-
-
-script:
-  - pytest --cov=s2p --cov-report term-missing tests
+      # The `homebrew` feature of `addons` is unfortunately not very reliable,
+      # so we `brew install` by hand. See this link for reference on the issue:
+      # https://travis-ci.community/t/osx-homebrew-addons-module-not-as-reliable-as-claimed/4054/7?u=glostis
+      before_install: HOMEBREW_NO_AUTO_UPDATE=1 brew install geographiclib fftw
+      script: pytest --cov=s2p --cov-report term-missing tests
