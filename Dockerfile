@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libgeographic-dev \
     libgeotiff-dev \
-    libgsl-dev \
     libtiff5-dev \
     python3 \
     python3-numpy \
@@ -24,6 +23,8 @@ WORKDIR /root/s2p
 COPY 3rdparty/ 3rdparty/
 COPY c/ c/
 COPY s2p/ s2p/
+COPY bin/ bin/
+COPY lib/ lib/
 
 # Install s2p
 RUN pip3 install -e .
