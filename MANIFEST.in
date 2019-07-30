@@ -2,9 +2,7 @@ include README.md
 include makefile
 
 # c/
-recursive-include c *.c *.h *.cpp *.pgm Makefile
-prune c/msmw
-prune c/test_colormesh
+recursive-include c *.c *.h *.cpp *.pgm
 
 # 3rdparty
 
@@ -27,6 +25,17 @@ recursive-include 3rdparty/tvl1flow *
 
 # lsd/
 recursive-include 3rdparty/lsd *.c *.h Makefile
+
+# homography/
+recursive-include 3rdparty/homography *
+prune 3rdparty/homography/test_data
+
+# sift/
+recursive-include 3rdparty/sift/simd *
+
+# msmw3/
+recursive-include 3rdparty/msmw3 *
+prune 3rdparty/msmw3/test_data
 
 # imscript/
 recursive-include 3rdparty/imscript Makefile TARGETS
@@ -74,8 +83,11 @@ include 3rdparty/imscript/src/tiff_octaves_rw.c
 include 3rdparty/imscript/src/vvector.h
 include 3rdparty/imscript/src/xfopen.c
 include 3rdparty/imscript/src/xmalloc.c
-recursive-include 3rdparty/imscript/bin *
+include 3rdparty/imscript/bin/.placeholder
 prune 3rdparty/imscript/src/ftr
 prune 3rdparty/imscript/src/misc/older
+
+include bin/.dummy
+include lib/.dummy
 
 global-exclude .git .travis.yml *.png *.o *.so
