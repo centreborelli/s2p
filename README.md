@@ -107,7 +107,7 @@ comes with a Command Line Interface (CLI).
 
 ## From the command line
 
-The `s2p` CLI has an extensive help that can be printed with the `-h` and `--help` switches.
+The `s2p` CLI usage instructions can be printed with the `-h` and `--help` switches.
 
     $ s2p -h
     usage: s2p.py [-h] config.json
