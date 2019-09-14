@@ -3,9 +3,10 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
 from __future__ import print_function
-import numpy as np
 import os
+import numpy as np
 import rasterio
+import rpcm
 
 from s2p import common
 from s2p import sift

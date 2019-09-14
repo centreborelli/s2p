@@ -81,7 +81,7 @@ def pointing_correction(tile, i):
         np.savetxt(os.path.join(out_dir, 'center_keypts_sec.txt'),
                    np.mean(m[:, 2:], 0), fmt='%9.3f')
         if cfg['debug']:
-            visualisation.plot_matches(img1, img2, rpc1, rpc2, m, x, y, w, h,
+            visualisation.plot_matches(img1, img2, m, x, y, w, h,
                                        os.path.join(out_dir,
                                                     'sift_matches_pointing.png'))
 
