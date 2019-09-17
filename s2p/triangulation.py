@@ -160,7 +160,7 @@ def count_3d_neighbors(xyz, r, p):
 
     # call the count_3d_neighbors function from disp_to_h.so
     out = np.zeros((h, w), dtype='int32')
-    lib.count_3d_neighbors(out, xyz, w, h, r, p)
+    lib.count_3d_neighbors(out, np.ascontiguousarray(xyz), w, h, r, p)
 
     return out
 
