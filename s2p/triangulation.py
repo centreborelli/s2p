@@ -165,6 +165,33 @@ def count_3d_neighbors(xyz, r, p):
     return out
 
 
+def remove_isolated_3d_points(xyz, r, p, n, q=1):
+    """
+    Discard (in place) isolated (groups of) points in a gridded set of 3D points
+
+    Discarded points satisfy the following conditions:
+    - they have less than n 3D neighbors in a ball of radius r meters;
+    - all their neighboring points of the grid in a square window of size 2q+1
+      that are closer than r meters are also discarded.
+
+    Args:
+        xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
+            UTM easting, northing, and altitude of a 3D point.
+        r (float): filtering radius, in meters
+        p (int): filering window radius, in pixels (square window of size 2p+1)
+        n (int): filtering threshold, in number of points
+        q (int): 2nd filtering window radius, in pixels (square of size 2q+1)
+    """
+    h, w, d = xyz.shape
+    assert d == 3, 'expecting a 3-channels image with shape (h, w, 3)'
+
+    lib.remove_isolated_3d_points.argtypes = (
+        ndpointer(dtype=c_float, shape=(h, w, 3)),
+        c_int, c_int, c_float, c_int, c_int, c_int)
+
+    lib.remove_isolated_3d_points(np.ascontiguousarray(xyz), w, h, r, p, n, q)
+
+
 def filter_xyz(xyz, r, n, img_gsd):
     """
     Discard (in place) points that have less than n points closer than r meters.
@@ -177,8 +204,7 @@ def filter_xyz(xyz, r, n, img_gsd):
         img_gsd (float): ground sampling distance, in meters / pix
     """
     p = np.ceil(r / img_gsd).astype(int)
-    count = count_3d_neighbors(xyz, r, p)
-    xyz[count < n] = np.nan
+    remove_isolated_3d_points(xyz, r, p, n)
 
 
 def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
