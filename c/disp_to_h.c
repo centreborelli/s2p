@@ -144,6 +144,62 @@ void count_3d_neighbors(int *count, float *xyz, int nx, int ny, float r, int p)
 }
 
 
+void remove_isolated_3d_points(
+    float* xyz,  // input (and output) image, shape = (h, w, 3)
+    int nx,      // width w
+    int ny,      // height h
+    float r,     // filtering radius, in meters
+    int p,       // filtering window (square of width is 2p+1 pixels)
+    int n,       // minimal number of neighbors to be an inlier
+    int q)       // neighborhood for the saving step (square of width 2q+1)
+{
+    int *count = (int*) malloc(nx * ny * sizeof(int));
+    bool *rejected = (bool*) malloc(nx * ny * sizeof(bool));
+
+    // count the 3d neighbors of each point
+    count_3d_neighbors(count, xyz, nx, ny, r, p);
+
+    // brutally reject any point with less than n neighbors
+    for (int i = 0; i < ny * nx; i++)
+        rejected[i] = count[i] < n;
+
+    // show mercy; save points with at least one close and non-rejected neighbor
+    bool need_more_iterations = true;
+    while (need_more_iterations) {
+        need_more_iterations = false;
+        // scan the grid and stop at rejected points
+        for (int y = 0; y < ny; y++)
+        for (int x = 0; x < nx; x++)
+        if (rejected[x + y * nx])
+        // explore the neighborhood (square of width 2q+1)
+        for (int yy = y - q; yy < y + q + 1; yy++) {
+            if (yy < 0) continue; else if (yy > ny-1) break;
+            for (int xx = x - q; xx < x + q + 1; xx++) {
+                if (xx < 0) continue; else if (xx > nx-1) break;
+                // is the current rejected point's neighbor non-rejected?
+                if (!rejected[xx + yy * nx])
+                // is this connected neighbor close (in 3d)?
+                if (squared_distance_between_3d_points(
+                        xyz + (x + y * nx)*3, xyz + (xx + yy * nx)*3) < r*r) {
+                    rejected[x + y * nx] = false; // save the point
+                    yy = xx = ny + nx + 2*q + 2;  // break loops over yy and xx
+                    need_more_iterations = true;  // this point may save others!
+                }
+            }
+        }
+    }
+
+    // set to NAN the rejected pixels
+    for (int i = 0; i < ny * nx; i++)
+        if (rejected[i])
+            for (int c = 0; c < 3; c++)
+                xyz[c + i * 3] = NAN;
+
+    free(rejected);
+    free(count);
+}
+
+
 static void help(char *s)
 {
     fprintf(stderr, "usage:\n\t"
