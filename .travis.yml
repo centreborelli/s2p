@@ -17,8 +17,23 @@ addons:
       - libfftw3-dev
       - libgdal-dev
       - libgeographic-dev
+  homebrew:
+    packages:
+      # GDAL is already included on osx images
+      - geographiclib
+      - fftw
 
-install: pip install -e .
+install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        # Work in a virtual environment to avoid having to do
+        # "pip3 install --user"
+        python3 -m venv venv
+        source venv/bin/activate
+    fi
+  - pip install -e .
+
+script: pytest --cov=s2p --cov-report term-missing tests
 
 jobs:
   include:
@@ -35,15 +50,12 @@ jobs:
       script: docker build .
 
     - stage: test
-      script: pytest --cov=s2p --cov-report term-missing tests
     - stage: test
       python: 2.7
-      script: pytest --cov=s2p --cov-report term-missing tests
     - stage: test
       os: osx
+      # The default osx image (xcode9.4 as of 2019-09-30) has a very old brew,
+      # which crashes with the `addons` feature, so we use a non-default more recent one
+      # (see https://github.com/Homebrew/homebrew-bundle/issues/540#issuecomment-518301382)
+      osx_image: xcode10.2
       language: generic
-      # The `homebrew` feature of `addons` is unfortunately not very reliable,
-      # so we `brew install` by hand. See this link for reference on the issue:
-      # https://travis-ci.community/t/osx-homebrew-addons-module-not-as-reliable-as-claimed/4054/7?u=glostis
-      before_install: HOMEBREW_NO_AUTO_UPDATE=1 brew install geographiclib fftw
-      script: pytest --cov=s2p --cov-report term-missing tests
