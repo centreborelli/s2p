@@ -5,8 +5,6 @@ python: 3.7
 sudo: required
 fast_finish: true
 
-if: tag IS blank
-
 addons:
   apt:
     sources:
@@ -17,8 +15,23 @@ addons:
       - libfftw3-dev
       - libgdal-dev
       - libgeographic-dev
+  homebrew:
+    packages:
+      # GDAL is already included on osx images
+      - geographiclib
+      - fftw
 
-install: pip install -e .
+install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        # Work in a virtual environment to avoid having to do
+        # "pip3 install --user"
+        python3 -m venv venv
+        source venv/bin/activate
+    fi
+  - pip install -e .
+
+script: pytest --cov=s2p --cov-report term-missing tests
 
 jobs:
   include:
@@ -35,15 +48,25 @@ jobs:
       script: docker build .
 
     - stage: test
-      script: pytest --cov=s2p --cov-report term-missing tests
     - stage: test
       python: 2.7
-      script: pytest --cov=s2p --cov-report term-missing tests
     - stage: test
       os: osx
+      # The default osx image (xcode9.4 as of 2019-09-30) has a very old brew,
+      # which crashes with the `addons` feature, so we use a non-default more recent one
+      # (see https://github.com/Homebrew/homebrew-bundle/issues/540#issuecomment-518301382)
+      osx_image: xcode10.2
       language: generic
-      # The `homebrew` feature of `addons` is unfortunately not very reliable,
-      # so we `brew install` by hand. See this link for reference on the issue:
-      # https://travis-ci.community/t/osx-homebrew-addons-module-not-as-reliable-as-claimed/4054/7?u=glostis
-      before_install: HOMEBREW_NO_AUTO_UPDATE=1 brew install geographiclib fftw
-      script: pytest --cov=s2p --cov-report term-missing tests
+
+    - stage: deploy
+      if: tag IS present AND repo = cmla/s2p
+      install: skip
+      script: skip
+      deploy:
+        - provider: pypi
+          user: carlodef
+          password:
+            secure: G7hXKw6wtWtHk8MfC+3pmtZbgCLyclacsHEf6o1tEqKWy+7D5+zeKRM2IjtbckIRPiM9zSVtUyGsZiBzNu6TMKUlzrDtIl+76CdyiFjMevbF6D8KZ2tMC9lDX5Ug3LmaYn5jzFOr16/ntEnCt4wEjyob5nESKf34Uly754cf/1afBo090Jw339U1JNLa4RwEwFLmaW1TcEa8H3ZVMST1t80uiUZ/VVDXzgvdxAwIMqnxSO4nYJ/TnU4cFJAULtSGhZ/swypSvgwCrBpyzjoT6f3BkTQnUuFTYuqbmKpflY3uvMzUxUCB0ZnsLi30uQs30R7Htzz0e0kZ/4NpXHlljsvZ2rhzHXeStp2A4RSGgRVPJMlhwbGJfIXuuuzpHER/RM2SdkEohfalVSkPYF9yxIRyhk3mL2ADkFaky54bXTgZgBOfPRxU4Hdoo9l34h1Rbbv2xax0nMgPHf8YGMvM4+Hh5Jf3Ve52/WBjzlDBb18Z2YYnfLcRuCdd5EkSn16jiqjnc7rrPd5vwJxcv+8BT68qRkyIb8OwZYQ4/Bg22Uxkx7xhZJWPYXioQjYSYLAK30No9Y9Cg/3LIL1z7rzAwrjMlQobSIRjM5MX7kKj0lwmWIV+1agWefM3LIXn7Bc4tKtAf9JnEUfEQA/6FxGB/GLBS8DBu4zoYF3uQ6FKqUY=
+          distributions: sdist
+          on:
+            tags: true
