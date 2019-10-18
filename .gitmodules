@@ -26,9 +26,12 @@
 [submodule "3rdparty/sift"]
 	path = 3rdparty/sift
 	url = https://github.com/cmla/sift
+	ignore = untracked
 [submodule "3rdparty/homography"]
 	path = 3rdparty/homography
 	url = https://github.com/cmla/homography
+	ignore = untracked
 [submodule "3rdparty/msmw3"]
 	path = 3rdparty/msmw3
 	url = https://github.com/cmla/msmw3
+	ignore = untracked
