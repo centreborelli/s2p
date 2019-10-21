@@ -119,13 +119,14 @@ def plot_matches_low_level(im1, im2, matches):
     return outfile
 
 
-def plot_matches(im1, im2, matches, x=None, y=None, w=None, h=None,
+def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
                  outfile=None):
     """
     Plot matches on Pleiades images
 
     Args:
         im1, im2: paths to full Pleiades images
+        rpc1, rpc2: two instances of the rpcm.RPCModel class
         matches: 2D numpy array of size 4xN containing a list of matches (a
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2). The coordinates are given in the frame of the full images.
@@ -140,10 +141,6 @@ def plot_matches(im1, im2, matches, x=None, y=None, w=None, h=None,
     if not matches.size:
         print("visualisation.plot_matches: nothing to plot")
         return
-
-    # read rpcs
-    rpc1 = rpcm.rpc_from_geotiff(im1)
-    rpc2 = rpcm.rpc_from_geotiff(im2)
 
     # determine regions to crop in im1 and im2
     if x is not None:

@@ -54,7 +54,13 @@ def check_parameters(d):
 
     # read RPCs
     for img in d['images']:
-        img['rpc'] = rpcm.rpc_from_geotiff(img['img'])
+        if 'rpc' in img:
+            if isinstance(img['rpc'], rpcm.RPCModel):
+                continue
+            else:
+                img['rpc'] = rpcm.rpc_from_rpc_file(img['rpc'])
+        else:
+            img['rpc'] = rpcm.rpc_from_geotiff(img['img'])
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:

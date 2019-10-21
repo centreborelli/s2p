@@ -283,13 +283,14 @@ def rectification_homographies(matches, x, y, w, h):
     return np.dot(T, S1), np.dot(T, S2), F
 
 
-def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
+def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matches=None,
                  method='rpc', hmargin=0, vmargin=0):
     """
     Rectify a ROI in a pair of images.
 
     Args:
         im1, im2: paths to two GeoTIFF image files
+        rpc1, rpc2: two instances of the rpcm.RPCModel class
         x, y, w, h: four integers defining the rectangular ROI in the first
             image.  (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
@@ -309,10 +310,6 @@ def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
         have been applied to the two original (large) images.
         disp_min, disp_max: horizontal disparity range
     """
-    # read RPC data
-    rpc1 = rpcm.rpc_from_geotiff(im1)
-    rpc2 = rpcm.rpc_from_geotiff(im2)
-
     # compute real or virtual matches
     if method == 'rpc':
         # find virtual matches from RPC camera models
@@ -356,7 +353,7 @@ def rectify_pair(im1, im2, x, y, w, h, out1, out2, A=None, sift_matches=None,
         out_dir = os.path.dirname(out1)
         np.savetxt(os.path.join(out_dir, 'sift_matches_disp.txt'),
                    sift_matches, fmt='%9.3f')
-        visualisation.plot_matches(im1, im2, sift_matches, x, y, w, h,
+        visualisation.plot_matches(im1, im2, rpc1, rpc2, sift_matches, x, y, w, h,
                                    os.path.join(out_dir, 'sift_matches_disp.png'))
     disp_m, disp_M = disparity_range(rpc1, rpc2, x, y, w, h, H1, H2,
                                      sift_matches, A)
