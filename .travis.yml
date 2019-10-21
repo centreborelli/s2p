@@ -29,7 +29,7 @@ install:
         python3 -m venv venv
         source venv/bin/activate
     fi
-  - pip install -e .
+  - pip install -e . --upgrade --upgrade-strategy eager
 
 script: pytest --cov=s2p --cov-report term-missing tests
 
