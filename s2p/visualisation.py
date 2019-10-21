@@ -2,7 +2,6 @@
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
-from __future__ import print_function
 import os
 import numpy as np
 import rasterio

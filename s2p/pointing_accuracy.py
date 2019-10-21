@@ -4,7 +4,6 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 
-from __future__ import print_function
 import os
 import numpy as np
 import rpcm

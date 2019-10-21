@@ -49,8 +49,6 @@ jobs:
 
     - stage: test
     - stage: test
-      python: 2.7
-    - stage: test
       os: osx
       # The default osx image (xcode9.4 as of 2019-09-30) has a very old brew,
       # which crashes with the `addons` feature, so we use a non-default more recent one

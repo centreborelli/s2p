@@ -3,7 +3,6 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
 
-from __future__ import print_function
 import os
 import numpy as np
 import rpcm

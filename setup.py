@@ -64,6 +64,7 @@ setup(name="s2p",
       cmdclass={'develop': CustomDevelop,
                 'build_py': CustomBuildPy,
                 'bdist_wheel': BdistWheel},
+      python_requires=">=3",
       entry_points="""
           [console_scripts]
           s2p=s2p.cli:main

@@ -1,6 +1,5 @@
 # Copyright (C) 2019, David Youssefi (CNES) <david.youssefi@cnes.fr>
 
-from __future__ import print_function
 
 import re
 import os

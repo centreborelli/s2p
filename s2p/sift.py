@@ -3,7 +3,6 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
-from __future__ import print_function
 import os
 import ctypes
 import warnings

@@ -3,7 +3,6 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
-from __future__ import print_function
 import numpy as np
 
 def distance_point_to_line(x, l):
