@@ -51,6 +51,7 @@ requirements = ['numpy',
                 'plyfile',
                 'ransac',
                 'rpcm>=1.4.6',
+                'srtm4',
                 'requests']
 
 extras_require = {

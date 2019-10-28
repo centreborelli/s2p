@@ -12,6 +12,7 @@ import rasterio
 import numpy as np
 
 import rpcm
+import srtm4
 
 from s2p import geographiclib
 from s2p import common
@@ -392,7 +393,10 @@ def roi_process(rpc, ll_poly, utm_zone=None):
     cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image
-    img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], rpc.alt_offset)
+    lon, lat = np.mean(ll_poly, axis=0)
+    z = srtm4.srtm4(lon, lat)
+
+    img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], z)
     img_pts = list(zip(*img_pts))
 
     # return image roi
