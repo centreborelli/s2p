@@ -63,7 +63,7 @@ def plyflatten(cloud,
 
     # Call rasterize_cloud function from libplyflatten.so
     raster = np.zeros(raster_shape, dtype='float32')
-    lib.rasterize_cloud(cloud.astype(np.float64),
+    lib.rasterize_cloud(np.ascontiguousarray(cloud.astype(np.float64)),
                         raster,
                         nb_points,
                         nb_extra_columns,
