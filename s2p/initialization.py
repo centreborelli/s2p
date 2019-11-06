@@ -301,7 +301,7 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
     rpc = cfg['images'][0]['rpc']
     for img, size in zip(cfg['images'][1:], images_sizes[1:]):
         coords = rpc_utils.corresponding_roi(rpc, img['rpc'], x, y, w, h)
-        if rectangles_intersect(coords, (0, 0, size[0], size[1])):
+        if rectangles_intersect(coords, (0, 0, size[1], size[0])):
             break  # the tile is partly contained
     else:  # we've reached the end of the loop hence the tile is not contained
         return False, None
