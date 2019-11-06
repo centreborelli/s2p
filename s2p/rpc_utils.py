@@ -243,7 +243,6 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
         h_m += margin_bottom
         h_M += margin_top
     else:
-        print("WARNING: returning coarse range from rpc")
         h_m, h_M = altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
 
     return h_m, h_M

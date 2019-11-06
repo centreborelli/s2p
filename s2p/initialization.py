@@ -244,6 +244,76 @@ def create_tile(coords, neighborhood_coords_dict):
 
     return tile
 
+
+def point_in_rectangle(p, r):
+    """
+    Check if a 2D point is included in a horizontal/vertical rectangle.
+
+    Args:
+        p (tuple): 2 floats giving the coordinates of a 2D point
+        r (tuple): 4 floats that define the coordinates of the top-left corner,
+            the width and the height of a rectangle
+
+    Return:
+        bool telling if the point is contained in the rectangle
+    """
+    a, b = p
+    x, y, w, h = r
+    return (x <= a < x + w) and (y <= b < y + h)
+
+
+def rectangles_intersect(r, s):
+    """
+    Check if two horizontal/vertical rectangles intersect.
+
+    Args:
+        r (tuple): 4 floats that define the coordinates of the top-left corner,
+            the width and the height of a rectangle
+        s (tuple): 4 floats that define the coordinates of the top-left corner,
+            the width and the height of a rectangle
+
+    Return:
+        bool telling if the rectangles intersect
+    """
+    l = []
+    x, y, w, h = r
+    for p in [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]:
+        l.append(point_in_rectangle(p, s))
+    return any(l)
+
+
+def is_this_tile_useful(x, y, w, h, images_sizes):
+    """
+    Check if a tile contains valid pixels.
+
+    Valid pixels must be found in the reference image plus at least one other image.
+
+    Args:
+        x, y, w, h (ints): 4 ints that define the coordinates of the top-left corner,
+            the width and the height of a rectangular tile
+        images_sizes (list): list of tuples with the height and width of the images
+
+    Return:
+        useful (bool): bool telling if the tile has to be processed
+        mask (np.array): tile validity mask. Set to None if the tile is discarded
+    """
+    # check if the tile is partly contained in at least one other image
+    rpc = cfg['images'][0]['rpc']
+    for img, size in zip(cfg['images'][1:], images_sizes[1:]):
+        coords = rpc_utils.corresponding_roi(rpc, img['rpc'], x, y, w, h)
+        if rectangles_intersect(coords, (0, 0, size[0], size[1])):
+            break  # the tile is partly contained
+    else:  # we've reached the end of the loop hence the tile is not contained
+        return False, None
+
+    roi_msk = cfg['images'][0]['roi']
+    cld_msk = cfg['images'][0]['cld']
+    wat_msk = cfg['images'][0]['wat']
+    mask = masking.image_tile_mask(x, y, w, h, roi_msk, cld_msk, wat_msk,
+                                   images_sizes[0], cfg['border_margin'])
+    return True, mask
+
+
 def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     """
     List the tiles to process and prepare their output directories structures.
@@ -264,50 +334,56 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
     rw = cfg['roi']['w']
     rh = cfg['roi']['h']
 
-    # build a tile dictionary for all non-masked tiles and store them in a list
+    # list of dictionaries (one for each non-masked tile)
     tiles = []
+
     # list tiles coordinates
     tiles_coords, neighborhood_coords_dict = compute_tiles_coordinates(rx, ry, rw, rh, tw, th)
 
-    if os.path.exists(tiles_txt) is False or create_masks is True:
+    if create_masks or not os.path.exists(tiles_txt):
         print('\ndiscarding masked tiles...')
+        images_sizes = []
+        for img in cfg['images']:
+            with rasterio.open(img['img'], 'r') as f:
+                images_sizes.append(f.shape)
+
         # compute all masks in parallel as numpy arrays
-        with rasterio.open(cfg['images'][0]['img'], 'r') as f:
-            ref_shape = f.shape
-        tiles_masks = parallel.launch_calls_simple(masking.image_tile_mask,
-                                                   tiles_coords,
-                                                   cfg['max_processes'], roi_msk,
-                                                   cld_msk, wat_msk, ref_shape,
-                                                   cfg['border_margin'])
+        tiles_usefulnesses = parallel.launch_calls_simple(is_this_tile_useful,
+                                                          tiles_coords,
+                                                          cfg['max_processes'],
+                                                          images_sizes)
 
-        for coords, mask in zip(tiles_coords,
-                                tiles_masks):
-            if mask.any():  # there's at least one non-masked pixel in the tile
-                tile = create_tile(coords, neighborhood_coords_dict)
-                tiles.append(tile)
+        for coords, usefulness in zip(tiles_coords, tiles_usefulnesses):
 
-                # make tiles directories and store json configuration dumps
-                common.mkdir_p(tile['dir'])
-                for i in range(1, len(cfg['images'])):
-                    common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
+            useful, mask = usefulness
+            if not useful:
+                continue
 
-                # save a json dump of the tile configuration
-                tile_cfg = copy.deepcopy(cfg)
-                x, y, w, h = tile['coordinates']
-                for img in tile_cfg['images']:
-                    img.pop('rpc', None)
-                tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
-                tile_cfg['full_img'] = False
-                tile_cfg['max_processes'] = 1
-                tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
-                tile_cfg['out_dir'] = '../../..'
+            tile = create_tile(coords, neighborhood_coords_dict)
+            tiles.append(tile)
 
-                with open(os.path.join(cfg['out_dir'], tile['json']), 'w') as f:
-                    json.dump(tile_cfg, f, indent=2,default=workaround_json_int64)
+            # make tiles directories and store json configuration dumps
+            common.mkdir_p(tile['dir'])
+            for i in range(1, len(cfg['images'])):
+                common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
 
-                # save the mask
-                common.rasterio_write(os.path.join(tile['dir'], 'mask.png'),
-                                      mask.astype(np.uint8))
+            # save a json dump of the tile configuration
+            tile_cfg = copy.deepcopy(cfg)
+            x, y, w, h = tile['coordinates']
+            for img in tile_cfg['images']:
+                img.pop('rpc', None)
+            tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
+            tile_cfg['full_img'] = False
+            tile_cfg['max_processes'] = 1
+            tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
+            tile_cfg['out_dir'] = '../../..'
+
+            with open(os.path.join(cfg['out_dir'], tile['json']), 'w') as f:
+                json.dump(tile_cfg, f, indent=2, default=workaround_json_int64)
+
+            # save the mask
+            common.rasterio_write(os.path.join(tile['dir'], 'mask.png'),
+                                  mask.astype(np.uint8))
     else:
         if len(tiles_coords) == 1:
             tiles.append(create_tile(tiles_coords[0], neighborhood_coords_dict))
