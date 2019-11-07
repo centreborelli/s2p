@@ -363,6 +363,11 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                                                           cfg['max_processes'],
                                                           images_sizes)
 
+        # discard useless tiles from neighborhood_coords_dict
+        discarded_tiles = set(x for x, (b, _) in zip(tiles_coords, tiles_usefulnesses) if not b)
+        for k, v in neighborhood_coords_dict.items():
+            neighborhood_coords_dict[k] = list(set(v) - discarded_tiles)
+
         for coords, usefulness in zip(tiles_coords, tiles_usefulnesses):
 
             useful, mask = usefulness
