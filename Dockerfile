@@ -4,6 +4,7 @@ MAINTAINER Carlo de Franchis <carlodef@gmail.com>
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
     cmake \
     gdal-bin \
     geographiclib-tools \
@@ -13,8 +14,10 @@ RUN apt-get update && apt-get install -y \
     libgeotiff-dev \
     libtiff5-dev \
     python3 \
-    python3-numpy \
-    python3-pip
+    python3-numpy
+
+# Install pip
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py
 
 # Copy files needed to install s2p
 WORKDIR /root
@@ -27,4 +30,4 @@ COPY bin/ bin/
 COPY lib/ lib/
 
 # Install s2p
-RUN pip3 install -e .
+RUN pip install -e .
