@@ -222,25 +222,35 @@ def get_tile_dir(x, y, w, h):
 
 
 def create_tile(coords, neighborhood_coords_dict):
+    """
+    Return a dictionary with the data of a tile.
+
+    Args:
+        coords (tuple): 4-tuple of ints giving the x, y, w, h coordinates of a
+            tile, where x, y are the top-left corner coordinates and w, h the
+            width and height
+        neighborhood_coords_dict (dict): dictionary with the list of
+            neighboring tiles of each tile. The keys of this dict are string
+            identifying the tiles, and the values are lists of tuples of
+            coordinates of neighboring tiles coordinates
+
+    Returns:
+        tile (dict): dictionary with the metadata of a tile
+    """
     tile = {}
-    x, y, w, h = coords
-    tile['dir'] = os.path.join(cfg['out_dir'], get_tile_dir(x, y, w, h))
     tile['coordinates'] = coords
+    tile['dir'] = os.path.join(cfg['out_dir'], get_tile_dir(*coords))
+    tile['json'] = os.path.join(get_tile_dir(*coords), 'config.json')
+
     tile['neighborhood_dirs'] = list()
-    key = str((x, y, w, h))
+    key = str(coords)
 
     if 'neighborhood_dirs' in cfg:
         tile['neighborhood_dirs'] = cfg['neighborhood_dirs']
     elif key in neighborhood_coords_dict:
         for coords2 in neighborhood_coords_dict[key]:
-            x2, y2, w2, h2 = coords2
-            tile['neighborhood_dirs'].append(os.path.join('../../..', get_tile_dir(x2,
-                                                                                   y2,
-                                                                                   w2,
-                                                                                   h2)))
-
-    tile_json = os.path.join(get_tile_dir(x,y,w,h),'config.json')
-    tile['json'] = tile_json
+            tile['neighborhood_dirs'].append(os.path.join('../../..',
+                                                          get_tile_dir(*coords2)))
 
     return tile
 

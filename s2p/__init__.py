@@ -482,8 +482,8 @@ def plys_to_dsm(tile):
     local_yoff = global_yoff + np.ceil((ymax - global_yoff) / res) * res
     local_ysize = int(1 - np.floor((ymin - local_yoff) / res))
 
-    clouds = [os.path.join(tile['dir'],n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
-    roi = (local_xoff, local_yoff, local_xsize, local_ysize)
+    clouds = [os.path.join(tile['dir'], n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
+    roi = local_xoff, local_yoff, local_xsize, local_ysize
 
     raster, profile = rasterization.plyflatten_from_plyfiles_list(clouds,
                                                                   resolution=res,
