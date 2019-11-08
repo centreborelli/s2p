@@ -255,26 +255,9 @@ def create_tile(coords, neighborhood_coords_dict):
     return tile
 
 
-def point_in_rectangle(p, r):
-    """
-    Check if a 2D point is included in a horizontal/vertical rectangle.
-
-    Args:
-        p (tuple): 2 floats giving the coordinates of a 2D point
-        r (tuple): 4 floats that define the coordinates of the top-left corner,
-            the width and the height of a rectangle
-
-    Return:
-        bool telling if the point is contained in the rectangle
-    """
-    a, b = p
-    x, y, w, h = r
-    return (x <= a < x + w) and (y <= b < y + h)
-
-
 def rectangles_intersect(r, s):
     """
-    Check if two horizontal/vertical rectangles intersect.
+    Check intersection of two rectangles parallel to the coordinate axis.
 
     Args:
         r (tuple): 4 floats that define the coordinates of the top-left corner,
@@ -285,11 +268,18 @@ def rectangles_intersect(r, s):
     Return:
         bool telling if the rectangles intersect
     """
-    l = []
-    x, y, w, h = r
-    for p in [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]:
-        l.append(point_in_rectangle(p, s))
-    return any(l)
+    rx, ry, rw, rh = r
+    sx, sy, sw, sh = s
+
+    # check if one rectangle is entirely above the other
+    if ry + rh < sy or sy + sh < ry:
+        return False
+
+    # check if one rectangle is entirely left of the other
+    if rx + rw < sx or sx + sw < rx:
+        return False
+
+    return True
 
 
 def is_this_tile_useful(x, y, w, h, images_sizes):
