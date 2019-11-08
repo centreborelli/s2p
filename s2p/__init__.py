@@ -575,14 +575,16 @@ def main(user_cfg):
         nb_workers = cfg['max_processes']
 
     tw, th = initialization.adjust_tile_size()
-    tiles_txt = os.path.join(cfg['out_dir'],'tiles.txt')
+    tiles_txt = os.path.join(cfg['out_dir'], 'tiles.txt')
     tiles = initialization.tiles_full_info(tw, th, tiles_txt, create_masks=True)
+    if not tiles:
+        print('ERROR: the ROI is not seen in two images or is totally masked.')
+        return
 
-    # initialisation step:
-    # Write the list of json files to outdir/tiles.txt
-    with open(tiles_txt,'w') as f:
+    # initialisation write the list of tilewise json files to outdir/tiles.txt
+    with open(tiles_txt, 'w') as f:
         for t in tiles:
-            f.write(t['json']+os.linesep)
+            print(t['json'], file=f)
 
     n = len(cfg['images'])
     tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
