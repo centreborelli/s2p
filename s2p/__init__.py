@@ -581,7 +581,7 @@ def main(user_cfg):
         print('ERROR: the ROI is not seen in two images or is totally masked.')
         return
 
-    # initialisation write the list of tilewise json files to outdir/tiles.txt
+    # initialisation: write the list of tilewise json files to outdir/tiles.txt
     with open(tiles_txt, 'w') as f:
         for t in tiles:
             print(t['json'], file=f)
