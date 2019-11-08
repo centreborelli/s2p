@@ -468,30 +468,31 @@ def plys_to_dsm(tile):
         global_xoff = bbx[0]
         global_yoff = bbx[3]
     else:
-        global_xoff = 0 # arbitrary reference
-        global_yoff = 0 # arbitrary reference
-
-    res = cfg['dsm_resolution']
+        global_xoff = 0  # arbitrary reference
+        global_yoff = 0
 
     xmin, xmax, ymin, ymax = np.loadtxt(os.path.join(tile['dir'], "plyextrema.txt"))
 
-    # compute xoff, yoff, xsize, ysize considering final dsm
-    local_xoff = global_xoff + np.floor((xmin - global_xoff) / res) * res
-    local_xsize = int(1 + np.floor((xmax - local_xoff) / res))
+    if not all(np.isfinite([xmin, xmax, ymin, ymax])):  # then the ply is empty
+        return
 
-    local_yoff = global_yoff + np.ceil((ymax - global_yoff) / res) * res
-    local_ysize = int(1 - np.floor((ymin - local_yoff) / res))
+    # compute xoff, yoff, xsize, ysize considering final dsm
+    xoff = global_xoff + np.floor((xmin - global_xoff) / res) * res
+    xsize = int(1 + np.floor((xmax - xoff) / res))
+
+    yoff = global_yoff + np.ceil((ymax - global_yoff) / res) * res
+    ysize = int(1 - np.floor((ymin - yoff) / res))
+
+    roi = xoff, yoff, xsize, ysize
 
     clouds = [os.path.join(tile['dir'], n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
-    roi = local_xoff, local_yoff, local_xsize, local_ysize
-
     raster, profile = rasterization.plyflatten_from_plyfiles_list(clouds,
                                                                   resolution=res,
                                                                   roi=roi,
                                                                   radius=cfg['dsm_radius'],
                                                                   sigma=cfg['dsm_sigma'])
 
-    # save_output_image_with_utm_georeferencing
+    # save output image with utm georeferencing
     common.rasterio_write(out_dsm, raster[:, :, 0], profile=profile)
 
     # export confidence (optional)
