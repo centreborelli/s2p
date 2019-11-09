@@ -191,7 +191,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
                                                               cfg['disp_range_exogenous_high_margin'],
                                                               cfg['disp_range_exogenous_low_margin'])
 
-        print("exogenous disparity range: [%f, %f]" % (exogenous_disp[0], exogenous_disp[1]))
+        print("exogenous disparity range:", exogenous_disp)
 
     # Compute SIFT disparity range if needed
     if (cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']):

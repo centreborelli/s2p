@@ -573,10 +573,14 @@ def exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
         disparity is made horizontal thanks to the two rectifying homographies
         H1 and H2.
     """
+    if cfg['exogenous_dem'] is None:
+        return
+
     m, M = altitude_range(rpc1, x, y, w, h, margin_top, margin_bottom)
 
     return altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2,
                                         A, margin_top, margin_bottom)
+
 
 def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
                                  margin_top=0, margin_bottom=0):
