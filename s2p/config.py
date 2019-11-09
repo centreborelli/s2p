@@ -72,7 +72,7 @@ cfg['disp_range_extra_margin'] = 0.2
 cfg['rectification_method'] = 'rpc'  # either 'rpc' or 'sift'
 
 # register the rectified images with a shear estimated from the rpc data
-cfg['register_with_shear'] = False
+cfg['register_with_shear'] = True
 
 # number of ground control points per axis in matches from rpc generation
 cfg['n_gcp_per_axis'] = 5
