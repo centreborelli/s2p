@@ -159,88 +159,75 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     """
     Compute the disparity range of a ROI from a list of point matches.
 
-    The estimation is based on the extrapolation of the affine registration
-    estimated from the matches. The extrapolation is done on the whole region of
-    interest.
-
     Args:
-        rpc1, rpc2: two instances of the rpcm.RPCModel class
-        x, y, w, h: four integers defining the rectangular ROI in the first
-            image.  (x, y) is the top-left corner, and (w, h) are the dimensions
-            of the rectangle.
-        H1, H2: two rectifying homographies, stored as numpy 3x3 matrices
-        matches: Nx4 numpy array containing a list of sift matches, in the full
-            image coordinates frame
-        A (optional): 3x3 numpy array containing the pointing error correction
-            for im2. This matrix is usually estimated with the pointing_accuracy
+        rpc1, rpc2 (rpcm.RPCModel): two RPC camera models
+        x, y, w, h (int): 4-tuple of integers defining the rectangular ROI in
+            the first image. (x, y) is the top-left corner, and (w, h) are the
+            dimensions of the rectangle.
+        H1, H2 (np.array): two rectifying homographies, stored as 3x3 arrays
+        matches (np.array): Nx4 array containing a list of sift matches, in the
+            full image coordinates frame
+        A (np.array): 3x3 array containing the pointing error correction for
+            im2. This matrix is usually estimated with the pointing_accuracy
             module.
 
     Returns:
         disp: 2-uple containing the horizontal disparity range
     """
-    # Default disparity range to return if everything else breaks
-    disp = (-3,3)
-    exogenous_disp = None
-    sift_disp = None
-    alt_disp  = None
-
-    # Compute exogenous disparity range if needed
-    if (cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']):
-        exogenous_disp = rpc_utils.exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h,
-                                                              H1, H2, A,
-                                                              cfg['disp_range_exogenous_high_margin'],
-                                                              cfg['disp_range_exogenous_low_margin'])
+    # compute exogenous disparity range if needed
+    if cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']:
+        exogenous_disp = rpc_utils.exogenous_disp_range_estimation(rpc1, rpc2,
+                                                                   x, y, w, h,
+                                                                   H1, H2, A,
+                                                                   cfg['disp_range_exogenous_high_margin'],
+                                                                   cfg['disp_range_exogenous_low_margin'])
 
         print("exogenous disparity range:", exogenous_disp)
 
-    # Compute SIFT disparity range if needed
-    if (cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']):
-        if matches is not None and len(matches)>=2:
+    # compute SIFT disparity range if needed
+    if cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']:
+        if matches is not None and len(matches) >= 2:
             sift_disp = disparity_range_from_matches(matches, H1, H2, w, h)
-            print("SIFT disparity range: [%f, %f]" % (sift_disp[0], sift_disp[1]))
         else:
-            print("No SIFT available, SIFT disparity can not be estimated")
+            sift_disp = None
+        print("SIFT disparity range:", sift_disp)
 
-    # Compute altitude range disparity if needed
+    # compute altitude range disparity if needed
     if cfg['disp_range_method'] == 'fixed_altitude_range':
-        if cfg['alt_min'] is not None and cfg['alt_max'] is not None:
-            alt_disp = rpc_utils.altitude_range_to_disp_range(cfg['alt_min'],
-                                                              cfg['alt_max'],
-                                                              rpc1, rpc2,
-                                                              x, y, w, h,
-                                                              H1, H2, A)
-            print("Altitude fixed disparity range: [%f, %f]" % (alt_disp[0], alt_disp[1]))
-            
-    # Now, compute disparity range according to selected method
+        alt_disp = rpc_utils.altitude_range_to_disp_range(cfg['alt_min'],
+                                                          cfg['alt_max'],
+                                                          rpc1, rpc2,
+                                                          x, y, w, h, H1, H2, A)
+        print("disparity range computed from fixed altitude range:", alt_disp)
+
+    # now compute disparity range according to selected method
     if cfg['disp_range_method'] == 'exogenous':
-        if exogenous_disp is not None:
-            disp = exogenous_disp
+        disp = exogenous_disp
 
     elif cfg['disp_range_method'] == 'sift':
-        if sift_disp is not None:
-            disp = sift_disp
+        disp = sift_disp
 
     elif cfg['disp_range_method'] == 'wider_sift_exogenous':
         if sift_disp is not None and exogenous_disp is not None:
             disp = min(exogenous_disp[0], sift_disp[0]), max(exogenous_disp[1], sift_disp[1])
         else:
-            if sift_disp is not None:
-                disp = sift_disp
-            else:
-                disp = exogenous_disp
-        
-    elif cfg['disp_range_method'] == 'fixed_pixel_range':
-        if cfg['disp_min'] is not None and cfg['disp_max'] is not None:
-            disp = cfg['disp_min'], cfg['disp_max']
+            disp = sift_disp or exogenous_disp
 
     elif cfg['disp_range_method'] == 'fixed_altitude_range':
         disp = alt_disp
 
+    elif cfg['disp_range_method'] == 'fixed_pixel_range':
+        disp = cfg['disp_min'], cfg['disp_max']
+
+    # default disparity range to return if everything else broke
+    if disp is None:
+        disp = -3, 3
+
     # impose a minimal disparity range (TODO this is valid only with the
     # 'center' flag for register_horizontally_translation)
-    disp = min(-3, disp[0]), max( 3,  disp[1])
-        
-    print("Final disparity range: [%f, %f]" % (disp[0], disp[1]))
+    disp = min(-3, disp[0]), max(3, disp[1])
+
+    print("Final disparity range:", disp)
     return disp
 
 
