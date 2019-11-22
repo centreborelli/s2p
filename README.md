@@ -67,7 +67,7 @@ sources, install it in editable mode from a git clone:
 
     git clone https://github.com/cmla/s2p.git --recursive
     cd s2p
-    pip install -e .
+    pip install -e ".[test]"
 
 The `--recursive` option for `git clone` allows to clone all git submodules, such
 as the [iio](https://github.com/mnhrdt/iio) library.
