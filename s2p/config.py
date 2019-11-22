@@ -129,8 +129,11 @@ cfg['stereo_speckle_filter'] = 25
 # MGM parameter: regularity (multiplies P1 and P2)
 cfg['stereo_regularity_multiplier'] = 1.0
 
-# MGM parameter: number of directions explored for regularization
+# MGM parameters:
+# number of directions explored for regularization
 cfg['mgm_nb_directions'] = 8
+# timeout in seconds, after which a running mgm process will be killed
+cfg['mgm_timeout'] = 600
 
 # remove isolated 3d points in height maps
 cfg['3d_filtering_r'] = None  # radius in meters

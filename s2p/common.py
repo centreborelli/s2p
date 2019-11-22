@@ -71,7 +71,7 @@ class RunFailure(Exception):
     pass
 
 
-def run(cmd, env=os.environ):
+def run(cmd, env=os.environ, timeout=None):
     """
     Runs a shell command, and print it before running.
 
@@ -79,6 +79,8 @@ def run(cmd, env=os.environ):
         cmd: string to be passed to a shell
         env (optional, default value is os.environ): dictionary containing the
             environment variables
+        timeout (optional, int): time in seconds after which the function will
+            raise an error if the command hasn't returned
 
     Both stdout and stderr of the shell in which the command is run are those
     of the parent process.
@@ -87,10 +89,10 @@ def run(cmd, env=os.environ):
     t = datetime.datetime.now()
     try:
         subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
-                              stderr=sys.stderr, env=env)
+                              stderr=sys.stderr, env=env, timeout=timeout)
         print(datetime.datetime.now() - t)
 
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
         # raise a custom exception because the CalledProcessError causes the
         # pool to crash in python2
         raise RunFailure({"command": e.cmd, "output": e.output})

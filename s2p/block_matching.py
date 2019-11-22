@@ -16,7 +16,7 @@ def rectify_secondary_tile_only(algo):
         return False
 
 def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
-                          disp_max=None, extra_params=''):
+                          disp_max=None, timeout=cfg['mgm_timeout'], extra_params=''):
     """
     Runs a block-matching binary on a pair of stereo-rectified images.
 
@@ -30,6 +30,9 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
             'msmw', 'tvl1', 'mgm', 'mgm_multi' and 'micmac'
         disp_min : smallest disparity to consider
         disp_max : biggest disparity to consider
+        timeout: time in seconds after which the disparity command will
+            raise an error if it hasn't returned.
+            Only applies to `mgm*` algorithms.
         extra_params: optional string with algorithm-dependent parameters
     """
     if rectify_secondary_tile_only(algo) is False:
@@ -159,7 +162,8 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                 im2=im2,
                 disp=disp,
             ),
-            env,
+            env=env,
+            timeout=timeout,
         )
 
         # create rejection mask (0 means rejected, 1 means accepted)
@@ -231,7 +235,8 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                 im2=im2,
                 disp=disp,
             ),
-            env,
+            env=env,
+            timeout=timeout,
         )
 
         # create rejection mask (0 means rejected, 1 means accepted)
@@ -274,7 +279,8 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                 im2=im2,
                 disp=disp,
             ),
-            env,
+            env=env,
+            timeout=timeout,
         )
 
         # create rejection mask (0 means rejected, 1 means accepted)
