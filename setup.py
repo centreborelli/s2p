@@ -44,7 +44,7 @@ except ImportError:
 
 requirements = ['numpy',
                 'scipy',
-                'rasterio[s3,test]>=1.0.14',
+                'rasterio[s3]>=1.0.14',
                 'utm',
                 'pyproj>=2.0.2',
                 'beautifulsoup4[lxml]',
@@ -52,6 +52,10 @@ requirements = ['numpy',
                 'ransac',
                 'rpcm>=1.3',
                 'requests']
+
+extras_require = {
+    "test": ["pytest", "pytest-cov"],
+}
 
 setup(name="s2p",
       version="1.0b21dev",
@@ -61,6 +65,7 @@ setup(name="s2p",
       url='https://github.com/cmla/s2p',
       packages=['s2p'],
       install_requires=requirements,
+      extras_require=extras_require,
       cmdclass={'develop': CustomDevelop,
                 'build_py': CustomBuildPy,
                 'bdist_wheel': BdistWheel},
