@@ -31,3 +31,6 @@ COPY lib/ lib/
 
 # Install s2p
 RUN pip install -e .
+
+# https://github.com/mapbox/rasterio#ssl-certs
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
