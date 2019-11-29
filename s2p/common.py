@@ -67,10 +67,6 @@ def tmpfile(ext=''):
     return out
 
 
-class RunFailure(Exception):
-    pass
-
-
 def run(cmd, env=os.environ, timeout=None):
     """
     Runs a shell command, and print it before running.
@@ -87,15 +83,9 @@ def run(cmd, env=os.environ, timeout=None):
     """
     print("\nRUN: %s" % cmd)
     t = datetime.datetime.now()
-    try:
-        subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
-                              stderr=sys.stderr, env=env, timeout=timeout)
-        print(datetime.datetime.now() - t)
-
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-        # raise a custom exception because the CalledProcessError causes the
-        # pool to crash in python2
-        raise RunFailure({"command": e.cmd, "output": e.output})
+    subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
+                          stderr=sys.stderr, env=env, timeout=timeout)
+    print(datetime.datetime.now() - t)
 
 
 def mkdir_p(path):

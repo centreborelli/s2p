@@ -21,6 +21,7 @@ import json
 import argparse
 import numpy as np
 import datetime
+import subprocess
 
 
 import s2p
@@ -46,7 +47,7 @@ def write_svg_tilemap(filename, cfg, tiles):
             dir = os.path.abspath(t['dir']).split(os.path.abspath(cfg['out_dir']))[-1]
             try:
                common.image_qauto("%s/dsm.tif"%t['dir'], "%s/dsm.tif.png"%t['dir'])
-            except common.RunFailure:
+            except subprocess.CalledProcessError:
                pass
 
             f.write('<polygon style="fill:white;stroke:black;stroke-width:2" \

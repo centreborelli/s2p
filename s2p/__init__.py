@@ -66,7 +66,7 @@ def pointing_correction(tile, i):
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
     try:
         A, m = pointing_accuracy.compute_correction(img1, img2, rpc1, rpc2, x, y, w, h)
-    except common.RunFailure as e:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         stderr = os.path.join(out_dir, 'stderr.log')
         with open(stderr, 'w') as f:
             f.write('ERROR during pointing correction with cmd: %s\n' % e[0]['command'])

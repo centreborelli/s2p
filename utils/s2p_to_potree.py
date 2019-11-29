@@ -12,12 +12,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import os
 import argparse
 from codecs import open
 import re
+import subprocess
 
 from bs4 import BeautifulSoup
 
@@ -108,7 +107,7 @@ def test_for_potree(basedir):
 
     if not os.path.exists(PotreeConverter):
         print('not found\n')
-        raise common.RunFailure
+        raise subprocess.CalledProcessError(1, "PotreeConverter")
 
 
 def produce_potree(s2p_outdirs_list, potreeoutdir):
@@ -185,7 +184,7 @@ if __name__ == '__main__':
 
     try:
         produce_potree(args.s2pout, args.outdir)
-    except common.RunFailure:
+    except subprocess.CalledProcessError:
         basedir = os.path.dirname(os.path.abspath(__file__))
         print('You must download and compile PotreeConverter. Run the following commands:')
         print('    > cd %s'%basedir)

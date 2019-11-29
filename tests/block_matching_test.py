@@ -1,4 +1,6 @@
 import os
+import subprocess
+
 import pytest
 
 import s2p
@@ -13,7 +15,7 @@ def test_compute_disparity_map_timeout(timeout=1):
     disp = data_path(os.path.join("testoutput", "d.tif"))
     mask = data_path(os.path.join("testoutput", "m.tif"))
 
-    with pytest.raises(s2p.common.RunFailure):
+    with pytest.raises(subprocess.TimeoutExpired):
         s2p.block_matching.compute_disparity_map(img, img, disp, mask,
                                                  "mgm_multi", -100, 100,
                                                  timeout)

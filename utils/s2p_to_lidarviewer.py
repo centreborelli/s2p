@@ -16,6 +16,7 @@
 import os
 import json
 import argparse
+import subprocess
 
 import s2p
 from s2p import common
@@ -113,7 +114,7 @@ if __name__ == '__main__':
 
     try:
     	produce_lidarviewer(args.s2pout,args.outdir)
-    except common.RunFailure:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         print ('------------------------------------------------------------------------------------')
         print ('\nYou must install LidarPreprocessor from https://github.com/KeckCAVES/LidarViewer\n')
         print ('------------------------------------------------------------------------------------')
