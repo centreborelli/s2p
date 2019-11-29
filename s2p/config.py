@@ -9,8 +9,6 @@
 # user is not forced to define in config.json) must be defined here, otherwise
 # they won't have a default value.
 
-import os.path
-
 cfg = {}
 
 # path to output directory
@@ -100,7 +98,6 @@ cfg['msk_erosion'] = 2
 cfg['fusion_operator'] = 'average_if_close'
 
 # threshold (in meters) used for the fusion of two dems in triplet processing
-# It should be adapted to the zoom factor
 cfg['fusion_thresh'] = 3
 
 cfg['rpc_alt_range_scale_factor'] = 1

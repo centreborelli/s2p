@@ -2,8 +2,6 @@
 # Copyright (C) 2017, Carlo de Franchis <carlo.de-franchis@polytechnique.org>
 # Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
-from __future__ import print_function
-
 import os
 import sys
 import glob
