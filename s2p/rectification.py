@@ -368,15 +368,6 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
     T = common.matrix_translation(hmargin, vmargin)
     H1, H2 = np.dot(T, H1), np.dot(T, H2)
 
-    # compute rectifying homographies for non-epipolar mode (rectify the secondary tile only)
-    if block_matching.rectify_secondary_tile_only(cfg['matching_algorithm']):
-        H1_inv = np.linalg.inv(H1)
-        H1 = np.eye(3) # H1 is replaced by 2-D array with ones on the diagonal and zeros elsewhere
-        H2 = np.dot(H1_inv,H2)
-        T = common.matrix_translation(-x + hmargin, -y + vmargin)
-        H1 = np.dot(T, H1)
-        H2 = np.dot(T, H2)
-
     # compute output images size
     roi = [[x, y], [x+w, y], [x+w, y+h], [x, y+h]]
     pts1 = common.points_apply_homography(H1, roi)
@@ -387,12 +378,5 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
     # apply homographies and do the crops
     common.image_apply_homography(out1, im1, H1, w0 + 2*hmargin, h0 + 2*vmargin)
     common.image_apply_homography(out2, im2, H2, w0 + 2*hmargin, h0 + 2*vmargin)
-
-    if block_matching.rectify_secondary_tile_only(cfg['matching_algorithm']):
-        pts_in = [[0, 0], [disp_m, 0], [disp_M, 0]]
-        pts_out = common.points_apply_homography(H1_inv,
-                                                 pts_in)
-        disp_m = pts_out[1,:] - pts_out[0,:]
-        disp_M = pts_out[2,:] - pts_out[0,:]
 
     return H1, H2, disp_m, disp_M

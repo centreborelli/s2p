@@ -14,13 +14,6 @@ class MaxDisparityRangeError(Exception):
     pass
 
 
-def rectify_secondary_tile_only(algo):
-    if algo in ['tvl1_2d']:
-        return True
-    else:
-        return False
-
-
 def create_rejection_mask(disp, im1, im2, mask):
     """
     Create rejection mask (0 means rejected, 1 means accepted)
@@ -52,8 +45,8 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
             one among 'hirschmuller02', 'hirschmuller08',
             'hirschmuller08_laplacian', 'hirschmuller08_cauchy', 'sgbm',
             'msmw', 'tvl1', 'mgm', 'mgm_multi' and 'micmac'
-        disp_min : smallest disparity to consider
-        disp_max : biggest disparity to consider
+        disp_min: smallest disparity to consider
+        disp_max: biggest disparity to consider
         timeout: time in seconds after which the disparity command will
             raise an error if it hasn't returned.
             Only applies to `mgm*` algorithms.
@@ -64,29 +57,19 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
             and if the [disp_min, disp_max] range is greater
             than max_disp_range, to avoid endless computation.
     """
-    if rectify_secondary_tile_only(algo) is False:
-        disp_min = [disp_min]
-        disp_max = [disp_max]
-
     # limit disparity bounds
-    np.alltrue(len(disp_min) == len(disp_max))
-    for dim in range(len(disp_min)):
-        if disp_min[dim] is not None and disp_max[dim] is not None:
-            image_size = common.image_size_gdal(im1)
-            if disp_max[dim] - disp_min[dim] > image_size[dim]:
-                center = 0.5 * (disp_min[dim] + disp_max[dim])
-                disp_min[dim] = int(center - 0.5 * image_size[dim])
-                disp_max[dim] = int(center + 0.5 * image_size[dim])
+    if disp_min is not None and disp_max is not None:
+        image_size = common.image_size_gdal(im1)
+        if disp_max - disp_min > image_size[0]:
+            center = 0.5 * (disp_min + disp_max)
+            disp_min = int(center - 0.5 * image_size[0])
+            disp_max = int(center + 0.5 * image_size[0])
 
-        # round disparity bounds
-        if disp_min[dim] is not None:
-            disp_min[dim] = int(np.floor(disp_min[dim]))
-        if disp_max is not None:
-            disp_max[dim] = int(np.ceil(disp_max[dim]))
-
-    if rectify_secondary_tile_only(algo) is False:
-        disp_min = disp_min[0]
-        disp_max = disp_max[0]
+    # round disparity bounds
+    if disp_min is not None:
+        disp_min = int(np.floor(disp_min))
+    if disp_max is not None:
+        disp_max = int(np.ceil(disp_max))
 
     if (
         max_disp_range is not None
@@ -152,12 +135,6 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         tvl1 = 'callTVL1.sh'
         common.run('{0} {1} {2} {3} {4}'.format(tvl1, im1, im2, disp, mask),
                    env)
-
-    if algo == 'tvl1_2d':
-        tvl1 = 'callTVL1.sh'
-        common.run('{0} {1} {2} {3} {4} {5}'.format(tvl1, im1, im2, disp, mask,
-                                                    1), env)
-
 
     if algo == 'msmw':
         bm_binary = 'iip_stereo_correlation_multi_win2'
