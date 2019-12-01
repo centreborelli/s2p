@@ -280,47 +280,6 @@ def utm_zone(rpc, x, y, w, h):
     return geographiclib.compute_utm_zone(lon, lat)
 
 
-def utm_roi_to_img_roi(rpc, roi, use_srtm=False):
-    """
-    Convert a UTM ROI into a rectangular bounding box
-    in image coordinates
-
-    Args:
-        rpc (rpcm.RPCModel): camera model
-        roi (dict): dictionary with keys
-            'utm_band', 'hemisphere', 'x', 'y', 'w', 'h'
-        use_srtm (bool): whether or not to use SRTM DEM to estimate the
-            average ground altitude of the ROI.
-
-    Returns:
-        x, y, w, h: four integers defining a rectangular region of interest
-            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
-            are the dimensions of the rectangle.
-    """
-    # define utm rectangular box
-    x, y, w, h = [roi[k] for k in ['x', 'y', 'w', 'h']]
-    box = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
-
-    # convert utm to lon/lat
-    utm_proj = geographiclib.utm_proj("{}{}".format(roi['utm_band'], roi['hemisphere']))
-    box_lon, box_lat = pyproj.transform(
-        utm_proj, pyproj.Proj(init="epsg:4326"), [p[0] for p in box], [p[1] for p in box]
-    )
-
-    # project lon/lat vertices into the image
-    if use_srtm:
-        lon = np.mean(box_lon)
-        lat = np.mean(box_lat)
-        z = srtm4.srtm4(lon, lat)
-    else:
-        z = rpc.alt_offset
-    img_pts = rpc.projection(box_lon, box_lat, rpc.alt_offset)
-
-    # return image roi
-    x, y, w, h = common.bounding_box2D(img_pts)
-    return {'x': x, 'y': y, 'w': w, 'h': h}
-
-
 def geojson_roi_process(rpc, geojson, utm_zone=None, use_srtm=False):
     """
     Define a rectangular bounding box in image coordinates

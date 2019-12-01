@@ -73,11 +73,6 @@ def check_parameters(d):
         d['roi'] = {'x': 0, 'y': 0, 'w': sz[0], 'h': sz[1]}
     elif 'roi' in d and dict_has_keys(d['roi'], ['x', 'y', 'w', 'h']):
         pass
-    elif 'roi_utm' in d and dict_has_keys(d['roi_utm'], ['utm_band',
-                                                         'hemisphere',
-                                                         'x', 'y', 'w', 'h']):
-        d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpcm'],
-                                                d['roi_utm'], d.get('use_srtm'))
     elif 'roi_geojson' in d:
         # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpcm'],
@@ -94,10 +89,9 @@ def check_parameters(d):
     d['roi']['h'] = int(np.ceil(d['roi']['h']))
 
     # warn about unknown parameters. The known parameters are those defined in
-    # the global config.cfg dictionary, plus the mandatory 'images' and 'roi' or
-    # 'roi_utm'
+    # the global config.cfg dictionary, plus the mandatory 'images' and 'roi'
     for k in d.keys():
-        if k not in ['images', 'roi', 'roi_geojson', 'roi_utm', 'utm_zone']:
+        if k not in ['images', 'roi', 'roi_geojson', 'utm_zone']:
             if k not in cfg:
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
