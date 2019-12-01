@@ -184,12 +184,8 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
 
 
     if algo == 'mgm_multi_lsd':
-
-
         ref = im1
         sec = im2
-
-
         wref = common.tmpfile('.tif')
         wsec = common.tmpfile('.tif')
         # TODO TUNE LSD PARAMETERS TO HANDLE DIRECTLY 12 bits images?
