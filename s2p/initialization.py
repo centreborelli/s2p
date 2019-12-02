@@ -14,6 +14,7 @@ import numpy as np
 import rpcm
 
 from s2p import common
+from s2p import geographiclib
 from s2p import rpc_utils
 from s2p import masking
 from s2p import parallel
@@ -74,10 +75,9 @@ def check_parameters(d):
     elif 'roi' in d and dict_has_keys(d['roi'], ['x', 'y', 'w', 'h']):
         pass
     elif 'roi_geojson' in d:
-        # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
-        d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpcm'],
-                                                 d['roi_geojson'], d.get('utm_zone'),
-                                                 d.get('use_srtm'))
+        ll_poly = geographiclib.read_lon_lat_poly_from_geojson(d['roi_geojson'])
+        d['roi'] = rpc_utils.roi_process(d['images'][0]['rpcm'], ll_poly,
+                                         d.get('use_srtm'))
     else:
         print('ERROR: missing or incomplete roi definition')
         sys.exit(1)

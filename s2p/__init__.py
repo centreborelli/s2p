@@ -460,33 +460,25 @@ def plys_to_dsm(tile):
     """
     out_dsm  = os.path.join(tile['dir'], 'dsm.tif')
     out_conf = os.path.join(tile['dir'], 'confidence.tif')
-
-    res = cfg['dsm_resolution']
-    if 'utm_bbx' in cfg:
-        bbx = cfg['utm_bbx']
-        global_xoff = bbx[0]
-        global_yoff = bbx[3]
-    else:
-        global_xoff = 0  # arbitrary reference
-        global_yoff = 0
-
-    xmin, xmax, ymin, ymax = np.loadtxt(os.path.join(tile['dir'], "plyextrema.txt"))
+    r = cfg['dsm_resolution']
+    xmin, xmax, ymin, ymax = np.loadtxt(os.path.join(tile['dir'],
+                                                     "plyextrema.txt"))
 
     if not all(np.isfinite([xmin, xmax, ymin, ymax])):  # then the ply is empty
         return
 
-    # compute xoff, yoff, xsize, ysize considering final dsm
-    xoff = global_xoff + np.floor((xmin - global_xoff) / res) * res
-    xsize = int(1 + np.floor((xmax - xoff) / res))
+    # compute xoff, yoff, xsize, ysize on a grid of unit r
+    xoff = np.floor(xmin / r) * r
+    xsize = int(1 + np.floor((xmax - xoff) / r))
 
-    yoff = global_yoff + np.ceil((ymax - global_yoff) / res) * res
-    ysize = int(1 - np.floor((ymin - yoff) / res))
+    yoff = np.ceil(ymax / r) * r
+    ysize = int(1 - np.floor((ymin - yoff) / r))
 
     roi = xoff, yoff, xsize, ysize
 
     clouds = [os.path.join(tile['dir'], n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
     raster, profile = rasterization.plyflatten_from_plyfiles_list(clouds,
-                                                                  resolution=res,
+                                                                  resolution=r,
                                                                   roi=roi,
                                                                   radius=cfg['dsm_radius'],
                                                                   sigma=cfg['dsm_sigma'])
@@ -518,15 +510,16 @@ def global_dsm(tiles):
 
     res = cfg['dsm_resolution']
 
-    if 'utm_bbx' in cfg:
-        bbx = cfg['utm_bbx']
+    if 'roi_geojson' in cfg:
+        ll_poly = read_lon_lat_poly_from_geojson(cfg['roi_geojson'])
+        bbx = geographiclib.utm_bbx(ll_poly, utm_zone=cfg.get('utm_zone'))
         xoff = bbx[0]
         yoff = bbx[3]
         xsize = int(np.ceil((bbx[1]-bbx[0]) / res))
         ysize = int(np.ceil((bbx[3]-bbx[2]) / res))
-        projwin = "-projwin %s %s %s %s" % (xoff, yoff,
-                                            xoff + xsize * res,
-                                            yoff - ysize * res)
+        projwin = "-projwin {} {} {} {}".format(xoff, yoff,
+                                                xoff + xsize * res,
+                                                yoff - ysize * res)
     else:
         projwin = ""
 

@@ -280,58 +280,14 @@ def utm_zone(rpc, x, y, w, h):
     return geographiclib.compute_utm_zone(lon, lat)
 
 
-def geojson_roi_process(rpc, geojson, utm_zone=None, use_srtm=False):
+def roi_process(rpc, ll_poly, use_srtm=False):
     """
-    Define a rectangular bounding box in image coordinates
-    from a polygon in a geojson file or dict
-
-    Args:
-        rpc: instance of the rpcm.RPCModel class, or path to the xml file
-        geojson: file path to a geojson file containing a single polygon,
-            or content of the file as a dict.
-            The geojson's top-level type should be either FeatureCollection,
-            Feature, or Polygon.
-        utm_zone: force the zone number to be used when defining `utm_bbx`.
-            If not specified, the default UTM zone for the given geography
-            is used.
-        use_srtm (bool): whether or not to use SRTM DEM to estimate the
-            average ground altitude of the ROI.
-
-    Returns:
-        x, y, w, h: four integers defining a rectangular region of interest
-            (ROI) in the image. (x, y) is the top-left corner, and (w, h)
-            are the dimensions of the rectangle.
-    """
-    # extract lon lat from geojson file or dict
-    if isinstance(geojson, str):
-        with open(geojson, 'r') as f:
-            a = json.load(f)
-    else:
-        a = geojson
-
-    if a["type"] == "FeatureCollection":
-        a = a["features"][0]
-
-    if a["type"] == "Feature":
-        a = a["geometry"]
-
-    ll_poly = np.array(a["coordinates"][0])
-    box_d = roi_process(rpc, ll_poly, utm_zone=utm_zone, use_srtm=use_srtm)
-    return box_d
-
-
-def roi_process(rpc, ll_poly, utm_zone=None, use_srtm=False):
-    """
-    Convert a longitude/latitude polygon into a rectangular
-    bounding box in image coordinates
+    Convert a (lon, lat) polygon into a rectangular bounding box in image space.
 
     Args:
         rpc (rpcm.RPCModel): camera model
         ll_poly (array): 2D array of shape (n, 2) containing the vertices
             (longitude, latitude) of the polygon
-        utm_zone: force the zone number to be used when defining `utm_bbx`.
-            If not specified, the default UTM zone for the given geography
-            is used.
         use_srtm (bool): whether or not to use SRTM DEM to estimate the
             average ground altitude of the ROI.
 
@@ -340,21 +296,6 @@ def roi_process(rpc, ll_poly, utm_zone=None, use_srtm=False):
             (ROI) in the image. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
     """
-    if not utm_zone:
-        utm_zone = geographiclib.compute_utm_zone(*ll_poly.mean(axis=0))
-    cfg['utm_zone'] = utm_zone
-
-    # convert lon lat polygon to utm
-    utm_proj = geographiclib.utm_proj(utm_zone)
-    easting, northing = pyproj.transform(
-        pyproj.Proj(init="epsg:4326"), utm_proj, ll_poly[:, 0], ll_poly[:, 1]
-    )
-    east_min = min(easting)
-    east_max = max(easting)
-    nort_min = min(northing)
-    nort_max = max(northing)
-    cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
-
     # project lon lat vertices into the image
     if use_srtm:
         lon, lat = np.mean(ll_poly, axis=0)

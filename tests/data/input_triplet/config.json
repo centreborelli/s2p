@@ -16,6 +16,5 @@
   "tile_size" : 300,
   "disp_range_method" : "sift",
   "msk_erosion": 0,
-  "dsm_resolution": 0.5,
-  "utm_bbx" : [698053.031, 698485.531, 4792556.569, 4792984.069]
+  "dsm_resolution": 0.5
 }

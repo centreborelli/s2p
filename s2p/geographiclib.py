@@ -7,6 +7,7 @@ import os
 import subprocess
 
 import pyproj
+import numpy as np
 
 
 def geoid_above_ellipsoid(lat, lon):
@@ -111,3 +112,61 @@ def lonlat_to_geocentric(lon, lat, alt):
     x, y, z = pyproj.transform(pyproj.Proj(init="epsg:4326"),
                                pyproj.Proj(init="epsg:4978"), lon, lat, alt)
     return x, y, z
+
+
+def read_lon_lat_poly_from_geojson(geojson):
+    """
+    Read a (lon, lat) polygon from a geojson file or dict.
+
+    Args:
+        geojson: file path to a geojson file containing a single polygon,
+            or content of the file as a dict.
+            The geojson's top-level type should be either FeatureCollection,
+            Feature, or Polygon.
+
+    Returns:
+        ll_poly: list of polygon vertices (lon, lat) coordinates
+    """
+    # extract lon lat from geojson file or dict
+    if isinstance(geojson, str):
+        with open(geojson, 'r') as f:
+            a = json.load(f)
+    else:
+        a = geojson
+
+    if a["type"] == "FeatureCollection":
+        a = a["features"][0]
+
+    if a["type"] == "Feature":
+        a = a["geometry"]
+
+    ll_poly = np.array(a["coordinates"][0])
+    return ll_poly
+
+
+def utm_bbx(ll_poly, utm_zone=None):
+    """
+    Compute the UTM bounding box of a given (lon, lat) polygon.
+
+    Args:
+        ll_poly ()
+        utm_zone (): force the UTM zone number. If not specified, the default UTM
+            zone for the given geography is used.
+
+    Returns:
+       4-tuple with easting min/max and northing min/max
+    """
+    if not utm_zone:
+        utm_zone = compute_utm_zone(*ll_poly.mean(axis=0))
+
+    # convert lon lat polygon to UTM
+    utm_proj = utm_proj(utm_zone)
+    easting, northing = pyproj.transform(pyproj.Proj(init="epsg:4326"),
+                                         utm_proj, ll_poly[:, 0], ll_poly[:, 1])
+
+    # return UTM bounding box
+    east_min = min(easting)
+    east_max = max(easting)
+    nort_min = min(northing)
+    nort_max = max(northing)
+    return east_min, east_max, nort_min, nort_max
