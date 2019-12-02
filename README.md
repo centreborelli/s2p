@@ -30,13 +30,11 @@ Its main source code repository is https://github.com/cmla/s2p.
 ## GDAL
 The main dependency is GDAL. Version 2.1.0 or newer is required.
 
-### On Ubuntu
-`gdal` can be installed with `apt-get`. In order to get a recent version we
-recommend adding the PPA `ubuntugis-unstable` (first command below):
+### On Ubuntu 18.04
+`gdal` can be installed with `apt-get`.
 
-    sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
-    sudo apt-get update
-    sudo apt-get install libgdal-dev gdal-bin
+    sudo apt update
+    sudo apt install libgdal-dev gdal-bin
 
 ### On macOS
 [Download GDAL](http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.4.dmg)
@@ -51,7 +49,7 @@ Copy it in your `~/.profile`.
 
 On Ubuntu:
 
-    apt-get install build-essential geographiclib-tools libgeographic-dev libfftw3-dev libgeotiff-dev libtiff5-dev
+    sudo apt install build-essential geographiclib-tools libgeographic-dev libfftw3-dev libgeotiff-dev libtiff5-dev
 
 On macOS:
 
