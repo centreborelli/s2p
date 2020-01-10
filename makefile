@@ -1,6 +1,8 @@
 # the following two options are used to control all C and C++ compilations
-export CFLAGS   = -march=native -O3
-export CXXFLAGS = -march=native -O3
+CFLAGS   ?= -march=native -O3
+CXXFLAGS ?= -march=native -O3
+export CFLAGS
+export CXXFLAGS
 
 # these options are only used for the programs directly inside "./c/"
 IIOLIBS     = -lz -ltiff -lpng -ljpeg -lm
