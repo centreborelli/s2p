@@ -39,7 +39,7 @@ recommend adding the PPA `ubuntugis-unstable` (first command below):
     sudo apt-get install libgdal-dev gdal-bin
 
 ### On macOS
-[Download](http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.4.dmg)
+[Download GDAL](http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.4.dmg)
 and install the `.dmg` file. Update your `PATH` after the installation by
 running this command:
 
@@ -47,7 +47,7 @@ running this command:
 
 Copy it in your `~/.profile`.
 
-## Other dependencies (geographiclib, fftw)
+## Other dependencies (geographiclib, fftw, libtiff)
 
 On Ubuntu:
 
@@ -55,7 +55,7 @@ On Ubuntu:
 
 On macOS:
 
-    brew install geographiclib fftw
+    brew install geographiclib fftw libtiff
 
 
 # Installation
