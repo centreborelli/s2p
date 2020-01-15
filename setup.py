@@ -54,7 +54,7 @@ requirements = ['numpy',
                 'requests']
 
 extras_require = {
-    "test": ["pytest", "pytest-cov"],
+    "test": ["pytest", "pytest-cov", "psutil"],
 }
 
 setup(name="s2p",
