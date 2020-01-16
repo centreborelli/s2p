@@ -376,61 +376,6 @@ def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
     return np.array(out)
 
 
-def get_rectangle_coordinates(im):
-    """
-    Get the coordinates of a rectangle defined by the user's clicks.
-
-    Args:
-        im: path to an image to be displayed.
-
-    Returns:
-        x, y, w, h: coordinates of the rectangle selected by the user. x, y are the
-            coordinates of the top-left corner, while (w, h) is the size of the
-            rectangle.
-    """
-    points_file = tmpfile('.txt')
-    run('python s2p/viewGL.py %s > %s' % (shellquote(im), points_file))
-    x1, y1, x2, y2 = map(int, open(points_file).read().split())
-    # viewGL.py returns the coordinates of two corners defining the rectangle.
-    # We can's make any assumption on the ordering of these coordinates.
-
-    x = min(x1, x2)
-    w = max(x1, x2) - x
-    y = min(y1, y2)
-    h = max(y1, y2) - y
-    return x, y, w, h
-
-
-def get_roi_coordinates(img, preview):
-    """
-    Coordinates of a rectangle in a large image from user clicks on a preview.
-
-    Args:
-        img: path to the large image file
-        preview: path to the preview image file
-
-    Returns:
-        x, y, w, h: coordinates of the rectangle selected by the user, in the
-            large image frame. x, y are the coordinates of the top-left corner,
-            while (w, h) is the size of the rectangle.
-
-    A preview image is displayed, on which the user selects a rectangle.
-    """
-    # read preview/full images dimensions
-    nc, nr = image_size_gdal(img)[:2]
-    nc_preview, nr_preview = image_size_gdal(preview)[:2]
-
-    # get the rectangle coordinates
-    x, y, w, h = get_rectangle_coordinates(preview)
-
-    # rescale according to preview/full ratio
-    x = int(x*nc/nc_preview)
-    y = int(y*nr/nr_preview)
-    w = int(w*nc/nc_preview)
-    h = int(h*nr/nr_preview)
-    return x, y, w, h
-
-
 def cargarse_basura(inputf, outputf):
     se=5
     tmp1 = outputf + '1.tif'

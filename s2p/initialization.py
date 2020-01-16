@@ -81,10 +81,6 @@ def check_parameters(d):
         # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpc'],
                                                  d['roi_geojson'], d.get('utm_zone'))
-    elif 'prv' in d['images'][0]:
-        x, y, w, h = common.get_roi_coordinates(d['images'][0]['img'],
-                                                d['images'][0]['prv'])
-        d['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
     else:
         print('ERROR: missing or incomplete roi definition')
         sys.exit(1)
