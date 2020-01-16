@@ -274,17 +274,18 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
     if not os.path.exists(crop_colorized):
         crop_colorized = ''
     hij = " ".join(str(x) for x in H.flatten()) if H is not None else ""
-    asc = "--ascii" if ascii_ply else ""
-    nrm = "--with-normals" if with_normals else ""
-    utm = "--utm-zone %s" % utm_zone if utm_zone else ""
-    lbb = "--lon-m %s --lon-M %s --lat-m %s --lat-M %s" % llbbx if llbbx else ""
-    command = "colormesh %s %s %s %s -h \"%s\" %s %s %s %s" % (cloud, heights,
-                                                               rpcfile,
-                                                               crop_colorized,
-                                                               hij, asc, nrm,
-                                                               utm, lbb)
+    command = ["colormesh", cloud, heights, rpcfile, crop_colorized, "-h", hij]
+    if ascii_ply:
+        command.append("--ascii")
+    if with_normals:
+        command.append("--with-normals")
+    if utm_zone:
+        command.extend(["--utm-zone", utm_zone])
+    if llbbx:
+        lonm, lonM, latm, latM = llbbx
+        command.extend(["--lon-m", lonm, "--lon-M", lonM, "--lat-m", latm, "--lat-M", latM])
     if off_x:
-        command += " --offset_x %d" % off_x
+        command.extend(["--offset_x", "%d" % off_x])
     if off_y:
-        command += " --offset_y %d" % off_y
+        command.extend(["--offset_y", "%d" % off_y])
     common.run(command)

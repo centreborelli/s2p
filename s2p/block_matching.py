@@ -15,6 +15,24 @@ def rectify_secondary_tile_only(algo):
     else:
         return False
 
+
+def create_rejection_mask(disp, im1, im2, mask):
+    """
+    Create rejection mask (0 means rejected, 1 means accepted)
+    Keep only the points that are matched and present in both input images
+
+    Args:
+        im1, im2: rectified stereo pair
+        disp: path to the input diparity map
+        mask: path to the output rejection mask
+    """
+    tmp1 = common.tmpfile('.tif')
+    tmp2 = common.tmpfile('.tif')
+    common.run(["plambda", disp, "x 0 join", "-o", tmp1])
+    common.run(["backflow", tmp1, im2, tmp2])
+    common.run(["plambda", disp, im1, tmp2, "x isfinite y isfinite z isfinite and and", "-o", mask])
+
+
 def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                           disp_max=None, timeout=cfg['mgm_timeout'], extra_params=''):
     """
@@ -107,9 +125,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
                                                                disp_max,
                                                                win, p1, p2, lr))
 
-        # create rejection mask (0 means rejected, 1 means accepted)
-        # keep only the points that are matched and present in both input images
-        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
+        create_rejection_mask(disp, im1, im2, mask)
 
     if algo == 'tvl1':
         tvl1 = 'callTVL1.sh'
@@ -166,9 +182,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
             timeout=timeout,
         )
 
-        # create rejection mask (0 means rejected, 1 means accepted)
-        # keep only the points that are matched and present in both input images
-        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
+        create_rejection_mask(disp, im1, im2, mask)
 
 
     if algo == 'mgm_multi_lsd':
@@ -183,18 +197,22 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         # TODO TUNE LSD PARAMETERS TO HANDLE DIRECTLY 12 bits images?
         # image dependent weights based on lsd segments
         image_size = common.image_size_gdal(ref)
+        #TODO refactor this command to not use shell=True
         common.run('qauto %s | \
                    lsd  -  - | \
                    cut -d\' \' -f1,2,3,4   | \
                    pview segments %d %d | \
-                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(ref,image_size[0], image_size[1],wref))
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(ref,image_size[0], image_size[1],wref),
+                   shell=True)
         # image dependent weights based on lsd segments
         image_size = common.image_size_gdal(sec)
+        #TODO refactor this command to not use shell=True
         common.run('qauto %s | \
                    lsd  -  - | \
                    cut -d\' \' -f1,2,3,4   | \
                    pview segments %d %d | \
-                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(sec,image_size[0], image_size[1],wsec))
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(sec,image_size[0], image_size[1],wsec),
+                   shell=True)
 
 
         env['REMOVESMALLCC'] = str(cfg['stereo_speckle_filter'])
@@ -239,9 +257,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
             timeout=timeout,
         )
 
-        # create rejection mask (0 means rejected, 1 means accepted)
-        # keep only the points that are matched and present in both input images
-        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
+        create_rejection_mask(disp, im1, im2, mask)
 
 
     if algo == 'mgm_multi':
@@ -283,9 +299,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
             timeout=timeout,
         )
 
-        # create rejection mask (0 means rejected, 1 means accepted)
-        # keep only the points that are matched and present in both input images
-        common.run('plambda {0} "x 0 join" | backflow - {2} | plambda {0} {1} - "x isfinite y isfinite z isfinite and and" -o {3}'.format(disp, im1, im2, mask))
+        create_rejection_mask(disp, im1, im2, mask)
 
     if (algo == 'micmac'):
         # add micmac binaries to the PATH environment variable
@@ -311,4 +325,4 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         micmac_cost = os.path.join(work_dir, 'MEC-EPI',
                                    'Correl_LeChantier_Num_5.tif')
         mask = os.path.join(work_dir, 'rectified_mask.png')
-        common.run('plambda {0} "x x%q10 < 0 255 if" -o {1}'.format(micmac_cost, mask))
+        common.run(["plambda", micmac_cost, "x x%q10 < 0 255 if", "-o", mask])

@@ -67,24 +67,30 @@ def tmpfile(ext=''):
     return out
 
 
-def run(cmd, env=os.environ, timeout=None):
+def run(cmd, env=os.environ, timeout=None, shell=False):
     """
     Runs a shell command, and print it before running.
 
     Arguments:
-        cmd: string to be passed to a shell
+        cmd: list of a command and its arguments, or as a fallback,
+            a string to be passed to a shell that will be split into a list.
         env (optional, default value is os.environ): dictionary containing the
             environment variables
         timeout (optional, int): time in seconds after which the function will
             raise an error if the command hasn't returned
+
+        TODO: remove the temporary `shell` argument once all commands use shell=False
+        shell (bool): run the command in a subshell. Defaults to False.
 
     Both stdout and stderr of the shell in which the command is run are those
     of the parent process.
     """
     print("\nRUN: %s" % cmd)
     t = datetime.datetime.now()
-    subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
-                          stderr=sys.stderr, env=env, timeout=timeout)
+    if not isinstance(cmd, list) and not shell:
+        cmd = cmd.split()
+    subprocess.run(cmd, shell=shell, stdout=sys.stdout, stderr=sys.stderr,
+                   env=env, timeout=timeout, check=True)
     print(datetime.datetime.now() - t)
 
 
@@ -98,10 +104,6 @@ def mkdir_p(path):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else: raise
-
-
-def shellquote(s):
-    return "'%s'" % s.replace("'", "'\\''")
 
 
 def matrix_translation(x, y):
@@ -223,7 +225,7 @@ def image_apply_homography(out, im, H, w, h):
     hij = " ".join(str(x) for x in H.flatten())
 
     # apply the homography
-    run("homography %s -h \"%s\" %s %d %d" % (im, hij, out, w, h))
+    run(["homography", im, "-h", hij, out, "%d" % w, "%d" % h])
 
 
 def image_qauto(im, out=None):
@@ -331,10 +333,20 @@ def image_crop_gdal(im, x, y, w, h, out=None):
         out = tmpfile('.tif')
 
     # do the crop with gdal_translate
-    run(('gdal_translate -ot Float32 -co TILED=YES -co BIGTIFF=IF_NEEDED '
-         '-srcwin %d %d %d %d %s %s') % (x, y, w, h, shellquote(im),
-                                         shellquote(out)))
-
+    run(
+        [
+            "gdal_translate",
+            "-ot", "Float32",
+            "-co", "TILED=YES",
+            "-co", "BIGTIFF=IF_NEEDED",
+            "-srcwin",
+            "%d" % x,
+            "%d" % y,
+            "%d" % w,
+            "%d" % h,
+            im, out,
+        ]
+    )
     return out
 
 
@@ -385,7 +397,7 @@ def cargarse_basura(inputf, outputf):
     run('morphoop %s max %d %s' % (inputf, se, tmp1))
     run('morphoop %s max %d %s' % (inputf, se, tmpM))
     run('morphoop %s min %d %s' % (inputf, se, tmp2))
-    run('plambda %s %s %s "x y - fabs %d > nan z if" -o %s' % (tmp1, tmp2, inputf, 5, tmpM))
+    run(["plambda", tmp1, tmp2, inputf, "x y - fabs %d > nan z if" % 5, "-o", tmpM])
     run('remove_small_cc %s %s %d %d' % (tmpM, outputf, 200, 5))
     run('rm -f %s %s %s' % (tmp1, tmp2, tmpM))
 
