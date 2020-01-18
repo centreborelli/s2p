@@ -233,9 +233,15 @@ def main(tiles_file,outfile,sub_img):
     # If Output format is tif, convert vrt file to tif
     if output_format == 'tif':
         print('Converting vrt to tif ...')
-        common.run(('gdal_translate -ot Float32 -co TILED=YES -co'
-                    ' BIGTIFF=IF_NEEDED %s %s'
-                    %(common.shellquote(vrt_name),common.shellquote(outfile))))
+        common.run(
+            [
+                "gdal_translate",
+                "-ot", "Float32",
+                "-co", "TILED=YES",
+                "-co", "BIGTIFF=IF_NEEDED",
+                vrt_name, outfile,
+            ]
+        )
 
         print('Removing temporary vrt files')
         # Do not use items()/iteritems() here because of python 2 and 3 compat

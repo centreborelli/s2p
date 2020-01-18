@@ -13,8 +13,7 @@ RUN apt-get update && apt-get install -y \
     libgeographic-dev \
     libgeotiff-dev \
     libtiff5-dev \
-    python3 \
-    python3-numpy
+    python3-dev
 
 # Install pip
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py

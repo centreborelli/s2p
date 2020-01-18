@@ -67,24 +67,30 @@ def tmpfile(ext=''):
     return out
 
 
-def run(cmd, env=os.environ, timeout=None):
+def run(cmd, env=os.environ, timeout=None, shell=False):
     """
     Runs a shell command, and print it before running.
 
     Arguments:
-        cmd: string to be passed to a shell
+        cmd: list of a command and its arguments, or as a fallback,
+            a string to be passed to a shell that will be split into a list.
         env (optional, default value is os.environ): dictionary containing the
             environment variables
         timeout (optional, int): time in seconds after which the function will
             raise an error if the command hasn't returned
+
+        TODO: remove the temporary `shell` argument once all commands use shell=False
+        shell (bool): run the command in a subshell. Defaults to False.
 
     Both stdout and stderr of the shell in which the command is run are those
     of the parent process.
     """
     print("\nRUN: %s" % cmd)
     t = datetime.datetime.now()
-    subprocess.check_call(cmd, shell=True, stdout=sys.stdout,
-                          stderr=sys.stderr, env=env, timeout=timeout)
+    if not isinstance(cmd, list) and not shell:
+        cmd = cmd.split()
+    subprocess.run(cmd, shell=shell, stdout=sys.stdout, stderr=sys.stderr,
+                   env=env, timeout=timeout, check=True)
     print(datetime.datetime.now() - t)
 
 
@@ -98,10 +104,6 @@ def mkdir_p(path):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else: raise
-
-
-def shellquote(s):
-    return "'%s'" % s.replace("'", "'\\''")
 
 
 def matrix_translation(x, y):
@@ -223,7 +225,7 @@ def image_apply_homography(out, im, H, w, h):
     hij = " ".join(str(x) for x in H.flatten())
 
     # apply the homography
-    run("homography %s -h \"%s\" %s %d %d" % (im, hij, out, w, h))
+    run(["homography", im, "-h", hij, out, "%d" % w, "%d" % h])
 
 
 def image_qauto(im, out=None):
@@ -331,10 +333,20 @@ def image_crop_gdal(im, x, y, w, h, out=None):
         out = tmpfile('.tif')
 
     # do the crop with gdal_translate
-    run(('gdal_translate -ot Float32 -co TILED=YES -co BIGTIFF=IF_NEEDED '
-         '-srcwin %d %d %d %d %s %s') % (x, y, w, h, shellquote(im),
-                                         shellquote(out)))
-
+    run(
+        [
+            "gdal_translate",
+            "-ot", "Float32",
+            "-co", "TILED=YES",
+            "-co", "BIGTIFF=IF_NEEDED",
+            "-srcwin",
+            "%d" % x,
+            "%d" % y,
+            "%d" % w,
+            "%d" % h,
+            im, out,
+        ]
+    )
     return out
 
 
@@ -376,61 +388,6 @@ def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
     return np.array(out)
 
 
-def get_rectangle_coordinates(im):
-    """
-    Get the coordinates of a rectangle defined by the user's clicks.
-
-    Args:
-        im: path to an image to be displayed.
-
-    Returns:
-        x, y, w, h: coordinates of the rectangle selected by the user. x, y are the
-            coordinates of the top-left corner, while (w, h) is the size of the
-            rectangle.
-    """
-    points_file = tmpfile('.txt')
-    run('python s2p/viewGL.py %s > %s' % (shellquote(im), points_file))
-    x1, y1, x2, y2 = map(int, open(points_file).read().split())
-    # viewGL.py returns the coordinates of two corners defining the rectangle.
-    # We can's make any assumption on the ordering of these coordinates.
-
-    x = min(x1, x2)
-    w = max(x1, x2) - x
-    y = min(y1, y2)
-    h = max(y1, y2) - y
-    return x, y, w, h
-
-
-def get_roi_coordinates(img, preview):
-    """
-    Coordinates of a rectangle in a large image from user clicks on a preview.
-
-    Args:
-        img: path to the large image file
-        preview: path to the preview image file
-
-    Returns:
-        x, y, w, h: coordinates of the rectangle selected by the user, in the
-            large image frame. x, y are the coordinates of the top-left corner,
-            while (w, h) is the size of the rectangle.
-
-    A preview image is displayed, on which the user selects a rectangle.
-    """
-    # read preview/full images dimensions
-    nc, nr = image_size_gdal(img)[:2]
-    nc_preview, nr_preview = image_size_gdal(preview)[:2]
-
-    # get the rectangle coordinates
-    x, y, w, h = get_rectangle_coordinates(preview)
-
-    # rescale according to preview/full ratio
-    x = int(x*nc/nc_preview)
-    y = int(y*nr/nr_preview)
-    w = int(w*nc/nc_preview)
-    h = int(h*nr/nr_preview)
-    return x, y, w, h
-
-
 def cargarse_basura(inputf, outputf):
     se=5
     tmp1 = outputf + '1.tif'
@@ -440,7 +397,7 @@ def cargarse_basura(inputf, outputf):
     run('morphoop %s max %d %s' % (inputf, se, tmp1))
     run('morphoop %s max %d %s' % (inputf, se, tmpM))
     run('morphoop %s min %d %s' % (inputf, se, tmp2))
-    run('plambda %s %s %s "x y - fabs %d > nan z if" -o %s' % (tmp1, tmp2, inputf, 5, tmpM))
+    run(["plambda", tmp1, tmp2, inputf, "x y - fabs %d > nan z if" % 5, "-o", tmpM])
     run('remove_small_cc %s %s %d %d' % (tmpM, outputf, 200, 5))
     run('rm -f %s %s %s' % (tmp1, tmp2, tmpM))
 
