@@ -22,8 +22,8 @@ def create_rejection_mask(disp, im1, im2, mask):
     Keep only the points that are matched and present in both input images
 
     Args:
+        disp: path to the input disparity map
         im1, im2: rectified stereo pair
-        disp: path to the input diparity map
         mask: path to the output rejection mask
     """
     tmp1 = common.tmpfile('.tif')

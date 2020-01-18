@@ -24,7 +24,7 @@ def test_run_error():
 def test_run_timeout():
     """
     Test s2p.common.run() timeout with Unix "sleep" utility command,
-    and check when the command times out, the launched process is killed.
+    and check that when the command times out, the launched process is killed.
     """
     with pytest.raises(subprocess.TimeoutExpired):
         common.run("sleep 10", timeout=1)
