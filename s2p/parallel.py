@@ -55,7 +55,7 @@ def tilewise_wrapper(fun, *args, **kwargs):
     return out
 
 
-def launch_calls(fun, list_of_args, nb_workers, *extra_args):
+def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True):
     """
     Run a function several times in parallel with different given inputs.
 
@@ -64,6 +64,7 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args):
         list_of_args: list of (first positional) arguments passed to fun, one
             per call
         nb_workers: number of calls run simultaneously
+        tilewise (bool): whether the calls are run tilewise or not
         extra_args (optional): tuple containing extra arguments to be passed to
             fun (same value for all calls)
 
@@ -76,55 +77,23 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args):
     show_progress.total = len(list_of_args)
     pool = multiprocessing.Pool(nb_workers)
     for x in list_of_args:
-        if type(x) == tuple:  # we expect x = (tile_dictionary, pair_id)
-            args = (fun,) + x + extra_args
-            log = os.path.join(x[0]['dir'], 'pair_%d' % x[1], 'stdout.log')
-        else:  # we expect x = tile_dictionary
-            args = (fun, x) + extra_args
-            log = os.path.join(x['dir'], 'stdout.log')
-        results.append(pool.apply_async(tilewise_wrapper, args=args,
-                                        kwds={'stdout': log},
-                                        callback=show_progress))
-
-    for r in results:
-        try:
-            outputs.append(r.get(600))  # wait at most 10 min per call
-        except KeyboardInterrupt:
-            pool.terminate()
-            sys.exit(1)
-
-    pool.close()
-    pool.join()
-    common.print_elapsed_time()
-    return outputs
-
-
-def launch_calls_simple(fun, list_of_args, nb_workers, *extra_args):
-    """
-    Run a function several times in parallel with different given inputs.
-
-    Args:
-        fun: function to be called several times in parallel.
-        list_of_args: list of (first positional) arguments passed to fun, one
-            per call
-        nb_workers: number of calls run simultaneously
-        extra_args (optional): tuple containing extra arguments to be passed to
-            fun (same value for all calls)
-
-    Return:
-        list of outputs
-    """
-    results = []
-    outputs = []
-    show_progress.counter = 0
-    show_progress.total = len(list_of_args)
-    pool = multiprocessing.Pool(nb_workers)
-    for x in list_of_args:
+        args = tuple()
         if type(x) == tuple:
-            args = x + extra_args
+            args += x
         else:
-            args = (x,) + extra_args
-        results.append(pool.apply_async(fun, args=args, callback=show_progress))
+            args += (x,)
+        args += extra_args
+        if tilewise:
+            if type(x) == tuple:  # we expect x = (tile_dictionary, pair_id)
+                log = os.path.join(x[0]['dir'], 'pair_%d' % x[1], 'stdout.log')
+            else:  # we expect x = tile_dictionary
+                log = os.path.join(x['dir'], 'stdout.log')
+            args = (fun,) + args
+            results.append(pool.apply_async(tilewise_wrapper, args=args,
+                                            kwds={'stdout': log},
+                                            callback=show_progress))
+        else:
+            results.append(pool.apply_async(fun, args=args, callback=show_progress))
 
     for r in results:
         try:
