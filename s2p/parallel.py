@@ -89,9 +89,6 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args):
     for r in results:
         try:
             outputs.append(r.get(600))  # wait at most 10 min per call
-        except multiprocessing.TimeoutError:
-            print("Timeout while running %s" % str(r))
-            outputs.append(None)
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
@@ -132,9 +129,6 @@ def launch_calls_simple(fun, list_of_args, nb_workers, *extra_args):
     for r in results:
         try:
             outputs.append(r.get(600))  # wait at most 10 min per call
-        except multiprocessing.TimeoutError:
-            print("Timeout while running %s" % str(r))
-            outputs.append(None)
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)
