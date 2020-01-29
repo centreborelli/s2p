@@ -14,10 +14,10 @@ def raise_exception(t, e):
     raise e
 
 
-def test_launch_calls_simple_error():
+def test_launch_calls_error():
     """
     Run several calls to an erroring function through a multiprocessing.Pool.
     """
     with pytest.raises(subprocess.CalledProcessError):
-        parallel.launch_calls_simple(raise_exception, [1, 1, 1, 1], 2,
-                                     subprocess.CalledProcessError(1, "failcmd"))
+        parallel.launch_calls(raise_exception, [1, 1, 1, 1], 2,
+                              subprocess.CalledProcessError(1, "failcmd"), tilewise=False)
