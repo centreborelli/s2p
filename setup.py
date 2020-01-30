@@ -50,7 +50,7 @@ requirements = ['numpy',
                 'beautifulsoup4[lxml]',
                 'plyfile',
                 'ransac',
-                'rpcm>=1.3',
+                'rpcm>=1.4.6',
                 'requests']
 
 extras_require = {

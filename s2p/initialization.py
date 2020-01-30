@@ -29,6 +29,7 @@ def workaround_json_int64(o):
     if isinstance(o, np.integer) : return int(o)
     raise TypeError
 
+
 def dict_has_keys(d, l):
     """
     Return True if the dict d contains all the keys of the input list l.
@@ -55,12 +56,16 @@ def check_parameters(d):
     # read RPCs
     for img in d['images']:
         if 'rpc' in img:
-            if isinstance(img['rpc'], rpcm.RPCModel):
-                continue
+            if isinstance(img['rpc'], str):  # path to an RPC file
+                img['rpcm'] = rpcm.rpc_from_rpc_file(img['rpc'])
+            elif isinstance(img['rpc'], dict):  # RPC dict in 'rpcm' format
+                img['rpcm'] = rpcm.RPCModel(img['rpc'], dict_format='rpcm')
             else:
-                img['rpc'] = rpcm.rpc_from_rpc_file(img['rpc'])
+                raise NotImplementedError(
+                    'rpc of type {} not supported'.format(type(img['rpc']))
+                )
         else:
-            img['rpc'] = rpcm.rpc_from_geotiff(img['img'])
+            img['rpcm'] = rpcm.rpc_from_geotiff(img['img'])
 
     # verify that roi or path to preview file are defined
     if 'full_img' in d and d['full_img']:
@@ -71,15 +76,15 @@ def check_parameters(d):
     elif 'roi_utm' in d and dict_has_keys(d['roi_utm'], ['utm_band',
                                                          'hemisphere',
                                                          'x', 'y', 'w', 'h']):
-        d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpc'],
+        d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpcm'],
                                                 d['roi_utm'])
     elif 'roi_kml' in d:
         # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
-        d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpc'],
+        d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpcm'],
                                              d['roi_kml'], d.get('utm_zone'))
     elif 'roi_geojson' in d:
         # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
-        d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpc'],
+        d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpcm'],
                                                  d['roi_geojson'], d.get('utm_zone'))
     else:
         print('ERROR: missing or incomplete roi definition')
@@ -135,10 +140,10 @@ def build_cfg(user_cfg):
     # get utm zone
     if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
         x, y, w, h = [cfg['roi'][k] for k in ['x', 'y', 'w', 'h']]
-        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['img'], x, y, w, h)
+        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
 
     # get image ground sampling distance
-    cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpc'])
+    cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpcm'])
 
 
 def make_dirs():
@@ -153,7 +158,7 @@ def make_dirs():
         cfg_copy = copy.deepcopy(cfg)
         cfg_copy['out_dir'] = '.'
         for img in cfg_copy['images']:
-            img.pop('rpc', None)
+            img.pop('rpcm', None)
         json.dump(cfg_copy, f, indent=2, default=workaround_json_int64)
 
 
@@ -294,9 +299,9 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
         mask (np.array): tile validity mask. Set to None if the tile is discarded
     """
     # check if the tile is partly contained in at least one other image
-    rpc = cfg['images'][0]['rpc']
+    rpc = cfg['images'][0]['rpcm']
     for img, size in zip(cfg['images'][1:], images_sizes[1:]):
-        coords = rpc_utils.corresponding_roi(rpc, img['rpc'], x, y, w, h)
+        coords = rpc_utils.corresponding_roi(rpc, img['rpcm'], x, y, w, h)
         if rectangles_intersect(coords, (0, 0, size[1], size[0])):
             break  # the tile is partly contained
     else:  # we've reached the end of the loop hence the tile is not contained
@@ -321,7 +326,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
         a list of dictionaries. Each dictionary contains the image coordinates
         and the output directory path of a tile.
     """
-    rpc = cfg['images'][0]['rpc']
+    rpc = cfg['images'][0]['rpcm']
     roi_msk = cfg['images'][0]['roi']
     cld_msk = cfg['images'][0]['cld']
     wat_msk = cfg['images'][0]['wat']
@@ -373,7 +378,7 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
             tile_cfg = copy.deepcopy(cfg)
             x, y, w, h = tile['coordinates']
             for img in tile_cfg['images']:
-                img.pop('rpc', None)
+                img.pop('rpcm', None)
             tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
             tile_cfg['full_img'] = False
             tile_cfg['max_processes'] = 1
