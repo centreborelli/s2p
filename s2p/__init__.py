@@ -58,9 +58,9 @@ def pointing_correction(tile, i):
     x, y, w, h = tile['coordinates']
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     img1 = cfg['images'][0]['img']
-    rpc1 = cfg['images'][0]['rpc']
+    rpc1 = cfg['images'][0]['rpcm']
     img2 = cfg['images'][i]['img']
-    rpc2 = cfg['images'][i]['rpc']
+    rpc2 = cfg['images'][i]['rpcm']
 
     # correct pointing error
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
@@ -113,9 +113,9 @@ def rectification_pair(tile, i):
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     x, y, w, h = tile['coordinates']
     img1 = cfg['images'][0]['img']
-    rpc1 = cfg['images'][0]['rpc']
+    rpc1 = cfg['images'][0]['rpcm']
     img2 = cfg['images'][i]['img']
-    rpc2 = cfg['images'][i]['rpc']
+    rpc2 = cfg['images'][i]['rpcm']
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
 
@@ -231,8 +231,8 @@ def disparity_to_height(tile, i):
         return
 
     print('triangulating tile {} {} pair {}...'.format(x, y, i))
-    rpc1 = cfg['images'][0]['rpc']
-    rpc2 = cfg['images'][i]['rpc']
+    rpc1 = cfg['images'][0]['rpcm']
+    rpc2 = cfg['images'][i]['rpcm']
     H_ref = np.loadtxt(os.path.join(out_dir, 'H_ref.txt'))
     H_sec = np.loadtxt(os.path.join(out_dir, 'H_sec.txt'))
     disp = os.path.join(out_dir, 'rectified_disp.tif')
@@ -270,8 +270,8 @@ def disparity_to_ply(tile):
     ply_file = os.path.join(out_dir, 'cloud.ply')
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     x, y, w, h = tile['coordinates']
-    rpc1 = cfg['images'][0]['rpc']
-    rpc2 = cfg['images'][1]['rpc']
+    rpc1 = cfg['images'][0]['rpcm']
+    rpc2 = cfg['images'][1]['rpcm']
 
     if os.path.exists(os.path.join(out_dir, 'stderr.log')):
         print('triangulation: stderr.log exists')
@@ -441,7 +441,7 @@ def heights_to_ply(tile):
                                                  w, h), colors)
 
     triangulation.height_map_to_point_cloud(plyfile, height_map,
-                                            cfg['images'][0]['rpc'], H, colors,
+                                            cfg['images'][0]['rpcm'], H, colors,
                                             utm_zone=cfg['utm_zone'])
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
@@ -685,7 +685,7 @@ def read_config_file(config_file):
     # input paths
     for img in user_cfg['images']:
         for d in ['img', 'rpc', 'clr', 'cld', 'roi', 'wat']:
-            if d in img and img[d] is not None and not os.path.isabs(img[d]):
+            if d in img and isinstance(img[d], str) and not os.path.isabs(img[d]):
                 img[d] = make_path_relative_to_file(img[d], config_file)
 
     return user_cfg
