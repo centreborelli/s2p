@@ -23,12 +23,10 @@ import sys
 import os.path
 import json
 import datetime
-import argparse
-import numpy as np
 import subprocess
 import multiprocessing
-import collections
-import shutil
+
+import numpy as np
 import rasterio
 
 
