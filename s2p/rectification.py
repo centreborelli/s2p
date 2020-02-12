@@ -16,6 +16,10 @@ from s2p import block_matching
 from s2p.config import cfg
 
 
+class NoRectificationMatchesError(Exception):
+    pass
+
+
 def filter_matches_epipolar_constraint(F, matches, thresh):
     """
     Discards matches that are not consistent with the epipolar constraint.
@@ -312,6 +316,11 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
 
     else:
         raise Exception("Unknown value {} for argument 'method'".format(method))
+
+    if matches is None or len(matches) < 4:
+        raise NoRectificationMatchesError(
+            "No or not enough matches found to rectify image pair"
+        )
 
     # compute rectifying homographies
     H1, H2, F = rectification_homographies(matches, x, y, w, h)
