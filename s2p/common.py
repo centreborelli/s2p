@@ -262,9 +262,10 @@ def points_apply_homography(H, pts):
 
     # convert the input points to homogeneous coordinates
     if len(pts[0]) < 2:
-        print("""points_apply_homography: ERROR the input must be a numpy array
-          of 2D points, one point per line""")
-        return
+        raise ValueError(
+            "The input must be a numpy array"
+            "of 2D points, one point per line"
+        )
     pts = np.hstack((pts[:, 0:2], pts[:, 0:1]*0+1))
 
     # apply the transformation

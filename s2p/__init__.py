@@ -23,12 +23,10 @@ import sys
 import os.path
 import json
 import datetime
-import argparse
-import numpy as np
 import subprocess
 import multiprocessing
-import collections
-import shutil
+
+import numpy as np
 import rasterio
 
 
@@ -579,7 +577,7 @@ def main(user_cfg):
     tiles = initialization.tiles_full_info(tw, th, tiles_txt, create_masks=True)
     if not tiles:
         print('ERROR: the ROI is not seen in two images or is totally masked.')
-        return
+        sys.exit(1)
 
     # initialisation: write the list of tilewise json files to outdir/tiles.txt
     with open(tiles_txt, 'w') as f:
