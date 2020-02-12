@@ -245,8 +245,9 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
         h_M += margin_top
     elif cfg['use_srtm']:
         s = 0.001 / 12  # SRTM90 pixel spacing is 0.001 / 12 degrees
-        lons = np.arange(lon_m, lon_M, s)
-        lats = np.arange(lat_m, lat_M, s)
+        points = [(lon, lat) for lon in np.arange(lon_m, lon_M, s)
+                             for lat in np.arange(lat_m, lat_M, s)]
+        lons, lats = np.asarray(points).T
         alts = srtm4.srtm4(lons, lats)  # TODO use srtm4 nn interpolation option
         h_m = min(alts) + margin_bottom
         h_M = max(alts) + margin_top
