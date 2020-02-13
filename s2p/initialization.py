@@ -353,7 +353,8 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
                                                    tiles_coords,
                                                    cfg['max_processes'],
                                                    images_sizes,
-                                                   tilewise=False)
+                                                   tilewise=False,
+                                                   timeout=cfg['timeout'])
 
         # discard useless tiles from neighborhood_coords_dict
         discarded_tiles = set(x for x, (b, _) in zip(tiles_coords, tiles_usefulnesses) if not b)

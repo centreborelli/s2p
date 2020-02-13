@@ -586,10 +586,12 @@ def main(user_cfg):
 
     n = len(cfg['images'])
     tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
+    timeout = cfg['timeout']
 
     # local-pointing step:
     print('correcting pointing locally...')
-    parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers)
+    parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers,
+                          timeout=timeout)
 
     # global-pointing step:
     print('correcting pointing globally...')
@@ -598,19 +600,22 @@ def main(user_cfg):
 
     # rectification step:
     print('rectifying tiles...')
-    parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers)
+    parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
+                          timeout=timeout)
 
     # matching step:
     print('running stereo matching...')
-    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers)
+    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers,
+                          timeout=timeout)
 
     if n > 2:
         # disparity-to-height step:
         print('computing height maps...')
-        parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
+        parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers,
+                              timeout=timeout)
 
         print('computing local pairwise height offsets...')
-        parallel.launch_calls(mean_heights, tiles, nb_workers)
+        parallel.launch_calls(mean_heights, tiles, nb_workers, timeout=timeout)
 
         # global-mean-heights step:
         print('computing global pairwise height offsets...')
@@ -618,15 +623,17 @@ def main(user_cfg):
 
         # heights-to-ply step:
         print('merging height maps and computing point clouds...')
-        parallel.launch_calls(heights_to_ply, tiles, nb_workers)
+        parallel.launch_calls(heights_to_ply, tiles, nb_workers,
+                              timeout=timeout)
     else:
         # triangulation step:
         print('triangulating tiles...')
-        parallel.launch_calls(disparity_to_ply, tiles, nb_workers)
+        parallel.launch_calls(disparity_to_ply, tiles, nb_workers,
+                              timeout=timeout)
 
     # local-dsm-rasterization step:
     print('computing DSM by tile...')
-    parallel.launch_calls(plys_to_dsm, tiles, nb_workers)
+    parallel.launch_calls(plys_to_dsm, tiles, nb_workers, timeout=timeout)
 
     # global-dsm-rasterization step:
     print('computing global DSM...')

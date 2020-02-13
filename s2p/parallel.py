@@ -55,7 +55,8 @@ def tilewise_wrapper(fun, *args, **kwargs):
     return out
 
 
-def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True):
+def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True,
+                 timeout=600):
     """
     Run a function several times in parallel with different given inputs.
 
@@ -64,9 +65,10 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True):
         list_of_args: list of (first positional) arguments passed to fun, one
             per call
         nb_workers: number of calls run simultaneously
-        tilewise (bool): whether the calls are run tilewise or not
         extra_args (optional): tuple containing extra arguments to be passed to
             fun (same value for all calls)
+        tilewise (bool): whether the calls are run tilewise or not
+        timeout (int): timeout for each function call (in seconds)
 
     Return:
         list of outputs
@@ -97,7 +99,7 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True):
 
     for r in results:
         try:
-            outputs.append(r.get(600))  # wait at most 10 min per call
+            outputs.append(r.get(timeout))
         except KeyboardInterrupt:
             pool.terminate()
             sys.exit(1)

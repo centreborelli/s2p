@@ -41,6 +41,10 @@ cfg['max_processes'] = None
 # max number of OMP threads used by programs compiled with openMP
 cfg['omp_num_threads'] = 1
 
+# timeout in seconds, after which a function that runs on a single tile is not
+# waited for
+cfg['timeout'] = 600
+
 # debug mode (more verbose logs and intermediate results saved)
 cfg['debug'] = False
 
