@@ -81,11 +81,13 @@ def check_parameters(d):
     elif 'roi_kml' in d:
         # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpcm'],
-                                             d['roi_kml'], d.get('utm_zone'))
+                                             d['roi_kml'], d.get('utm_zone'),
+                                             d.get('use_srtm'))
     elif 'roi_geojson' in d:
         # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.geojson_roi_process(d['images'][0]['rpcm'],
-                                                 d['roi_geojson'], d.get('utm_zone'))
+                                                 d['roi_geojson'], d.get('utm_zone'),
+                                                 d.get('use_srtm'))
     else:
         print('ERROR: missing or incomplete roi definition')
         sys.exit(1)

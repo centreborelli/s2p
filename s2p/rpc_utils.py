@@ -304,7 +304,7 @@ def utm_roi_to_img_roi(rpc, roi):
     return {'x': x, 'y': y, 'w': w, 'h': h}
 
 
-def kml_roi_process(rpc, kml, utm_zone=None):
+def kml_roi_process(rpc, kml, utm_zone=None, use_srtm=False):
     """
     Define a rectangular bounding box in image coordinates
     from a polygon in a KML file
@@ -315,6 +315,8 @@ def kml_roi_process(rpc, kml, utm_zone=None):
         utm_zone: force the zone number to be used when defining `utm_bbx`.
             If not specified, the default UTM zone for the given geography
             is used.
+        use_srtm (bool): whether or not to use SRTM DEM to estimate the
+            average ground altitude of the ROI.
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
@@ -325,11 +327,11 @@ def kml_roi_process(rpc, kml, utm_zone=None):
     with open(kml, 'r') as f:
         a = bs4.BeautifulSoup(f, "lxml").find_all('coordinates')[0].text.split()
     ll_poly = np.array([list(map(float, x.split(','))) for x in a])[:, :2]
-    box_d = roi_process(rpc, ll_poly, utm_zone=utm_zone)
+    box_d = roi_process(rpc, ll_poly, utm_zone=utm_zone, use_srtm=use_srtm)
     return box_d
 
 
-def geojson_roi_process(rpc, geojson, utm_zone=None):
+def geojson_roi_process(rpc, geojson, utm_zone=None, use_srtm=False):
     """
     Define a rectangular bounding box in image coordinates
     from a polygon in a geojson file or dict
@@ -343,6 +345,8 @@ def geojson_roi_process(rpc, geojson, utm_zone=None):
         utm_zone: force the zone number to be used when defining `utm_bbx`.
             If not specified, the default UTM zone for the given geography
             is used.
+        use_srtm (bool): whether or not to use SRTM DEM to estimate the
+            average ground altitude of the ROI.
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
@@ -363,11 +367,11 @@ def geojson_roi_process(rpc, geojson, utm_zone=None):
         a = a["geometry"]
 
     ll_poly = np.array(a["coordinates"][0])
-    box_d = roi_process(rpc, ll_poly, utm_zone=utm_zone)
+    box_d = roi_process(rpc, ll_poly, utm_zone=utm_zone, use_srtm=use_srtm)
     return box_d
 
 
-def roi_process(rpc, ll_poly, utm_zone=None):
+def roi_process(rpc, ll_poly, utm_zone=None, use_srtm=False):
     """
     Convert a longitude/latitude polygon into a rectangular
     bounding box in image coordinates
@@ -379,6 +383,8 @@ def roi_process(rpc, ll_poly, utm_zone=None):
         utm_zone: force the zone number to be used when defining `utm_bbx`.
             If not specified, the default UTM zone for the given geography
             is used.
+        use_srtm (bool): whether or not to use SRTM DEM to estimate the
+            average ground altitude of the ROI.
 
     Returns:
         x, y, w, h: four integers defining a rectangular region of interest
@@ -401,7 +407,7 @@ def roi_process(rpc, ll_poly, utm_zone=None):
     cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image
-    if cfg['use_srtm']:
+    if use_srtm:
         lon, lat = np.mean(ll_poly, axis=0)
         z = srtm4.srtm4(lon, lat)
         img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], z)
