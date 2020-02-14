@@ -4,6 +4,8 @@
 
 
 import os
+import warnings
+
 import numpy as np
 import rpcm
 
@@ -17,6 +19,10 @@ from s2p.config import cfg
 
 
 class NoRectificationMatchesError(Exception):
+    pass
+
+
+class NoHorizontalRegistrationWarning(Warning):
     pass
 
 
@@ -339,8 +345,11 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
     if sift_matches is not None:
         sift_matches = filter_matches_epipolar_constraint(F, sift_matches,
                                                           cfg['epipolar_thresh'])
-        if len(sift_matches) < 10:
-            print('WARNING: no registration with less than 10 matches')
+        if len(sift_matches) < 1:
+            warnings.warn(
+                "Need at least one sift match for the horizontal registration",
+                category=NoHorizontalRegistrationWarning,
+            )
         else:
             H2 = register_horizontally_translation(sift_matches, H1, H2)
 
