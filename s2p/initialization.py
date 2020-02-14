@@ -77,7 +77,7 @@ def check_parameters(d):
                                                          'hemisphere',
                                                          'x', 'y', 'w', 'h']):
         d['roi'] = rpc_utils.utm_roi_to_img_roi(d['images'][0]['rpcm'],
-                                                d['roi_utm'])
+                                                d['roi_utm'], d.get('use_srtm'))
     elif 'roi_kml' in d:
         # this call defines cfg['utm_zone'] and cfg['utm_bbx'] as side effects
         d['roi'] = rpc_utils.kml_roi_process(d['images'][0]['rpcm'],
