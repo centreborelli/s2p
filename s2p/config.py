@@ -111,7 +111,14 @@ cfg['disp_range_method'] = "wider_sift_exogenous"
 cfg['disp_range_exogenous_low_margin'] = -10
 cfg['disp_range_exogenous_high_margin'] = +100
 
-# exogenous dem
+# whether or not to use SRTM DEM (downloaded from internet) to estimate:
+#   - the average ground altitude (to project the input geographic AOI to the
+#     correct place in the input images)
+#   - a reasonable altitude range (to get a better rectification when
+#     "rectification_method" is set to "rpc")
+cfg['use_srtm'] = False
+
+# exogenous dem. If set, it superseeds SRTM.
 cfg['exogenous_dem'] = None
 cfg['exogenous_dem_geoid_mode'] = True
 

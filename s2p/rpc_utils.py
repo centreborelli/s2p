@@ -12,6 +12,7 @@ import rasterio
 import numpy as np
 
 import rpcm
+import srtm4
 
 from s2p import geographiclib
 from s2p import common
@@ -242,6 +243,14 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
                                             lon_m, lon_M, lat_m, lat_M, rpc)
         h_m += margin_bottom
         h_M += margin_top
+    elif cfg['use_srtm']:
+        s = 0.001 / 12  # SRTM90 pixel spacing is 0.001 / 12 degrees
+        points = [(lon, lat) for lon in np.arange(lon_m, lon_M, s)
+                             for lat in np.arange(lat_m, lat_M, s)]
+        lons, lats = np.asarray(points).T
+        alts = srtm4.srtm4(lons, lats)  # TODO use srtm4 nn interpolation option
+        h_m = min(alts) + margin_bottom
+        h_M = max(alts) + margin_top
     else:
         h_m, h_M = altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
 
@@ -392,11 +401,15 @@ def roi_process(rpc, ll_poly, utm_zone=None):
     cfg['utm_bbx'] = (east_min, east_max, nort_min, nort_max)
 
     # project lon lat vertices into the image
-    img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], rpc.alt_offset)
-    img_pts = list(zip(*img_pts))
+    if cfg['use_srtm']:
+        lon, lat = np.mean(ll_poly, axis=0)
+        z = srtm4.srtm4(lon, lat)
+        img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], z)
+    else:
+        img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], rpc.alt_offset)
 
     # return image roi
-    x, y, w, h = common.bounding_box2D(img_pts)
+    x, y, w, h = common.bounding_box2D(list(zip(*img_pts)))
     return {'x': x, 'y': y, 'w': w, 'h': h}
 
 
