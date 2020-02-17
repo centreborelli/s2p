@@ -34,7 +34,7 @@ def create_rejection_mask(disp, im1, im2, mask):
 
 
 def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
-                          disp_max=None, timeout=cfg['mgm_timeout'], extra_params=''):
+                          disp_max=None, timeout=600, extra_params=''):
     """
     Runs a block-matching binary on a pair of stereo-rectified images.
 
