@@ -606,7 +606,11 @@ def main(user_cfg):
 
     # matching step:
     print('running stereo matching...')
-    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers,
+    if cfg['max_processes_stereo_matching'] is not None:
+        nb_workers_stereo = cfg['max_processes_stereo_matching']
+    else:
+        nb_workers_stereo = nb_workers
+    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
                           timeout=timeout)
 
     if n > 2:
