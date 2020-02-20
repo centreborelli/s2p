@@ -69,6 +69,9 @@ cfg['sift_match_thresh'] = 0.6
 # disp range expansion facto
 cfg['disp_range_extra_margin'] = 0.2
 
+# Maximum disparity range allowed in block matching
+cfg['max_disp_range'] = None
+
 # estimate rectification homographies either blindly using the rpc data or from
 # the images actual content thanks to sift matches
 cfg['rectification_method'] = 'rpc'  # either 'rpc' or 'sift'

@@ -200,7 +200,8 @@ def stereo_matching(tile,i):
 
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
                                          cfg['matching_algorithm'], disp_min,
-                                         disp_max, timeout=cfg['mgm_timeout'])
+                                         disp_max, timeout=cfg['mgm_timeout'],
+                                         max_disp_range=cfg['max_disp_range'])
 
     # add margin around masked pixels
     masking.erosion(mask, mask, cfg['msk_erosion'])
