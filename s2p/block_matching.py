@@ -9,6 +9,11 @@ import numpy as np
 from s2p import common
 from s2p.config import cfg
 
+
+class MaxDisparityRangeError(Exception):
+    pass
+
+
 def rectify_secondary_tile_only(algo):
     if algo in ['tvl1_2d']:
         return True
@@ -34,7 +39,8 @@ def create_rejection_mask(disp, im1, im2, mask):
 
 
 def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
-                          disp_max=None, timeout=600, extra_params=''):
+                          disp_max=None, timeout=600, max_disp_range=None,
+                          extra_params=''):
     """
     Runs a block-matching binary on a pair of stereo-rectified images.
 
@@ -52,6 +58,11 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
             raise an error if it hasn't returned.
             Only applies to `mgm*` algorithms.
         extra_params: optional string with algorithm-dependent parameters
+
+    Raises:
+        MaxDisparityRangeError: if max_disp_range is defined,
+            and if the [disp_min, disp_max] range is greater
+            than max_disp_range, to avoid endless computation.
     """
     if rectify_secondary_tile_only(algo) is False:
         disp_min = [disp_min]
@@ -76,6 +87,16 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
     if rectify_secondary_tile_only(algo) is False:
         disp_min = disp_min[0]
         disp_max = disp_max[0]
+
+    if (
+        max_disp_range is not None
+        and disp_max - disp_min > max_disp_range
+    ):
+        raise MaxDisparityRangeError(
+            'Disparity range [{}, {}] greater than {}'.format(
+                disp_min, disp_max, max_disp_range
+            )
+        )
 
     # define environment variables
     env = os.environ.copy()
