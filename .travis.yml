@@ -20,6 +20,7 @@ addons:
       # GDAL is already included on osx images
       - geographiclib
       - fftw
+    update: true
 
 install:
   - |
