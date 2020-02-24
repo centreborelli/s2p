@@ -38,6 +38,10 @@ cfg['vertical_margin'] = 10  # for regularity
 # max number of processes launched in parallel. None means the number of available cores
 cfg['max_processes'] = None
 
+# max number of processes launched in parallel for stereo_matching
+# Uses the value of cfg['max_processes'] if None
+cfg['max_processes_stereo_matching'] = None
+
 # max number of OMP threads used by programs compiled with openMP
 cfg['omp_num_threads'] = 1
 
