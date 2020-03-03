@@ -104,8 +104,8 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=No
             error
     """
     # copy rpc coefficients to an RPCStruct object
-    rpc1_c_struct = RPCStruct(rpc1)
-    rpc2_c_struct = RPCStruct(rpc2)
+    rpc1_c_struct = RPCStruct(rpc1, delta=0.1)
+    rpc2_c_struct = RPCStruct(rpc2, delta=0.1)
 
     # handle optional arguments
     if A is not None:  # apply pointing correction
