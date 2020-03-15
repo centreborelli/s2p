@@ -13,12 +13,13 @@ def test_image_keypoints():
     """
     Unit test for the function s2p.sift.image_keypoints.
 
-    Right now it tests only the x, y coordinates of keypoints.
+    Right now it tests only the x, y, scale, orientation of keypoints, not the
+    descriptors.
     """
     computed = sift.image_keypoints(data_path('input_triplet/img_02.tif'),
                                     100, 100, 200, 200)
     expected = np.loadtxt(data_path('expected_output/units/unit_image_keypoints.txt'))
-    np.testing.assert_allclose(computed[:, :2], expected[:, :2], atol=1e-3)
+    np.testing.assert_allclose(computed[:, :4], expected[:, :4], atol=1e-3)
 
 
 def test_matching():
