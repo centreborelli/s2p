@@ -81,8 +81,8 @@ def register_horizontally_shear(matches, H1, H2):
 
     # we search the (a, b, c) vector that minimises \sum (x1 - (a*x2+b*y2+c))^2
     # it is a least squares minimisation problem
-    A = np.vstack((x2, y2, y2*0+1)).T
-    a, b, c = np.linalg.lstsq(A, x1)[0].flatten()
+    A = np.column_stack((x2, y2, y2*0+1))
+    a, b, c = np.linalg.lstsq(A, x1, rcond=None)[0]
 
     # correct H2 with the estimated tilt, shear and translation
     return np.dot(np.array([[a, b, c], [0, 1, 0], [0, 0, 1]]), H2)
