@@ -338,7 +338,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
         x1, y1 = rpc1.projection(lon, lat, alt)[:2]
         x2, y2 = rpc2.projection(lon, lat, alt)[:2]
         m = np.vstack([x1, y1, x2, y2]).T
-        m = np.vstack({tuple(row) for row in m})  # remove duplicates due to no alt range
+        m = np.vstack(list({tuple(row) for row in m}))  # remove duplicates due to no alt range
         H2 = register_horizontally_shear(m, H1, H2)
 
     # compose H2 with a horizontal translation to center disp range around 0
