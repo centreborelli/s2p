@@ -5,7 +5,6 @@
 
 import json
 import datetime
-import pyproj
 import warnings
 import rasterio
 import numpy as np
@@ -163,10 +162,10 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
     dataset = rasterio.open(im, 'r')
 
     # convert lon/lat to im projection
-    x_im_proj, y_im_proj = pyproj.transform(pyproj.Proj(init='epsg:4326'),
-                                            pyproj.Proj(init=dataset.crs['init']),
-                                            [lon_m, lon_M],
-                                            [lat_m, lat_M])
+    x_im_proj, y_im_proj = geographiclib.pyproj_transform([lon_m, lon_M],
+                                                          [lat_m, lat_M],
+                                                          4326,
+                                                          dataset.crs.to_epsg())
 
     # convert im projection to pixel
     pts = []
@@ -345,10 +344,10 @@ def roi_process(rpc, ll_poly, utm_zone=None, use_srtm=False):
     cfg['utm_zone'] = utm_zone
 
     # convert lon lat polygon to utm
-    utm_proj = geographiclib.utm_proj(utm_zone)
-    easting, northing = pyproj.transform(
-        pyproj.Proj(init="epsg:4326"), utm_proj, ll_poly[:, 0], ll_poly[:, 1]
-    )
+    epsg = geographiclib.epsg_code_from_utm_zone(utm_zone)
+    easting, northing = geographiclib.pyproj_transform(ll_poly[:, 0],
+                                                       ll_poly[:, 1],
+                                                       4326, epsg)
     east_min = min(easting)
     east_max = max(easting)
     nort_min = min(northing)

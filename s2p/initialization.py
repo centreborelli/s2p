@@ -67,7 +67,7 @@ def check_parameters(d):
         else:
             img['rpcm'] = rpcm.rpc_from_geotiff(img['img'])
 
-    # verify that roi or path to preview file are defined
+    # verify that an input ROI is defined
     if 'full_img' in d and d['full_img']:
         sz = common.image_size_gdal(d['images'][0]['img'])
         d['roi'] = {'x': 0, 'y': 0, 'w': sz[0], 'h': sz[1]}
