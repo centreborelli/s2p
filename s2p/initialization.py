@@ -18,6 +18,7 @@ from s2p import geographiclib
 from s2p import rpc_utils
 from s2p import masking
 from s2p import parallel
+from s2p import geographiclib
 from s2p.config import cfg
 
 # This function is here as a workaround to python bug #24313 When
@@ -132,6 +133,10 @@ def build_cfg(user_cfg):
     if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
         x, y, w, h = [cfg['roi'][k] for k in ['x', 'y', 'w', 'h']]
         cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
+
+    # get out_epsg
+    if 'out_epsg' not in cfg or cfg['out_epsg'] is None:
+        geographiclib.epsg_code_from_utm_zone(cfg['utm_zone'])
 
     # get image ground sampling distance
     cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpcm'])

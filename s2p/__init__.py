@@ -44,6 +44,7 @@ from s2p import fusion
 from s2p import rasterization
 from s2p import visualisation
 from s2p import ply
+from s2p import geographiclib
 
 
 def pointing_correction(tile, i):
@@ -287,6 +288,13 @@ def disparity_to_ply(tile):
     if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
         triangulation.filter_xyz(xyz_array, cfg['3d_filtering_r'],
                                  cfg['3d_filtering_n'], cfg['gsd'])
+
+    # output EPSG conversion
+    if 'out_epsg' in cfg:
+        epsg_utm = geographiclib.epsg_code_from_utm_zone(cfg['utm_zone'])
+        if cfg['out_epsg'] != epsg_utm:
+            x, y, z = geographiclib.pyproj_transform(xyz_array[:,0], xyz_array[:,1], epsg_utm, cfg['out_epsg'], xyz_array[:,2])
+            xyz_array = np.vstack((x,y,y)).T
 
     # flatten the xyz array into a list and remove nan points
     xyz_list = xyz_array.reshape(-1, 3)
