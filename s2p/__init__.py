@@ -295,10 +295,15 @@ def disparity_to_ply(tile):
         if cfg['out_epsg'] != epsg_utm:
             x, y, z = geographiclib.pyproj_transform(xyz_array[:,0], xyz_array[:,1], epsg_utm, cfg['out_epsg'], xyz_array[:,2])
             xyz_array = np.vstack((x,y,y)).T
+            proj_com = "EPSG {}".format(cfg['out_epsg'])
 
     # flatten the xyz array into a list and remove nan points
     xyz_list = xyz_array.reshape(-1, 3)
     valid = np.all(np.isfinite(xyz_list), axis=1)
+
+    # projection comment
+    if not proj_com:
+        proj_com = "UTM {}".format(cfg['utm_zone'])
 
     # write the point cloud to a ply file
     with rasterio.open(colors, 'r') as f:
@@ -309,7 +314,7 @@ def disparity_to_ply(tile):
                                     extra_properties=None,
                                     extra_properties_names=None,
                                     comments=["created by S2P",
-                                              "projection: UTM {}".format(cfg['utm_zone'])])
+                                              "projection: {}".format(proj_com)])
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))
