@@ -220,7 +220,6 @@ def disparity_to_height(tile, i):
         mask_rect_img = f.read().squeeze()
     height_map = triangulation.height_map(x, y, w, h, rpc1, rpc2, H_ref, H_sec,
                                           disp_img, mask_rect_img,
-                                          int(cfg['utm_zone'][:-1]),
                                           A=np.loadtxt(pointing))
 
     # write height map to a file
@@ -280,30 +279,39 @@ def disparity_to_ply(tile):
     xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
                                                np.loadtxt(H_ref), np.loadtxt(H_sec),
                                                disp_img, mask_rect_img,
-                                               int(cfg['utm_zone'][:-1]),
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
+
+    # reshape the xyz array into a 3-column 2D-array
+    xyz_shape = xyz_array.shape
+    xyz_list = xyz_array.reshape(-1, 3)
+
+    # output EPSG conversion
+    in_epsg = 4979
+    if 'out_epsg' in cfg:
+        if cfg['out_epsg'] != in_epsg:
+            out_epsg = cfg['out_epsg']
+            proj_com = "EPSG {}".format(out_epsg)
+    else:
+        out_epsg = geographiclib.epsg_code_from_utm_zone(cfg['utm_zone'])
+        proj_com = "UTM {}".format(cfg['utm_zone'])
+
+    # 3D coordinates conversion
+    if out_epsg:
+        x, y, z = geographiclib.pyproj_transform(xyz_list[:,0], xyz_list[:,1],
+                                             in_epsg, out_epsg, xyz_list[:,2])
+        xyz_array[:,:,0] = x.reshape(*xyz_shape[:2])
+        xyz_array[:,:,1] = y.reshape(*xyz_shape[:2])
+        xyz_array[:,:,2] = z.reshape(*xyz_shape[:2])
 
     # 3D filtering
     if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
         triangulation.filter_xyz(xyz_array, cfg['3d_filtering_r'],
                                  cfg['3d_filtering_n'], cfg['gsd'])
 
-    # output EPSG conversion
-    if 'out_epsg' in cfg:
-        epsg_utm = geographiclib.epsg_code_from_utm_zone(cfg['utm_zone'])
-        if cfg['out_epsg'] != epsg_utm:
-            x, y, z = geographiclib.pyproj_transform(xyz_array[:,0], xyz_array[:,1], epsg_utm, cfg['out_epsg'], xyz_array[:,2])
-            xyz_array = np.vstack((x,y,y)).T
-            proj_com = "EPSG {}".format(cfg['out_epsg'])
-
     # flatten the xyz array into a list and remove nan points
     xyz_list = xyz_array.reshape(-1, 3)
     valid = np.all(np.isfinite(xyz_list), axis=1)
-
-    # projection comment
-    if not proj_com:
-        proj_com = "UTM {}".format(cfg['utm_zone'])
 
     # write the point cloud to a ply file
     with rasterio.open(colors, 'r') as f:

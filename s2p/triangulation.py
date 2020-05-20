@@ -76,7 +76,7 @@ class RPCStruct(ctypes.Structure):
                 self.deny[i] = np.nan
 
 
-def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
+def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
     """
     Compute a height map from a disparity map, using RPC camera models.
 
@@ -85,8 +85,6 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
-        utm_zone (int): desired UTM zone number (between 1 and 60) for the
-            output xyz map
         img_bbx (4-tuple): col_min, col_max, row_min, row_max defining the
             unrectified image domain to process.
         A (array): 3x3 array with the pointing correction matrix for im2
@@ -118,7 +116,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
                                 c_int, c_int,
                                 ndpointer(dtype=c_double, shape=(9,)),
                                 ndpointer(dtype=c_double, shape=(9,)),
-                                POINTER(RPCStruct), POINTER(RPCStruct), c_int,
+                                POINTER(RPCStruct), POINTER(RPCStruct),
                                 ndpointer(dtype=c_float, shape=(4,)))
 
 
@@ -130,7 +128,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
     msk = mask.astype('float32')
     lib.disp_to_xyz(xyz, err, dispx, dispy, msk, w, h,
                     H1.flatten(), H2.flatten(),
-                    byref(rpc1_c_struct), byref(rpc2_c_struct), utm_zone,
+                    byref(rpc1_c_struct), byref(rpc2_c_struct),
                     np.asarray(img_bbx, dtype='float32'))
 
     return xyz, err
@@ -207,7 +205,7 @@ def filter_xyz(xyz, r, n, img_gsd):
     remove_isolated_3d_points(xyz, r, p, n)
 
 
-def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
+def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -219,14 +217,12 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
-        utm_zone (int): desired UTM zone number (between 1 and 60) for the
-            output xyz map
         A (array): 3x3 array with the pointing correction matrix for im2
 
     Returns:
         array of shape (h, w) with the height map
     """
-    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=A)
+    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A=A)
     height_map = xyz[:, :, 2].squeeze()
 
     # transfer the rectified height map onto an unrectified height map
