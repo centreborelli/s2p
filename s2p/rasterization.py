@@ -123,8 +123,8 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
                         xsize, ysize,
                         radius, sigma)
 
-    utm_zone = utm_zone_from_ply(clouds_list[0])
-    utm_proj = geographiclib.utm_proj(utm_zone)
+    crs, crs_type = crs_from_ply(clouds_list[0])
+    crs_proj = geographiclib.crs_proj(crs, crs_type)
 
     # construct profile dict
     profile = dict()
@@ -139,7 +139,17 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
     return raster, profile
 
 
-def utm_zone_from_ply(ply_path):
+def epsg_code_from_comments(comments):
+    regex = r"^projection: EPSG ([0-9]{4,5})"
+    epsg_code = None
+    for comment in comments:
+        s = re.search(regex, comment)
+        if s:
+            epsg_code = s.group(1)
+    return epsg_code
+
+
+def crs_from_ply(ply_path):
     _, comments = ply.read_3d_point_cloud_from_ply(ply_path)
     regex = r"^projection: UTM (\d{1,2}[NS])"
     utm_zone = None
@@ -148,9 +158,15 @@ def utm_zone_from_ply(ply_path):
         if s:
             utm_zone = s.group(1)
 
+    epsg_code = None
     if not utm_zone:
+        epsg_code = epsg_code_from_comments(comments)
+
+    if not utm_zone and not epsg_code:
         raise InvalidPlyCommentsError(
             "Invalid header comments {} for ply file {}".format(comments, ply_path)
         )
 
-    return utm_zone
+    crs_type = "UTM" if utm_zone else "EPSG"
+
+    return utm_zone or epsg_code, crs_type

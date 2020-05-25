@@ -81,25 +81,26 @@ def epsg_code_from_utm_zone(utm_zone):
     return const + zone_number
 
 
-def utm_proj(utm_zone):
+def crs_proj(utm_zone, crs_type="UTM"):
     """
-    Return a pyproj.Proj object that corresponds to the given utm_zone string.
+    Return a pyproj.Proj object that corresponds
+    to the given utm_zone string or EPSG code
 
     Args:
-        utm_zone (str): UTM zone number + hemisphere (e.g. "30N" or "30S")
+        crs_type (str): 'UTM' (default) or 'EPSG'
+        utm_zone (str): UTM zone number + hemisphere (eg: '30N') or EPSG code
 
     Returns:
         pyproj.Proj: object that can be used to transform coordinates
     """
-    zone_number = utm_zone[:-1]
-    hemisphere = utm_zone[-1]
-    return pyproj.Proj(
-        proj='utm',
-        zone=zone_number,
-        ellps='WGS84',
-        datum='WGS84',
-        south=(hemisphere == 'S'),
-    )
+    if crs_type == "UTM":
+        zone_number = utm_zone[:-1]
+        hemisphere = utm_zone[-1]
+        return pyproj.Proj(
+            proj="utm", zone=zone_number, ellps="WGS84", datum="WGS84", south=(hemisphere == "S")
+        )
+    elif crs_type == "EPSG":
+        return pyproj.Proj("epsg:{}".format(utm_zone))
 
 
 def pyproj_transform(x, y, in_epsg, out_epsg, z=None):
