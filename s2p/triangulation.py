@@ -108,7 +108,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
 
     # define the argument types of the disp_to_xyz function from disp_to_h.so
     h, w = disp.shape
-    lib.disp_to_xyz.argtypes = (ndpointer(dtype=c_float, shape=(h, w, 3)),
+    lib.disp_to_xyz.argtypes = (ndpointer(dtype=c_double, shape=(h, w, 3)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
@@ -121,7 +121,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
 
 
     # call the disp_to_xyz function from disp_to_h.so
-    xyz =  np.zeros((h, w, 3), dtype='float32')
+    xyz =  np.zeros((h, w, 3), dtype='float64')
     err =  np.zeros((h, w), dtype='float32')
     dispx = disp.astype('float32')
     dispy = np.zeros((h, w), dtype='float32')

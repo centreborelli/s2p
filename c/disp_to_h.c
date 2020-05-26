@@ -40,7 +40,7 @@ static double invert_homography(double o[9], double i[9])
 }
 
 
-void disp_to_xyz(float *xyz, float *err,  // outputs
+void disp_to_xyz(double *xyz, float *err,  // outputs
                  float *dispx, float *dispy, float *msk, int nx, int ny,  // inputs
                  double ha[9], double hb[9],
                  struct rpc *rpca, struct rpc *rpcb,
@@ -254,7 +254,7 @@ int main_disp_to_h(int c, char *v[])
     float *msk  = iio_read_image_float_split(mask_path, &nx, &ny, &nch);
 
     // triangulation
-    float *xyz_map = calloc(nx*ny*3, sizeof(*xyz_map));
+    double *xyz_map = calloc(nx*ny*3, sizeof(*xyz_map));
     float *err_map = calloc(nx*ny, sizeof(*err_map));
     float img_bbx[4] = {col_m, col_M, row_m, row_M};
     disp_to_xyz(xyz_map, err_map, dispx, dispy, msk, nx, ny, ha, hb,

@@ -15,5 +15,6 @@
   "tile_size" : 300,
   "disp_range_method" : "sift",
   "msk_erosion": 0,
-  "dsm_resolution": 0.5
+  "dsm_resolution": 0.5,
+  "out_epsg": 32740
 }
