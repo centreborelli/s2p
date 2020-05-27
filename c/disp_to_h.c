@@ -261,7 +261,7 @@ int main_disp_to_h(int c, char *v[])
                 rpca, rpcb, img_bbx);
 
     // save the height map and error map
-    iio_write_image_float_vec(fout_heights, xyz_map, nx, ny, 3);
+    iio_write_image_double_vec(fout_heights, xyz_map, nx, ny, 3);
     iio_write_image_float_vec(fout_err, err_map, nx, ny, 1);
     return 0;
 }
