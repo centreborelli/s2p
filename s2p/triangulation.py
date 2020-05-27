@@ -76,7 +76,7 @@ class RPCStruct(ctypes.Structure):
                 self.deny[i] = np.nan
 
 
-def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
+def disp_to_lonlatalt(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
     """
     Compute a height map from a disparity map, using RPC camera models.
 
@@ -90,8 +90,8 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
         A (array): 3x3 array with the pointing correction matrix for im2
 
     Returns:
-        xyz: array of shape (h, w, 3) where each pixel contains the UTM
-            easting, northing, and altitude of the triangulated point.
+        lonlatalt: array of shape (h, w, 3) where each pixel contains the
+            longitude, latitude and altitude of the triangulated point.
         err: array of shape (h, w) where each pixel contains the triangulation
             error
     """
@@ -106,9 +106,9 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
     if img_bbx is None:
         img_bbx = (-np.inf, np.inf, -np.inf, np.inf)
 
-    # define the argument types of the disp_to_xyz function from disp_to_h.so
+    # define the argument types of the disp_to_lonlatalt function from disp_to_h.so
     h, w = disp.shape
-    lib.disp_to_xyz.argtypes = (ndpointer(dtype=c_double, shape=(h, w, 3)),
+    lib.disp_to_lonlatalt.argtypes = (ndpointer(dtype=c_double, shape=(h, w, 3)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
@@ -120,18 +120,18 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
                                 ndpointer(dtype=c_float, shape=(4,)))
 
 
-    # call the disp_to_xyz function from disp_to_h.so
-    xyz =  np.zeros((h, w, 3), dtype='float64')
+    # call the disp_to_lonlatalt function from disp_to_h.so
+    lonlatalt =  np.zeros((h, w, 3), dtype='float64')
     err =  np.zeros((h, w), dtype='float32')
     dispx = disp.astype('float32')
     dispy = np.zeros((h, w), dtype='float32')
     msk = mask.astype('float32')
-    lib.disp_to_xyz(xyz, err, dispx, dispy, msk, w, h,
+    lib.disp_to_lonlatalt(lonlatalt, err, dispx, dispy, msk, w, h,
                     H1.flatten(), H2.flatten(),
                     byref(rpc1_c_struct), byref(rpc2_c_struct),
                     np.asarray(img_bbx, dtype='float32'))
 
-    return xyz, err
+    return lonlatalt, err
 
 
 def count_3d_neighbors(xyz, r, p):
@@ -222,8 +222,8 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     Returns:
         array of shape (h, w) with the height map
     """
-    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A=A)
-    height_map = xyz[:, :, 2].squeeze()
+    lonlatalt, err = disp_to_lonlatalt(rpc1, rpc2, H1, H2, disp, mask, A=A)
+    height_map = lonlatalt[:, :, 2].squeeze()
 
     # transfer the rectified height map onto an unrectified height map
     H = np.dot(H1, common.matrix_translation(x, y))

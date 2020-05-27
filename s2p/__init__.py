@@ -276,15 +276,15 @@ def disparity_to_ply(tile):
         disp_img = f.read().squeeze()
     with rasterio.open(mask_rect, 'r') as f:
         mask_rect_img = f.read().squeeze()
-    xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
+    lonlatalt_array, err = triangulation.disp_to_lonlatalt(rpc1, rpc2,
                                                np.loadtxt(H_ref), np.loadtxt(H_sec),
                                                disp_img, mask_rect_img,
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
     # reshape the xyz array into a 3-column 2D-array
-    xyz_shape = xyz_array.shape
-    xyz_list = xyz_array.reshape(-1, 3)
+    lonlatalt_shape = lonlatalt_array.shape
+    lonlatalt_array = lonlatalt_array.reshape(-1, 3)
 
     # output EPSG conversion
     in_epsg = 4979
@@ -298,11 +298,12 @@ def disparity_to_ply(tile):
 
     # 3D coordinates conversion
     if out_epsg:
-        x, y, z = geographiclib.pyproj_transform(xyz_list[:,0], xyz_list[:,1],
-                                             in_epsg, out_epsg, xyz_list[:,2])
-        xyz_array[:,:,0] = x.reshape(*xyz_shape[:2])
-        xyz_array[:,:,1] = y.reshape(*xyz_shape[:2])
-        xyz_array[:,:,2] = z.reshape(*xyz_shape[:2])
+        x, y, z = geographiclib.pyproj_transform(lonlatalt_array[:,0], lonlatalt_array[:,1],
+                                             in_epsg, out_epsg, lonlatalt_array[:,2])
+        xyz_array = np.empty(lonlatalt_shape, dtype=np.float32)
+        xyz_array[:,:,0] = x.reshape(*lonlatalt_shape[:2])
+        xyz_array[:,:,1] = y.reshape(*lonlatalt_shape[:2])
+        xyz_array[:,:,2] = z.reshape(*lonlatalt_shape[:2])
 
     # 3D filtering
     if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
