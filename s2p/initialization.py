@@ -129,14 +129,16 @@ def build_cfg(user_cfg):
             if d in cfg['images'][i] and cfg['images'][i][d] is not None and not os.path.isabs(cfg['images'][i][d]):
                 cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
 
-    # get utm zone
-    if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
+    # get out_crs
+    if 'out_crs' not in cfg or cfg['out_crs'] is None:
         x, y, w, h = [cfg['roi'][k] for k in ['x', 'y', 'w', 'h']]
-        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
-
-    # get out_epsg
-    if 'out_epsg' not in cfg or cfg['out_epsg'] is None:
-        geographiclib.epsg_code_from_utm_zone(cfg['utm_zone'])
+        utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
+        epsg_code = geographiclib.epsg_code_from_utm_zone(utm_zone)
+        cfg['out_crs'] = "epsg:{}".format(epsg_code)
+    try:
+        geographiclib.pyproj_crs(cfg['out_crs'])
+    except pyproj.exceptions.CRSError as e:
+        raise e
 
     # get image ground sampling distance
     cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpcm'])

@@ -157,5 +157,5 @@ cfg['3d_filtering_n'] = None  # number of points
 # clean height maps outliers
 cfg['cargarse_basura'] = True
 
-# EPSG code of the output coordinate system
-cfg['out_epsg'] = None
+# output coordinate reference system
+cfg['out_crs'] = None

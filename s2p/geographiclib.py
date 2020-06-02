@@ -81,45 +81,51 @@ def epsg_code_from_utm_zone(utm_zone):
     return const + zone_number
 
 
-def crs_proj(utm_zone, crs_type="UTM"):
+def crs_proj(projparams):
     """
     Return a pyproj.Proj object that corresponds
-    to the given utm_zone string or EPSG code
+    to the given parameters
 
     Args:
-        crs_type (str): 'UTM' (default) or 'EPSG'
-        utm_zone (str): UTM zone number + hemisphere (eg: '30N') or EPSG code
+        projparams (int, str, dict, pyproj.CRS): PROJ parameters
 
     Returns:
         pyproj.Proj: object that can be used to transform coordinates
     """
-    if crs_type == "UTM":
-        zone_number = utm_zone[:-1]
-        hemisphere = utm_zone[-1]
-        return pyproj.Proj(
-            proj="utm", zone=zone_number, ellps="WGS84", datum="WGS84", south=(hemisphere == "S")
-        )
-    elif crs_type == "EPSG":
-        return pyproj.Proj("epsg:{}".format(utm_zone))
+    return pyproj.Proj(projparams)
 
 
-def pyproj_transform(x, y, in_epsg, out_epsg, z=None):
+def pyproj_crs(projparams):
+    """
+    Wrapper around pyproj to return a pyproj.crs.CRS object that corresponds
+    to the given parameters
+
+    Args:
+        projparams (int, str, dict): CRS parameters
+
+    Returns:
+        pyproj.crs.CRS: object that defines a CRS
+    """
+    return pyproj.crs.CRS(projparams)
+
+
+def pyproj_transform(x, y, in_crs, out_crs, z=None):
     """
     Wrapper around pyproj to convert coordinates from an EPSG system to another.
 
     Args:
-        x (scalar or array): x coordinate(s), expressed in in_epsg
-        y (scalar or array): y coordinate(s), expressed in in_epsg
-        in_epsg (int): EPSG code of the input coordinate system
-        out_epsg (int): EPSG code of the output coordinate system
-        z (scalar or array): z coordinate(s), expressed in in_epsg
+        x (scalar or array): x coordinate(s), expressed in in_crs
+        y (scalar or array): y coordinate(s), expressed in in_crs
+        in_crs (pyproj.crs.CRS or int): input coordinate reference system or EPSG code
+        out_crs (pyproj.crs.CRS or int): output coordinate reference system or EPSG code
+        z (scalar or array): z coordinate(s), expressed in in_crs
 
     Returns:
-        scalar or array: x coordinate(s), expressed in out_epsg
-        scalar or array: y coordinate(s), expressed in out_epsg
-        scalar or array (optional if z): z coordinate(s), expressed in out_epsg
+        scalar or array: x coordinate(s), expressed in out_crs
+        scalar or array: y coordinate(s), expressed in out_crs
+        scalar or array (optional if z): z coordinate(s), expressed in out_crs
     """
-    transformer = pyproj.Transformer.from_crs(in_epsg, out_epsg, always_xy=True)
+    transformer = pyproj.Transformer.from_crs(in_crs, out_crs, always_xy=True)
     if z is None:
         return transformer.transform(x, y)
     else:

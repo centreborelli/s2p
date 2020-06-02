@@ -282,28 +282,26 @@ def disparity_to_ply(tile):
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
-    # reshape the xyz array into a 3-column 2D-array
-    lonlatalt_shape = lonlatalt_array.shape
-    lonlatalt_array = lonlatalt_array.reshape(-1, 3)
+    # output CRS conversion
+    in_crs = geographiclib.pyproj_crs("epsg:4979")
+    pyproj_out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
+    proj_com = "CRS {}".format(cfg['out_crs'])
 
-    # output EPSG conversion
-    in_epsg = 4979
-    if 'out_epsg' in cfg:
-        if cfg['out_epsg'] != in_epsg:
-            out_epsg = cfg['out_epsg']
-            proj_com = "EPSG {}".format(out_epsg)
-    else:
-        out_epsg = geographiclib.epsg_code_from_utm_zone(cfg['utm_zone'])
-        proj_com = "UTM {}".format(cfg['utm_zone'])
+    if pyproj_out_crs != in_crs:
 
-    # 3D coordinates conversion
-    if out_epsg:
-        x, y, z = geographiclib.pyproj_transform(lonlatalt_array[:,0], lonlatalt_array[:,1],
-                                             in_epsg, out_epsg, lonlatalt_array[:,2])
+        # reshape the xyz array into a 3-column 2D-array
+        lonlatalt_shape = lonlatalt_array.shape
+        lonlatalt_array = lonlatalt_array.reshape(-1, 3)
         xyz_array = np.empty(lonlatalt_shape, dtype=np.float32)
+
+        x, y, z = geographiclib.pyproj_transform(lonlatalt_array[:,0], lonlatalt_array[:,1],
+                                             in_crs, pyproj_out_crs, lonlatalt_array[:,2])
+
         xyz_array[:,:,0] = x.reshape(*lonlatalt_shape[:2])
         xyz_array[:,:,1] = y.reshape(*lonlatalt_shape[:2])
         xyz_array[:,:,2] = z.reshape(*lonlatalt_shape[:2])
+    else:
+        xyz_array = lonlatalt_array
 
     # 3D filtering
     if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
