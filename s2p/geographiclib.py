@@ -5,9 +5,14 @@
 
 import os
 import subprocess
+from distutils.version import LooseVersion
 
 import pyproj
 import numpy as np
+import rasterio
+from rasterio.crs import CRS as RioCRS
+from pyproj.crs import CRS
+from pyproj.enums import WktVersion
 
 
 def geoid_above_ellipsoid(lat, lon):
@@ -81,18 +86,23 @@ def epsg_code_from_utm_zone(utm_zone):
     return const + zone_number
 
 
-def crs_proj(projparams):
+def rasterio_crs(projparams):
     """
-    Return a pyproj.Proj object that corresponds
+    Return a rasterio.CRS object that corresponds
     to the given parameters
 
     Args:
         projparams (int, str, dict, pyproj.CRS): PROJ parameters
 
     Returns:
-        pyproj.Proj: object that can be used to transform coordinates
+        rasterio.CRS: object that can be used with rasterio
     """
-    return pyproj.Proj(projparams)
+    proj_crs = pyproj_crs(projparams)
+    if LooseVersion(rasterio.__gdal_version__) < LooseVersion("3.0.0"):
+        rio_crs = RioCRS.from_wkt(proj_crs.to_wkt(WktVersion.WKT1_GDAL))
+    else:
+        rio_crs = RioCRS.from_wkt(proj_crs.to_wkt())
+    return rio_crs
 
 
 def pyproj_crs(projparams):

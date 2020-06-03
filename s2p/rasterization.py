@@ -124,7 +124,7 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
                         radius, sigma)
 
     crs = crs_from_ply(clouds_list[0])
-    crs_proj = geographiclib.crs_proj(crs)
+    rasterio_crs = geographiclib.rasterio_crs(crs)
 
     # construct profile dict
     profile = dict()
@@ -132,7 +132,7 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
     profile["compress"] = "deflate"
     profile["predictor"] = 2
     profile["nodata"] = float("nan")
-    profile["crs"] = utm_proj.srs
+    profile["crs"] = rasterio_crs
     profile["transform"] = affine.Affine(resolution, 0.0, xoff,
                                          0.0, -resolution, yoff)
 
