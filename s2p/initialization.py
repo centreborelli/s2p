@@ -12,6 +12,7 @@ import rasterio
 import warnings
 import numpy as np
 import rpcm
+from pyproj.exceptions import CRSError
 
 from s2p import common
 from s2p import geographiclib
@@ -137,7 +138,7 @@ def build_cfg(user_cfg):
         cfg['out_crs'] = "epsg:{}".format(epsg_code)
     try:
         geographiclib.pyproj_crs(cfg['out_crs'])
-    except pyproj.exceptions.CRSError as e:
+    except CRSError as e:
         raise e
 
     # get image ground sampling distance
