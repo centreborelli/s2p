@@ -122,14 +122,6 @@ def test_distributed_plyflatten():
     res = test_cfg['dsm_resolution']
     roi = None
 
-    if 'utm_bbx' in test_cfg:
-        bbx = test_cfg['utm_bbx']
-        global_xoff = bbx[0]
-        global_yoff = bbx[3]
-        global_xsize = int(np.ceil((bbx[1]-bbx[0]) / test_cfg['dsm_resolution']))
-        global_ysize = int(np.ceil((bbx[3]-bbx[2]) / test_cfg['dsm_resolution']))
-        roi = (global_xoff, global_yoff, global_xsize, global_ysize)
-
     raster, profile = s2p.rasterization.plyflatten_from_plyfiles_list(clouds_list,
                                                                       resolution=res,
                                                                       roi=roi)
