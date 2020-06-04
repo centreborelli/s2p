@@ -125,6 +125,25 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
     return keypoints
 
 
+def string_dump_of_keypoint_and_descriptor(k):
+    """
+    Return a string representing a keypoint and its descriptor.
+
+    Args:
+        k (array_like): list of 132 floats, the first four elements are the
+            keypoint (x, y, scale, orientation), the 128 following elements are
+            the coefficients of the SIFT descriptor and take integer values
+            between 0 and 255.
+
+    Return:
+        string dump of the descriptor, such as for example
+        "342.254 003.570 0.91346 2.36788 000 001 005 000 000 000 028 029 179..."
+    """
+    s = "{:3.6f} {:3.6f} {:3.6f} {: 3.6f} ".format(*k[:4])
+    s += " ".join("{:3d}".format(int(x)) for x in k[4:])
+    return s
+
+
 def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
                     epipolar_threshold=10, model=None, ransac_max_err=0.3):
     """

@@ -39,8 +39,7 @@ def geoid_above_ellipsoid(lat, lon):
 
 def compute_utm_zone(lon, lat):
     """
-    Compute the UTM zone which contains
-    the point with given longitude and latitude
+    Compute the UTM zone containing the point with given longitude and latitude.
 
     Args:
         lon (float): longitude of the point
@@ -58,13 +57,36 @@ def compute_utm_zone(lon, lat):
     return utm_zone
 
 
-def utm_proj(utm_zone):
+def epsg_code_from_utm_zone(utm_zone):
     """
-    Return a pyproj.Proj object that corresponds
-    to the given utm_zone string
+    Compute the EPSG code of a given UTM zone.
 
     Args:
-        utm_zone (str): UTM zone number + hemisphere (eg: '30N')
+        utm_zone (str): UTM zone number + hemisphere (e.g. "30N" or "30S")
+
+    Returns:
+        epsg (int): EPSG code
+    """
+    zone_number = int(utm_zone[:-1])
+    hemisphere = utm_zone[-1]
+
+    if hemisphere not in ["N", "S"]:
+        raise ValueError("unknown hemisphere {} in utm_zone {}".format(hemisphere,
+                                                                       utm_zone))
+
+    # EPSG = CONST + ZONE where CONST is
+    # - 32600 for positive latitudes
+    # - 32700 for negative latitudes
+    const = 32600 if hemisphere == "N" else 32700
+    return const + zone_number
+
+
+def utm_proj(utm_zone):
+    """
+    Return a pyproj.Proj object that corresponds to the given utm_zone string.
+
+    Args:
+        utm_zone (str): UTM zone number + hemisphere (e.g. "30N" or "30S")
 
     Returns:
         pyproj.Proj: object that can be used to transform coordinates
@@ -80,6 +102,29 @@ def utm_proj(utm_zone):
     )
 
 
+def pyproj_transform(x, y, in_epsg, out_epsg, z=None):
+    """
+    Wrapper around pyproj to convert coordinates from an EPSG system to another.
+
+    Args:
+        x (scalar or array): x coordinate(s), expressed in in_epsg
+        y (scalar or array): y coordinate(s), expressed in in_epsg
+        in_epsg (int): EPSG code of the input coordinate system
+        out_epsg (int): EPSG code of the output coordinate system
+        z (scalar or array): z coordinate(s), expressed in in_epsg
+
+    Returns:
+        scalar or array: x coordinate(s), expressed in out_epsg
+        scalar or array: y coordinate(s), expressed in out_epsg
+        scalar or array (optional if z): z coordinate(s), expressed in out_epsg
+    """
+    transformer = pyproj.Transformer.from_crs(in_epsg, out_epsg, always_xy=True)
+    if z is None:
+        return transformer.transform(x, y)
+    else:
+        return transformer.transform(x, y, z)
+
+
 def lonlat_to_utm(lon, lat, utm_zone):
     """
     Compute UTM easting and northing of a given lon, lat point.
@@ -92,8 +137,7 @@ def lonlat_to_utm(lon, lat, utm_zone):
     Returns:
         easting, northing
     """
-    e, n = pyproj.transform(pyproj.Proj(init="epsg:4326"), utm_proj(utm_zone),
-                            lon, lat)
+    e, n = pyproj_transform(lon, lat, 4326, epsg_code_from_utm_zone(utm_zone))
     return e, n
 
 
@@ -109,8 +153,7 @@ def lonlat_to_geocentric(lon, lat, alt):
     Returns:
         three floats or three lists of floats
     """
-    x, y, z = pyproj.transform(pyproj.Proj(init="epsg:4326"),
-                               pyproj.Proj(init="epsg:4978"), lon, lat, alt)
+    x, y, z = pyproj_transform(lon, lat, 4326, 4978, alt)
     return x, y, z
 
 
