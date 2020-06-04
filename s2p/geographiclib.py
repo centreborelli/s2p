@@ -88,8 +88,8 @@ def epsg_code_from_utm_zone(utm_zone):
 
 def rasterio_crs(projparams):
     """
-    Return a rasterio.CRS object that corresponds
-    to the given parameters
+    Return a rasterio.CRS object that corresponds to the given parameters.
+    See: https://pyproj4.github.io/pyproj/stable/crs_compatibility.html#converting-from-pyproj-crs-crs-to-rasterio-crs-crs
 
     Args:
         projparams (int, str, dict, pyproj.CRS): PROJ parameters
