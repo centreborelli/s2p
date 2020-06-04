@@ -110,10 +110,11 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
         ymin = np.amin(yy)
         ymax = np.amax(yy)
 
-        xsize = int(1 + np.floor((xmax - xmin) / resolution))
-        ysize = int(1 + np.floor((ymax - ymin) / resolution))
-        xoff = (xmax + xmin - resolution * xsize) / 2
-        yoff = (ymax + ymin + resolution * ysize) / 2
+        xoff = np.floor(xmin / resolution) * resolution
+        xsize = int(1 + np.floor((xmax - xoff) / resolution))
+
+        yoff = np.ceil(ymax / resolution) * resolution
+        ysize = int(1 - np.floor((ymin - yoff) / resolution))
 
     # The copy() method will reorder to C-contiguous order by default:
     full_cloud = full_cloud.copy()
