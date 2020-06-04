@@ -33,6 +33,7 @@ import rasterio
 from s2p.config import cfg
 from s2p import common
 from s2p import parallel
+from s2p import geographiclib
 from s2p import initialization
 from s2p import pointing_accuracy
 from s2p import rectification
@@ -511,7 +512,7 @@ def global_dsm(tiles):
     res = cfg['dsm_resolution']
 
     if 'roi_geojson' in cfg:
-        ll_poly = read_lon_lat_poly_from_geojson(cfg['roi_geojson'])
+        ll_poly = geographiclib.read_lon_lat_poly_from_geojson(cfg['roi_geojson'])
         bbx = geographiclib.utm_bbx(ll_poly, utm_zone=cfg.get('utm_zone'))
         xoff = bbx[0]
         yoff = bbx[3]
