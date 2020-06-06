@@ -104,10 +104,9 @@ def test_end2end_mosaic():
 
 
 def test_distributed_plyflatten():
-    config_file = data_path('input_triplet/config.json')
 
     print('Running end2end with distributed plyflatten dsm ...')
-    test_cfg = s2p.read_config_file(config_file)
+    test_cfg = s2p.read_config_file(data_path('input_triplet/config.json'))
     s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
@@ -117,7 +116,6 @@ def test_distributed_plyflatten():
     print('Running plyflatten dsm reference ...')
 
     clouds_list = glob.glob(os.path.join(outdir, "tiles", "*", "*", "cloud.ply"))
-    out_dsm = os.path.join(outdir, "dsm_ref.tif")
 
     res = test_cfg['dsm_resolution']
     roi = None
@@ -125,8 +123,6 @@ def test_distributed_plyflatten():
     raster, profile = s2p.rasterization.plyflatten_from_plyfiles_list(clouds_list,
                                                                       resolution=res,
                                                                       roi=roi)
-    s2p.common.rasterio_write(out_dsm, raster[:,:,0], profile=profile)
-
-    expected = common.gdal_read_as_array_with_nans(os.path.join(outdir, 'dsm_ref.tif'))
+    expected = raster[:, :, 0]
 
     compare_dsm(computed, expected, 0, 0)
