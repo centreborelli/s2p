@@ -63,14 +63,7 @@ def pointing_correction(tile, i):
 
     # correct pointing error
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
-    try:
-        A, m = pointing_accuracy.compute_correction(img1, img2, rpc1, rpc2, x, y, w, h)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        stderr = os.path.join(out_dir, 'stderr.log')
-        with open(stderr, 'w') as f:
-            f.write('ERROR during pointing correction with cmd: %s\n' % e[0]['command'])
-            f.write('Stop processing this pair\n')
-        return
+    A, m = pointing_accuracy.compute_correction(img1, img2, rpc1, rpc2, x, y, w, h)
 
     if A is not None:  # A is the correction matrix
         np.savetxt(os.path.join(out_dir, 'pointing.txt'), A, fmt='%6.3f')
@@ -119,11 +112,6 @@ def rectification_pair(tile, i):
                             'global_pointing_pair_{}.txt'.format(i))
 
     outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
-
-    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
-        print('rectification: stderr.log exists')
-        print('pair_{} not processed on tile {} {}'.format(i, x, y))
-        return
 
     print('rectifying tile {} {} pair {}...'.format(x, y, i))
     try:
@@ -187,11 +175,6 @@ def stereo_matching(tile,i):
 
     outputs = ['rectified_mask.png', 'rectified_disp.tif']
 
-    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
-        print('disparity estimation: stderr.log exists')
-        print('pair_{} not processed on tile {} {}'.format(i, x, y))
-        return
-
     print('estimating disparity on tile {} {} pair {}...'.format(x, y, i))
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
@@ -224,11 +207,6 @@ def disparity_to_height(tile, i):
     """
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     x, y, w, h = tile['coordinates']
-
-    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
-        print('triangulation: stderr.log exists')
-        print('pair_{} not processed on tile {} {}'.format(i, x, y))
-        return
 
     print('triangulating tile {} {} pair {}...'.format(x, y, i))
     rpc1 = cfg['images'][0]['rpcm']
@@ -272,11 +250,6 @@ def disparity_to_ply(tile):
     x, y, w, h = tile['coordinates']
     rpc1 = cfg['images'][0]['rpcm']
     rpc2 = cfg['images'][1]['rpcm']
-
-    if os.path.exists(os.path.join(out_dir, 'stderr.log')):
-        print('triangulation: stderr.log exists')
-        print('pair_1 not processed on tile {} {}'.format(x, y))
-        return
 
     print('triangulating tile {} {}...'.format(x, y))
     # This function is only called when there is a single pair (pair_1)
