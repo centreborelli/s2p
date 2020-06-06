@@ -525,8 +525,11 @@ def global_dsm(tiles):
         projwin = ""
 
     common.run(" ".join(["gdal_translate",
-                         "-co TILED=YES -co BIGTIFF=IF_SAFER",
-                         "%s %s %s" % (projwin, out_dsm_vrt, out_dsm_tif)]))
+                         "-co", "TILED=YES",
+                         "-co", "COMPRESS=DEFLATE",
+                         "-co", "PREDICTOR=2",
+                         "-co", "BIGTIFF=IF_SAFER",
+                         projwin, out_dsm_vrt, out_dsm_tif]))
 
     # EXPORT CONFIDENCE
     out_conf_vrt = os.path.join(cfg['out_dir'], 'confidence.vrt')
