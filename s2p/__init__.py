@@ -111,8 +111,6 @@ def rectification_pair(tile, i):
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
 
-    outputs = ['disp_min_max.txt', 'rectified_ref.tif', 'rectified_sec.tif']
-
     print('rectifying tile {} {} pair {}...'.format(x, y, i))
     try:
         A = np.loadtxt(os.path.join(out_dir, 'pointing.txt'))
@@ -123,8 +121,6 @@ def rectification_pair(tile, i):
     except IOError:
         m = None
 
-    x, y, w, h = tile['coordinates']
-
     cur_dir = os.path.join(tile['dir'],'pair_{}'.format(i))
     for n in tile['neighborhood_dirs']:
         nei_dir = os.path.join(tile['dir'], n, 'pair_{}'.format(i))
@@ -133,9 +129,9 @@ def rectification_pair(tile, i):
             try:
                 m_n = np.loadtxt(sift_from_neighborhood)
                 # added sifts in the ellipse of semi axes : (3*w/4, 3*h/4)
-                m_n = m_n[np.where(np.linalg.norm([(m_n[:,0]-(x+w/2))/w,
-                                                   (m_n[:,1]-(y+h/2))/h],
-                                                  axis=0) < 3.0/4)]
+                m_n = m_n[np.where(np.linalg.norm([(m_n[:, 0] - (x + w/2)) / w,
+                                                   (m_n[:, 1] - (y + h/2)) / h],
+                                                  axis=0) < 3/4)]
                 if m is None:
                     m = m_n
                 else:
@@ -158,11 +154,11 @@ def rectification_pair(tile, i):
                             fmt='%3.1f')
 
     if cfg['clean_intermediate']:
-        common.remove(os.path.join(out_dir,'pointing.txt'))
-        common.remove(os.path.join(out_dir,'sift_matches.txt'))
+        common.remove(os.path.join(out_dir, 'pointing.txt'))
+        common.remove(os.path.join(out_dir, 'sift_matches.txt'))
 
 
-def stereo_matching(tile,i):
+def stereo_matching(tile, i):
     """
     Compute the disparity of a pair of images on a given tile.
 
@@ -172,8 +168,6 @@ def stereo_matching(tile,i):
     """
     out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     x, y = tile['coordinates'][:2]
-
-    outputs = ['rectified_mask.png', 'rectified_disp.tif']
 
     print('estimating disparity on tile {} {} pair {}...'.format(x, y, i))
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
@@ -194,7 +188,7 @@ def stereo_matching(tile,i):
         if len(cfg['images']) > 2:
             common.remove(rect1)
         common.remove(rect2)
-        common.remove(os.path.join(out_dir,'disp_min_max.txt'))
+        common.remove(os.path.join(out_dir, 'disp_min_max.txt'))
 
 
 def disparity_to_height(tile, i):
