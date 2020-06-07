@@ -72,9 +72,10 @@ def pointing_correction(tile, i):
         np.savetxt(os.path.join(out_dir, 'center_keypts_sec.txt'),
                    np.mean(m[:, 2:], 0), fmt='%9.3f')
         if cfg['debug']:
-            visualisation.plot_matches(img1, img2, rpc1, rpc2, m, x, y, w, h,
+            visualisation.plot_matches(img1, img2, rpc1, rpc2, m,
                                        os.path.join(out_dir,
-                                                    'sift_matches_pointing.png'))
+                                                    'sift_matches_pointing.png'),
+                                       x, y, w, h)
 
 
 def global_pointing_correction(tiles):
@@ -235,10 +236,13 @@ def disparity_to_ply(tile):
     """
     Compute a point cloud from the disparity map of a pair of image tiles.
 
+    This function is called by s2p.main only if there are two input images (not
+    three).
+
     Args:
         tile: dictionary containing the information needed to process a tile.
     """
-    out_dir = os.path.join(tile['dir'])
+    out_dir = tile['dir']
     ply_file = os.path.join(out_dir, 'cloud.ply')
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     x, y, w, h = tile['coordinates']
@@ -246,7 +250,6 @@ def disparity_to_ply(tile):
     rpc2 = cfg['images'][1]['rpcm']
 
     print('triangulating tile {} {}...'.format(x, y))
-    # This function is only called when there is a single pair (pair_1)
     H_ref = os.path.join(out_dir, 'pair_1', 'H_ref.txt')
     H_sec = os.path.join(out_dir, 'pair_1', 'H_sec.txt')
     pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_1.txt')
@@ -261,7 +264,7 @@ def disparity_to_ply(tile):
     colors = os.path.join(out_dir, 'rectified_ref.png')
     if cfg['images'][0]['clr']:
         hom = np.loadtxt(H_ref)
-        # We want rectified_ref.png and rectified_ref.tif to have the same size
+        # we want rectified_ref.png and rectified_ref.tif to have the same size
         with rasterio.open(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif')) as f:
             ww, hh = f.width, f.height
         common.image_apply_homography(colors, cfg['images'][0]['clr'], hom, ww, hh)

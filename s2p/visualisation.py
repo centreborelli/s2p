@@ -2,7 +2,6 @@
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
-import os
 import numpy as np
 import rasterio
 import rpcm
@@ -53,7 +52,7 @@ def plot_line(im, x1, y1, x2, y2, colour):
     return im
 
 
-def plot_matches_low_level(im1, im2, matches):
+def plot_matches_low_level(im1, im2, matches, outfile):
     """
     Displays two images side by side with matches highlighted
 
@@ -62,9 +61,7 @@ def plot_matches_low_level(im1, im2, matches):
         matches: 2D numpy array of size 4xN containing a list of matches (a
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2)
-
-    Returns:
-        path to the resulting image, to be displayed
+        outfile (str): path where to write the resulting image, to be displayed
     """
     # load images
     with rasterio.open(im1, 'r') as f:
@@ -113,14 +110,13 @@ def plot_matches_low_level(im1, im2, matches):
             out[y2, x2] = green
         except IndexError:
             pass
-    # save the output image, and return its path
-    outfile = common.tmpfile('.png')
+
+    # save output image
     common.rasterio_write(outfile, out)
-    return outfile
 
 
-def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
-                 outfile=None):
+def plot_matches(im1, im2, rpc1, rpc2, matches, outfile, x=None, y=None,
+                 w=None, h=None):
     """
     Plot matches on Pleiades images
 
@@ -130,9 +126,8 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
         matches: 2D numpy array of size 4xN containing a list of matches (a
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2). The coordinates are given in the frame of the full images.
+        outfile: path to the output file
         x, y, w, h (optional, default is None): ROI in the reference image
-        outfile (optional, default is None): path to the output file. If None,
-            the file image is displayed using the pvflip viewer
 
     Returns:
         path to the displayed output
@@ -189,10 +184,4 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, x=None, y=None, w=None, h=None,
     pts2 = matches[:, 2:4] - [x2, y2]
 
     # plot the matches on the two crops
-    to_display = plot_matches_low_level(crop1, crop2, np.hstack((pts1, pts2)))
-    if outfile is None:
-        os.system('v %s &' % (to_display))
-    else:
-        common.run('cp %s %s' % (to_display, outfile))
-
-    return
+    plot_matches_low_level(crop1, crop2, np.hstack((pts1, pts2)), outfile)
