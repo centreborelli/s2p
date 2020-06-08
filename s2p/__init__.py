@@ -276,32 +276,15 @@ def disparity_to_ply(tile):
         disp_img = f.read().squeeze()
     with rasterio.open(mask_rect, 'r') as f:
         mask_rect_img = f.read().squeeze()
-    lonlatalt_array, err = triangulation.disp_to_lonlatalt(rpc1, rpc2,
-                                               np.loadtxt(H_ref), np.loadtxt(H_sec),
-                                               disp_img, mask_rect_img,
-                                               img_bbx=(x, x+w, y, y+h),
-                                               A=np.loadtxt(pointing))
 
-    # output CRS conversion
-    in_crs = geographiclib.pyproj_crs("epsg:4979")
     pyproj_out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
     proj_com = "CRS {}".format(cfg['out_crs'])
-
-    if pyproj_out_crs != in_crs:
-
-        # reshape the xyz array into a 3-column 2D-array
-        lonlatalt_shape = lonlatalt_array.shape
-        lonlatalt_array = lonlatalt_array.reshape(-1, 3)
-        xyz_array = np.empty(lonlatalt_shape, dtype=np.float32)
-
-        x, y, z = geographiclib.pyproj_transform(lonlatalt_array[:,0], lonlatalt_array[:,1],
-                                             in_crs, pyproj_out_crs, lonlatalt_array[:,2])
-
-        xyz_array[:,:,0] = x.reshape(*lonlatalt_shape[:2])
-        xyz_array[:,:,1] = y.reshape(*lonlatalt_shape[:2])
-        xyz_array[:,:,2] = z.reshape(*lonlatalt_shape[:2])
-    else:
-        xyz_array = lonlatalt_array
+    xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
+                                               np.loadtxt(H_ref), np.loadtxt(H_sec),
+                                               disp_img, mask_rect_img,
+                                               pyproj_out_crs,
+                                               img_bbx=(x, x+w, y, y+h),
+                                               A=np.loadtxt(pointing))
 
     # 3D filtering
     if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:

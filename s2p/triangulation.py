@@ -78,7 +78,7 @@ class RPCStruct(ctypes.Structure):
                 self.deny[i] = np.nan
 
 
-def disp_to_lonlatalt(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
+def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=None):
     """
     Compute a height map from a disparity map, using RPC camera models.
 
@@ -87,6 +87,8 @@ def disp_to_lonlatalt(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
+        out_crs (pyproj.crs.CRS): object defining the desired coordinate reference system for the
+            output xyz map
         img_bbx (4-tuple): col_min, col_max, row_min, row_max defining the
             unrectified image domain to process.
         A (array): 3x3 array with the pointing correction matrix for im2
@@ -133,7 +135,26 @@ def disp_to_lonlatalt(rpc1, rpc2, H1, H2, disp, mask, img_bbx=None, A=None):
                     byref(rpc1_c_struct), byref(rpc2_c_struct),
                     np.asarray(img_bbx, dtype='float32'))
 
-    return lonlatalt, err
+    # output CRS conversion
+    in_crs = geographiclib.pyproj_crs("epsg:4979")
+
+    if out_crs and out_crs != in_crs:
+
+        # reshape the xyz array into a 3-column 2D-array
+        lonlatalt_shape = lonlatalt.shape
+        lonlatalt = lonlatalt.reshape(-1, 3)
+        xyz_array = np.empty(lonlatalt_shape, dtype=np.float32)
+
+        x, y, z = geographiclib.pyproj_transform(lonlatalt[:,0], lonlatalt[:,1],
+                                             in_crs, out_crs, lonlatalt[:,2])
+
+        xyz_array[:,:,0] = x.reshape(*lonlatalt_shape[:2])
+        xyz_array[:,:,1] = y.reshape(*lonlatalt_shape[:2])
+        xyz_array[:,:,2] = z.reshape(*lonlatalt_shape[:2])
+    else:
+        xyz_array = lonlatalt
+
+    return xyz_array, err
 
 
 def count_3d_neighbors(xyz, r, p):
@@ -224,7 +245,7 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     Returns:
         array of shape (h, w) with the height map
     """
-    lonlatalt, err = disp_to_lonlatalt(rpc1, rpc2, H1, H2, disp, mask, A=A)
+    lonlatalt, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A=A)
     height_map = lonlatalt[:, :, 2].squeeze()
 
     # transfer the rectified height map onto an unrectified height map
