@@ -420,9 +420,6 @@ def heights_to_ply(tile):
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     height_map = os.path.join(out_dir, 'height_map.tif')
 
-    # H is the homography transforming the coordinates system of the original
-    # full size image into the coordinates system of the crop
-    H = np.dot(np.diag([1, 1, 1]), common.matrix_translation(-x, -y))
     colors = os.path.join(out_dir, 'ref.tif')
     if cfg['images'][0]['clr']:
         common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
@@ -431,8 +428,7 @@ def heights_to_ply(tile):
                                                  w, h), colors)
 
     triangulation.height_map_to_point_cloud(plyfile, height_map,
-                                            cfg['images'][0]['rpcm'], H, colors,
-                                            utm_zone=cfg['utm_zone'])
+                                            cfg['images'][0]['rpcm'], x, y, colors)
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (plyfile, plyextrema))
