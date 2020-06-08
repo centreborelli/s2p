@@ -44,7 +44,6 @@ from s2p import fusion
 from s2p import rasterization
 from s2p import visualisation
 from s2p import ply
-from s2p import geographiclib
 
 
 def pointing_correction(tile, i):

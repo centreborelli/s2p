@@ -128,8 +128,8 @@ bin/colormesh: c/colormesh.o c/iio.o c/rpc.o c/geographiclib_wrapper.o
 
 libraries: lib/libplyflatten.so lib/disp_to_h.so
 
-lib/disp_to_h.so: c/disp_to_h.o c/geographiclib_wrapper.o c/iio.o c/rpc.o
-	$(CC) -shared $^ $(IIOLIBS) -lGeographic -o $@
+lib/disp_to_h.so: c/disp_to_h.o c/iio.o c/rpc.o
+	$(CC) -shared $^ $(IIOLIBS) -o $@
 
 lib/libplyflatten.so: c/plyflatten.o
 	$(CC) -shared $^ -o $@
