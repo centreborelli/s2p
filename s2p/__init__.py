@@ -285,25 +285,9 @@ def disparity_to_ply(tile):
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
-    # 3D filtering
-    if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
-        triangulation.filter_xyz(xyz_array, cfg['3d_filtering_r'],
-                                 cfg['3d_filtering_n'], cfg['gsd'])
-
-    # flatten the xyz array into a list and remove nan points
-    xyz_list = xyz_array.reshape(-1, 3)
-    valid = np.all(np.isfinite(xyz_list), axis=1)
-
-    # write the point cloud to a ply file
-    with rasterio.open(colors, 'r') as f:
-        img = f.read()
-    colors_list = img.transpose(1, 2, 0).reshape(-1, img.shape[0])
-    ply.write_3d_point_cloud_to_ply(ply_file, xyz_list[valid],
-                                    colors=colors_list[valid],
-                                    extra_properties=None,
-                                    extra_properties_names=None,
-                                    comments=["created by S2P",
-                                              "projection: {}".format(proj_com)])
+    triangulation.filter_xyz_and_write_to_ply(ply_file, xyz_array,
+                                              cfg['3d_filtering_r'], cfg['3d_filtering_n'],
+                                              cfg['gsd'], colors, proj_com)
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))

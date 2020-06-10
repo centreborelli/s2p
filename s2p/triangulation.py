@@ -263,6 +263,44 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     return out
 
 
+def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='', proj_com=''):
+    """
+    Filter points that have less than n points closer than r meters and write them in a .ply file
+
+    Args:
+        path_to_ply_file (str): path to a .ply file
+        xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
+            x, y, and z  coordinates of a 3D point.
+        r (float): filtering radius, in meters
+        n (int): filtering threshold, in number of points
+        img_gsd (float): ground sampling distance, in meters / pix
+        colors (optional, default ''): path to a colorized image
+        proj_com (str): projection comment in the .ply file
+    """
+    # 3D filtering
+    if r and n:
+        filter_xyz(xyz, r, n, img_gsd)
+
+    # flatten the xyz array into a list and remove nan points
+    xyz_list = xyz.reshape(-1, 3)
+    valid = np.all(np.isfinite(xyz_list), axis=1)
+
+    # write the point cloud to a ply file
+    if colors:
+        with rasterio.open(colors, 'r') as f:
+            img = f.read()
+        colors_list = img.transpose(1, 2, 0).reshape(-1, img.shape[0])[valid]
+    else:
+        colors_list = None
+
+    ply.write_3d_point_cloud_to_ply(path_to_ply_file, xyz_list[valid],
+                                    colors=colors_list,
+                                    extra_properties=None,
+                                    extra_properties_names=None,
+                                    comments=["created by S2P",
+                                              "projection: {}".format(proj_com)])
+
+
 def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_colorized=''):
     """
     Computes a color point cloud from a height map.
@@ -280,13 +318,14 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
     """
     with rasterio.open(heights) as src:
         h_map = src.read(1)
+        map_shape = h_map.shape
 
     heights = h_map.ravel()
-    indices = np.indices(h_map.shape)
+    indices = np.indices(map_shape)
 
     non_nan_ind = np.where(~np.isnan(heights))[0]
 
-    heights = heights[non_nan_ind]
+    alts = heights[non_nan_ind]
     cols = indices[1].ravel()[non_nan_ind]
     rows = indices[0].ravel()[non_nan_ind]
 
@@ -295,7 +334,9 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
         rows = rows + (off_y or 0)
 
     # localize pixels
-    lons, lats = rpc.localization(cols, rows, heights)
+    lons = np.empty_like(heights, dtype=np.float64)
+    lats = np.empty_like(heights, dtype=np.float64)
+    lons[non_nan_ind], lats[non_nan_ind] = rpc.localization(cols, rows, alts)
 
     # output CRS conversion
     in_crs = geographiclib.pyproj_crs("epsg:4979")
@@ -305,19 +346,14 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
     if pyproj_out_crs != in_crs:
         x, y, z = geographiclib.pyproj_transform(lons, lats,
                                              in_crs, pyproj_out_crs, heights)
-        xyz_array = np.vstack((x, y, z)).T
     else:
-        xyz_array = np.vstack((lons, lats, heights)).T
+        x, y, z = lons, lats, heights
 
-    # write the point cloud to a ply file
-    if crop_colorized:
-        with rasterio.open(crop_colorized, 'r') as f:
-            img = f.read()
-        colors_list = img.transpose(1, 2, 0).reshape(-1, img.shape[0])[non_nan_ind]
-    else:
-        colors_list = None
+    xyz_array = np.zeros((*map_shape, 3))
+    xyz_array[:,:,0] = x.reshape(map_shape)
+    xyz_array[:,:,1] = y.reshape(map_shape)
+    xyz_array[:,:,2] = z.reshape(map_shape)
 
-    ply.write_3d_point_cloud_to_ply(cloud, xyz_array, colors=colors_list,
-                                    extra_properties=None, extra_properties_names=None,
-                                    comments=["created by S2P",
-                                              "projection: {}".format(proj_com)])
+    filter_xyz_and_write_to_ply(cloud, xyz_array,
+                                              cfg['3d_filtering_r'], cfg['3d_filtering_n'],
+                                              cfg['gsd'], crop_colorized, proj_com)
