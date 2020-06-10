@@ -11,7 +11,6 @@ import pyproj
 import numpy as np
 import rasterio
 from rasterio.crs import CRS as RioCRS
-from pyproj.crs import CRS
 from pyproj.enums import WktVersion
 
 
@@ -88,14 +87,14 @@ def epsg_code_from_utm_zone(utm_zone):
 
 def rasterio_crs(projparams):
     """
-    Return a rasterio.CRS object that corresponds to the given parameters.
+    Return a rasterio.crs.CRS object that corresponds to the given parameters.
     See: https://pyproj4.github.io/pyproj/stable/crs_compatibility.html#converting-from-pyproj-crs-crs-to-rasterio-crs-crs
 
     Args:
         projparams (int, str, dict, pyproj.CRS): PROJ parameters
 
     Returns:
-        rasterio.CRS: object that can be used with rasterio
+        rasterio.crs.CRS: object that can be used with rasterio
     """
     proj_crs = pyproj_crs(projparams)
     if LooseVersion(rasterio.__gdal_version__) < LooseVersion("3.0.0"):
