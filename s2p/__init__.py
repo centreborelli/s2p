@@ -481,7 +481,7 @@ def global_dsm(tiles):
 
     if 'roi_geojson' in cfg:
         ll_poly = geographiclib.read_lon_lat_poly_from_geojson(cfg['roi_geojson'])
-        bbx = geographiclib.utm_bbx(ll_poly, utm_zone=cfg.get('utm_zone'))
+        bbx = geographiclib.utm_bbx(ll_poly)
         xoff = bbx[0]
         yoff = bbx[3]
         xsize = int(np.ceil((bbx[1]-bbx[0]) / res))

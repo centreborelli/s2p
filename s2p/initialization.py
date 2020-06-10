@@ -93,7 +93,7 @@ def check_parameters(d):
     # warn about unknown parameters. The known parameters are those defined in
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi'
     for k in d.keys():
-        if k not in ['images', 'roi', 'roi_geojson', 'utm_zone']:
+        if k not in ['images', 'roi', 'roi_geojson']:
             if k not in cfg:
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
