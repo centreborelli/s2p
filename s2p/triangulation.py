@@ -245,8 +245,8 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     Returns:
         array of shape (h, w) with the height map
     """
-    lonlatalt, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A=A)
-    height_map = lonlatalt[:, :, 2].squeeze()
+    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A=A)
+    height_map = xyz[:, :, 2].squeeze()
 
     # transfer the rectified height map onto an unrectified height map
     H = np.dot(H1, common.matrix_translation(x, y))
