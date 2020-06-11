@@ -203,25 +203,26 @@ def read_lon_lat_poly_from_geojson(geojson):
     return ll_poly
 
 
-def utm_bbx(ll_poly, utm_zone=None):
+def crs_bbx(ll_poly, crs=None):
     """
     Compute the UTM bounding box of a given (lon, lat) polygon.
 
     Args:
         ll_poly ()
-        utm_zone (): force the UTM zone number. If not specified, the default UTM
+        crs (pyproj.crs.CRS): pyproj CRS object. If not specified, the default CRS of the UTM
             zone for the given geography is used.
 
     Returns:
        4-tuple with easting min/max and northing min/max
     """
-    if not utm_zone:
+    if not crs:
         utm_zone = compute_utm_zone(*ll_poly.mean(axis=0))
+        epsg = epsg_code_from_utm_zone(utm_zone)
+        crs = pyproj_crs(epsg)
 
-    # convert lon lat polygon to UTM
-    utm_proj = utm_proj(utm_zone)
+    # convert lon lat polygon to target CRS
     easting, northing = pyproj.transform(pyproj.Proj(init="epsg:4326"),
-                                         utm_proj, ll_poly[:, 0], ll_poly[:, 1])
+                                         crs, ll_poly[:, 0], ll_poly[:, 1])
 
     # return UTM bounding box
     east_min = min(easting)
