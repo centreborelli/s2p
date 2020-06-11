@@ -164,12 +164,12 @@ def count_3d_neighbors(xyz, r, p):
     Args:
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             UTM easting, northing, and altitude of a 3D point.
-        r (float): filtering radius, in meters
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
         p (int): the filering window has size 2p + 1, in pixels
 
     Returns:
         array of shape (h, w) with the count of the number of 3D points located
-        less than r meters from the current 3D point
+        less than r units from the current 3D point
     """
     h, w, d = xyz.shape
     assert(d == 3)
@@ -191,14 +191,14 @@ def remove_isolated_3d_points(xyz, r, p, n, q=1):
     Discard (in place) isolated (groups of) points in a gridded set of 3D points
 
     Discarded points satisfy the following conditions:
-    - they have less than n 3D neighbors in a ball of radius r meters;
+    - they have less than n 3D neighbors in a ball of radius r units (ex: meters);
     - all their neighboring points of the grid in a square window of size 2q+1
-      that are closer than r meters are also discarded.
+      that are closer than r units are also discarded.
 
     Args:
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             UTM easting, northing, and altitude of a 3D point.
-        r (float): filtering radius, in meters
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
         p (int): filering window radius, in pixels (square window of size 2p+1)
         n (int): filtering threshold, in number of points
         q (int): 2nd filtering window radius, in pixels (square of size 2q+1)
@@ -215,14 +215,14 @@ def remove_isolated_3d_points(xyz, r, p, n, q=1):
 
 def filter_xyz(xyz, r, n, img_gsd):
     """
-    Discard (in place) points that have less than n points closer than r meters.
+    Discard (in place) points that have less than n points closer than r units (ex: meters).
 
     Args:
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             UTM easting, northing, and altitude of a 3D point.
-        r (float): filtering radius, in meters
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
         n (int): filtering threshold, in number of points
-        img_gsd (float): ground sampling distance, in meters / pix
+        img_gsd (float): ground sampling distance, in units of the CRS (ex: meters) / pix
     """
     p = np.ceil(r / img_gsd).astype(int)
     remove_isolated_3d_points(xyz, r, p, n)
@@ -265,15 +265,15 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
 
 def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='', proj_com=''):
     """
-    Filter points that have less than n points closer than r meters and write them in a .ply file
+    Filter points that have less than n points closer than r units (ex: meters) and write them in a .ply file
 
     Args:
         path_to_ply_file (str): path to a .ply file
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             x, y, and z  coordinates of a 3D point.
-        r (float): filtering radius, in meters
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
         n (int): filtering threshold, in number of points
-        img_gsd (float): ground sampling distance, in meters / pix
+        img_gsd (float): ground sampling distance, in units of the CRS (ex: meters) / pix
         colors (optional, default ''): path to a colorized image
         proj_com (str): projection comment in the .ply file
     """
