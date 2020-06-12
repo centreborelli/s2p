@@ -94,7 +94,7 @@ msmw2:
 #
 
 SRCIIO   = downsa backflow qauto morsi cldmask remove_small_cc\
-           plambda pview morphoop plyextrema colormesh
+           plambda pview morphoop plyextrema
 PROGRAMS = $(addprefix bin/,$(SRCIIO))
 
 executables: $(PROGRAMS)
@@ -115,10 +115,6 @@ bin/% : c/%.o c/iio.o
 # this particular object requires a hardcoded filename
 c/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
-
-# this particular program combines different objects in a non-standard way
-bin/colormesh: c/colormesh.o c/iio.o c/rpc.o c/geographiclib_wrapper.o
-	$(CC) $^ $(IIOLIBS) -lstdc++ -lGeographic -o $@
 
 
 
