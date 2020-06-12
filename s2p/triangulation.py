@@ -94,8 +94,9 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=No
         A (array): 3x3 array with the pointing correction matrix for im2
 
     Returns:
-        lonlatalt: array of shape (h, w, 3) where each pixel contains the
-            longitude, latitude and altitude of the triangulated point.
+        xyz: array of shape (h, w, 3) where each pixel contains the 3D
+            coordinates of the triangulated point in the coordinate system 
+            defined by `out_crs`
         err: array of shape (h, w) where each pixel contains the triangulation
             error
     """
@@ -140,17 +141,13 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=No
 
     if out_crs and out_crs != in_crs:
 
-        # reshape the xyz array into a 3-column 2D-array
-        lonlatalt_shape = lonlatalt.shape
+        # reshape the lonlatlat array into a 3-column 2D-array
         lonlatalt = lonlatalt.reshape(-1, 3)
-        xyz_array = np.empty(lonlatalt_shape, dtype=np.float32)
 
-        x, y, z = geographiclib.pyproj_transform(lonlatalt[:,0], lonlatalt[:,1],
-                                             in_crs, out_crs, lonlatalt[:,2])
+        x, y, z = geographiclib.pyproj_transform(lonlatalt[:, 0], lonlatalt[:, 1],
+                                                 in_crs, out_crs, lonlatalt[:, 2])
 
-        xyz_array[:,:,0] = x.reshape(*lonlatalt_shape[:2])
-        xyz_array[:,:,1] = y.reshape(*lonlatalt_shape[:2])
-        xyz_array[:,:,2] = z.reshape(*lonlatalt_shape[:2])
+        xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3).astype(np.float32)
     else:
         xyz_array = lonlatalt
 
@@ -318,10 +315,10 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
     """
     with rasterio.open(heights) as src:
         h_map = src.read(1)
-        map_shape = h_map.shape
+        h, w = h_map.shape
 
     heights = h_map.ravel()
-    indices = np.indices(map_shape)
+    indices = np.indices((h, w))
 
     non_nan_ind = np.where(~np.isnan(heights))[0]
 
@@ -349,10 +346,7 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
     else:
         x, y, z = lons, lats, heights
 
-    xyz_array = np.zeros((*map_shape, 3))
-    xyz_array[:,:,0] = x.reshape(map_shape)
-    xyz_array[:,:,1] = y.reshape(map_shape)
-    xyz_array[:,:,2] = z.reshape(map_shape)
+    xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3)
 
     filter_xyz_and_write_to_ply(cloud, xyz_array,
                                               cfg['3d_filtering_r'], cfg['3d_filtering_n'],
