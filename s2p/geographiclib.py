@@ -115,6 +115,11 @@ def pyproj_crs(projparams):
     Returns:
         pyproj.crs.CRS: object that defines a CRS
     """
+    if isinstance(projparams, str):
+        try:
+            projparams = int(projparams)
+        except (ValueError, TypeError):
+            pass
     return pyproj.crs.CRS(projparams)
 
 
