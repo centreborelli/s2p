@@ -49,7 +49,7 @@ Copy it in your `~/.profile`.
 
 On Ubuntu:
 
-    sudo apt install build-essential geographiclib-tools libgeographic-dev libfftw3-dev libgeotiff-dev libtiff5-dev
+    sudo apt install build-essential geographiclib-tools libfftw3-dev libgeotiff-dev libtiff5-dev
 
 On macOS:
 
