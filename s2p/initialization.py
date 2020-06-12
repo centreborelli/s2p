@@ -136,10 +136,7 @@ def build_cfg(user_cfg):
         utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
         epsg_code = geographiclib.epsg_code_from_utm_zone(utm_zone)
         cfg['out_crs'] = "epsg:{}".format(epsg_code)
-    try:
-        geographiclib.pyproj_crs(cfg['out_crs'])
-    except CRSError as e:
-        raise e
+    geographiclib.pyproj_crs(cfg['out_crs'])
 
     # get image ground sampling distance
     cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpcm'])
