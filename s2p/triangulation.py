@@ -337,12 +337,12 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
 
     # output CRS conversion
     in_crs = geographiclib.pyproj_crs("epsg:4979")
-    pyproj_out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
+    out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
     proj_com = "CRS {}".format(cfg['out_crs'])
 
-    if pyproj_out_crs != in_crs:
+    if out_crs != in_crs:
         x, y, z = geographiclib.pyproj_transform(lons, lats,
-                                             in_crs, pyproj_out_crs, heights)
+                                                 in_crs, out_crs, heights)
     else:
         x, y, z = lons, lats, heights
 
