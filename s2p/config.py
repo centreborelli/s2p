@@ -156,3 +156,11 @@ cfg['3d_filtering_n'] = None  # number of points
 
 # clean height maps outliers
 cfg['cargarse_basura'] = True
+
+# Output coordinate reference system
+# All formats accepted by `pyproj.CRS()` are allowed, for example:
+# 32740 (int interpreted as an EPSG code), or
+# "epsg:32740+5773" (authority string), or
+# "+proj=utm +zone=40 +south +datum=WGS84 +units=m +vunits=m +no_defs +type=crs" (proj4 string)
+# If None, the local UTM zone will be used
+cfg['out_crs'] = None

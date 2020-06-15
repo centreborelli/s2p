@@ -14,7 +14,6 @@ addons:
       - geographiclib-tools
       - libfftw3-dev
       - libgdal-dev
-      - libgeographic-dev
   homebrew:
     packages:
       # GDAL is already included on osx images

@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y \
     geographiclib-tools \
     libfftw3-dev \
     libgdal-dev \
-    libgeographic-dev \
     libgeotiff-dev \
     libtiff5-dev \
     python3-dev

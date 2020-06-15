@@ -123,8 +123,8 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
                         xsize, ysize,
                         radius, sigma)
 
-    utm_zone = utm_zone_from_ply(clouds_list[0])
-    utm_proj = geographiclib.utm_proj(utm_zone)
+    crs = crs_from_ply(clouds_list[0])
+    rasterio_crs = geographiclib.rasterio_crs(crs)
 
     # construct profile dict
     profile = dict()
@@ -132,25 +132,25 @@ def plyflatten_from_plyfiles_list(clouds_list, resolution, radius=0, roi=None, s
     profile["compress"] = "deflate"
     profile["predictor"] = 2
     profile["nodata"] = float("nan")
-    profile["crs"] = utm_proj.srs
+    profile["crs"] = rasterio_crs
     profile["transform"] = affine.Affine(resolution, 0.0, xoff,
                                          0.0, -resolution, yoff)
 
     return raster, profile
 
 
-def utm_zone_from_ply(ply_path):
+def crs_from_ply(ply_path):
     _, comments = ply.read_3d_point_cloud_from_ply(ply_path)
-    regex = r"^projection: UTM (\d{1,2}[NS])"
-    utm_zone = None
+    regex = r"^projection: CRS (.*)"
+    crs = None
     for comment in comments:
         s = re.search(regex, comment)
         if s:
-            utm_zone = s.group(1)
+            crs = s.group(1)
 
-    if not utm_zone:
+    if not crs:
         raise InvalidPlyCommentsError(
             "Invalid header comments {} for ply file {}".format(comments, ply_path)
         )
 
-    return utm_zone
+    return crs

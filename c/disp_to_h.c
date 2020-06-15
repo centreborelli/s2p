@@ -11,8 +11,6 @@
 #include "pickopt.c"
 
 
-void utm_alt_zone(double *out, double lat, double lon, int zone);
-
 static void apply_homography(double y[2], double h[9], double x[2])
 {
     //                    h[0] h[1] h[2]
@@ -42,10 +40,10 @@ static double invert_homography(double o[9], double i[9])
 }
 
 
-void disp_to_xyz(float *xyz, float *err,  // outputs
+void disp_to_lonlatalt(double *lonlatalt, float *err,  // outputs
                  float *dispx, float *dispy, float *msk, int nx, int ny,  // inputs
                  double ha[9], double hb[9],
-                 struct rpc *rpca, struct rpc *rpcb, int zone,
+                 struct rpc *rpca, struct rpc *rpcb,
                  float orig_img_bounding_box[4])
 {
     // invert homographies
@@ -66,11 +64,11 @@ void disp_to_xyz(float *xyz, float *err,  // outputs
         int pix = col + nx*row;
         err[pix] = NAN;
         for (int k = 0; k < 3; k++)
-            xyz[3 * pix + k] = NAN;
+            lonlatalt[3 * pix + k] = NAN;
     }
 
     // intermediate buffers
-    double p[2], q[2], lonlat[2], utm[2];
+    double p[2], q[2], lonlat[2];
     double e, z;
 
     // loop over all the pixels of the input disp map
@@ -98,13 +96,10 @@ void disp_to_xyz(float *xyz, float *err,  // outputs
         z = rpc_height(rpca, rpcb, p[0], p[1], q[0], q[1], &e);
         eval_rpc(lonlat, rpca, p[0], p[1], z);
 
-        // convert (lon, lat, alt) to utm
-        utm_alt_zone(utm, lonlat[1], lonlat[0], zone);
-
         // store the output values
-        xyz[3 * pix + 0] = utm[0];
-        xyz[3 * pix + 1] = utm[1];
-        xyz[3 * pix + 2] = z;
+        lonlatalt[3 * pix + 0] = lonlat[0];
+        lonlatalt[3 * pix + 1] = lonlat[1];
+        lonlatalt[3 * pix + 2] = z;
         err[pix] = e;
     }
 }
@@ -206,7 +201,7 @@ static void help(char *s)
             "%s rpc_ref.xml rpc_sec.xml disp.tif heights.tif err.tif "
             "[--mask mask.png] "
             "[-href \"h1 ... h9\"] [-hsec \"h1 ... h9\"] "
-            "[--utm-zone ZONE] [--mask-orig msk.png] "
+            "[--mask-orig msk.png] "
             "[--col-m x0] [--col-M xf] [--row-m y0] [--row-M yf]\n", s);
 }
 
@@ -237,9 +232,6 @@ int main_disp_to_h(int c, char *v[])
             fail("can not read 3x3 matrix from \"%s\"", hom_string_sec);
     }
 
-    // utm zone
-    int zone = atoi(pick_option(&c, &v, "-utm-zone", ""));
-
     // x-y bounding box
     double col_m = atof(pick_option(&c, &v, "-col-m", "-inf"));
     double col_M = atof(pick_option(&c, &v, "-col-M", "inf"));
@@ -262,14 +254,14 @@ int main_disp_to_h(int c, char *v[])
     float *msk  = iio_read_image_float_split(mask_path, &nx, &ny, &nch);
 
     // triangulation
-    float *xyz_map = calloc(nx*ny*3, sizeof(*xyz_map));
+    double *lonlatalt_map = calloc(nx*ny*3, sizeof(*lonlatalt_map));
     float *err_map = calloc(nx*ny, sizeof(*err_map));
     float img_bbx[4] = {col_m, col_M, row_m, row_M};
-    disp_to_xyz(xyz_map, err_map, dispx, dispy, msk, nx, ny, ha, hb,
-                rpca, rpcb, zone, img_bbx);
+    disp_to_lonlatalt(lonlatalt_map, err_map, dispx, dispy, msk, nx, ny, ha, hb,
+                rpca, rpcb, img_bbx);
 
     // save the height map and error map
-    iio_write_image_float_vec(fout_heights, xyz_map, nx, ny, 3);
+    iio_write_image_double_vec(fout_heights, lonlatalt_map, nx, ny, 3);
     iio_write_image_float_vec(fout_err, err_map, nx, ny, 1);
     return 0;
 }

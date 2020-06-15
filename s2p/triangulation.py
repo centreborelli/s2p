@@ -8,10 +8,12 @@ from ctypes import c_int, c_float, c_double, byref, POINTER
 from numpy.ctypeslib import ndpointer
 import numpy as np
 from scipy import ndimage
+import rasterio
 
 from s2p import common
 from s2p.config import cfg
-
+from s2p import ply
+from s2p import geographiclib
 
 here = os.path.dirname(os.path.abspath(__file__))
 lib_path = os.path.join(os.path.dirname(here), 'lib', 'disp_to_h.so')
@@ -76,7 +78,7 @@ class RPCStruct(ctypes.Structure):
                 self.deny[i] = np.nan
 
 
-def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
+def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=None):
     """
     Compute a height map from a disparity map, using RPC camera models.
 
@@ -85,15 +87,16 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
-        utm_zone (int): desired UTM zone number (between 1 and 60) for the
+        out_crs (pyproj.crs.CRS): object defining the desired coordinate reference system for the
             output xyz map
         img_bbx (4-tuple): col_min, col_max, row_min, row_max defining the
             unrectified image domain to process.
         A (array): 3x3 array with the pointing correction matrix for im2
 
     Returns:
-        xyz: array of shape (h, w, 3) where each pixel contains the UTM
-            easting, northing, and altitude of the triangulated point.
+        xyz: array of shape (h, w, 3) where each pixel contains the 3D
+            coordinates of the triangulated point in the coordinate system 
+            defined by `out_crs`
         err: array of shape (h, w) where each pixel contains the triangulation
             error
     """
@@ -108,9 +111,9 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
     if img_bbx is None:
         img_bbx = (-np.inf, np.inf, -np.inf, np.inf)
 
-    # define the argument types of the disp_to_xyz function from disp_to_h.so
+    # define the argument types of the disp_to_lonlatalt function from disp_to_h.so
     h, w = disp.shape
-    lib.disp_to_xyz.argtypes = (ndpointer(dtype=c_float, shape=(h, w, 3)),
+    lib.disp_to_lonlatalt.argtypes = (ndpointer(dtype=c_double, shape=(h, w, 3)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
                                 ndpointer(dtype=c_float, shape=(h, w)),
@@ -118,22 +121,37 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, img_bbx=None, A=None):
                                 c_int, c_int,
                                 ndpointer(dtype=c_double, shape=(9,)),
                                 ndpointer(dtype=c_double, shape=(9,)),
-                                POINTER(RPCStruct), POINTER(RPCStruct), c_int,
+                                POINTER(RPCStruct), POINTER(RPCStruct),
                                 ndpointer(dtype=c_float, shape=(4,)))
 
 
-    # call the disp_to_xyz function from disp_to_h.so
-    xyz =  np.zeros((h, w, 3), dtype='float32')
+    # call the disp_to_lonlatalt function from disp_to_h.so
+    lonlatalt =  np.zeros((h, w, 3), dtype='float64')
     err =  np.zeros((h, w), dtype='float32')
     dispx = disp.astype('float32')
     dispy = np.zeros((h, w), dtype='float32')
     msk = mask.astype('float32')
-    lib.disp_to_xyz(xyz, err, dispx, dispy, msk, w, h,
+    lib.disp_to_lonlatalt(lonlatalt, err, dispx, dispy, msk, w, h,
                     H1.flatten(), H2.flatten(),
-                    byref(rpc1_c_struct), byref(rpc2_c_struct), utm_zone,
+                    byref(rpc1_c_struct), byref(rpc2_c_struct),
                     np.asarray(img_bbx, dtype='float32'))
 
-    return xyz, err
+    # output CRS conversion
+    in_crs = geographiclib.pyproj_crs("epsg:4979")
+
+    if out_crs and out_crs != in_crs:
+
+        # reshape the lonlatlat array into a 3-column 2D-array
+        lonlatalt = lonlatalt.reshape(-1, 3)
+
+        x, y, z = geographiclib.pyproj_transform(lonlatalt[:, 0], lonlatalt[:, 1],
+                                                 in_crs, out_crs, lonlatalt[:, 2])
+
+        xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3).astype(np.float32)
+    else:
+        xyz_array = lonlatalt
+
+    return xyz_array, err
 
 
 def count_3d_neighbors(xyz, r, p):
@@ -143,12 +161,12 @@ def count_3d_neighbors(xyz, r, p):
     Args:
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             UTM easting, northing, and altitude of a 3D point.
-        r (float): filtering radius, in meters
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
         p (int): the filering window has size 2p + 1, in pixels
 
     Returns:
         array of shape (h, w) with the count of the number of 3D points located
-        less than r meters from the current 3D point
+        less than r units from the current 3D point
     """
     h, w, d = xyz.shape
     assert(d == 3)
@@ -170,14 +188,14 @@ def remove_isolated_3d_points(xyz, r, p, n, q=1):
     Discard (in place) isolated (groups of) points in a gridded set of 3D points
 
     Discarded points satisfy the following conditions:
-    - they have less than n 3D neighbors in a ball of radius r meters;
+    - they have less than n 3D neighbors in a ball of radius r units (ex: meters);
     - all their neighboring points of the grid in a square window of size 2q+1
-      that are closer than r meters are also discarded.
+      that are closer than r units are also discarded.
 
     Args:
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             UTM easting, northing, and altitude of a 3D point.
-        r (float): filtering radius, in meters
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
         p (int): filering window radius, in pixels (square window of size 2p+1)
         n (int): filtering threshold, in number of points
         q (int): 2nd filtering window radius, in pixels (square of size 2q+1)
@@ -194,20 +212,20 @@ def remove_isolated_3d_points(xyz, r, p, n, q=1):
 
 def filter_xyz(xyz, r, n, img_gsd):
     """
-    Discard (in place) points that have less than n points closer than r meters.
+    Discard (in place) points that have less than n points closer than r units (ex: meters).
 
     Args:
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             UTM easting, northing, and altitude of a 3D point.
-        r (float): filtering radius, in meters
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
         n (int): filtering threshold, in number of points
-        img_gsd (float): ground sampling distance, in meters / pix
+        img_gsd (float): ground sampling distance, in units of the CRS (ex: meters) / pix
     """
     p = np.ceil(r / img_gsd).astype(int)
     remove_isolated_3d_points(xyz, r, p, n)
 
 
-def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
+def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -219,14 +237,12 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
-        utm_zone (int): desired UTM zone number (between 1 and 60) for the
-            output xyz map
         A (array): 3x3 array with the pointing correction matrix for im2
 
     Returns:
         array of shape (h, w) with the height map
     """
-    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=A)
+    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A=A)
     height_map = xyz[:, :, 2].squeeze()
 
     # transfer the rectified height map onto an unrectified height map
@@ -244,9 +260,45 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, utm_zone, A=None):
     return out
 
 
-def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
-                              off_x=None, off_y=None, ascii_ply=False,
-                              with_normals=False, utm_zone=None, llbbx=None):
+def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='', proj_com=''):
+    """
+    Filter points that have less than n points closer than r units (ex: meters) and write them in a .ply file
+
+    Args:
+        path_to_ply_file (str): path to a .ply file
+        xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
+            x, y, and z  coordinates of a 3D point.
+        r (float): filtering radius, in the unit of the CRS (ex: meters)
+        n (int): filtering threshold, in number of points
+        img_gsd (float): ground sampling distance, in units of the CRS (ex: meters) / pix
+        colors (optional, default ''): path to a colorized image
+        proj_com (str): projection comment in the .ply file
+    """
+    # 3D filtering
+    if r and n:
+        filter_xyz(xyz, r, n, img_gsd)
+
+    # flatten the xyz array into a list and remove nan points
+    xyz_list = xyz.reshape(-1, 3)
+    valid = np.all(np.isfinite(xyz_list), axis=1)
+
+    # write the point cloud to a ply file
+    if colors:
+        with rasterio.open(colors, 'r') as f:
+            img = f.read()
+        colors_list = img.transpose(1, 2, 0).reshape(-1, img.shape[0])[valid]
+    else:
+        colors_list = None
+
+    ply.write_3d_point_cloud_to_ply(path_to_ply_file, xyz_list[valid],
+                                    colors=colors_list,
+                                    extra_properties=None,
+                                    extra_properties_names=None,
+                                    comments=["created by S2P",
+                                              "projection: {}".format(proj_com)])
+
+
+def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_colorized=''):
     """
     Computes a color point cloud from a height map.
 
@@ -255,37 +307,47 @@ def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
         heights: height map, sampled on the same grid as the crop_colorized
             image. In particular, its size is the same as crop_colorized.
         rpc: instances of the rpcm.RPCModel class
-        H (optional, default None): numpy array of size 3x3 defining the
-            homography transforming the coordinates system of the original full
-            size image into the coordinates system of the crop we are dealing
-            with.
+        off_{x,y} (optional, default None): coordinates of the origin of the crop
+            we are dealing with in the pixel coordinates of the original full
+            size image
         crop_colorized (optional, default ''): path to a colorized crop of a
             Pleiades image
-        off_{x,y} (optional, default None): coordinates of the point we want to
-            use as origin in the local coordinate system of the computed cloud
-        ascii_ply (optional, default false): boolean flag to tell if the output
-            ply file should be encoded in plain text (ascii).
-        utm_zone (optional, default None):
     """
-    # write rpc coefficients to txt file
-    rpcfile = common.tmpfile('.txt')
-    rpc.write_to_file(rpcfile)
+    with rasterio.open(heights) as src:
+        h_map = src.read(1)
+        h, w = h_map.shape
 
-    if not os.path.exists(crop_colorized):
-        crop_colorized = ''
-    hij = " ".join(str(x) for x in H.flatten()) if H is not None else ""
-    command = ["colormesh", cloud, heights, rpcfile, crop_colorized, "-h", hij]
-    if ascii_ply:
-        command.append("--ascii")
-    if with_normals:
-        command.append("--with-normals")
-    if utm_zone:
-        command.extend(["--utm-zone", utm_zone])
-    if llbbx:
-        lonm, lonM, latm, latM = llbbx
-        command.extend(["--lon-m", lonm, "--lon-M", lonM, "--lat-m", latm, "--lat-M", latM])
-    if off_x:
-        command.extend(["--offset_x", "%d" % off_x])
-    if off_y:
-        command.extend(["--offset_y", "%d" % off_y])
-    common.run(command)
+    heights = h_map.ravel()
+    indices = np.indices((h, w))
+
+    non_nan_ind = np.where(~np.isnan(heights))[0]
+
+    alts = heights[non_nan_ind]
+    cols = indices[1].ravel()[non_nan_ind]
+    rows = indices[0].ravel()[non_nan_ind]
+
+    if off_x or off_y:
+        cols = cols + (off_x or 0)
+        rows = rows + (off_y or 0)
+
+    # localize pixels
+    lons = np.empty_like(heights, dtype=np.float64)
+    lats = np.empty_like(heights, dtype=np.float64)
+    lons[non_nan_ind], lats[non_nan_ind] = rpc.localization(cols, rows, alts)
+
+    # output CRS conversion
+    in_crs = geographiclib.pyproj_crs("epsg:4979")
+    out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
+    proj_com = "CRS {}".format(cfg['out_crs'])
+
+    if out_crs != in_crs:
+        x, y, z = geographiclib.pyproj_transform(lons, lats,
+                                                 in_crs, out_crs, heights)
+    else:
+        x, y, z = lons, lats, heights
+
+    xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3)
+
+    filter_xyz_and_write_to_ply(cloud, xyz_array,
+                                              cfg['3d_filtering_r'], cfg['3d_filtering_n'],
+                                              cfg['gsd'], crop_colorized, proj_com)

@@ -28,7 +28,7 @@ def test_plyflatten():
     assert np.allclose(test_raster, expected_raster, equal_nan=True)
 
     # Check that both images have the same CRS
-    test_crs = rasterio.crs.CRS.from_proj4(profile['crs'])
+    test_crs = profile['crs']
     assert test_crs == expected_crs
 
     # Check that both images have the same transform

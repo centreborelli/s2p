@@ -12,12 +12,14 @@ import rasterio
 import warnings
 import numpy as np
 import rpcm
+from pyproj.exceptions import CRSError
 
 from s2p import common
 from s2p import geographiclib
 from s2p import rpc_utils
 from s2p import masking
 from s2p import parallel
+from s2p import geographiclib
 from s2p.config import cfg
 
 # This function is here as a workaround to python bug #24313 When
@@ -91,7 +93,7 @@ def check_parameters(d):
     # warn about unknown parameters. The known parameters are those defined in
     # the global config.cfg dictionary, plus the mandatory 'images' and 'roi'
     for k in d.keys():
-        if k not in ['images', 'roi', 'roi_geojson', 'utm_zone']:
+        if k not in ['images', 'roi', 'roi_geojson']:
             if k not in cfg:
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
@@ -128,10 +130,13 @@ def build_cfg(user_cfg):
             if d in cfg['images'][i] and cfg['images'][i][d] is not None and not os.path.isabs(cfg['images'][i][d]):
                 cfg['images'][i][d] = os.path.abspath(cfg['images'][i][d])
 
-    # get utm zone
-    if 'utm_zone' not in cfg or cfg['utm_zone'] is None:
+    # get out_crs
+    if 'out_crs' not in cfg or cfg['out_crs'] is None:
         x, y, w, h = [cfg['roi'][k] for k in ['x', 'y', 'w', 'h']]
-        cfg['utm_zone'] = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
+        utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
+        epsg_code = geographiclib.epsg_code_from_utm_zone(utm_zone)
+        cfg['out_crs'] = "epsg:{}".format(epsg_code)
+    geographiclib.pyproj_crs(cfg['out_crs'])
 
     # get image ground sampling distance
     cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpcm'])

@@ -219,7 +219,6 @@ def disparity_to_height(tile, i):
         mask_rect_img = f.read().squeeze()
     height_map = triangulation.height_map(x, y, w, h, rpc1, rpc2, H_ref, H_sec,
                                           disp_img, mask_rect_img,
-                                          int(cfg['utm_zone'][:-1]),
                                           A=np.loadtxt(pointing))
 
     # write height map to a file
@@ -276,32 +275,19 @@ def disparity_to_ply(tile):
         disp_img = f.read().squeeze()
     with rasterio.open(mask_rect, 'r') as f:
         mask_rect_img = f.read().squeeze()
+
+    pyproj_out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
+    proj_com = "CRS {}".format(cfg['out_crs'])
     xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
                                                np.loadtxt(H_ref), np.loadtxt(H_sec),
                                                disp_img, mask_rect_img,
-                                               int(cfg['utm_zone'][:-1]),
+                                               pyproj_out_crs,
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
-    # 3D filtering
-    if cfg['3d_filtering_r'] and cfg['3d_filtering_n']:
-        triangulation.filter_xyz(xyz_array, cfg['3d_filtering_r'],
-                                 cfg['3d_filtering_n'], cfg['gsd'])
-
-    # flatten the xyz array into a list and remove nan points
-    xyz_list = xyz_array.reshape(-1, 3)
-    valid = np.all(np.isfinite(xyz_list), axis=1)
-
-    # write the point cloud to a ply file
-    with rasterio.open(colors, 'r') as f:
-        img = f.read()
-    colors_list = img.transpose(1, 2, 0).reshape(-1, img.shape[0])
-    ply.write_3d_point_cloud_to_ply(ply_file, xyz_list[valid],
-                                    colors=colors_list[valid],
-                                    extra_properties=None,
-                                    extra_properties_names=None,
-                                    comments=["created by S2P",
-                                              "projection: UTM {}".format(cfg['utm_zone'])])
+    triangulation.filter_xyz_and_write_to_ply(ply_file, xyz_array,
+                                              cfg['3d_filtering_r'], cfg['3d_filtering_n'],
+                                              cfg['gsd'], colors, proj_com)
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))
@@ -400,9 +386,6 @@ def heights_to_ply(tile):
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     height_map = os.path.join(out_dir, 'height_map.tif')
 
-    # H is the homography transforming the coordinates system of the original
-    # full size image into the coordinates system of the crop
-    H = np.dot(np.diag([1, 1, 1]), common.matrix_translation(-x, -y))
     colors = os.path.join(out_dir, 'ref.tif')
     if cfg['images'][0]['clr']:
         common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
@@ -411,8 +394,7 @@ def heights_to_ply(tile):
                                                  w, h), colors)
 
     triangulation.height_map_to_point_cloud(plyfile, height_map,
-                                            cfg['images'][0]['rpcm'], H, colors,
-                                            utm_zone=cfg['utm_zone'])
+                                            cfg['images'][0]['rpcm'], x, y, colors)
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (plyfile, plyextrema))
@@ -483,7 +465,8 @@ def global_dsm(tiles):
 
     if 'roi_geojson' in cfg:
         ll_poly = geographiclib.read_lon_lat_poly_from_geojson(cfg['roi_geojson'])
-        bbx = geographiclib.utm_bbx(ll_poly, utm_zone=cfg.get('utm_zone'))
+        pyproj_crs = geographiclib.pyproj_crs(cfg['out_crs'])
+        bbx = geographiclib.crs_bbx(ll_poly, pyproj_crs)
         xoff = bbx[0]
         yoff = bbx[3]
         xsize = int(np.ceil((bbx[1]-bbx[0]) / res))

@@ -5,9 +5,13 @@
 
 import os
 import subprocess
+from distutils.version import LooseVersion
 
 import pyproj
 import numpy as np
+import rasterio
+from rasterio.crs import CRS as RioCRS
+from pyproj.enums import WktVersion
 
 
 def geoid_above_ellipsoid(lat, lon):
@@ -81,44 +85,61 @@ def epsg_code_from_utm_zone(utm_zone):
     return const + zone_number
 
 
-def utm_proj(utm_zone):
+def rasterio_crs(projparams):
     """
-    Return a pyproj.Proj object that corresponds to the given utm_zone string.
+    Return a rasterio.crs.CRS object that corresponds to the given parameters.
+    See: https://pyproj4.github.io/pyproj/stable/crs_compatibility.html#converting-from-pyproj-crs-crs-to-rasterio-crs-crs
 
     Args:
-        utm_zone (str): UTM zone number + hemisphere (e.g. "30N" or "30S")
+        projparams (int, str, dict, pyproj.CRS): PROJ parameters
 
     Returns:
-        pyproj.Proj: object that can be used to transform coordinates
+        rasterio.crs.CRS: object that can be used with rasterio
     """
-    zone_number = utm_zone[:-1]
-    hemisphere = utm_zone[-1]
-    return pyproj.Proj(
-        proj='utm',
-        zone=zone_number,
-        ellps='WGS84',
-        datum='WGS84',
-        south=(hemisphere == 'S'),
-    )
+    proj_crs = pyproj_crs(projparams)
+    if LooseVersion(rasterio.__gdal_version__) < LooseVersion("3.0.0"):
+        rio_crs = RioCRS.from_wkt(proj_crs.to_wkt(WktVersion.WKT1_GDAL))
+    else:
+        rio_crs = RioCRS.from_wkt(proj_crs.to_wkt())
+    return rio_crs
 
 
-def pyproj_transform(x, y, in_epsg, out_epsg, z=None):
+def pyproj_crs(projparams):
+    """
+    Wrapper around pyproj to return a pyproj.crs.CRS object that corresponds
+    to the given parameters
+
+    Args:
+        projparams (int, str, dict): CRS parameters
+
+    Returns:
+        pyproj.crs.CRS: object that defines a CRS
+    """
+    if isinstance(projparams, str):
+        try:
+            projparams = int(projparams)
+        except (ValueError, TypeError):
+            pass
+    return pyproj.crs.CRS(projparams)
+
+
+def pyproj_transform(x, y, in_crs, out_crs, z=None):
     """
     Wrapper around pyproj to convert coordinates from an EPSG system to another.
 
     Args:
-        x (scalar or array): x coordinate(s), expressed in in_epsg
-        y (scalar or array): y coordinate(s), expressed in in_epsg
-        in_epsg (int): EPSG code of the input coordinate system
-        out_epsg (int): EPSG code of the output coordinate system
-        z (scalar or array): z coordinate(s), expressed in in_epsg
+        x (scalar or array): x coordinate(s), expressed in in_crs
+        y (scalar or array): y coordinate(s), expressed in in_crs
+        in_crs (pyproj.crs.CRS or int): input coordinate reference system or EPSG code
+        out_crs (pyproj.crs.CRS or int): output coordinate reference system or EPSG code
+        z (scalar or array): z coordinate(s), expressed in in_crs
 
     Returns:
-        scalar or array: x coordinate(s), expressed in out_epsg
-        scalar or array: y coordinate(s), expressed in out_epsg
-        scalar or array (optional if z): z coordinate(s), expressed in out_epsg
+        scalar or array: x coordinate(s), expressed in out_crs
+        scalar or array: y coordinate(s), expressed in out_crs
+        scalar or array (optional if z): z coordinate(s), expressed in out_crs
     """
-    transformer = pyproj.Transformer.from_crs(in_epsg, out_epsg, always_xy=True)
+    transformer = pyproj.Transformer.from_crs(in_crs, out_crs, always_xy=True)
     if z is None:
         return transformer.transform(x, y)
     else:
@@ -187,25 +208,26 @@ def read_lon_lat_poly_from_geojson(geojson):
     return ll_poly
 
 
-def utm_bbx(ll_poly, utm_zone=None):
+def crs_bbx(ll_poly, crs=None):
     """
     Compute the UTM bounding box of a given (lon, lat) polygon.
 
     Args:
         ll_poly ()
-        utm_zone (): force the UTM zone number. If not specified, the default UTM
+        crs (pyproj.crs.CRS): pyproj CRS object. If not specified, the default CRS of the UTM
             zone for the given geography is used.
 
     Returns:
        4-tuple with easting min/max and northing min/max
     """
-    if not utm_zone:
+    if not crs:
         utm_zone = compute_utm_zone(*ll_poly.mean(axis=0))
+        epsg = epsg_code_from_utm_zone(utm_zone)
+        crs = pyproj_crs(epsg)
 
-    # convert lon lat polygon to UTM
-    utm_proj = utm_proj(utm_zone)
+    # convert lon lat polygon to target CRS
     easting, northing = pyproj.transform(pyproj.Proj(init="epsg:4326"),
-                                         utm_proj, ll_poly[:, 0], ll_poly[:, 1])
+                                         crs, ll_poly[:, 0], ll_poly[:, 1])
 
     # return UTM bounding box
     east_min = min(easting)
