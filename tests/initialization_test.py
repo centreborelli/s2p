@@ -105,3 +105,39 @@ def test_rpc_dict(data, mocks):
 
     rpcm.rpc_from_geotiff.assert_not_called()
     rpcm.rpc_from_rpc_file.assert_not_called()
+
+
+def test_roi_geojson(data):
+    tmp_config, _, _, _ = data
+    user_cfg = s2p.read_config_file(tmp_config)
+
+    user_cfg["roi_geojson"] = {
+      "coordinates" : [
+        [
+          [
+            55.64943405,
+            -21.23207174
+          ],
+          [
+            55.65212062,
+            -21.23207174
+          ],
+          [
+            55.65212062,
+            -21.23460474
+          ],
+          [
+            55.64943405,
+            -21.23460474
+          ],
+          [
+            55.64943405,
+            -21.23207174
+          ]
+        ]
+      ],
+      "type" : "Polygon"
+    }
+
+    s2p.initialization.build_cfg(user_cfg)
+    assert user_cfg["roi"] == {'x': 150, 'y': 150, 'w': 700, 'h': 700}
