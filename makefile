@@ -30,7 +30,6 @@ sift:
 	$(MAKE) -j -C 3rdparty/sift/simd libsift4ctypes.so
 	cp 3rdparty/sift/simd/libsift4ctypes.so lib
 
-
 mgm_multi:
 	$(MAKE) -C 3rdparty/mgm_multi
 	cp 3rdparty/mgm_multi/mgm       bin
@@ -111,11 +110,6 @@ c/%.o: c/%.cpp
 # generic rule to build most imscript binaries
 bin/% : c/%.o c/iio.o
 	$(CC) $^ -o $@ $(IIOLIBS)
-
-# this particular object requires a hardcoded filename
-c/geoid_height_wrapper.o: c/geoid_height_wrapper.cpp
-	$(CXX) $(CXXFLAGS) -c $^ -o $@ -DGEOID_DATA_FILE_PATH="\"$(CURDIR)/c\""
-
 
 
 #
