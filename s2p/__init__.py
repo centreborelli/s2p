@@ -631,11 +631,8 @@ def read_config_file(config_file):
 
     # output paths
     if not os.path.isabs(user_cfg['out_dir']):
-        print('WARNING: out_dir is a relative path. It is interpreted with '
-              'respect to {} location (not cwd)'.format(config_file))
         user_cfg['out_dir'] = make_path_relative_to_file(user_cfg['out_dir'],
                                                          config_file)
-        print('out_dir is: {}'.format(user_cfg['out_dir']))
 
     # ROI path
     k = "roi_geojson"
