@@ -6,6 +6,7 @@ import os
 import sys
 import glob
 import numpy as np
+from plyflatten import plyflatten_from_plyfiles_list
 
 import s2p
 from s2p import common
@@ -120,9 +121,9 @@ def test_distributed_plyflatten():
     res = test_cfg['dsm_resolution']
     roi = None
 
-    raster, profile = s2p.rasterization.plyflatten_from_plyfiles_list(clouds_list,
-                                                                      resolution=res,
-                                                                      roi=roi)
+    raster, _ = plyflatten_from_plyfiles_list(clouds_list,
+                                              resolution=res,
+                                              roi=roi)
     expected = raster[:, :, 0]
 
     compare_dsm(computed, expected, 0, 0)
