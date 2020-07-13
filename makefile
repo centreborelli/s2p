@@ -116,13 +116,10 @@ bin/% : c/%.o c/iio.o
 # rules to build the dynamic objects that are used via ctypes
 #
 
-libraries: lib/libplyflatten.so lib/disp_to_h.so
+libraries: lib/disp_to_h.so
 
 lib/disp_to_h.so: c/disp_to_h.o c/iio.o c/rpc.o
 	$(CC) -shared $^ $(IIOLIBS) -o $@
-
-lib/libplyflatten.so: c/plyflatten.o
-	$(CC) -shared $^ -o $@
 
 
 
