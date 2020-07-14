@@ -254,7 +254,7 @@ def disparity_to_ply(tile):
     pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_1.txt')
     disp  = os.path.join(out_dir, 'pair_1', 'rectified_disp.tif')
     extra = os.path.join(out_dir, 'pair_1', 'rectified_disp_confidence.tif')
-    if not os.path.exists(extra):
+    if not os.path.exists(extra):    # confidence file not always generated
         extra = ''
     mask_rect = os.path.join(out_dir, 'pair_1', 'rectified_mask.png')
     mask_orig = os.path.join(out_dir, 'mask.png')
@@ -287,7 +287,7 @@ def disparity_to_ply(tile):
 
     triangulation.filter_xyz_and_write_to_ply(ply_file, xyz_array,
                                               cfg['3d_filtering_r'], cfg['3d_filtering_n'],
-                                              cfg['gsd'], colors, proj_com)
+                                              cfg['gsd'], colors, proj_com, confidence = extra)
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))
@@ -410,6 +410,7 @@ def plys_to_dsm(tile):
 
     Args:
         tile: a dictionary that provides all you need to process a tile
+
     """
     out_dsm  = os.path.join(tile['dir'], 'dsm.tif')
     out_conf = os.path.join(tile['dir'], 'confidence.tif')
@@ -440,6 +441,9 @@ def plys_to_dsm(tile):
     common.rasterio_write(out_dsm, raster[:, :, 0], profile=profile)
 
     # export confidence (optional)
+    # note that the plys are assumed to contain the fields:
+    #  [x(float32),y(float32),z(float32),(uint8),g(uint8),b(uint8), confidence(optional, float32)]
+    # so the rasterized has : [z,r,g,b,confidence(optional)]
     if raster.shape[-1] == 5:
         common.rasterio_write(out_conf, raster[:, :, 4], profile=profile)
 
