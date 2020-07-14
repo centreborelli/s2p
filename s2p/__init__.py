@@ -28,6 +28,7 @@ import multiprocessing
 
 import numpy as np
 import rasterio
+from plyflatten import plyflatten_from_plyfiles_list
 
 
 from s2p.config import cfg
@@ -41,7 +42,6 @@ from s2p import block_matching
 from s2p import masking
 from s2p import triangulation
 from s2p import fusion
-from s2p import rasterization
 from s2p import visualisation
 from s2p import ply
 
@@ -431,11 +431,11 @@ def plys_to_dsm(tile):
     roi = xoff, yoff, xsize, ysize
 
     clouds = [os.path.join(tile['dir'], n_dir, 'cloud.ply') for n_dir in tile['neighborhood_dirs']]
-    raster, profile = rasterization.plyflatten_from_plyfiles_list(clouds,
-                                                                  resolution=r,
-                                                                  roi=roi,
-                                                                  radius=cfg['dsm_radius'],
-                                                                  sigma=cfg['dsm_sigma'])
+    raster, profile = plyflatten_from_plyfiles_list(clouds,
+                                                    resolution=r,
+                                                    roi=roi,
+                                                    radius=cfg['dsm_radius'],
+                                                    sigma=cfg['dsm_sigma'])
 
     # save output image with utm georeferencing
     common.rasterio_write(out_dsm, raster[:, :, 0], profile=profile)

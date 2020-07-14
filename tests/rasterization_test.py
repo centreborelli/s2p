@@ -4,15 +4,15 @@ import math
 
 import numpy as np
 import rasterio
+from plyflatten import plyflatten_from_plyfiles_list
 
-import s2p
 from tests_utils import data_path
 
 
 def test_plyflatten():
     # Test data
     f = data_path("input_ply/cloud.ply")
-    raster, profile = s2p.rasterization.plyflatten_from_plyfiles_list([f], resolution=0.4)
+    raster, profile = plyflatten_from_plyfiles_list([f], resolution=0.4)
     test_raster = raster[:, :, 0]  # keep only band with height
 
     # Expected data
