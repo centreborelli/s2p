@@ -292,7 +292,7 @@ def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='',
         colors_list = None
 
     # read extra field (confidence) if present
-    if confidence != '' :
+    if confidence != '':
         with rasterio.open(confidence, 'r') as f:
             img = f.read()
         extra_list  = img.flatten()[valid].astype(np.float32)

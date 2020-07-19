@@ -19,7 +19,6 @@ addons:
       # GDAL is already included on osx images
       - geographiclib
       - fftw
-    update: true
 
 install:
   - |
@@ -53,7 +52,7 @@ jobs:
       # The default osx image (xcode9.4 as of 2019-09-30) has a very old brew,
       # which crashes with the `addons` feature, so we use a non-default more recent one
       # (see https://github.com/Homebrew/homebrew-bundle/issues/540#issuecomment-518301382)
-      osx_image: xcode10.2
+      osx_image: xcode11
       language: generic
 
     - stage: deploy
