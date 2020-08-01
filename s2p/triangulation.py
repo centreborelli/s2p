@@ -260,7 +260,7 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     return out
 
 
-def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='', proj_com=''):
+def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='', proj_com='', confidence=''):
     """
     Filter points that have less than n points closer than r units (ex: meters) and write them in a .ply file
 
@@ -273,6 +273,7 @@ def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='',
         img_gsd (float): ground sampling distance, in units of the CRS (ex: meters) / pix
         colors (optional, default ''): path to a colorized image
         proj_com (str): projection comment in the .ply file
+        confidence (optional, default ''): path to an image containig a confidence map
     """
     # 3D filtering
     if r and n:
@@ -290,10 +291,21 @@ def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='',
     else:
         colors_list = None
 
+    # read extra field (confidence) if present
+    if confidence != '':
+        with rasterio.open(confidence, 'r') as f:
+            img = f.read()
+        extra_list  = img.flatten()[valid].astype(np.float32)
+        extra_names = ['confidence']
+    else:
+        extra_list  = None
+        extra_names = None
+
+    # write the point cloud to a ply file
     ply.write_3d_point_cloud_to_ply(path_to_ply_file, xyz_list[valid],
                                     colors=colors_list,
-                                    extra_properties=None,
-                                    extra_properties_names=None,
+                                    extra_properties=extra_list,
+                                    extra_properties_names=extra_names,
                                     comments=["created by S2P",
                                               "projection: {}".format(proj_com)])
 
