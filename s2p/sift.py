@@ -139,7 +139,7 @@ def string_dump_of_keypoint_and_descriptor(k):
         string dump of the descriptor, such as for example
         "342.254 003.570 0.91346 2.36788 000 001 005 000 000 000 028 029 179..."
     """
-    s = "{:3.6f} {:3.6f} {:3.6f} {: 3.6f} ".format(*k[:4])
+    s = "{:8.3f} {:8.3f} {:7.3f} {: 5.3f} ".format(*k[:4])
     s += " ".join("{:3d}".format(int(x)) for x in k[4:])
     return s
 
