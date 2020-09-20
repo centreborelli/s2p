@@ -3,6 +3,7 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+import geojson
 import os
 import subprocess
 from distutils.version import LooseVersion
@@ -178,25 +179,23 @@ def lonlat_to_geocentric(lon, lat, alt):
     return x, y, z
 
 
-def read_lon_lat_poly_from_geojson(geojson):
+def read_lon_lat_poly_from_geojson(poly):
     """
     Read a (lon, lat) polygon from a geojson file or dict.
 
     Args:
-        geojson: file path to a geojson file containing a single polygon,
-            or content of the file as a dict.
-            The geojson's top-level type should be either FeatureCollection,
-            Feature, or Polygon.
+        poly (str or dict): file path to a geojson file containing a single
+            polygon, or content of the file as a dict. The geojson's top-level
+            type should be either FeatureCollection, Feature, or Polygon.
 
     Returns:
-        ll_poly: list of polygon vertices (lon, lat) coordinates
+        list: polygon vertices (lon, lat) coordinates
     """
-    # extract lon lat from geojson file or dict
-    if isinstance(geojson, str):
-        with open(geojson, 'r') as f:
-            a = json.load(f)
+    if isinstance(poly, str):
+        with open(poly, "r") as f:
+            a = geojson.load(f)
     else:
-        a = geojson
+        a = poly
 
     if a["type"] == "FeatureCollection":
         a = a["features"][0]
@@ -204,8 +203,7 @@ def read_lon_lat_poly_from_geojson(geojson):
     if a["type"] == "Feature":
         a = a["geometry"]
 
-    ll_poly = np.array(a["coordinates"][0])
-    return ll_poly
+    return np.asarray(a["coordinates"][0])
 
 
 def crs_bbx(ll_poly, crs=None):
