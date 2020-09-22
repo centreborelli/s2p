@@ -198,9 +198,9 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
         hmax = np.nanmax(array)
 
         if cfg['exogenous_dem_geoid_mode'] is True:
-            geoid = geographiclib.geoid_above_ellipsoid((lat_m + lat_M)/2, (lon_m + lon_M)/2)
-            hmin += geoid
-            hmax += geoid
+            offset = geographiclib.geoid_to_ellipsoid((lat_m + lat_M)/2, (lon_m + lon_M)/2, 0)
+            hmin += offset
+            hmax += offset
         return hmin, hmax
     else:
         print("WARNING: rpc_utils.min_max_heights_from_bbx: access window out of range")
@@ -279,7 +279,8 @@ def utm_zone(rpc, x, y, w, h):
     return geographiclib.compute_utm_zone(lon, lat)
 
 
-def roi_process(rpc, ll_poly, use_srtm=False):
+def roi_process(rpc, ll_poly, use_srtm=False, exogenous_dem=None,
+                exogenous_dem_geoid_mode=True):
     """
     Convert a (lon, lat) polygon into a rectangular bounding box in image space.
 
@@ -295,13 +296,22 @@ def roi_process(rpc, ll_poly, use_srtm=False):
             (ROI) in the image. (x, y) is the top-left corner, and (w, h)
             are the dimensions of the rectangle.
     """
+    if use_srtm and (exogenous_dem is not None):
+        raise ValueError("use_srtm and exogenous_dem are mutually exclusive")
+
     # project lon lat vertices into the image
-    if use_srtm:
-        lon, lat = np.mean(ll_poly, axis=0)
+    lon, lat = np.mean(ll_poly, axis=0)
+    if exogenous_dem is not None:
+        with rasterio.open(exogenous_dem) as src:
+            x, y = geographiclib.pyproj_transform(lon, lat, 4326, src.crs.to_epsg())
+            z = list(src.sample([(x, y)]))[0][0]
+            if exogenous_dem_geoid_mode is True:
+                z = geographiclib.geoid_to_ellipsoid(lat, lon, z)
+    elif use_srtm:
         z = srtm4.srtm4(lon, lat)
-        img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], z)
     else:
-        img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], rpc.alt_offset)
+        z = rpc.alt_offset
+    img_pts = rpc.projection(ll_poly[:, 0], ll_poly[:, 1], z)
 
     # return image roi
     x, y, w, h = common.bounding_box2D(list(zip(*img_pts)))

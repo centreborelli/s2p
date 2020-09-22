@@ -79,7 +79,9 @@ def check_parameters(d):
     elif 'roi_geojson' in d:
         ll_poly = geographiclib.read_lon_lat_poly_from_geojson(d['roi_geojson'])
         d['roi'] = rpc_utils.roi_process(d['images'][0]['rpcm'], ll_poly,
-                                         d.get('use_srtm'))
+                                         use_srtm=d.get('use_srtm'),
+                                         exogenous_dem=d.get('exogenous_dem'),
+                                         exogenous_dem_geoid_mode=d.get('exogenous_dem_geoid_mode'))
     else:
         print('ERROR: missing or incomplete roi definition')
         sys.exit(1)
