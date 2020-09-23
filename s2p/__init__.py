@@ -23,7 +23,6 @@ import sys
 import os.path
 import json
 import datetime
-import subprocess
 import multiprocessing
 
 import numpy as np
@@ -43,7 +42,6 @@ from s2p import masking
 from s2p import triangulation
 from s2p import fusion
 from s2p import visualisation
-from s2p import ply
 
 
 def pointing_correction(tile, i):

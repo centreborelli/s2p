@@ -3,8 +3,6 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
 
-import json
-import datetime
 import warnings
 import rasterio
 import numpy as np

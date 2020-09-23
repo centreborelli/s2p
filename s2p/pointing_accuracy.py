@@ -6,7 +6,6 @@
 
 import os
 import numpy as np
-import rpcm
 
 from s2p import sift
 from s2p import rpc_utils

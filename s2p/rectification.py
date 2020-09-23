@@ -7,14 +7,12 @@ import os
 import warnings
 
 import numpy as np
-import rpcm
 
 from s2p import rpc_utils
 from s2p import estimation
 from s2p import evaluation
 from s2p import common
 from s2p import visualisation
-from s2p import block_matching
 from s2p.config import cfg
 
 

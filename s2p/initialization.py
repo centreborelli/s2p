@@ -7,19 +7,15 @@ import os
 import sys
 import json
 import copy
-import shutil
 import rasterio
-import warnings
 import numpy as np
 import rpcm
-from pyproj.exceptions import CRSError
 
 from s2p import common
 from s2p import geographiclib
 from s2p import rpc_utils
 from s2p import masking
 from s2p import parallel
-from s2p import geographiclib
 from s2p.config import cfg
 
 # This function is here as a workaround to python bug #24313 When

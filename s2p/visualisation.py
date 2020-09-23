@@ -4,13 +4,9 @@
 
 import numpy as np
 import rasterio
-import rpcm
 
 from s2p import common
-from s2p import sift
-from s2p import estimation
 from s2p import rpc_utils
-import s2p.pointing_accuracy
 
 
 def plot_line(im, x1, y1, x2, y2, colour):

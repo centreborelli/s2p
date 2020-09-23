@@ -12,7 +12,6 @@ import rasterio as rio
 from numpy.ctypeslib import ndpointer
 import ransac
 
-from s2p import common
 from s2p import rpc_utils
 from s2p import estimation
 
