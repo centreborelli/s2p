@@ -7,14 +7,12 @@ import os
 import warnings
 
 import numpy as np
-import rpcm
 
 from s2p import rpc_utils
 from s2p import estimation
 from s2p import evaluation
 from s2p import common
 from s2p import visualisation
-from s2p import block_matching
 from s2p.config import cfg
 
 
@@ -297,7 +295,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
             module.
         sift_matches (optional): Nx4 numpy array containing a list of sift
             matches, in the full image coordinates frame
-        method (default: 'rpc'): option to decide wether to use rpc of sift
+        method (default: 'rpc'): option to decide whether to use rpc of sift
             matches for the fundamental matrix estimation.
         {h,v}margin (optional): horizontal and vertical margins added on the
             sides of the rectified images

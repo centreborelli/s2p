@@ -12,10 +12,8 @@ import rasterio as rio
 from numpy.ctypeslib import ndpointer
 import ransac
 
-from s2p import common
 from s2p import rpc_utils
 from s2p import estimation
-from s2p.config import cfg
 
 # Locate sift4ctypes library and raise an ImportError if it can not be
 # found This call will raise an exception if library can not be found,
@@ -155,7 +153,7 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         k2 (array): numpy array of shape (m, 132), where each row represents a
             sift keypoint
         method (optional, default is 'relative'): flag ('relative' or
-            'absolute') indicating wether to use absolute distance or relative
+            'absolute') indicating whether to use absolute distance or relative
             distance
         sift_thresh (optional, default is 0.6): threshold for distance between SIFT
             descriptors. These descriptors are 128-vectors, whose coefficients
@@ -239,7 +237,8 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
     return matches.reshape((nb_matches.value, 4))
 
 
-def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
+def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h,
+                       method, sift_thresh, epipolar_threshold):
     """
     Compute a list of SIFT matches between two images on a given roi.
 
@@ -252,6 +251,8 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
         x, y, w, h: four integers defining the rectangular ROI in the first
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
+        method, sift_thresh, epipolar_threshold: see docstring of
+            s2p.sift.keypoints_match()
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line
@@ -264,16 +265,13 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h):
     rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
     F = estimation.affine_fundamental_matrix(rpc_matches)
 
-    # sift matching method:
-    method = 'relative' if cfg['relative_sift_match_thresh'] is True else 'absolute'
-
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT
     thresh_dog = 0.0133
-    for i in range(2):
+    for _ in range(2):
         p1 = image_keypoints(im1, x, y, w, h, thresh_dog=thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, thresh_dog=thresh_dog)
-        matches = keypoints_match(p1, p2, method, cfg['sift_match_thresh'], F,
-                                  epipolar_threshold=cfg['max_pointing_error'],
+        matches = keypoints_match(p1, p2, method, sift_thresh, F,
+                                  epipolar_threshold=epipolar_threshold,
                                   model='fundamental')
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
             break

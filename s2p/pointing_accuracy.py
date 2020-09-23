@@ -6,7 +6,6 @@
 
 import os
 import numpy as np
-import rpcm
 
 from s2p import sift
 from s2p import rpc_utils
@@ -100,7 +99,8 @@ def local_translation(r1, r2, x, y, w, h, m):
     return A
 
 
-def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h):
+def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
+                       method, sift_thresh, epipolar_threshold):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -113,13 +113,16 @@ def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h):
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle. The ROI may be as big as you want. If bigger than
             1 Mpix, only five crops will be used to compute sift matches.
+        method, sift_thresh, epipolar_threshold: see docstring of
+            s2p.sift.keypoints_match()
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to img2 in
         order to correct the pointing error, and the list of sift matches used
         to compute this correction.
     """
-    m = sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, x, y, w, h)
+    m = sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, x, y, w, h,
+                                method, sift_thresh, epipolar_threshold)
 
     if m is not None:
         A = local_translation(rpc1, rpc2, x, y, w, h, m)

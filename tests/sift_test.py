@@ -41,7 +41,10 @@ def test_matches_on_rpc_roi():
     img2 = data_path('input_triplet/img_02.tif')
     rpc1 = rpcm.rpc_from_geotiff(img1)
     rpc2 = rpcm.rpc_from_geotiff(img2)
-    computed = sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, 100, 100, 200, 200)
+    computed = sift.matches_on_rpc_roi(
+        img1, img2, rpc1, rpc2, 100, 100, 200, 200,
+        method='relative', sift_thresh=0.6, epipolar_threshold=10
+    )
     expected = np.loadtxt(data_path('expected_output/units/matches_on_rpc_roi.txt'))
     np.testing.assert_allclose(computed, expected, rtol=0.01, atol=0.1,
                                verbose=True)
