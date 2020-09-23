@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     cmake \
     gdal-bin \
-    geographiclib-tools \
     libfftw3-dev \
     libgdal-dev \
     libgeotiff-dev \

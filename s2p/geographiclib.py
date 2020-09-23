@@ -4,8 +4,6 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import geojson
-import os
-import subprocess
 from distutils.version import LooseVersion
 
 import pyproj
@@ -15,30 +13,27 @@ from rasterio.crs import CRS as RioCRS
 from pyproj.enums import WktVersion
 
 
-def geoid_above_ellipsoid(lat, lon):
+def geoid_to_ellipsoid(lat, lon, z):
     """
-    Computes the height, in meters, of the EGM96 geoid above the WGS84 ellipsoid.
+    Converts a height, in meters, from the EGM96 geoid datum
+    to the WGS84 ellipsoid datum.
 
     Args:
         lat: latitude, in degrees between -90 and 90
         lon: longitude, between -180 and 180
+        z: height, in meters w.r.t. the EGM96 geoid datum
 
     Returns:
-        the height in meters. It should be between -106 and 85 meters.
+        the height in meters w.r.t. the WGS84 ellipsoid datum
 
-
-    The conversion is made by a commandline tool, GeoidEval, which is part of
-    the GeographicLib library:
-    http://geographiclib.sourceforge.net/html/intro.html
+    The conversion is made by PROJ through its python wrapper pyproj
     """
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    geoid_dir = os.path.join(parent_dir, 'c')
-    geoid_name = 'egm96-15'
-    p = subprocess.Popen(['echo', str(lat), str(lon)], stdout=subprocess.PIPE)
-    q = subprocess.Popen(['GeoidEval',
-                          '-d', geoid_dir,
-                          '-n', geoid_name], stdin=p.stdout, stdout=subprocess.PIPE)
-    height = float(q.stdout.readline().split()[0])
+    # WGS84 with ellipsoid height as vertical axis
+    ellipsoid = pyproj.CRS.from_epsg(4979)
+    # WGS84 with Gravity-related height (EGM96)
+    geoid = pyproj.CRS("EPSG:4326+5773")
+    transformer = pyproj.Transformer.from_crs(geoid, ellipsoid)
+    height = transformer.transform(lat, lon, z)[-1]
     return height
 
 

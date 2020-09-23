@@ -45,15 +45,15 @@ running this command:
 
 Copy it in your `~/.profile`.
 
-## Other dependencies (geographiclib, fftw, libtiff)
+## Other dependencies (fftw, libtiff)
 
 On Ubuntu:
 
-    sudo apt install build-essential geographiclib-tools libfftw3-dev libgeotiff-dev libtiff5-dev
+    sudo apt install build-essential libfftw3-dev libgeotiff-dev libtiff5-dev
 
 On macOS:
 
-    brew install geographiclib fftw libtiff
+    brew install fftw libtiff
 
 
 # Installation
