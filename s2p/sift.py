@@ -154,7 +154,7 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         k2 (array): numpy array of shape (m, 132), where each row represents a
             sift keypoint
         method (optional, default is 'relative'): flag ('relative' or
-            'absolute') indicating wether to use absolute distance or relative
+            'absolute') indicating whether to use absolute distance or relative
             distance
         sift_thresh (optional, default is 0.6): threshold for distance between SIFT
             descriptors. These descriptors are 128-vectors, whose coefficients
