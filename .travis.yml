@@ -11,13 +11,11 @@ addons:
       - sourceline: 'ppa:ubuntugis/ppa'
     packages:
       - gdal-bin
-      - geographiclib-tools
       - libfftw3-dev
       - libgdal-dev
   homebrew:
     packages:
       # GDAL is already included on osx images
-      - geographiclib
       - fftw
 
 install:
