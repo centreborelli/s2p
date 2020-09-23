@@ -63,7 +63,11 @@ def pointing_correction(tile, i):
 
     # correct pointing error
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
-    A, m = pointing_accuracy.compute_correction(img1, img2, rpc1, rpc2, x, y, w, h)
+    method = 'relative' if cfg['relative_sift_match_thresh'] is True else 'absolute'
+    A, m = pointing_accuracy.compute_correction(
+        img1, img2, rpc1, rpc2, x, y, w, h, method,
+        cfg['sift_match_thresh'], cfg['max_pointing_error']
+    )
 
     if A is not None:  # A is the correction matrix
         np.savetxt(os.path.join(out_dir, 'pointing.txt'), A, fmt='%6.3f')
