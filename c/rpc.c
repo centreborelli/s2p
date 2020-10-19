@@ -383,7 +383,8 @@ static void eval_nrpc_iterative(double *result,
 	double x1[2];
 	double x2[2];
 	double xf[2] = {x, y};
-	double lon = -1, lat = -1, eps = 2;
+	double delta = 0.1;
+	double lon = -1 * delta, lat = -1 * delta, eps = 2 * delta;
 	eval_nrpci(x0, p, lon, lat, z);
 	eval_nrpci(x1, p, lon + eps, lat, z);
 	eval_nrpci(x2, p, lon, lat + eps, z);

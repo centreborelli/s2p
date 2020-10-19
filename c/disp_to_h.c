@@ -40,6 +40,33 @@ static double invert_homography(double o[9], double i[9])
 }
 
 
+void stereo_corresp_to_lonlatalt(double *lonlatalt, float *err,  // outputs
+                                 float *kp_a, float *kp_b, int n_kp,  // inputs
+                                 struct rpc *rpc_a, struct rpc *rpc_b)
+{
+
+    // intermediate buffers
+    double lonlat[2];
+    double e, z;
+
+    // loop over all matches
+    // a 3D point is produced for each match
+    for (int i = 0; i < n_kp; i++) {
+
+        // compute (lon, lat, alt) of the 3D point
+        z = rpc_height(rpc_a, rpc_b, kp_a[2 * i], kp_a[2 * i + 1],
+                       kp_b[2 * i], kp_b[2 * i + 1], &e);
+        eval_rpc(lonlat, rpc_a, kp_a[2 * i], kp_a[2 * i + 1], z);
+
+        // store the output values
+        lonlatalt[3 * i + 0] = lonlat[0];
+        lonlatalt[3 * i + 1] = lonlat[1];
+        lonlatalt[3 * i + 2] = z;
+        err[i] = e;
+    }
+}
+
+
 void disp_to_lonlatalt(double *lonlatalt, float *err,  // outputs
                  float *dispx, float *dispy, float *msk, int nx, int ny,  // inputs
                  double ha[9], double hb[9],
