@@ -645,6 +645,10 @@ def read_config_file(config_file):
     if k in user_cfg and isinstance(user_cfg[k], str) and not os.path.isabs(user_cfg[k]):
         user_cfg[k] = make_path_relative_to_file(user_cfg[k], config_file)
 
+    if 'exogenous_dem' in user_cfg and not os.path.isabs(user_cfg['exogenous_dem']):
+        user_cfg['exogenous_dem'] = make_path_relative_to_file(user_cfg['exogenous_dem'],
+                                                               config_file)
+
     # input paths
     for img in user_cfg['images']:
         for d in ['img', 'rpc', 'clr', 'cld', 'roi', 'wat']:
