@@ -383,7 +383,11 @@ static void eval_nrpc_iterative(double *result,
 	double x1[2];
 	double x2[2];
 	double xf[2] = {x, y};
-	double delta = 0.1;
+	double delta = 1.0;
+	if (p->delta) {
+		// if delta was pre-defined use the specified value
+		delta = p->delta;
+	}
 	double lon = -1 * delta, lat = -1 * delta, eps = 2 * delta;
 	eval_nrpci(x0, p, lon, lat, z);
 	eval_nrpci(x1, p, lon + eps, lat, z);
@@ -476,6 +480,7 @@ void rpc_localization(double lonlat[2], struct rpc *r, double ijh[3])
 double rpc_height(struct rpc *rpca, struct rpc *rpcb,
 		double xa, double ya, double xb, double yb, double *outerr)
 {
+
 	double x[2] = {xa, ya};
 	double y[2] = {xb, yb};
 

@@ -37,9 +37,10 @@ class RPCStruct(ctypes.Structure):
                 ("iscale", c_double * 3),
                 ("ioffset", c_double * 3),
                 ("dmval", c_double * 4),
-                ("imval", c_double * 4)]
+                ("imval", c_double * 4),
+                ("delta", c_double)]
 
-    def __init__(self, rpc):
+    def __init__(self, rpc, delta=1.0):
         """
         Args:
             rpc (rpcm.RPCModel): rpc model
@@ -77,6 +78,8 @@ class RPCStruct(ctypes.Structure):
                 self.numy[i] = np.nan
                 self.deny[i] = np.nan
 
+	# initialization factor for iterative localization
+        self.delta = delta
 
 def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=None):
     """
@@ -174,8 +177,8 @@ def stereo_corresp_to_xyz(rpc1, rpc2, pts1, pts2, out_crs=None):
             error
     """
     # copy rpc coefficients to an RPCStruct object
-    rpc1_c_struct = RPCStruct(rpc1)
-    rpc2_c_struct = RPCStruct(rpc2)
+    rpc1_c_struct = RPCStruct(rpc1, delta=0.1)
+    rpc2_c_struct = RPCStruct(rpc2, delta=0.1)
 
     # get number of points to triangulate
     n = pts1.shape[0]
