@@ -72,7 +72,7 @@ def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
 
     # image borders mask
     if img_shape is not None:
-        m = np.ones(img_shape, dtype=np.bool)
+        m = np.ones(img_shape, dtype=bool)
         m[:border_margin] = 0  # first rows
         m[-border_margin:] = 0  # last rows
         m[:, :border_margin] = 0  # first columns

@@ -69,6 +69,7 @@ void stereo_corresp_to_lonlatalt(double *lonlatalt, float *err,  // outputs
 
 void disp_to_lonlatalt(double *lonlatalt, float *err,  // outputs
                  float *dispx, float *dispy, float *msk, int nx, int ny,  // inputs
+                 float *msk_orig, int w, int h,
                  double ha[9], double hb[9],
                  struct rpc *rpca, struct rpc *rpcb,
                  float orig_img_bounding_box[4])
@@ -114,6 +115,13 @@ void disp_to_lonlatalt(double *lonlatalt, float *err,  // outputs
         if (round(p[0]) < col_min || round(p[0]) > col_max ||
             round(p[1]) < row_min || round(p[1]) > row_max)
             continue;
+
+        // check that it passes the image domain mask
+        int x = (int) round(p[0]) - col_min;
+        int y = (int) round(p[1]) - row_min;
+        if ((x < w) && (y < h))
+            if (!msk_orig[y * w + x])
+                continue;
 
         // compute (lon, lat, alt) of the 3D point
         double dx = dispx[pix];
@@ -226,9 +234,9 @@ static void help(char *s)
 {
     fprintf(stderr, "usage:\n\t"
             "%s rpc_ref.xml rpc_sec.xml disp.tif heights.tif err.tif "
-            "[--mask mask.png] "
+            "[--mask-rect mask_rect.png] "
             "[-href \"h1 ... h9\"] [-hsec \"h1 ... h9\"] "
-            "[--mask-orig msk.png] "
+            "[--mask-orig mask_orig.png] "
             "[--col-m x0] [--col-M xf] [--row-m y0] [--row-M yf]\n", s);
 }
 
@@ -265,6 +273,11 @@ int main_disp_to_h(int c, char *v[])
     double row_m = atof(pick_option(&c, &v, "-row-m", "-inf"));
     double row_M = atof(pick_option(&c, &v, "-row-M", "inf"));
 
+    // mask on the original (unrectified) image grid
+    const char *msk_orig_fname = pick_option(&c, &v, "-mask-orig", "");
+    int w, h;
+    float *msk_orig = iio_read_image_float(msk_orig_fname, &w, &h);
+
     // remaining positional arguments: rpcs, disparity map, output files
     struct rpc rpca[1], rpcb[1];
     read_rpc_file_xml(rpca, v[1]);
@@ -284,7 +297,7 @@ int main_disp_to_h(int c, char *v[])
     double *lonlatalt_map = calloc(nx*ny*3, sizeof(*lonlatalt_map));
     float *err_map = calloc(nx*ny, sizeof(*err_map));
     float img_bbx[4] = {col_m, col_M, row_m, row_M};
-    disp_to_lonlatalt(lonlatalt_map, err_map, dispx, dispy, msk, nx, ny, ha, hb,
+    disp_to_lonlatalt(lonlatalt_map, err_map, dispx, dispy, msk, nx, ny, msk_orig, w, h, ha, hb,
                 rpca, rpcb, img_bbx);
 
     // save the height map and error map
