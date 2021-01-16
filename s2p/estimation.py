@@ -65,36 +65,33 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
     # check that the input matrix is an affine fundamental matrix
     assert(np.shape(F) == (3, 3))
     assert(np.linalg.matrix_rank(F) == 2)
-    assert(F[0, 0] == 0)
-    assert(F[0, 1] == 0)
-    assert(F[1, 0] == 0)
-    assert(F[1, 1] == 0)
+    np.testing.assert_allclose(F[:2, :2], np.zeros((2, 2)))
 
     # notations
-    a = F[2, 0]
-    b = F[2, 1]
-    c = F[0, 2]
-    d = F[1, 2]
+    a = F[0, 2]
+    b = F[1, 2]
+    c = F[2, 0]
+    d = F[2, 1]
     e = F[2, 2]
 
     # rotations
-    r = np.sqrt(a*a + b*b)
-    s = np.sqrt(c*c + d*d)
-    R1 = (1.0 / r) * np.array([[b, -a], [a, b]])
-    R2 = (1.0 / s) * np.array([[-d, c], [-c, -d]])
+    r = np.sqrt(c*c + d*d)
+    s = np.sqrt(a*a + b*b)
+    R1 = 1 / r * np.array([[d, -c], [c, d]])
+    R2 = 1 / s * np.array([[-b, a], [-a, -b]])
 
     # zoom and translation
     z = np.sqrt(r / s)
     t = 0.5 * e / np.sqrt(r * s)
 
     if debug:
-        theta_1 = get_angle_from_cos_and_sin(b, a)
+        theta_1 = get_angle_from_cos_and_sin(d, c)
         print("reference image:")
         print("\trotation: %f deg" % np.rad2deg(theta_1))
         print("\tzoom: %f" % z)
         print("\tvertical translation: %f" % t)
         print()
-        theta_2 = get_angle_from_cos_and_sin(-d, -c)
+        theta_2 = get_angle_from_cos_and_sin(-b, -a)
         print("secondary image:")
         print("\trotation: %f deg" % np.rad2deg(theta_2))
         print("\tzoom: %f" % (1.0 / z))
@@ -107,7 +104,7 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
     S1[2, 2] = 1
 
     S2 = np.zeros((3, 3))
-    S2[0:2, 0:2] = (1.0 / z) * R2
+    S2[0:2, 0:2] = 1 / z * R2
     S2[1, 2] = -t
     S2[2, 2] = 1
 
