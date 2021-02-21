@@ -26,6 +26,9 @@ struct rpc {
 
 	double dmval[4];
 	double imval[4];
+
+	// initialization factor for iterative localization
+	double delta;
 };
 
 
