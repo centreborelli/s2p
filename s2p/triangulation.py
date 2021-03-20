@@ -150,7 +150,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=No
         x, y, z = geographiclib.pyproj_transform(lonlatalt[:, 0], lonlatalt[:, 1],
                                                  in_crs, out_crs, lonlatalt[:, 2])
 
-        xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3).astype(np.float32)
+        xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3).astype(np.float64)
     else:
         xyz_array = lonlatalt
 
@@ -205,7 +205,7 @@ def stereo_corresp_to_xyz(rpc1, rpc2, pts1, pts2, out_crs=None):
         x, y, z = geographiclib.pyproj_transform(lonlatalt[:, 0], lonlatalt[:, 1],
                                                  in_crs, out_crs, lonlatalt[:, 2])
 
-        xyz_array = np.column_stack((x, y, z)).astype(np.float32)
+        xyz_array = np.column_stack((x, y, z)).astype(np.float64)
     else:
         xyz_array = lonlatalt
 
