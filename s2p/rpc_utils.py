@@ -530,16 +530,21 @@ def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
     return np.min(d), np.max(d)
 
 
-def gsd_from_rpc(rpc):
+def gsd_from_rpc(rpc, z=0):
     """
-    Compute the ground sampling distance from an RPC camera model.
+    Compute an image ground sampling distance from its RPC camera model.
 
     Args:
         rpc (rpcm.RPCModel): camera model
+        z (float, optional): ground elevation
 
     Returns:
         float (meters per pixel)
     """
-    a = geographiclib.lonlat_to_geocentric(*rpc.localization(0, 0, 0), alt=0)
-    b = geographiclib.lonlat_to_geocentric(*rpc.localization(1, 0, 0), alt=0)
+    # we assume that RPC col/row offset match the coordinates of image center
+    c = rpc.col_offset
+    r = rpc.row_offset
+
+    a = geographiclib.lonlat_to_geocentric(*rpc.localization(c+0, r, z), alt=z)
+    b = geographiclib.lonlat_to_geocentric(*rpc.localization(c+1, r, z), alt=z)
     return np.linalg.norm(np.asarray(b) - np.asarray(a))
