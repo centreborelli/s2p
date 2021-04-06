@@ -132,7 +132,7 @@ void disp_to_lonlatalt(double *lonlatalt, float *err,  // outputs
 }
 
 
-float squared_distance_between_3d_points(float a[3], float b[3])
+float squared_distance_between_3d_points(double a[3], double b[3])
 {
     float x = (a[0] - b[0]);
     float y = (a[1] - b[1]);
@@ -141,13 +141,13 @@ float squared_distance_between_3d_points(float a[3], float b[3])
 }
 
 
-void count_3d_neighbors(int *count, float *xyz, int nx, int ny, float r, int p)
+void count_3d_neighbors(int *count, double *xyz, int nx, int ny, float r, int p)
 {
     // count the 3d neighbors of each point
     for (int y = 0; y < ny; y++)
     for (int x = 0; x < nx; x++) {
         int pos = x + nx * y;
-        float *v = xyz + pos * 3;
+        double *v = xyz + pos * 3;
         int c = 0;
         int i0 = y > p ? -p : -y;
         int i1 = y < ny - p ? p : ny - y - 1;
@@ -155,7 +155,7 @@ void count_3d_neighbors(int *count, float *xyz, int nx, int ny, float r, int p)
         int j1 = x < nx - p ? p : nx - x - 1;
         for (int i = i0; i <= i1; i++)
         for (int j = j0; j <= j1; j++) {
-            float *u = xyz + (x + j + nx * (y + i)) * 3;
+            double *u = xyz + (x + j + nx * (y + i)) * 3;
             float d = squared_distance_between_3d_points(u, v);
             if (d < r*r) {
                 c++;
@@ -167,7 +167,7 @@ void count_3d_neighbors(int *count, float *xyz, int nx, int ny, float r, int p)
 
 
 void remove_isolated_3d_points(
-    float* xyz,  // input (and output) image, shape = (h, w, 3)
+    double* xyz,  // input (and output) image, shape = (h, w, 3)
     int nx,      // width w
     int ny,      // height h
     float r,     // filtering radius, in meters
@@ -306,7 +306,7 @@ int main_count_3d_neighbors(int c, char *v[])
 
     // read input data
     int nx, ny, nch;
-    float *xyz = iio_read_image_float_vec(v[1], &nx, &ny, &nch);
+    double *xyz = iio_read_image_double_vec(v[1], &nx, &ny, &nch);
     if (nch != 3) fprintf(stderr, "xyz image must have 3 channels\n");
     float r = atof(v[2]);
     int p = atoi(v[3]);
