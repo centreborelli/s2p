@@ -98,7 +98,7 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=No
 
     Returns:
         xyz: array of shape (h, w, 3) where each pixel contains the 3D
-            coordinates of the triangulated point in the coordinate system 
+            coordinates of the triangulated point in the coordinate system
             defined by `out_crs`
         err: array of shape (h, w) where each pixel contains the triangulation
             error
@@ -231,7 +231,7 @@ def count_3d_neighbors(xyz, r, p):
 
     # define the argument types of the count_3d_neighbors function from disp_to_h.so
     lib.count_3d_neighbors.argtypes = (ndpointer(dtype=c_int, shape=(h, w)),
-                                       ndpointer(dtype=c_float, shape=(h, w, 3)),
+                                       ndpointer(dtype=c_double, shape=(h, w, 3)),
                                        c_int, c_int, c_float, c_int)
 
     # call the count_3d_neighbors function from disp_to_h.so
@@ -262,7 +262,7 @@ def remove_isolated_3d_points(xyz, r, p, n, q=1):
     assert d == 3, 'expecting a 3-channels image with shape (h, w, 3)'
 
     lib.remove_isolated_3d_points.argtypes = (
-        ndpointer(dtype=c_float, shape=(h, w, 3)),
+        ndpointer(dtype=c_double, shape=(h, w, 3)),
         c_int, c_int, c_float, c_int, c_int, c_int)
 
     lib.remove_isolated_3d_points(np.ascontiguousarray(xyz), w, h, r, p, n, q)
