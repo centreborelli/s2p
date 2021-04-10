@@ -28,7 +28,7 @@ def create_rejection_mask(disp, im1, im2, mask):
     tmp2 = common.tmpfile('.tif')
     common.run(["plambda", disp, "x 0 join", "-o", tmp1])
     common.run(["backflow", tmp1, im2, tmp2])
-    common.run(["plambda", disp, im1, tmp2, "x isfinite y isfinite z isfinite and and", "-o", mask])
+    common.run(["plambda", disp, im1, tmp2, "x isfinite y isfinite z isfinite and and vmul", "-o", mask])
 
 
 def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
