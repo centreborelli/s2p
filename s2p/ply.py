@@ -45,12 +45,14 @@ def write_3d_point_cloud_to_ply(path_to_ply_file, coordinates, colors=None,
     if colors is not None:
         if colors.shape[1] == 1:  # replicate grayscale 3 times
             colors = np.column_stack([colors] * 3)
-        elif colors.shape[1] != 3:
-            raise Exception('Error: colors must have either 1 or 3 columns')
+        elif colors.shape[1] not in [3, 4]:
+            raise Exception('Error: colors must have either 1, 3 or 4 channels')
         points = np.column_stack((points, colors))
         dtypes += [('red', colors.dtype),
                    ('green', colors.dtype),
                    ('blue', colors.dtype)]
+        if colors.shape[1] == 4:
+            dtypes += [('ir', colors.dtype)]
 
     if extra_properties is not None:
         points = np.column_stack((points, extra_properties))
