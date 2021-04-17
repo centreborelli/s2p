@@ -318,7 +318,7 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     return out
 
 
-def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='', proj_com='', confidence=''):
+def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors=None, proj_com='', confidence=''):
     """
     Filter points that have less than n points closer than r units (ex: meters) and write them in a .ply file
 
@@ -329,9 +329,9 @@ def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='',
         r (float): filtering radius, in the unit of the CRS (ex: meters)
         n (int): filtering threshold, in number of points
         img_gsd (float): ground sampling distance, in units of the CRS (ex: meters) / pix
-        colors (optional, default ''): path to a colorized image
+        colors (np.array): colors image, optional
         proj_com (str): projection comment in the .ply file
-        confidence (optional, default ''): path to an image containig a confidence map
+        confidence (str): path to an image containig a confidence map, optional
     """
     # 3D filtering
     if r and n:
@@ -342,10 +342,8 @@ def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='',
     valid = np.all(np.isfinite(xyz_list), axis=1)
 
     # write the point cloud to a ply file
-    if colors:
-        with rasterio.open(colors, 'r') as f:
-            img = f.read()
-        colors_list = img.transpose(1, 2, 0).reshape(-1, img.shape[0])[valid]
+    if colors is not None:
+        colors_list = colors.transpose(1, 2, 0).reshape(-1, colors.shape[0])[valid]
     else:
         colors_list = None
 
@@ -368,7 +366,8 @@ def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors='',
                                               "projection: {}".format(proj_com)])
 
 
-def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_colorized=''):
+def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None,
+                              crop_colorized=None):
     """
     Computes a color point cloud from a height map.
 
@@ -380,8 +379,7 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
         off_{x,y} (optional, default None): coordinates of the origin of the crop
             we are dealing with in the pixel coordinates of the original full
             size image
-        crop_colorized (optional, default ''): path to a colorized crop of a
-            Pleiades image
+        crop_colorized (np.array): colors image, optional
     """
     with rasterio.open(heights) as src:
         h_map = src.read(1)
@@ -418,6 +416,6 @@ def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None, crop_
 
     xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3)
 
-    filter_xyz_and_write_to_ply(cloud, xyz_array,
-                                              cfg['3d_filtering_r'], cfg['3d_filtering_n'],
-                                              cfg['gsd'], crop_colorized, proj_com)
+    filter_xyz_and_write_to_ply(cloud, xyz_array, cfg['3d_filtering_r'],
+                                cfg['3d_filtering_n'], cfg['gsd'],
+                                crop_colorized, proj_com)

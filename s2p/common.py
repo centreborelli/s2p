@@ -297,44 +297,6 @@ def crop_array(img, x, y, w, h, fill_value=0):
     return crop
 
 
-def image_crop_gdal(im, x, y, w, h, out=None):
-    """
-    Crop an image using gdal_translate.
-
-    Args:
-        im: path to an image file
-        x, y, w, h: four integers definig the rectangular crop in the image.
-            (x, y) is the top-left corner, and (w, h) are the dimensions of the
-            rectangle.
-        out (optional): path to the output crop
-
-    Returns:
-        path to cropped tif image
-    """
-    if int(x) != x or int(y) != y:
-        print('WARNING: image_crop_gdal will round the coordinates of your crop')
-
-    if out is None:
-        out = tmpfile('.tif')
-
-    # do the crop with gdal_translate
-    run(
-        [
-            "gdal_translate",
-            "-ot", "Float32",
-            "-co", "TILED=YES",
-            "-co", "BIGTIFF=IF_NEEDED",
-            "-srcwin",
-            "%d" % x,
-            "%d" % y,
-            "%d" % w,
-            "%d" % h,
-            im, out,
-        ]
-    )
-    return out
-
-
 def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
     """
     Runs a binary that reads its input on stdin.
@@ -404,3 +366,19 @@ def print_elapsed_time(since_first_call=False):
             print("Elapsed time:", t2 - print_elapsed_time.t0)
     print_elapsed_time.t1 = t2
     print()
+
+
+def linear_stretching_and_quantization_8bit(img, p=1):
+    """
+    Simple 8-bit quantization with linear stretching.
+
+    Args:
+        img (np.array): image to quantize
+        p (float): percentage of the darkest and brightest pixels to saturate,
+            from 0 to 100.
+
+    Returns:
+        numpy array with the quantized uint8 image
+    """
+    a, b = np.nanpercentile(img, (p, 100 - p))
+    return np.round(255 * (np.clip(img, a, b) - a) / (b - a)).astype(np.uint8)

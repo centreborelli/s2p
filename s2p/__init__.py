@@ -287,9 +287,13 @@ def disparity_to_ply(tile):
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
+    with rasterio.open(colors, "r") as f:
+        colors_raster = f.read()
+
     triangulation.filter_xyz_and_write_to_ply(ply_file, xyz_array,
                                               cfg['3d_filtering_r'], cfg['3d_filtering_n'],
-                                              cfg['gsd'], colors, proj_com, confidence=extra)
+                                              cfg['gsd'], colors_raster,
+                                              proj_com, confidence=extra)
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
     common.run("plyextrema %s %s" % (ply_file, plyextrema))
@@ -388,12 +392,14 @@ def heights_to_ply(tile):
     plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     height_map = os.path.join(out_dir, 'height_map.tif')
 
-    colors = os.path.join(out_dir, 'ref.tif')
     if cfg['images'][0]['clr']:
-        common.image_crop_gdal(cfg['images'][0]['clr'], x, y, w, h, colors)
+        with rasterio.open(cfg['images'][0]['clr'], "r") as f:
+            colors = f.read(window=((y, y + h), (x, x + w)))
     else:
-        common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
-                                                 w, h), colors)
+        with rasterio.open(cfg['images'][0]['img'], "r") as f:
+            colors = f.read(window=((y, y + h), (x, x + w)))
+
+        colors = common.linear_stretching_and_quantization_8bit(colors)
 
     triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpcm'], x, y, colors)
@@ -403,7 +409,6 @@ def heights_to_ply(tile):
 
     if cfg['clean_intermediate']:
         common.remove(height_map)
-        common.remove(colors)
         common.remove(os.path.join(out_dir, 'mask.png'))
 
 
