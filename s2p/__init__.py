@@ -477,22 +477,18 @@ def global_dsm(tiles):
     if 'roi_geojson' in cfg:
         ll_poly = geographiclib.read_lon_lat_poly_from_geojson(cfg['roi_geojson'])
         pyproj_crs = geographiclib.pyproj_crs(cfg['out_crs'])
-        bbx = geographiclib.crs_bbx(ll_poly, pyproj_crs)
-        xoff = bbx[0]
-        yoff = bbx[3]
-        xsize = int(np.ceil((bbx[1]-bbx[0]) / res))
-        ysize = int(np.ceil((bbx[3]-bbx[2]) / res))
-        projwin = "-projwin {} {} {} {}".format(xoff, yoff,
-                                                xoff + xsize * res,
-                                                yoff - ysize * res)
+        left, bottom, right, top = geographiclib.crs_bbx(ll_poly, pyproj_crs, align=res)
+        projwin = f"--bounds {left} {bottom} {right} {top}"
     else:
-        projwin = ""
+        projwin = f"--like {out_dsm_vrt}"
 
-    common.run(" ".join(["gdal_translate",
-                         "-co", "TILED=YES",
-                         "-co", "COMPRESS=DEFLATE",
-                         "-co", "PREDICTOR=2",
-                         "-co", "BIGTIFF=IF_SAFER",
+    common.run(" ".join(["rio", "clip", "--overwrite",
+                         "--co", "tiled=true",
+                         "--co", "blockxsize=256",
+                         "--co", "blockysize=256",
+                         "--co", "compress=deflate",
+                         "--co", "predictor=2",
+                         "--co", "bigtiff=if_safer",
                          projwin, out_dsm_vrt, out_dsm_tif]))
 
     # EXPORT CONFIDENCE
@@ -513,9 +509,14 @@ def global_dsm(tiles):
         common.run("gdalbuildvrt -vrtnodata nan -input_file_list %s %s" % (input_file_list,
                                                                            out_conf_vrt))
 
-        common.run(" ".join(["gdal_translate",
-                             "-co TILED=YES -co BIGTIFF=IF_SAFER",
-                             "%s %s %s" % (projwin, out_conf_vrt, out_conf_tif)]))
+        common.run(" ".join(["rio", "clip", "--overwrite",
+                             "--co", "tiled=true",
+                             "--co", "blockxsize=256",
+                             "--co", "blockysize=256",
+                             "--co", "compress=deflate",
+                             "--co", "predictor=2",
+                             "--co", "bigtiff=if_safer",
+                             projwin, out_conf_vrt, out_conf_tif]))
 
 
 def main(user_cfg):

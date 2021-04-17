@@ -201,17 +201,19 @@ def read_lon_lat_poly_from_geojson(poly):
     return np.asarray(a["coordinates"][0])
 
 
-def crs_bbx(ll_poly, crs=None):
+def crs_bbx(ll_poly, crs=None, align=None):
     """
-    Compute the UTM bounding box of a given (lon, lat) polygon.
+    Compute the bounding box of a (lon, lat) polygon in a given CRS.
 
     Args:
-        ll_poly ()
-        crs (pyproj.crs.CRS): pyproj CRS object. If not specified, the default CRS of the UTM
-            zone for the given geography is used.
+        ll_poly (np.ndarray): array of shape (n, 2)
+        crs (pyproj.crs.CRS): pyproj CRS object. If not specified, the default
+            CRS of the UTM zone for the given geography is used.
+        align (float): adjust the bounds, by slightly expanding them, in order to
+            fit a regular grid of resolution `align` (in crs units)
 
     Returns:
-       4-tuple with easting min/max and northing min/max
+       4-tuple (left, bottom, right, top)
     """
     if not crs:
         utm_zone = compute_utm_zone(*ll_poly.mean(axis=0))
@@ -222,9 +224,16 @@ def crs_bbx(ll_poly, crs=None):
     easting, northing = pyproj.transform(pyproj.Proj(init="epsg:4326"),
                                          crs, ll_poly[:, 0], ll_poly[:, 1])
 
-    # return UTM bounding box
-    east_min = min(easting)
-    east_max = max(easting)
-    nort_min = min(northing)
-    nort_max = max(northing)
-    return east_min, east_max, nort_min, nort_max
+    # CRS bounding box
+    left = min(easting)
+    bottom = min(northing)
+    right = max(easting)
+    top = max(northing)
+
+    if align:
+        left = align * int(np.floor(left / align))
+        bottom = align * int(np.floor(bottom / align))
+        right = align * int(np.ceil(right / align))
+        top = align * int(np.ceil(top / align))
+
+    return left, bottom, right, top
