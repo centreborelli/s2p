@@ -67,8 +67,8 @@ def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
 
     outdir = test_cfg['out_dir']
 
-    computed = common.gdal_read_as_array_with_nans(os.path.join(outdir, 'dsm.tif'))
-    expected = common.gdal_read_as_array_with_nans(ref_dsm)
+    computed = common.rio_read_as_array_with_nans(os.path.join(outdir, 'dsm.tif'))
+    expected = common.rio_read_as_array_with_nans(ref_dsm)
 
     compare_dsm(computed, expected, absmean_tol, percentile_tol)
 
@@ -83,8 +83,8 @@ def end2end_mosaic(config_file, ref_height_map, absmean_tol=0.025, percentile_to
 
     s2p_mosaic.main(tiles_file, global_height_map, 'pair_1/height_map.tif')
 
-    computed = common.gdal_read_as_array_with_nans(global_height_map)
-    expected = common.gdal_read_as_array_with_nans(ref_height_map)
+    computed = common.rio_read_as_array_with_nans(global_height_map)
+    expected = common.rio_read_as_array_with_nans(ref_height_map)
 
     compare_dsm(computed, expected, absmean_tol, percentile_tol)
 
@@ -111,8 +111,8 @@ def test_distributed_plyflatten():
     s2p.main(test_cfg)
 
     outdir = test_cfg['out_dir']
-    computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,
-                                                                'dsm.tif'))
+    computed = common.rio_read_as_array_with_nans(os.path.join(outdir,
+                                                               'dsm.tif'))
 
     print('Running plyflatten dsm reference ...')
 

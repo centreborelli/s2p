@@ -113,9 +113,9 @@ def matrix_translation(x, y):
     return t
 
 
-def gdal_read_as_array_with_nans(im):
+def rio_read_as_array_with_nans(im):
     """
-    Read an image replacing gdal NoDataValue with np.nan
+    Read an image replacing gdal nodata value with np.nan
 
     Args:
         im: path to the input image file
