@@ -113,22 +113,6 @@ def matrix_translation(x, y):
     return t
 
 
-def image_size_gdal(im):
-    """
-    Read the width, height and pixel dimension of an image using rasterio.
-
-    Args:
-        im: path to the input image file
-
-    Returns:
-        w, h, pd: a tuple of length 3
-    """
-    with rasterio.open(im, 'r') as f:
-        y, x = f.shape
-        pd = f.count
-    return x, y, pd
-
-
 def gdal_read_as_array_with_nans(im):
     """
     Read an image replacing gdal NoDataValue with np.nan

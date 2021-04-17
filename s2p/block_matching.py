@@ -5,6 +5,7 @@
 
 import os
 import numpy as np
+import rasterio
 
 from s2p import common
 from s2p.config import cfg
@@ -59,11 +60,12 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
     """
     # limit disparity bounds
     if disp_min is not None and disp_max is not None:
-        image_size = common.image_size_gdal(im1)
-        if disp_max - disp_min > image_size[0]:
+        with rasterio.open(im1, "r") as f:
+            width = f.width
+        if disp_max - disp_min > width:
             center = 0.5 * (disp_min + disp_max)
-            disp_min = int(center - 0.5 * image_size[0])
-            disp_max = int(center + 0.5 * image_size[0])
+            disp_min = int(center - 0.5 * width)
+            disp_max = int(center + 0.5 * width)
 
     # round disparity bounds
     if disp_min is not None:
@@ -190,22 +192,26 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         wsec = common.tmpfile('.tif')
         # TODO TUNE LSD PARAMETERS TO HANDLE DIRECTLY 12 bits images?
         # image dependent weights based on lsd segments
-        image_size = common.image_size_gdal(ref)
+        with rasterio.open(ref, "r") as f:
+            width = f.width
+            height = f.height
         #TODO refactor this command to not use shell=True
         common.run('qauto %s | \
                    lsd  -  - | \
                    cut -d\' \' -f1,2,3,4   | \
                    pview segments %d %d | \
-                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(ref,image_size[0], image_size[1],wref),
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s' % (ref, width, height, wref),
                    shell=True)
         # image dependent weights based on lsd segments
-        image_size = common.image_size_gdal(sec)
+        with rasterio.open(sec, "r") as f:
+            width = f.width
+            height = f.height
         #TODO refactor this command to not use shell=True
         common.run('qauto %s | \
                    lsd  -  - | \
                    cut -d\' \' -f1,2,3,4   | \
                    pview segments %d %d | \
-                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s'%(sec,image_size[0], image_size[1],wsec),
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s' % (sec, width, height, wsec),
                    shell=True)
 
 
