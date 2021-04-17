@@ -27,6 +27,7 @@ import multiprocessing
 
 import numpy as np
 import rasterio
+import rasterio.merge
 from plyflatten import plyflatten_from_plyfiles_list
 
 
@@ -457,66 +458,51 @@ def plys_to_dsm(tile):
 
 def global_dsm(tiles):
     """
+    Merge tilewise DSMs and confidence maps in a global DSM and confidence map.
     """
-    out_dsm_vrt = os.path.join(cfg['out_dir'], 'dsm.vrt')
-    out_dsm_tif = os.path.join(cfg['out_dir'], 'dsm.tif')
+    bounds = None
+    if "roi_geojson" in cfg:
+        ll_poly = geographiclib.read_lon_lat_poly_from_geojson(cfg["roi_geojson"])
+        pyproj_crs = geographiclib.pyproj_crs(cfg["out_crs"])
+        bounds = geographiclib.crs_bbx(ll_poly, pyproj_crs,
+                                       align=cfg["dsm_resolution"])
 
-    dsms_list = [os.path.join(t['dir'], 'dsm.tif') for t in tiles]
-    dsms = '\n'.join(d for d in dsms_list if os.path.exists(d))
+    creation_options = {"tiled": True,
+                        "blockxsize": 256,
+                        "blockysize": 256,
+                        "compress": "deflate",
+                        "predictor": 2}
 
-    input_file_list = os.path.join(cfg['out_dir'], 'gdalbuildvrt_input_file_list.txt')
+    dsms = []
+    confidence_maps = []
 
-    with open(input_file_list, 'w') as f:
-        f.write(dsms)
+    for t in tiles:
 
-    common.run("gdalbuildvrt -vrtnodata nan -input_file_list %s %s" % (input_file_list,
-                                                                       out_dsm_vrt))
+        d = os.path.join(t["dir"], "dsm.tif")
+        if os.path.exists(d):
+            dsms.append(d)
 
-    res = cfg['dsm_resolution']
+        c = os.path.join(t["dir"], "confidence.tif")
+        if os.path.exists(c):
+            confidence_maps.append(c)
 
-    if 'roi_geojson' in cfg:
-        ll_poly = geographiclib.read_lon_lat_poly_from_geojson(cfg['roi_geojson'])
-        pyproj_crs = geographiclib.pyproj_crs(cfg['out_crs'])
-        left, bottom, right, top = geographiclib.crs_bbx(ll_poly, pyproj_crs, align=res)
-        projwin = f"--bounds {left} {bottom} {right} {top}"
-    else:
-        projwin = f"--like {out_dsm_vrt}"
+    if dsms:
+        rasterio.merge.merge(dsms,
+                             bounds=bounds,
+                             res=cfg["dsm_resolution"],
+                             nodata=np.nan,
+                             indexes=1,
+                             dst_path=os.path.join(cfg["out_dir"], "dsm.tif"),
+                             dst_kwds=creation_options)
 
-    common.run(" ".join(["rio", "clip", "--overwrite",
-                         "--co", "tiled=true",
-                         "--co", "blockxsize=256",
-                         "--co", "blockysize=256",
-                         "--co", "compress=deflate",
-                         "--co", "predictor=2",
-                         "--co", "bigtiff=if_safer",
-                         projwin, out_dsm_vrt, out_dsm_tif]))
-
-    # EXPORT CONFIDENCE
-    out_conf_vrt = os.path.join(cfg['out_dir'], 'confidence.vrt')
-    out_conf_tif = os.path.join(cfg['out_dir'], 'confidence.tif')
-
-    dsms_list = [os.path.join(t['dir'], 'confidence.tif') for t in tiles]
-    dems_list_ok = [d for d in dsms_list if os.path.exists(d)]
-    dsms = '\n'.join(dems_list_ok)
-
-    input_file_list = os.path.join(cfg['out_dir'], 'gdalbuildvrt_input_file_list2.txt')
-
-    if len(dems_list_ok) > 0:
-
-        with open(input_file_list, 'w') as f:
-            f.write(dsms)
-
-        common.run("gdalbuildvrt -vrtnodata nan -input_file_list %s %s" % (input_file_list,
-                                                                           out_conf_vrt))
-
-        common.run(" ".join(["rio", "clip", "--overwrite",
-                             "--co", "tiled=true",
-                             "--co", "blockxsize=256",
-                             "--co", "blockysize=256",
-                             "--co", "compress=deflate",
-                             "--co", "predictor=2",
-                             "--co", "bigtiff=if_safer",
-                             projwin, out_conf_vrt, out_conf_tif]))
+    if confidence_maps:
+        rasterio.merge.merge(confidence_maps,
+                             bounds=bounds,
+                             res=cfg["dsm_resolution"],
+                             nodata=np.nan,
+                             indexes=1,
+                             dst_path=os.path.join(cfg["out_dir"], "confidence.tif"),
+                             dst_kwds=creation_options)
 
 
 def main(user_cfg):
