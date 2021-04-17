@@ -34,16 +34,11 @@ The main dependency is GDAL. Version 2.1.0 or newer is required.
 `gdal` can be installed with `apt-get`.
 
     sudo apt update
-    sudo apt install libgdal-dev gdal-bin
+    sudo apt install libgdal-dev
 
 ### On macOS
 [Download GDAL](http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.4.dmg)
-and install the `.dmg` file. Update your `PATH` after the installation by
-running this command:
-
-    export PATH="$PATH:/Library/Frameworks/GDAL.framework/Programs"
-
-Copy it in your `~/.profile`.
+and install the `.dmg` file.
 
 ## Other dependencies (fftw, libtiff)
 

@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     cmake \
-    gdal-bin \
     libfftw3-dev \
     libgdal-dev \
     libgeotiff-dev \
