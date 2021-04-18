@@ -40,6 +40,7 @@ from s2p import pointing_accuracy
 from s2p import rectification
 from s2p import block_matching
 from s2p import masking
+from s2p import ply
 from s2p import triangulation
 from s2p import fusion
 from s2p import visualisation
@@ -246,7 +247,6 @@ def disparity_to_ply(tile):
     """
     out_dir = tile['dir']
     ply_file = os.path.join(out_dir, 'cloud.ply')
-    plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     x, y, w, h = tile['coordinates']
     rpc1 = cfg['images'][0]['rpcm']
     rpc2 = cfg['images'][1]['rpcm']
@@ -285,22 +285,22 @@ def disparity_to_ply(tile):
     with rasterio.open(mask_rect, 'r') as f:
         mask_rect_img = f.read().squeeze()
 
-    pyproj_out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
-    proj_com = "CRS {}".format(cfg['out_crs'])
+    out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
     xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
                                                np.loadtxt(H_ref), np.loadtxt(H_sec),
                                                disp_img, mask_rect_img,
-                                               pyproj_out_crs,
+                                               out_crs,
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
-    triangulation.filter_xyz_and_write_to_ply(ply_file, xyz_array,
-                                              cfg['3d_filtering_r'], cfg['3d_filtering_n'],
-                                              cfg['gsd'], colors,
-                                              proj_com, confidence=extra)
+    # 3D filtering
+    r = cfg['3d_filtering_r']
+    n = cfg['3d_filtering_n']
+    if r and n:
+        triangulation.filter_xyz(xyz_array, r, n, cfg['gsd'])
 
-    # compute the point cloud extrema (xmin, xmax, xmin, ymax)
-    common.run("plyextrema %s %s" % (ply_file, plyextrema))
+    proj_com = "CRS {}".format(cfg['out_crs'])
+    triangulation.write_to_ply(ply_file, xyz_array, colors, proj_com, confidence=extra)
 
     if cfg['clean_intermediate']:
         common.remove(H_ref)
@@ -392,7 +392,6 @@ def heights_to_ply(tile):
     out_dir = tile['dir']
     x, y, w, h = tile['coordinates']
     plyfile = os.path.join(out_dir, 'cloud.ply')
-    plyextrema = os.path.join(out_dir, 'plyextrema.txt')
     height_map = os.path.join(out_dir, 'height_map.tif')
 
     if cfg['images'][0]['clr']:
@@ -404,11 +403,19 @@ def heights_to_ply(tile):
 
         colors = common.linear_stretching_and_quantization_8bit(colors)
 
-    triangulation.height_map_to_point_cloud(plyfile, height_map,
-                                            cfg['images'][0]['rpcm'], x, y, colors)
+    out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
+    xyz_array = triangulation.height_map_to_xyz(height_map,
+                                                cfg['images'][0]['rpcm'], x, y,
+                                                out_crs)
 
-    # compute the point cloud extrema (xmin, xmax, xmin, ymax)
-    common.run("plyextrema %s %s" % (plyfile, plyextrema))
+    # 3D filtering
+    r = cfg['3d_filtering_r']
+    n = cfg['3d_filtering_n']
+    if r and n:
+        triangulation.filter_xyz(xyz_array, r, n, cfg['gsd'])
+
+    proj_com = "CRS {}".format(cfg['out_crs'])
+    triangulation.write_to_ply(plyfile, xyz_array, colors, proj_com)
 
     if cfg['clean_intermediate']:
         common.remove(height_map)
@@ -425,11 +432,12 @@ def plys_to_dsm(tile):
     out_dsm  = os.path.join(tile['dir'], 'dsm.tif')
     out_conf = os.path.join(tile['dir'], 'confidence.tif')
     r = cfg['dsm_resolution']
-    xmin, xmax, ymin, ymax = np.loadtxt(os.path.join(tile['dir'],
-                                                     "plyextrema.txt"))
 
-    if not all(np.isfinite([xmin, xmax, ymin, ymax])):  # then the ply is empty
-        return
+    # compute the point cloud x, y bounds
+    points, _ = ply.read_3d_point_cloud_from_ply(os.path.join(tile['dir'],
+                                                              'cloud.ply'))
+    xmin, ymin, *_ = np.min(points, axis=0)
+    xmax, ymax, *_ = np.max(points, axis=0)
 
     # compute xoff, yoff, xsize, ysize on a grid of unit r
     xoff = np.floor(xmin / r) * r

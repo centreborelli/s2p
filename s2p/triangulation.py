@@ -81,9 +81,10 @@ class RPCStruct(ctypes.Structure):
 	# initialization factor for iterative localization
         self.delta = delta
 
+
 def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=None):
     """
-    Compute a height map from a disparity map, using RPC camera models.
+    Compute a 3D coordinates map from a disparity map, using RPC camera models.
 
     Args:
         rpc1, rpc2 (rpcm.RPCModel): camera models
@@ -155,6 +156,61 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=No
         xyz_array = lonlatalt
 
     return xyz_array, err
+
+
+def height_map_to_xyz(heights, rpc, off_x=0, off_y=0, out_crs=None):
+    """
+    Compute a 3D coordinates map from a height map, using an RPC camera model.
+
+    Args:
+        heights: height map, sampled on a subset of the image grid, starting at
+            given offset
+        rpc: instances of the rpcm.RPCModel class
+        off_{x,y} (optional, default 0): coordinates of the origin of the crop
+            we are dealing with in the pixel coordinates of the original full
+            size image
+        out_crs (pyproj.crs.CRS): object defining the desired coordinate
+            reference system for the output xyz map
+
+    Returns:
+        xyz: array of shape (h, w, 3) where each pixel contains the 3D
+            coordinates of the triangulated point in the coordinate system
+            defined by `out_crs`
+    """
+    with rasterio.open(heights) as src:
+        h_map = src.read(1)
+
+    h, w = h_map.shape
+
+    heights = h_map.ravel()
+    indices = np.indices((h, w))
+
+    non_nan_ind = np.where(~np.isnan(heights))[0]
+
+    alts = heights[non_nan_ind]
+    cols = indices[1].ravel()[non_nan_ind]
+    rows = indices[0].ravel()[non_nan_ind]
+
+    cols = cols + off_x
+    rows = rows + off_y
+
+    # localize pixels
+    lons = np.empty_like(heights, dtype=np.float64)
+    lats = np.empty_like(heights, dtype=np.float64)
+    lons[non_nan_ind], lats[non_nan_ind] = rpc.localization(cols, rows, alts)
+
+    # output CRS conversion
+    in_crs = geographiclib.pyproj_crs("epsg:4979")
+
+    if out_crs and out_crs != in_crs:
+        x, y, z = geographiclib.pyproj_transform(lons, lats,
+                                                 in_crs, out_crs, heights)
+    else:
+        x, y, z = lons, lats, heights
+
+    xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3)
+
+    return xyz_array
 
 
 def stereo_corresp_to_xyz(rpc1, rpc2, pts1, pts2, out_crs=None):
@@ -318,30 +374,22 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
     return out
 
 
-def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors=None, proj_com='', confidence=''):
+def write_to_ply(path_to_ply_file, xyz, colors=None, proj_com='', confidence=''):
     """
-    Filter points that have less than n points closer than r units (ex: meters) and write them in a .ply file
+    Write raster of 3D point coordinates as a 3D point cloud in a .ply file
 
     Args:
         path_to_ply_file (str): path to a .ply file
         xyz (array): 3D array of shape (h, w, 3) where each pixel contains the
             x, y, and z  coordinates of a 3D point.
-        r (float): filtering radius, in the unit of the CRS (ex: meters)
-        n (int): filtering threshold, in number of points
-        img_gsd (float): ground sampling distance, in units of the CRS (ex: meters) / pix
         colors (np.array): colors image, optional
         proj_com (str): projection comment in the .ply file
         confidence (str): path to an image containig a confidence map, optional
     """
-    # 3D filtering
-    if r and n:
-        filter_xyz(xyz, r, n, img_gsd)
-
     # flatten the xyz array into a list and remove nan points
     xyz_list = xyz.reshape(-1, 3)
     valid = np.all(np.isfinite(xyz_list), axis=1)
 
-    # write the point cloud to a ply file
     if colors is not None:
         colors_list = colors.transpose(1, 2, 0).reshape(-1, colors.shape[0])[valid]
     else:
@@ -364,58 +412,3 @@ def filter_xyz_and_write_to_ply(path_to_ply_file, xyz, r, n, img_gsd, colors=Non
                                     extra_properties_names=extra_names,
                                     comments=["created by S2P",
                                               "projection: {}".format(proj_com)])
-
-
-def height_map_to_point_cloud(cloud, heights, rpc, off_x=None, off_y=None,
-                              crop_colorized=None):
-    """
-    Computes a color point cloud from a height map.
-
-    Args:
-        cloud: path to the output points cloud (ply format)
-        heights: height map, sampled on the same grid as the crop_colorized
-            image. In particular, its size is the same as crop_colorized.
-        rpc: instances of the rpcm.RPCModel class
-        off_{x,y} (optional, default None): coordinates of the origin of the crop
-            we are dealing with in the pixel coordinates of the original full
-            size image
-        crop_colorized (np.array): colors image, optional
-    """
-    with rasterio.open(heights) as src:
-        h_map = src.read(1)
-        h, w = h_map.shape
-
-    heights = h_map.ravel()
-    indices = np.indices((h, w))
-
-    non_nan_ind = np.where(~np.isnan(heights))[0]
-
-    alts = heights[non_nan_ind]
-    cols = indices[1].ravel()[non_nan_ind]
-    rows = indices[0].ravel()[non_nan_ind]
-
-    if off_x or off_y:
-        cols = cols + (off_x or 0)
-        rows = rows + (off_y or 0)
-
-    # localize pixels
-    lons = np.empty_like(heights, dtype=np.float64)
-    lats = np.empty_like(heights, dtype=np.float64)
-    lons[non_nan_ind], lats[non_nan_ind] = rpc.localization(cols, rows, alts)
-
-    # output CRS conversion
-    in_crs = geographiclib.pyproj_crs("epsg:4979")
-    out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
-    proj_com = "CRS {}".format(cfg['out_crs'])
-
-    if out_crs != in_crs:
-        x, y, z = geographiclib.pyproj_transform(lons, lats,
-                                                 in_crs, out_crs, heights)
-    else:
-        x, y, z = lons, lats, heights
-
-    xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3)
-
-    filter_xyz_and_write_to_ply(cloud, xyz_array, cfg['3d_filtering_r'],
-                                cfg['3d_filtering_n'], cfg['gsd'],
-                                crop_colorized, proj_com)
