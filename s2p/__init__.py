@@ -263,15 +263,21 @@ def disparity_to_ply(tile):
     mask_orig = os.path.join(out_dir, 'mask.png')
 
     # prepare the image needed to colorize point cloud
-    colors = os.path.join(out_dir, 'rectified_ref.png')
     if cfg['images'][0]['clr']:
-        hom = np.loadtxt(H_ref)
-        # we want rectified_ref.png and rectified_ref.tif to have the same size
+        # we want colors image and rectified_ref.tif to have the same size
         with rasterio.open(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif')) as f:
             ww, hh = f.width, f.height
-        common.image_apply_homography(colors, cfg['images'][0]['clr'], hom, ww, hh)
+
+        colors = common.tmpfile(".tif")
+        common.image_apply_homography(colors, cfg['images'][0]['clr'],
+                                      np.loadtxt(H_ref), ww, hh)
+        with rasterio.open(colors, "r") as f:
+            colors = f.read()
+
     else:
-        common.image_qauto(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'), colors)
+        with rasterio.open(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif')) as f:
+            img = f.read()
+        colors = common.linear_stretching_and_quantization_8bit(img)
 
     # compute the point cloud
     with rasterio.open(disp, 'r') as f:
@@ -288,12 +294,9 @@ def disparity_to_ply(tile):
                                                img_bbx=(x, x+w, y, y+h),
                                                A=np.loadtxt(pointing))
 
-    with rasterio.open(colors, "r") as f:
-        colors_raster = f.read()
-
     triangulation.filter_xyz_and_write_to_ply(ply_file, xyz_array,
                                               cfg['3d_filtering_r'], cfg['3d_filtering_n'],
-                                              cfg['gsd'], colors_raster,
+                                              cfg['gsd'], colors,
                                               proj_com, confidence=extra)
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
@@ -305,7 +308,6 @@ def disparity_to_ply(tile):
         common.remove(disp)
         common.remove(mask_rect)
         common.remove(mask_orig)
-        common.remove(colors)
         common.remove(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'))
 
 

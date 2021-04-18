@@ -212,23 +212,6 @@ def image_apply_homography(out, im, H, w, h):
     run(["homography", im, "-h", hij, out, "%d" % w, "%d" % h])
 
 
-def image_qauto(im, out=None):
-    """
-    Uniform requantization between min and max intensity.
-
-    Args:
-        im: path to input image
-        out (optional, default is None): path to output image
-
-    Returns:
-        path of requantized image, saved as png
-    """
-    if out is None:
-        out = tmpfile('.png')
-    run('qauto %s %s' % (im, out))
-    return out
-
-
 def points_apply_homography(H, pts):
     """
     Applies an homography to a list of 2D points.
