@@ -126,7 +126,7 @@ def rectification_pair(tile, i):
     except IOError:
         m = None
 
-    cur_dir = os.path.join(tile['dir'],'pair_{}'.format(i))
+    cur_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
     for n in tile['neighborhood_dirs']:
         nei_dir = os.path.join(tile['dir'], n, 'pair_{}'.format(i))
         if os.path.exists(nei_dir) and not os.path.samefile(cur_dir, nei_dir):
@@ -156,7 +156,7 @@ def rectification_pair(tile, i):
     np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'H_sec.txt'), H2, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
-                            fmt='%3.1f')
+               fmt='%3.1f')
 
     if cfg['clean_intermediate']:
         common.remove(os.path.join(out_dir, 'pointing.txt'))
@@ -255,7 +255,7 @@ def disparity_to_ply(tile):
     H_ref = os.path.join(out_dir, 'pair_1', 'H_ref.txt')
     H_sec = os.path.join(out_dir, 'pair_1', 'H_sec.txt')
     pointing = os.path.join(cfg['out_dir'], 'global_pointing_pair_1.txt')
-    disp  = os.path.join(out_dir, 'pair_1', 'rectified_disp.tif')
+    disp = os.path.join(out_dir, 'pair_1', 'rectified_disp.tif')
     extra = os.path.join(out_dir, 'pair_1', 'rectified_disp_confidence.tif')
     if not os.path.exists(extra):    # confidence file not always generated
         extra = ''
@@ -429,7 +429,7 @@ def plys_to_dsm(tile):
     Args:
         tile: a dictionary that provides all you need to process a tile
     """
-    out_dsm  = os.path.join(tile['dir'], 'dsm.tif')
+    out_dsm = os.path.join(tile['dir'], 'dsm.tif')
     out_conf = os.path.join(tile['dir'], 'confidence.tif')
     r = cfg['dsm_resolution']
 
@@ -613,14 +613,13 @@ def make_path_relative_to_file(path, f):
 
 
 def read_tiles(tiles_file):
-    tiles = []
     outdir = os.path.dirname(tiles_file)
 
     with open(tiles_file) as f:
         tiles = f.readlines()
 
     # Strip trailing \n
-    tiles = list(map(str.strip,tiles))
+    tiles = list(map(str.strip, tiles))
     tiles = [os.path.join(outdir, t) for t in tiles]
 
     return tiles
