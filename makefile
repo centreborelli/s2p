@@ -92,7 +92,7 @@ msmw2:
 # rules to build the programs under the source directory
 #
 
-SRCIIO   = downsa backflow qauto morsi cldmask remove_small_cc\
+SRCIIO   = backflow qauto morsi cldmask remove_small_cc\
            plambda pview morphoop
 PROGRAMS = $(addprefix bin/,$(SRCIIO))
 
