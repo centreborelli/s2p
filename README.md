@@ -93,6 +93,15 @@ You can test if S2P is correctly working using:
 
     make test
 
+If the libraries needed by `s2p` (such as `libfftw3`) are installed in a custom location, 
+the tests may fail with exit status 127 or mentioning not being able to load shared 
+libaries. The following invocation can be used then on Linux:
+
+    LD_LIBRARY_PATH=/path/to/your/custom/lib make test
+
+and the same for the `s2p` command later. One macOS one may use instead 
+`DYLD_FALLBACK_LIBRARY_PATH`.
+
 ## Docker image
 [![Docker Status](http://dockeri.co/image/cmla/s2p)](https://hub.docker.com/r/cmla/s2p/)
 
