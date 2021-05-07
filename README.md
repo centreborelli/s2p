@@ -93,11 +93,17 @@ You can test if S2P is correctly working using:
 
     make test
 
-If the libraries needed by `s2p` (such as `libfftw3`) are installed in a custom location, 
-the tests may fail with exit status 127 or mentioning not being able to load shared 
-libaries. The following invocation can be used then on Linux:
+If some libraries needed by `s2p` (such as `libfftw3`) are installed in a custom location,
+for example `/usr/joe/local`, then the compilation and tests will fail with exit status 127
+or mentioning not being able to load shared  libaries.  You can help the compiler to find
+these libraries by defining the following variables:
 
-    LD_LIBRARY_PATH=/path/to/your/custom/lib make test
+    export CPATH=/usr/joe/local/include
+    export LIBRARY_PATH=/usr/joe/local/lib
+    
+The following invocation can be used then on Linux:
+
+    LD_LIBRARY_PATH=/usr/joe/local/lib make test
 
 and the same for the `s2p` command later. One macOS one may use instead 
 `DYLD_FALLBACK_LIBRARY_PATH`.
