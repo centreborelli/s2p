@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     //! Other checking
     OptStruct od = {"d:", 0, NULL, NULL, "mindist flag and value"}; options.push_back(&od);
     OptStruct oT = {"t:", 0, NULL, NULL, "mindist dilatation flag"}; options.push_back(&oT);
-    OptStruct oD = {"D:", 0, NULL, NULL, "REGRESSION MINDISS flag"}; options.push_back(&oD);
+    OptStruct oD = {"D:", 0, NULL, NULL, "regression mindist flag"}; options.push_back(&oD);
     
     OptStruct oS = {"s:", 0, NULL, NULL, "self similarity flag and value"}; options.push_back(&oS);
     OptStruct oB = {"b:", 0, NULL, NULL, "integral of derivatives"}; options.push_back(&oB);
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     
     OptStruct oO = {"o:", 0, "0", NULL, "remove isolated flag"}; options.push_back(&oO);
     OptStruct oOg = {"O:", 0, "0", NULL, "remove isolated grain (# pixels)"}; options.push_back(&oOg);
-    OptStruct oC = {"C:", 0, "-1", NULL, "filter using the cost, train removing a fraction of the accepted points (ej. 0.05)"}; options.push_back(&oC);
+    OptStruct oC = {"C:", 0, "-1", NULL, "filter using the cost, train removing a fraction of the accepted points (e.g. 0.05)"}; options.push_back(&oC);
 	
 	OptStruct oA = {"a:", 0, NULL, NULL, "use laplacian of the image instead of the image itself"}; options.push_back(&oA);
     
@@ -64,12 +64,12 @@ int main(int argc, char **argv)
 	OptStruct oc = {"c:", 0, NULL, NULL, "combine last scale with the previous one to densify the result"}; options.push_back(&oc);
     
 	vector<ParStruct2 *> parameters;
-	ParStruct2 pinput = {"image1", NULL, "intput left image",0}; parameters.push_back(&pinput);
+	ParStruct2 pinput = {"image1", NULL, "input left image",0}; parameters.push_back(&pinput);
 	ParStruct2 pinput2 = {"image2", NULL, "input right image",0}; parameters.push_back(&pinput2);
 	ParStruct2 poutput = {"output", NULL, "output disparity",0}; parameters.push_back(&poutput);
-	ParStruct2 pmask = {"mask", NULL, "outptut mask",0}; parameters.push_back(&pmask);
+	ParStruct2 pmask = {"mask", NULL, "output mask",0}; parameters.push_back(&pmask);
 	ParStruct2 poutput2 = {"outputr", NULL, "right output disparity",1}; parameters.push_back(&poutput2);
-	ParStruct2 pmask2 = {"maskr", NULL, "right outptut mask",1}; parameters.push_back(&pmask2);
+	ParStruct2 pmask2 = {"maskr", NULL, "right output mask",1}; parameters.push_back(&pmask2);
     
 	
 	

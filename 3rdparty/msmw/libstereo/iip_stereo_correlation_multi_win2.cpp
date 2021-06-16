@@ -54,16 +54,16 @@ int main(int argc, char **argv)
     
     OptStruct oO = {"o:", 0, "0", NULL, "remove isolated flag"}; options.push_back(&oO);
     OptStruct oOg = {"O:", 0, "0", NULL, "remove isolated grain (# pixels)"}; options.push_back(&oOg);
-    OptStruct oC = {"C:", 0, "-1", NULL, "filter using the cost, train removing a fraction of the accepted points (ej. 0.05)"}; options.push_back(&oC);
+    OptStruct oC = {"C:", 0, "-1", NULL, "filter using the cost, train removing a fraction of the accepted points (e.g. 0.05)"}; options.push_back(&oC);
 	
 	OptStruct oA = {"a:", 0, NULL, NULL, "use laplacian of the image instead of the image itself"}; options.push_back(&oA);
     
     
 	vector<ParStruct *> parameters;
-	ParStruct pinput = {"image1", NULL, "intput left image"}; parameters.push_back(&pinput);
+	ParStruct pinput = {"image1", NULL, "input left image"}; parameters.push_back(&pinput);
 	ParStruct pinput2 = {"image2", NULL, "input right image"}; parameters.push_back(&pinput2);
 	ParStruct poutput = {"output", NULL, "output disparity"}; parameters.push_back(&poutput);
-	ParStruct pmask = {"mask", NULL, "outptut mask"}; parameters.push_back(&pmask);
+	ParStruct pmask = {"mask", NULL, "output mask"}; parameters.push_back(&pmask);
     
 	
 	
