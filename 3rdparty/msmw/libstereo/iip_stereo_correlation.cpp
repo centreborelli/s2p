@@ -55,10 +55,10 @@ int main(int argc, char **argv)
     
     
 	vector<ParStruct *> parameters;
-	ParStruct pinput = {"image1", NULL, "intput left image"}; parameters.push_back(&pinput);
+	ParStruct pinput = {"image1", NULL, "input left image"}; parameters.push_back(&pinput);
 	ParStruct pinput2 = {"image2", NULL, "input right image"}; parameters.push_back(&pinput2);
 	ParStruct poutput = {"output", NULL, "output disparity"}; parameters.push_back(&poutput);
-	ParStruct pmask = {"mask", NULL, "outptut mask"}; parameters.push_back(&pmask);
+	ParStruct pmask = {"mask", NULL, "output mask"}; parameters.push_back(&pmask);
     
 	
 	
