@@ -1,17 +1,17 @@
-# s2p.sift testing module
+# s2p_aidash.sift testing module
 # Copyright (C) 2019, Carlo de Franchis (CMLA) <carlo.de-franchis@ens-paris-saclay.fr>
 # Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
 import numpy as np
 import rpcm
 
-from s2p import sift
+from s2p_aidash import sift
 from tests_utils import data_path
 
 
 def test_image_keypoints():
     """
-    Unit test for the function s2p.sift.image_keypoints.
+    Unit test for the function s2p_aidash.sift.image_keypoints.
 
     Right now it tests only the x, y, scale, orientation of keypoints, not the
     descriptors.
@@ -24,7 +24,7 @@ def test_image_keypoints():
 
 def test_matching():
     """
-    Unit test for the function s2p.sift.keypoints_match.
+    Unit test for the function s2p_aidash.sift.keypoints_match.
     """
     computed = sift.keypoints_match(np.loadtxt(data_path('units/sift1.txt')),
                                     np.loadtxt(data_path('units/sift2.txt')))

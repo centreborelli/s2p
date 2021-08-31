@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from s2p import parallel
+from s2p_aidash import parallel
 
 
 def raise_exception(t, e):

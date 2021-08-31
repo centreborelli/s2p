@@ -1,4 +1,4 @@
-# s2p (Satellite Stereo Pipeline) testing module
+# s2p_aidash (Satellite Stereo Pipeline) testing module
 
 import math
 

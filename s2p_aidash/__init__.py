@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# s2p - Satellite Stereo Pipeline
+# s2p_aidash - Satellite Stereo Pipeline
 # Copyright (C) 2015, Carlo de Franchis <carlo.de-franchis@polytechnique.org>
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
@@ -30,18 +30,18 @@ import rasterio
 from plyflatten import plyflatten_from_plyfiles_list
 
 
-from s2p.config import cfg
-from s2p import common
-from s2p import parallel
-from s2p import geographiclib
-from s2p import initialization
-from s2p import pointing_accuracy
-from s2p import rectification
-from s2p import block_matching
-from s2p import masking
-from s2p import triangulation
-from s2p import fusion
-from s2p import visualisation
+from s2p_aidash.config import cfg
+from s2p_aidash import common
+from s2p_aidash import parallel
+from s2p_aidash import geographiclib
+from s2p_aidash import initialization
+from s2p_aidash import pointing_accuracy
+from s2p_aidash import rectification
+from s2p_aidash import block_matching
+from s2p_aidash import masking
+from s2p_aidash import triangulation
+from s2p_aidash import fusion
+from s2p_aidash import visualisation
 
 
 def pointing_correction(tile, i):
@@ -237,7 +237,7 @@ def disparity_to_ply(tile):
     """
     Compute a point cloud from the disparity map of a pair of image tiles.
 
-    This function is called by s2p.main only if there are two input images (not
+    This function is called by s2p_aidash.main only if there are two input images (not
     three).
 
     Args:
@@ -515,7 +515,7 @@ def global_dsm(tiles):
 
 def main(user_cfg):
     """
-    Launch the s2p pipeline with the parameters given in a json file.
+    Launch the s2p_aidash pipeline with the parameters given in a json file.
 
     Args:
         user_cfg: user config dictionary

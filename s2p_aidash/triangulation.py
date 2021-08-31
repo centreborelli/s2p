@@ -10,10 +10,10 @@ import numpy as np
 from scipy import ndimage
 import rasterio
 
-from s2p import common
-from s2p.config import cfg
-from s2p import ply
-from s2p import geographiclib
+from s2p_aidash import common
+from s2p_aidash.config import cfg
+from s2p_aidash import ply
+from s2p_aidash import geographiclib
 
 here = os.path.dirname(os.path.abspath(__file__))
 lib_path = os.path.join(os.path.dirname(here), 'lib', 'disp_to_h.so')

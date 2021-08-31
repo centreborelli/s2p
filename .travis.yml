@@ -54,7 +54,7 @@ jobs:
       language: generic
 
     - stage: deploy
-      if: tag IS present AND repo = cmla/s2p
+      if: tag IS present AND repo = cmla/s2p_aidash
       install: skip
       script: skip
       deploy:

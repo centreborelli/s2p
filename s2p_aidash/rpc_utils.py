@@ -10,9 +10,9 @@ import numpy as np
 import rpcm
 import srtm4
 
-from s2p import geographiclib
-from s2p import common
-from s2p.config import cfg
+from s2p_aidash import geographiclib
+from s2p_aidash import common
+from s2p_aidash.config import cfg
 
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 

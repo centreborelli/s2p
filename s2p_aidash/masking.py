@@ -8,7 +8,7 @@ import numpy as np
 import warnings
 import rasterio
 
-from s2p import common
+from s2p_aidash import common
 
 # silent rasterio NotGeoreferencedWarning
 warnings.filterwarnings("ignore",

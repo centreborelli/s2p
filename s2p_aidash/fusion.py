@@ -9,8 +9,8 @@ import shutil
 import numpy as np
 import rasterio
 
-from s2p.config import cfg
-from s2p import common
+from s2p_aidash.config import cfg
+from s2p_aidash import common
 
 
 def average_if_close(x, threshold):

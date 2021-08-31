@@ -11,12 +11,12 @@ import rasterio
 import numpy as np
 import rpcm
 
-from s2p import common
-from s2p import geographiclib
-from s2p import rpc_utils
-from s2p import masking
-from s2p import parallel
-from s2p.config import cfg
+from s2p_aidash import common
+from s2p_aidash import geographiclib
+from s2p_aidash import rpc_utils
+from s2p_aidash import masking
+from s2p_aidash import parallel
+from s2p_aidash.config import cfg
 
 # This function is here as a workaround to python bug #24313 When
 # using python3, json does not know how to serialize numpy.int64 on
@@ -38,7 +38,7 @@ def dict_has_keys(d, l):
 
 def check_parameters(d):
     """
-    Check that the provided dictionary defines all mandatory s2p arguments.
+    Check that the provided dictionary defines all mandatory s2p_aidash arguments.
 
     Args:
         d: python dictionary
@@ -98,7 +98,7 @@ def check_parameters(d):
 
 def build_cfg(user_cfg):
     """
-    Populate a dictionary containing the s2p parameters from a user config file.
+    Populate a dictionary containing the s2p_aidash parameters from a user config file.
 
     This dictionary is contained in the global variable 'cfg' of the config
     module.
@@ -142,7 +142,7 @@ def build_cfg(user_cfg):
 
 def make_dirs():
     """
-    Create directories needed to run s2p.
+    Create directories needed to run s2p_aidash.
     """
     common.mkdir_p(cfg['out_dir'])
     common.mkdir_p(os.path.expandvars(cfg['temporary_dir']))

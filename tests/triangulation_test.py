@@ -3,9 +3,9 @@ import shutil
 
 import pytest
 
-from s2p import disparity_to_ply, read_config_file
-from s2p.initialization import build_cfg
-from s2p.ply import read_3d_point_cloud_from_ply
+from s2p_aidash import disparity_to_ply, read_config_file
+from s2p_aidash.initialization import build_cfg
+from s2p_aidash.ply import read_3d_point_cloud_from_ply
 from tests_utils import data_path
 
 
@@ -19,7 +19,7 @@ def test_disparity_to_ply(tmp_path, out_crs):
     tile_dir = str(tmp_path / "tile_dir")
     shutil.copytree(data_path("input_triangulation"), tile_dir)
 
-    # Initialize s2p's state
+    # Initialize s2p_aidash's state
     config_file = data_path(os.path.join("input_pair", "config.json"))
     test_cfg = read_config_file(config_file)
     test_cfg["out_crs"] = out_crs
