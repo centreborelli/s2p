@@ -12,8 +12,8 @@ import rasterio as rio
 from numpy.ctypeslib import ndpointer
 import ransac
 
-from s2p import rpc_utils
-from s2p import estimation
+from s2p_aidash import rpc_utils
+from s2p_aidash import estimation
 
 # Locate sift4ctypes library and raise an ImportError if it can not be
 # found This call will raise an exception if library can not be found,
@@ -252,7 +252,7 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h,
             image. (x, y) is the top-left corner, and (w, h) are the dimensions
             of the rectangle.
         method, sift_thresh, epipolar_threshold: see docstring of
-            s2p.sift.keypoints_match()
+            s2p_aidash.sift.keypoints_match()
 
     Returns:
         matches: 2D numpy array containing a list of matches. Each line

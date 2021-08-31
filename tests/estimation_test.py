@@ -4,7 +4,7 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import numpy as np
-import s2p
+import s2p_aidash
 
 
 def rotation_matrix(t):
@@ -54,6 +54,6 @@ def test_affine_transformation():
         A[:2, :] = np.random.random((2, 3))
 
     for B in translations + isometries + similarities + affinities:
-        xx = s2p.common.points_apply_homography(B, x)
-        E = s2p.estimation.affine_transformation(x, xx)
+        xx = s2p_aidash.common.points_apply_homography(B, x)
+        E = s2p_aidash.estimation.affine_transformation(x, xx)
         np.testing.assert_array_almost_equal(E, B)

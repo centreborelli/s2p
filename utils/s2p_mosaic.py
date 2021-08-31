@@ -17,8 +17,8 @@ import os
 import json
 import argparse
 
-import s2p
-from s2p import common
+import s2p_aidash
+from s2p_aidash import common
 
 
 def vrt_body_source(fname,band,src_x,src_y,src_w,src_h,dst_x,dst_y,dst_w,dst_h):
@@ -213,7 +213,7 @@ def main(tiles_file,outfile,sub_img):
     vrt_name = os.path.join(outfile_dirname,vrt_basename)
 
     # Read the tiles file
-    tiles = s2p.read_tiles(tiles_file)
+    tiles = s2p_aidash.read_tiles(tiles_file)
 
     print(str(len(tiles))+' tiles found')
 

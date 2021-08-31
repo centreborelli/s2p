@@ -4,7 +4,7 @@
 # Copyright (C) 2013, Julien Michel <julien.michel@cnes.fr>
 
 # This module contains a dictionary, cfg, containing all the parameters of the
-# s2p pipeline. This dictionary is updated at runtime with parameters defined
+# s2p_aidash pipeline. This dictionary is updated at runtime with parameters defined
 # by the user in the config.json file. All the optional parameters (that the
 # user is not forced to define in config.json) must be defined here, otherwise
 # they won't have a default value.
@@ -17,7 +17,7 @@ cfg['out_dir'] = "s2p_output"
 # path to directory where (many) temporary files will be stored
 cfg['temporary_dir'] = "s2p_tmp"
 
-# temporary files are erased when s2p terminates. Switch to False to keep them
+# temporary files are erased when s2p_aidash terminates. Switch to False to keep them
 cfg['clean_tmp'] = True
 
 # remove all generated files except from ply point clouds and tif raster dsm
@@ -26,7 +26,7 @@ cfg['clean_intermediate'] = False
 # switch to True if you want to process the whole image
 cfg['full_img'] = False
 
-# s2p processes the images tile by tile. The tiles are squares cropped from the
+# s2p_aidash processes the images tile by tile. The tiles are squares cropped from the
 # reference image. The width and height of the tiles are given by this param, in pixels.
 cfg['tile_size'] = 800
 

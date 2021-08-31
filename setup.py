@@ -20,7 +20,7 @@ class CustomDevelop(develop.develop, object):
 
 class CustomBuildPy(build_py.build_py, object):
     """
-    Class needed for "pip install s2p"
+    Class needed for "pip install s2p_aidash"
     """
     def run(self):
         super(CustomBuildPy, self).run()
@@ -59,13 +59,13 @@ extras_require = {
     "test": ["pytest", "pytest-cov", "psutil"],
 }
 
-setup(name="s2p",
-      version="1.0b26dev",
+setup(name="s2p_aidash",
+      version="1.0.0",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
-      url='https://github.com/cmla/s2p',
-      packages=['s2p'],
+      url='https://github.com/aidash/s2p_aidash',
+      packages=['s2p_aidash'],
       install_requires=requirements,
       extras_require=extras_require,
       cmdclass={'develop': CustomDevelop,
@@ -74,5 +74,5 @@ setup(name="s2p",
       python_requires=">=3",
       entry_points="""
           [console_scripts]
-          s2p=s2p.cli:main
+          s2p_aidash=s2p_aidash.cli:main
       """)

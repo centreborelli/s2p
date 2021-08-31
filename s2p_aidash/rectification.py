@@ -8,12 +8,12 @@ import warnings
 
 import numpy as np
 
-from s2p import rpc_utils
-from s2p import estimation
-from s2p import evaluation
-from s2p import common
-from s2p import visualisation
-from s2p.config import cfg
+from s2p_aidash import rpc_utils
+from s2p_aidash import estimation
+from s2p_aidash import evaluation
+from s2p_aidash import common
+from s2p_aidash import visualisation
+from s2p_aidash.config import cfg
 
 
 class NoRectificationMatchesError(Exception):

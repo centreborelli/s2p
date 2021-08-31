@@ -5,8 +5,8 @@
 import numpy as np
 import rasterio
 
-from s2p import common
-from s2p import rpc_utils
+from s2p_aidash import common
+from s2p_aidash import rpc_utils
 
 
 def plot_line(im, x1, y1, x2, y2, colour):

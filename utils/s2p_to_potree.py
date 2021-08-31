@@ -20,8 +20,8 @@ import subprocess
 
 from bs4 import BeautifulSoup
 
-import s2p
-from s2p import common
+import s2p_aidash
+from s2p_aidash import common
 
 
 def tmpfile(ext='', tmpdir='tmp'):
@@ -115,7 +115,7 @@ def produce_potree(s2p_outdirs_list, potreeoutdir):
     Produce a single multiscale point cloud for the whole processed region.
 
     Args:
-        s2poutdirs_list: list of s2p output directories
+        s2poutdirs_list: list of s2p_aidash output directories
     """
     basedir = os.path.dirname(os.path.abspath(__file__))
     test_for_potree(os.path.join(basedir, 'PotreeConverter_PLY_toolchain/'))
@@ -130,9 +130,9 @@ def produce_potree(s2p_outdirs_list, potreeoutdir):
     regex = re.compile("Potree\.loadPointCloud\(.*\);", re.DOTALL)
     cloudoutdir = os.path.join(potreeoutdir, "cloud.potree")
 
-    # Produce a "cloud_?.html" file for all given s2p outdirs
+    # Produce a "cloud_?.html" file for all given s2p_aidash outdirs
     for i, s2p_outdir in enumerate(s2p_outdirs_list):
-        tiles = s2p.read_tiles(os.path.join(s2p_outdir, 'tiles.txt'))
+        tiles = s2p_aidash.read_tiles(os.path.join(s2p_outdir, 'tiles.txt'))
         print(str(len(tiles))+' tiles found')
 
         # collect all plys
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: potree generation tool'))
 
     parser.add_argument('s2pout', nargs='+',
-                        help=('path(s) to the s2p output directory(ies)'))
+                        help=('path(s) to the s2p_aidash output directory(ies)'))
     parser.add_argument('--outdir', metavar='potree_outdir', default='.',
                         help=('path to output directory'))
     args = parser.parse_args()

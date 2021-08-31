@@ -6,8 +6,8 @@ import sys
 import traceback
 import multiprocessing
 
-from s2p import common
-from s2p.config import cfg
+from s2p_aidash import common
+from s2p_aidash.config import cfg
 
 
 def show_progress(a):

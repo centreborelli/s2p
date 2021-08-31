@@ -24,10 +24,10 @@ import datetime
 import subprocess
 
 
-import s2p
-from s2p.config import cfg
-from s2p import common
-from s2p import initialization
+import s2p_aidash
+from s2p_aidash.config import cfg
+from s2p_aidash import common
+from s2p_aidash import initialization
 
 
 def write_svg_tilemap(filename, cfg, tiles):
@@ -70,7 +70,7 @@ def write_svg_tilemap(filename, cfg, tiles):
 
 def main(user_cfg):
     """
-    Recompute the s2p tile geometry for the config file
+    Recompute the s2p_aidash tile geometry for the config file
     and produce an svg representing the tiles
 
     Args:
@@ -97,10 +97,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('generate svg tilemap for S2P'))
     parser.add_argument('config', metavar='config.json',
                         help=('path to a json file containing the paths to '
-                              'input and output files and the s2p algorithm '
+                              'input and output files and the s2p_aidash algorithm '
                               'parameters'))
     args = parser.parse_args()
 
-    user_cfg = s2p.read_config_file(args.config)
+    user_cfg = s2p_aidash.read_config_file(args.config)
 
     main(user_cfg)

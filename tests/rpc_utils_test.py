@@ -1,11 +1,11 @@
-# s2p (Satellite Stereo Pipeline) testing module
+# s2p_aidash (Satellite Stereo Pipeline) testing module
 
 import os
 import numpy as np
 import rpcm
 import pytest
 
-from s2p import rpc_utils
+from s2p_aidash import rpc_utils
 from tests_utils import data_path
 
 

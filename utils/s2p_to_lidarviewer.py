@@ -18,8 +18,8 @@ import json
 import argparse
 import subprocess
 
-import s2p
-from s2p import common
+import s2p_aidash
+from s2p_aidash import common
 
 
 
@@ -87,7 +87,7 @@ def produce_lidarviewer(s2poutdir, output):
     tiles_file = os.path.join(s2poutdir, 'tiles.txt')
 
     # Read the tiles file
-    tiles = s2p.read_tiles(tiles_file)
+    tiles = s2p_aidash.read_tiles(tiles_file)
     print(str(len(tiles))+' tiles found')
 
     # collect all plys
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('S2P: lidarviewer generation tool'))
 
     parser.add_argument('s2pout',metavar='s2poutdir',
-                        help=('path to the s2p output directory'))
+                        help=('path to the s2p_aidash output directory'))
     parser.add_argument('outdir',metavar='potreeoutdir', default='',nargs='?',
                         help=('path to output lidarviewer (default: current dir)'))
     args = parser.parse_args()

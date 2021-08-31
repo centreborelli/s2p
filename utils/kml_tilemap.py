@@ -29,8 +29,8 @@ import gdal
 import numpy as np
 import rpcm
 
-import s2p
-from s2p import common
+import s2p_aidash
+from s2p_aidash import common
 
 def pix_2_latlon(gt, px, py, zone_number, northern):
     x = px * gt[1] + gt[0]
@@ -97,7 +97,7 @@ def get_coordinates_with_img(img):
     return [pix_2_latlon(gt, x[0], x[1], zone_number, northern) for x in roi]
 
 def get_coordinates_with_config(tile, m, M):
-    tile_cfg = s2p.read_config_file(os.path.join(tile, "config.json"))
+    tile_cfg = s2p_aidash.read_config_file(os.path.join(tile, "config.json"))
 
     x = tile_cfg['roi']['x']
     y = tile_cfg['roi']['y']
@@ -182,7 +182,7 @@ def write_tiles_polygon(tile, kml, m=None, M=None, message=None, error_mode=Fals
         color = simplekml.Color.green
         head_style = green_style
 
-    tile_cfg = s2p.read_config_file(os.path.join(tile, "config.json"))
+    tile_cfg = s2p_aidash.read_config_file(os.path.join(tile, "config.json"))
     x = tile_cfg['roi']['x']
     y = tile_cfg['roi']['y']
     w = tile_cfg['roi']['w']

@@ -1,4 +1,4 @@
-# s2p (Satellite Stereo Pipeline) testing module
+# s2p_aidash (Satellite Stereo Pipeline) testing module
 # Copyright (C) 2017, Carlo de Franchis <carlo.de-franchis@polytechnique.org>
 # Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
@@ -8,8 +8,8 @@ import glob
 import numpy as np
 from plyflatten import plyflatten_from_plyfiles_list
 
-import s2p
-from s2p import common
+import s2p_aidash
+from s2p_aidash import common
 from tests_utils import data_path
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -60,10 +60,10 @@ def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
 
     # TODO: this is ugly, and will be fixed once we'll have implemented a better
     # way to control the config parameters
-    if 'out_crs' in s2p.cfg: del s2p.cfg['out_crs']
+    if 'out_crs' in s2p_aidash.cfg: del s2p_aidash.cfg['out_crs']
 
-    test_cfg = s2p.read_config_file(config_file)
-    s2p.main(test_cfg)
+    test_cfg = s2p_aidash.read_config_file(config_file)
+    s2p_aidash.main(test_cfg)
 
     outdir = test_cfg['out_dir']
 
@@ -74,9 +74,9 @@ def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
 
 
 def end2end_mosaic(config_file, ref_height_map, absmean_tol=0.025, percentile_tol=1.):
-    test_cfg = s2p.read_config_file(config_file)
+    test_cfg = s2p_aidash.read_config_file(config_file)
     outdir = test_cfg['out_dir']
-    s2p.main(test_cfg)
+    s2p_aidash.main(test_cfg)
 
     tiles_file = os.path.join(outdir, 'tiles.txt')
     global_height_map = os.path.join(outdir, 'height_map.tif')
@@ -107,8 +107,8 @@ def test_end2end_mosaic():
 def test_distributed_plyflatten():
 
     print('Running end2end with distributed plyflatten dsm ...')
-    test_cfg = s2p.read_config_file(data_path('input_triplet/config.json'))
-    s2p.main(test_cfg)
+    test_cfg = s2p_aidash.read_config_file(data_path('input_triplet/config.json'))
+    s2p_aidash.main(test_cfg)
 
     outdir = test_cfg['out_dir']
     computed = common.gdal_read_as_array_with_nans(os.path.join(outdir,

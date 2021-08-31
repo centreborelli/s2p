@@ -18,7 +18,7 @@ import os
 import tempfile
 
 import rpcm
-from s2p import common
+from s2p_aidash import common
 
 available_filters = ['near', 'bilinear',
                      'cubic', 'cubicspline', 'lanczos', 'average']

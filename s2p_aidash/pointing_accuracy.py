@@ -7,10 +7,10 @@
 import os
 import numpy as np
 
-from s2p import sift
-from s2p import rpc_utils
-from s2p import estimation
-from s2p.config import cfg
+from s2p_aidash import sift
+from s2p_aidash import rpc_utils
+from s2p_aidash import estimation
+from s2p_aidash.config import cfg
 
 
 def error_vectors(m, F, ind='ref'):
@@ -114,7 +114,7 @@ def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
             of the rectangle. The ROI may be as big as you want. If bigger than
             1 Mpix, only five crops will be used to compute sift matches.
         method, sift_thresh, epipolar_threshold: see docstring of
-            s2p.sift.keypoints_match()
+            s2p_aidash.sift.keypoints_match()
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to img2 in

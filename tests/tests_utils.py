@@ -1,8 +1,8 @@
-# s2p (Satellite Stereo Pipeline) testing module
+# s2p_aidash (Satellite Stereo Pipeline) testing module
 # Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
 import os
-import s2p
+import s2p_aidash
 
 
 def data_path(p):
