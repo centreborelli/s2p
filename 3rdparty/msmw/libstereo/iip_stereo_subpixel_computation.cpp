@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 	
 	
 	vector<ParStruct *> parameters;
-	ParStruct pinput = {"image1", NULL, "intput left image"}; parameters.push_back(&pinput);
+	ParStruct pinput = {"image1", NULL, "input left image"}; parameters.push_back(&pinput);
 	ParStruct pinput2 = {"image2", NULL, "input right image"}; parameters.push_back(&pinput2);
 	
 	ParStruct pidisp = {"idisparity", NULL, "input disparity"}; parameters.push_back(&pidisp);
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
 	ParStruct podisp = {"odisp", NULL, "output disparity"}; parameters.push_back(&podisp);
 	//ParStruct podist = {"odist", NULL, "output disparity"}; parameters.push_back(&podist);
-	ParStruct pmask = {"omask", NULL, "outptut mask"}; parameters.push_back(&pmask);
+	ParStruct pmask = {"omask", NULL, "output mask"}; parameters.push_back(&pmask);
 	//ParStruct pparameters = {"parameters", NULL, "input parameters file"}; parameters.push_back(&pparameters);
 	
 	

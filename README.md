@@ -50,6 +50,9 @@ On macOS:
 
     brew install fftw libtiff
 
+If lacking administrative privedges to run `sudo`, all these dependencies exist as conda 
+packages and can be installed in a user directory. Then the path to them can be specified
+in the s2p makefiles if compiling it from source. 
 
 # Installation
 
