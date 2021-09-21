@@ -149,6 +149,8 @@ cfg['stereo_regularity_multiplier'] = 1.0
 cfg['mgm_nb_directions'] = 8
 # timeout in seconds, after which a running mgm process will be killed
 cfg['mgm_timeout'] = 600
+# distance threshold (in pixels) for the left-right consistency test
+cfg['mgm_leftright_threshold'] = 1.0
 
 # remove isolated 3d points in height maps
 cfg['3d_filtering_r'] = None  # radius in meters
