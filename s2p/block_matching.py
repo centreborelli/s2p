@@ -156,6 +156,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
         env['TSGM'] = '3'
+        env['TESTLRRL_TAU'] = str(cfg['mgm_leftright_threshold'])
 
         nb_dir = cfg['mgm_nb_directions']
 
@@ -219,6 +220,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         env['SUBPIX'] = '2'
         env['MEDIAN'] = '1'
         env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
+        env['TESTLRRL_TAU'] = str(cfg['mgm_leftright_threshold'])
         # it is required that p2 > p1. The larger p1, p2, the smoother the disparity
         regularity_multiplier = cfg['stereo_regularity_multiplier']
 
@@ -265,6 +267,7 @@ def compute_disparity_map(im1, im2, disp, mask, algo, disp_min=None,
         env['MINDIFF'] = '1'
         env['CENSUS_NCC_WIN'] = str(cfg['census_ncc_win'])
         env['SUBPIX'] = '2'
+        env['TESTLRRL_TAU'] = str(cfg['mgm_leftright_threshold'])
         # it is required that p2 > p1. The larger p1, p2, the smoother the disparity
         regularity_multiplier = cfg['stereo_regularity_multiplier']
 
