@@ -501,7 +501,7 @@ def global_dsm(tiles):
                              bounds=bounds,
                              res=cfg["dsm_resolution"],
                              nodata=np.nan,
-                             indexes=1,
+                             indexes=[1],
                              dst_path=os.path.join(cfg["out_dir"], "dsm.tif"),
                              dst_kwds=creation_options)
 
@@ -510,7 +510,7 @@ def global_dsm(tiles):
                              bounds=bounds,
                              res=cfg["dsm_resolution"],
                              nodata=np.nan,
-                             indexes=1,
+                             indexes=[1],
                              dst_path=os.path.join(cfg["out_dir"], "confidence.tif"),
                              dst_kwds=creation_options)
 
