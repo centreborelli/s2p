@@ -67,9 +67,11 @@ def check_parameters(d):
             img['rpcm'] = rpcm.rpc_from_geotiff(img['img'])
 
     # verify that an input ROI is defined
-    if 'full_img' in d and d['full_img']:
-        sz = common.image_size_gdal(d['images'][0]['img'])
-        d['roi'] = {'x': 0, 'y': 0, 'w': sz[0], 'h': sz[1]}
+    if d.get("full_img"):
+        with rasterio.open(d['images'][0]['img'], "r") as f:
+            width = f.width
+            height = f.height
+        d['roi'] = {'x': 0, 'y': 0, 'w': width, 'h': height}
     elif 'roi' in d and dict_has_keys(d['roi'], ['x', 'y', 'w', 'h']):
         pass
     elif 'roi_geojson' in d:

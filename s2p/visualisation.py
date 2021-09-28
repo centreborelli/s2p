@@ -48,23 +48,17 @@ def plot_line(im, x1, y1, x2, y2, colour):
     return im
 
 
-def plot_matches_low_level(im1, im2, matches, outfile):
+def plot_matches_low_level(img1, img2, matches, outfile):
     """
     Displays two images side by side with matches highlighted
 
     Args:
-        im1, im2: paths to the two input images
+        img1, img2 (np.array): two input images
         matches: 2D numpy array of size 4xN containing a list of matches (a
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2)
         outfile (str): path where to write the resulting image, to be displayed
     """
-    # load images
-    with rasterio.open(im1, 'r') as f:
-        img1 = f.read().squeeze()
-    with rasterio.open(im2, 'r') as f:
-        img2 = f.read().squeeze()
-
     # transform single channel to 3-channels
     if img1.ndim < 3:
         img1 = np.dstack([img1] * 3)
@@ -111,10 +105,9 @@ def plot_matches_low_level(im1, im2, matches, outfile):
     common.rasterio_write(outfile, out)
 
 
-def plot_matches(im1, im2, rpc1, rpc2, matches, outfile, x=None, y=None,
-                 w=None, h=None):
+def plot_matches(im1, im2, rpc1, rpc2, matches, outfile, x, y, w, h):
     """
-    Plot matches on Pleiades images
+    Plot keypoint matches on images corresponding ROIs.
 
     Args:
         im1, im2: paths to full Pleiades images
@@ -123,7 +116,7 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, outfile, x=None, y=None,
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2). The coordinates are given in the frame of the full images.
         outfile: path to the output file
-        x, y, w, h (optional, default is None): ROI in the reference image
+        x, y, w, h (ints): ROI in the reference image
 
     Returns:
         path to the displayed output
@@ -133,51 +126,21 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, outfile, x=None, y=None,
         print("visualisation.plot_matches: nothing to plot")
         return
 
-    # determine regions to crop in im1 and im2
-    if x is not None:
-        x1 = x
-    else:
-        x1 = np.min(matches[:, 0])
-
-    if y is not None:
-        y1 = y
-    else:
-        y1 = np.min(matches[:, 1])
-
-    if w is not None:
-        w1 = w
-    else:
-        w1 = np.max(matches[:, 0]) - x1
-
-    if h is not None:
-        h1 = h
-    else:
-        h1 = np.max(matches[:, 1]) - y1
-
-    x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x1, y1, w1, h1)
-    # x2 = np.min(matches[:, 2])
-    # w2 = np.max(matches[:, 2]) - x2
-    # y2 = np.min(matches[:, 3])
-    # h2 = np.max(matches[:, 3]) - y2
-
-    # # add 20 pixels offset and round. The image_crop_gdal function will round
-    # # off the coordinates before it does the crops.
-    # x1 -= 20; x1 = np.round(x1)
-    # y1 -= 20; y1 = np.round(y1)
-    # x2 -= 20; x2 = np.round(x2)
-    # y2 -= 20; y2 = np.round(y2)
-    # w1 += 40; w1 = np.round(w1)
-    # h1 += 40; h1 = np.round(h1)
-    # w2 += 40; w2 = np.round(w2)
-    # h2 += 40; h2 = np.round(h2)
+    x1, y1, w1, h1 = x, y, w, h
+    x2, y2, w2, h2 = map(int, rpc_utils.corresponding_roi(rpc1, rpc2, x1, y1, w1, h1))
 
     # do the crops
-    crop1 = common.image_qauto(common.image_crop_gdal(im1, x1, y1, w1, h1))
-    crop2 = common.image_qauto(common.image_crop_gdal(im2, x2, y2, w2, h2))
+    with rasterio.open(im1, "r") as f:
+        crop1 = f.read(window=((y1, y1 + h1), (x1, x1 + w1)))
+    with rasterio.open(im2, "r") as f:
+        crop2 = f.read(window=((y2, y2 + h2), (x2, x2 + w2)))
+
+    crop1 = common.linear_stretching_and_quantization_8bit(crop1)
+    crop2 = common.linear_stretching_and_quantization_8bit(crop2)
 
     # compute matches coordinates in the cropped images
-    pts1 = matches[:, 0:2] - [x1, y1]
-    pts2 = matches[:, 2:4] - [x2, y2]
+    pts1 = matches[:, :2] - [x1, y1]
+    pts2 = matches[:, 2:] - [x2, y2]
 
     # plot the matches on the two crops
     plot_matches_low_level(crop1, crop2, np.hstack((pts1, pts2)), outfile)
