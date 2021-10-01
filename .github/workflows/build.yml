@@ -1,0 +1,20 @@
+name: build
+
+on: [push]
+
+jobs:
+
+  python-packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install libgdal-dev gdal-bin libfftw3-dev
+      - uses: actions/checkout@v2
+        with:
+            submodules: true
+      - name: Build sdist
+        run: python setup.py sdist
+      - name: Test sdist install
+        run: pip install dist/*.tar.gz
