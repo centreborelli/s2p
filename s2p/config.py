@@ -151,10 +151,13 @@ cfg['mgm_nb_directions'] = 8
 cfg['mgm_timeout'] = 600
 # distance threshold (in pixels) for the left-right consistency test
 cfg['mgm_leftright_threshold'] = 1.0
-# controls the mgm left-right consistency check. 0: disabled, 1 (default): enabled at all scales, 2: enables only at the last scale (faster)
+# controls the mgm left-right consistency check. 0: disabled
+#                                                1 (default): enabled at all scales
+#                                                2: enables only at the last scale (faster)
 cfg['mgm_leftright_control'] = 1
-# controls the mgm mindiff filter check. 1 (default): enabled produces conservative results, -1: disabled (produce denser maps)
-cfg['mgm_mindiff_control'] = 1
+# controls the mgm mindiff filter check. -1: disabled (default), produce denser maps
+#                                         1: enabled, produce conservative results
+cfg['mgm_mindiff_control'] = -1
 
 # remove isolated 3d points in height maps
 cfg['3d_filtering_r'] = None  # radius in meters
