@@ -7,6 +7,7 @@ import sys
 import glob
 import numpy as np
 from plyflatten import plyflatten_from_plyfiles_list
+import pytest
 
 import s2p
 from s2p import common
@@ -55,8 +56,6 @@ def compare_dsm(computed, expected, absmean_tol, percentile_tol):
 
 
 def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
-    print('Configuration file: ', config_file)
-    print('Reference DSM:', ref_dsm, os.linesep)
 
     # TODO: this is ugly, and will be fixed once we'll have implemented a better
     # way to control the config parameters
@@ -73,22 +72,6 @@ def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
     compare_dsm(computed, expected, absmean_tol, percentile_tol)
 
 
-def end2end_mosaic(config_file, ref_height_map, absmean_tol=0.025, percentile_tol=1.):
-    test_cfg = s2p.read_config_file(config_file)
-    outdir = test_cfg['out_dir']
-    s2p.main(test_cfg)
-
-    tiles_file = os.path.join(outdir, 'tiles.txt')
-    global_height_map = os.path.join(outdir, 'height_map.tif')
-
-    s2p_mosaic.main(tiles_file, global_height_map, 'pair_1/height_map.tif')
-
-    computed = common.rio_read_as_array_with_nans(global_height_map)
-    expected = common.rio_read_as_array_with_nans(ref_height_map)
-
-    compare_dsm(computed, expected, absmean_tol, percentile_tol)
-
-
 def test_end2end_pair():
     end2end(data_path('input_pair/config.json'),
             data_path('expected_output/pair/dsm.tif'), 0.025, 1)
@@ -99,31 +82,34 @@ def test_end2end_triplet():
             data_path('expected_output/triplet/dsm.tif'), 0.05, 2)
 
 
-def test_end2end_mosaic():
-    end2end_mosaic(data_path('input_triplet/config.json'),
-                   data_path('expected_output/triplet/height_map.tif'), 0.05, 2)
+def test_mosaic(tmp_path):
+
+    test_cfg = s2p.read_config_file(data_path('input_triplet/config.json'))
+
+    # we assume that test_end2end_triplet has already run
+    s2p_mosaic.main(os.path.join(test_cfg['out_dir'], 'tiles.txt'),
+                    os.path.join(tmp_path, 'height_map.tif'),
+                    'pair_1/height_map.tif')
+
+    computed = common.rio_read_as_array_with_nans(os.path.join(tmp_path, 'height_map.tif'))
+    expected = common.rio_read_as_array_with_nans(data_path('expected_output/triplet/height_map.tif'))
+
+    compare_dsm(computed, expected, absmean_tol=0.05, percentile_tol=2)
 
 
 def test_distributed_plyflatten():
 
-    print('Running end2end with distributed plyflatten dsm ...')
     test_cfg = s2p.read_config_file(data_path('input_triplet/config.json'))
-    s2p.main(test_cfg)
 
-    outdir = test_cfg['out_dir']
-    computed = common.rio_read_as_array_with_nans(os.path.join(outdir,
+    # we assume that test_end2end_triplet has already run
+    computed = common.rio_read_as_array_with_nans(os.path.join(test_cfg['out_dir'],
                                                                'dsm.tif'))
 
-    print('Running plyflatten dsm reference ...')
-
-    clouds_list = glob.glob(os.path.join(outdir, "tiles", "*", "*", "cloud.ply"))
-
-    res = test_cfg['dsm_resolution']
-    roi = None
-
+    clouds_list = glob.glob(os.path.join(test_cfg["out_dir"], "tiles", "*",
+                                         "*", "cloud.ply"))
     raster, _ = plyflatten_from_plyfiles_list(clouds_list,
-                                              resolution=res,
-                                              roi=roi)
+                                              resolution=test_cfg['dsm_resolution'],
+                                              roi=None)
     expected = raster[:, :, 0]
 
     compare_dsm(computed, expected, 0, 0)
