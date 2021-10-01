@@ -113,25 +113,9 @@ def matrix_translation(x, y):
     return t
 
 
-def image_size_gdal(im):
+def rio_read_as_array_with_nans(im):
     """
-    Read the width, height and pixel dimension of an image using rasterio.
-
-    Args:
-        im: path to the input image file
-
-    Returns:
-        w, h, pd: a tuple of length 3
-    """
-    with rasterio.open(im, 'r') as f:
-        y, x = f.shape
-        pd = f.count
-    return x, y, pd
-
-
-def gdal_read_as_array_with_nans(im):
-    """
-    Read an image replacing gdal NoDataValue with np.nan
+    Read an image replacing gdal nodata value with np.nan
 
     Args:
         im: path to the input image file
@@ -148,26 +132,6 @@ def gdal_read_as_array_with_nans(im):
             band[band == nodata] = np.nan
 
     return array.squeeze()
-
-
-def image_zoom_out_morpho(im, f):
-    """
-    Image zoom out by morphological operation (median).
-
-    Args:
-        im: path to the input image
-        f: zoom out factor. It has to be a positive integer
-
-    Returns:
-        path to the output image
-    """
-    if (f != np.floor(f)):
-        print('image_zoom_out_morpho: zoom factor has to be integer')
-        sys.exit()
-
-    out = tmpfile('.tif')
-    run('downsa e %d %s %s' % (f, im, out))
-    return out
 
 
 def rasterio_write(path, array, profile={}, tags={}):
@@ -226,23 +190,6 @@ def image_apply_homography(out, im, H, w, h):
 
     # apply the homography
     run(["homography", im, "-h", hij, out, "%d" % w, "%d" % h])
-
-
-def image_qauto(im, out=None):
-    """
-    Uniform requantization between min and max intensity.
-
-    Args:
-        im: path to input image
-        out (optional, default is None): path to output image
-
-    Returns:
-        path of requantized image, saved as png
-    """
-    if out is None:
-        out = tmpfile('.png')
-    run('qauto %s %s' % (im, out))
-    return out
 
 
 def points_apply_homography(H, pts):
@@ -311,44 +258,6 @@ def crop_array(img, x, y, w, h, fill_value=0):
         crop[y0 - y:y1 - y, x0 - x:x1 - x] = img[y0:y1, x0:x1]
 
     return crop
-
-
-def image_crop_gdal(im, x, y, w, h, out=None):
-    """
-    Crop an image using gdal_translate.
-
-    Args:
-        im: path to an image file
-        x, y, w, h: four integers definig the rectangular crop in the image.
-            (x, y) is the top-left corner, and (w, h) are the dimensions of the
-            rectangle.
-        out (optional): path to the output crop
-
-    Returns:
-        path to cropped tif image
-    """
-    if int(x) != x or int(y) != y:
-        print('WARNING: image_crop_gdal will round the coordinates of your crop')
-
-    if out is None:
-        out = tmpfile('.tif')
-
-    # do the crop with gdal_translate
-    run(
-        [
-            "gdal_translate",
-            "-ot", "Float32",
-            "-co", "TILED=YES",
-            "-co", "BIGTIFF=IF_NEEDED",
-            "-srcwin",
-            "%d" % x,
-            "%d" % y,
-            "%d" % w,
-            "%d" % h,
-            im, out,
-        ]
-    )
-    return out
 
 
 def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
@@ -420,3 +329,19 @@ def print_elapsed_time(since_first_call=False):
             print("Elapsed time:", t2 - print_elapsed_time.t0)
     print_elapsed_time.t1 = t2
     print()
+
+
+def linear_stretching_and_quantization_8bit(img, p=1):
+    """
+    Simple 8-bit quantization with linear stretching.
+
+    Args:
+        img (np.array): image to quantize
+        p (float): percentage of the darkest and brightest pixels to saturate,
+            from 0 to 100.
+
+    Returns:
+        numpy array with the quantized uint8 image
+    """
+    a, b = np.nanpercentile(img, (p, 100 - p))
+    return np.round(255 * (np.clip(img, a, b) - a) / (b - a)).astype(np.uint8)

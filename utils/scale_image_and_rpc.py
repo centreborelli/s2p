@@ -17,6 +17,7 @@ import sys
 import os
 import tempfile
 
+import rasterio
 import rpcm
 from s2p import common
 
@@ -55,9 +56,9 @@ if __name__ == "__main__":
     print("Generating {} ...".format(out_img_file))
 
     # First get input image size
-    sz = common.image_size_gdal(in_img_file)
-    w = sz[0]
-    h = sz[1]
+    with rasterio.open(in_img_file, "r") as f:
+        w = f.width
+        h = f.height
 
     # Generate a temporary vrt file to have the proper geotransform
     fd, tmp_vrt = tempfile.mkstemp(suffix='.vrt',

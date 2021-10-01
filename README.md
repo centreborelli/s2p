@@ -1,6 +1,7 @@
 # S2P - Satellite Stereo Pipeline
 
-[![Build Status](https://travis-ci.com/cmla/s2p.svg?branch=master)](https://travis-ci.com/cmla/s2p)
+![Build Status](https://github.com/centreborelli/s2p/actions/workflows/build.yml/badge.svg)
+![Tests Status](https://github.com/centreborelli/s2p/actions/workflows/tests.yml/badge.svg)
 [![PyPI version](https://img.shields.io/pypi/v/s2p)](https://pypi.org/project/s2p)
 
 S2P is a Python library and command line tool that implements a stereo
@@ -34,16 +35,11 @@ The main dependency is GDAL. Version 2.1.0 or newer is required.
 `gdal` can be installed with `apt-get`.
 
     sudo apt update
-    sudo apt install libgdal-dev gdal-bin
+    sudo apt install libgdal-dev
 
 ### On macOS
 [Download GDAL](http://www.kyngchaos.com/files/software/frameworks/GDAL_Complete-2.4.dmg)
-and install the `.dmg` file. Update your `PATH` after the installation by
-running this command:
-
-    export PATH="$PATH:/Library/Frameworks/GDAL.framework/Programs"
-
-Copy it in your `~/.profile`.
+and install the `.dmg` file.
 
 ## Other dependencies (fftw, libtiff)
 

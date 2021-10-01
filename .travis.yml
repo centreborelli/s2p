@@ -10,7 +10,6 @@ addons:
     sources:
       - sourceline: 'ppa:ubuntugis/ppa'
     packages:
-      - gdal-bin
       - libfftw3-dev
       - libgdal-dev
   homebrew:
