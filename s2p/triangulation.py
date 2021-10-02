@@ -82,20 +82,23 @@ class RPCStruct(ctypes.Structure):
         self.delta = delta
 
 
-def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=None):
+def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None,
+                out_crs=None):
     """
     Compute a 3D coordinates map from a disparity map, using RPC camera models.
 
     Args:
         rpc1, rpc2 (rpcm.RPCModel): camera models
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
-        disp, mask (array): 2D arrays of shape (h, w) representing the diparity
-            and mask maps
-        out_crs (pyproj.crs.CRS): object defining the desired coordinate reference system for the
-            output xyz map
+        disp, mask_rect (array): 2D arrays of shape (h, w) representing the
+            diparity and mask maps
         img_bbx (4-tuple): col_min, col_max, row_min, row_max defining the
-            unrectified image domain to process.
+            unrectified image domain to process
+        mask_orig (array): 2D array representing the unrectified image validity
+            domain
         A (array): 3x3 array with the pointing correction matrix for im2
+        out_crs (pyproj.crs.CRS): object defining the desired coordinate
+            reference system for the output xyz map
 
     Returns:
         xyz: array of shape (h, w, 3) where each pixel contains the 3D
@@ -108,37 +111,38 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, out_crs=None, img_bbx=None, A=No
     rpc1_c_struct = RPCStruct(rpc1)
     rpc2_c_struct = RPCStruct(rpc2)
 
-    # handle optional arguments
     if A is not None:  # apply pointing correction
         H2 = np.dot(H2, np.linalg.inv(A))
 
-    if img_bbx is None:
-        img_bbx = (-np.inf, np.inf, -np.inf, np.inf)
-
     # define the argument types of the disp_to_lonlatalt function from disp_to_h.so
     h, w = disp.shape
+    hh, ww = mask_orig.shape
     lib.disp_to_lonlatalt.argtypes = (ndpointer(dtype=c_double, shape=(h, w, 3)),
-                                ndpointer(dtype=c_float, shape=(h, w)),
-                                ndpointer(dtype=c_float, shape=(h, w)),
-                                ndpointer(dtype=c_float, shape=(h, w)),
-                                ndpointer(dtype=c_float, shape=(h, w)),
-                                c_int, c_int,
-                                ndpointer(dtype=c_double, shape=(9,)),
-                                ndpointer(dtype=c_double, shape=(9,)),
-                                POINTER(RPCStruct), POINTER(RPCStruct),
-                                ndpointer(dtype=c_float, shape=(4,)))
+                                      ndpointer(dtype=c_float, shape=(h, w)),
+                                      ndpointer(dtype=c_float, shape=(h, w)),
+                                      ndpointer(dtype=c_float, shape=(h, w)),
+                                      ndpointer(dtype=c_float, shape=(h, w)),
+                                      c_int, c_int,
+                                      ndpointer(dtype=c_float, shape=(hh, ww)),
+                                      c_int, c_int,
+                                      ndpointer(dtype=c_double, shape=(9,)),
+                                      ndpointer(dtype=c_double, shape=(9,)),
+                                      POINTER(RPCStruct), POINTER(RPCStruct),
+                                      ndpointer(dtype=c_float, shape=(4,)))
 
 
     # call the disp_to_lonlatalt function from disp_to_h.so
-    lonlatalt =  np.zeros((h, w, 3), dtype='float64')
-    err =  np.zeros((h, w), dtype='float32')
+    lonlatalt = np.zeros((h, w, 3), dtype='float64')
+    err = np.zeros((h, w), dtype='float32')
     dispx = disp.astype('float32')
     dispy = np.zeros((h, w), dtype='float32')
-    msk = mask.astype('float32')
-    lib.disp_to_lonlatalt(lonlatalt, err, dispx, dispy, msk, w, h,
-                    H1.flatten(), H2.flatten(),
-                    byref(rpc1_c_struct), byref(rpc2_c_struct),
-                    np.asarray(img_bbx, dtype='float32'))
+    msk_rect = mask_rect.astype('float32')
+    msk_orig = mask_orig.astype('float32')
+    lib.disp_to_lonlatalt(lonlatalt, err, dispx, dispy, msk_rect, w, h,
+                          msk_orig, ww, hh,
+                          H1.flatten(), H2.flatten(),
+                          byref(rpc1_c_struct), byref(rpc2_c_struct),
+                          np.asarray(img_bbx, dtype='float32'))
 
     # output CRS conversion
     in_crs = geographiclib.pyproj_crs("epsg:4979")
@@ -339,7 +343,7 @@ def filter_xyz(xyz, r, n, img_gsd):
     remove_isolated_3d_points(xyz, r, p, n)
 
 
-def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
+def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, mask_orig, A=None):
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -351,12 +355,23 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, A=None):
         H1, H2 (arrays): 3x3 numpy arrays defining the rectifying homographies
         disp, mask (array): 2D arrays of shape (h, w) representing the diparity
             and mask maps
+        mask_orig (array): 2D array representing the unrectified image validity
+            domain
         A (array): 3x3 array with the pointing correction matrix for im2
 
     Returns:
         array of shape (h, w) with the height map
     """
-    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask, A=A)
+    # padding width for mask_orig
+    # the rectangular tile in original image is extended by p pixels in both
+    # directions to avoid border effects when resampling the height map from
+    # rectified domain to original domain
+    p = 1
+
+    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask,
+                           img_bbx=(x-p, x+w+2*p, y-p, y+h+2*p),
+                           mask_orig=np.pad(mask_orig, p, constant_values=1),
+                           A=A, out_crs=None)
     height_map = xyz[:, :, 2].squeeze()
 
     # transfer the rectified height map onto an unrectified height map

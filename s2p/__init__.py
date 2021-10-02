@@ -214,6 +214,7 @@ def disparity_to_height(tile, i):
     H_sec = np.loadtxt(os.path.join(out_dir, 'H_sec.txt'))
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
+    mask_orig = os.path.join(tile['dir'], 'mask.png')
     pointing = os.path.join(cfg['out_dir'],
                             'global_pointing_pair_{}.txt'.format(i))
 
@@ -221,8 +222,11 @@ def disparity_to_height(tile, i):
         disp_img = f.read().squeeze()
     with rasterio.open(mask, 'r') as f:
         mask_rect_img = f.read().squeeze()
+    with rasterio.open(mask_orig, 'r') as f:
+        mask_orig_img = f.read().squeeze()
     height_map = triangulation.height_map(x, y, w, h, rpc1, rpc2, H_ref, H_sec,
                                           disp_img, mask_rect_img,
+                                          mask_orig_img,
                                           A=np.loadtxt(pointing))
 
     # write height map to a file
@@ -284,14 +288,17 @@ def disparity_to_ply(tile):
         disp_img = f.read().squeeze()
     with rasterio.open(mask_rect, 'r') as f:
         mask_rect_img = f.read().squeeze()
+    with rasterio.open(mask_orig, 'r') as f:
+        mask_orig_img = f.read().squeeze()
 
     out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
     xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
                                                np.loadtxt(H_ref), np.loadtxt(H_sec),
                                                disp_img, mask_rect_img,
-                                               out_crs,
                                                img_bbx=(x, x+w, y, y+h),
-                                               A=np.loadtxt(pointing))
+                                               mask_orig=mask_orig_img,
+                                               A=np.loadtxt(pointing),
+                                               out_crs=out_crs)
 
     # 3D filtering
     r = cfg['3d_filtering_r']
