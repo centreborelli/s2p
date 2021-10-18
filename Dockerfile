@@ -1,8 +1,13 @@
-FROM ubuntu:latest
-MAINTAINER Carlo de Franchis <carlodef@gmail.com>
+FROM ubuntu:20.04
+
+LABEL maintainer="Carlo de Franchis <carlodef@gmail.com>"
+
 # https://goo.gl/aypXVx
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
+# https://github.com/mapbox/rasterio#ssl-certs
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     cmake \
@@ -10,10 +15,9 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libgeotiff-dev \
     libtiff5-dev \
-    python3-dev
-
-# Install pip
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py
+    python3-dev \
+    python3-pip && \
+    rm -fr /var/lib/apt/lists/*
 
 # Copy files needed to install s2p
 WORKDIR /root
@@ -26,7 +30,5 @@ COPY bin/ bin/
 COPY lib/ lib/
 
 # Install s2p
-RUN pip install -e .
+RUN pip install --no-cache-dir -e .
 
-# https://github.com/mapbox/rasterio#ssl-certs
-ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
