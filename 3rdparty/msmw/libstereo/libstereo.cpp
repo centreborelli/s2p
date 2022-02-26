@@ -935,9 +935,11 @@ namespace libIIPStable {
                prolate[f]( prolate[f].offx[i] , 
                      prolate[f].offy[i] ) = w5[f][2*w5_lens[f] + i];
             }
-            char stri[1024];
-            sprintf(stri, "p%d.tif", f);
-            prolate[f].save(stri);
+            if (STEREOVERBOSE) {
+              char stri[1024];
+              sprintf(stri, "p%d.tif", f);
+              prolate[f].save(stri);
+            }
          }
 
       }
@@ -1052,8 +1054,10 @@ namespace libIIPStable {
 		}
 
 		
-      odist.save("debug_dists_left.tif");
-      odistr.save("debug_dists_right.tif");
+                if (STEREOVERBOSE) {
+                  odist.save("debug_dists_left.tif");
+                  odistr.save("debug_dists_right.tif");
+                }
 		
 
 
@@ -1137,31 +1141,34 @@ namespace libIIPStable {
             stereo_cost_filter(odist, omask, discard_threshold, oBin);
             stereo_cost_filter(odistr, omask2, discard_threshold, oBin2);
             
-            oBin.save("debug_cost_histogram0.tif");
-            omask.save("debug_cost_histogram1.tif");
-
+            if (STEREOVERBOSE) {
+              oBin.save("debug_cost_histogram0.tif");
+              omask.save("debug_cost_histogram1.tif");
+            }
+            
             for (int i=0; i < omask.wh(); i++) if (oBin[i] <= 0) omask[i] = oBin[i];
             for (int i=0; i < omask2.wh(); i++) if (oBin2[i] <= 0) omask2[i] = oBin2[i];
 
-            omask.save("debug_cost_histogram2.tif");
+            if (STEREOVERBOSE) {
+              omask.save("debug_cost_histogram2.tif");
+            }
             
         }
 
 
 
 
-
-		// TODO:  DEBUG REMOVE THIS
-		char stri[1024];
-		 sprintf(stri, "win%d.tif", strPar.currentScale);
-		oChoice.save(stri);
-		 sprintf(stri, "disp%d.tif", strPar.currentScale);
-      odisp.save(stri);
-		 sprintf(stri, "cost%d.tif", strPar.currentScale);
-      odist.save(stri);
-		 sprintf(stri, "mask%d.tif", strPar.currentScale);
-      omask.save(stri);
-		
+        if (STEREOVERBOSE) {
+          char stri[1024];
+          sprintf(stri, "win%d.tif", strPar.currentScale);
+          oChoice.save(stri);
+          sprintf(stri, "disp%d.tif", strPar.currentScale);
+          odisp.save(stri);
+          sprintf(stri, "cost%d.tif", strPar.currentScale);
+          odist.save(stri);
+          sprintf(stri, "mask%d.tif", strPar.currentScale);
+          omask.save(stri);
+        }
 		
 		
       // Update min and max
