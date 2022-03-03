@@ -276,7 +276,7 @@ int cc_postprocess(int w, int h, float *img, float *msk, float *out, float *outm
       if(maxerr< MAXERR && vmax-vmin< MAXDIFF ) {
          for(int i = 0;i<pixels.size();i++) {
             int idx = pixels[i].x + pixels[i].y*w;
-            float vv[3] = {pixels[i].x, pixels[i].y, 0};
+            float vv[3] = {float(pixels[i].x), float(pixels[i].y), float(0.0)};
             out[idx] = eval_model(3, vv, model);
             outmsk[idx] = 254;
          }
