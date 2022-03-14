@@ -1767,11 +1767,12 @@ void compute_subpixel_match_multiple_windows_one_direction( cflimage *images1, c
          }
 
 
-
-         for(int f=0; f<nprol; f++) {
-            char stri[1024];
-            sprintf(stri, "prolate%d.tif", f);
-            prolates[f].save(stri);
+         if (STEREOVERBOSE) {
+           for(int f=0; f<nprol; f++) {
+             char stri[1024];
+             sprintf(stri, "prolate%d.tif", f);
+             prolates[f].save(stri);
+           }
          }
 
       }
@@ -2039,9 +2040,10 @@ void compute_subpixel_match_multiple_windows_one_direction( cflimage *images1, c
 		}
 
 		
-      odist.save("debug_dists_left.tif");
-      odistr.save("debug_dists_right.tif");
-		
+                if (STEREOVERBOSE) {
+                  odist.save("debug_dists_left.tif");
+                  odistr.save("debug_dists_right.tif");
+		}
 
 
 		//! Check left right consistency
@@ -2091,18 +2093,18 @@ void compute_subpixel_match_multiple_windows_one_direction( cflimage *images1, c
 		
 
 
-		// TODO:  DEBUG REMOVE THIS
-		char stri[1024];
-		 sprintf(stri, "win%d.tif", strPar.currentScale);
-		oChoice.save(stri);
-		 sprintf(stri, "disp%d.tif", strPar.currentScale);
-      odisp.save(stri);
-		 sprintf(stri, "cost%d.tif", strPar.currentScale);
-      odist.save(stri);
-		 sprintf(stri, "mask%d.tif", strPar.currentScale);
-      omask.save(stri);
-		
-		
+                if (STEREOVERBOSE) {
+                  char stri[1024];
+                  sprintf(stri, "win%d.tif", strPar.currentScale);
+                  oChoice.save(stri);
+                  sprintf(stri, "disp%d.tif", strPar.currentScale);
+                  odisp.save(stri);
+                  sprintf(stri, "cost%d.tif", strPar.currentScale);
+                  odist.save(stri);
+                  sprintf(stri, "mask%d.tif", strPar.currentScale);
+                  omask.save(stri);
+                }
+                
 		//// Update min and max
       // STILL WORSE THAN THE MODIFICATION
 		//update_dmin_dmax(Dmin,Dmax,odisp,omask, strPar.dmin0, strPar.dmax0, support_window, support_window);
