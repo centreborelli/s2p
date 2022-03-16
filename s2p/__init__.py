@@ -443,6 +443,9 @@ def plys_to_dsm(tile):
     # compute the point cloud x, y bounds
     points, _ = ply.read_3d_point_cloud_from_ply(os.path.join(tile['dir'],
                                                               'cloud.ply'))
+    if len(points) == 0:
+        return
+
     xmin, ymin, *_ = np.min(points, axis=0)
     xmax, ymax, *_ = np.max(points, axis=0)
 
