@@ -69,6 +69,8 @@ def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
         with rasterio.open(raster_mask, 'r') as f:
             mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w)),
                                                boundless=True).squeeze())
+        if not mask.any():
+            return mask
 
     # image borders mask
     if img_shape is not None:

@@ -308,6 +308,8 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
     wat_msk = cfg['images'][0]['wat']
     mask = masking.image_tile_mask(x, y, w, h, roi_msk, cld_msk, wat_msk,
                                    images_sizes[0], cfg['border_margin'])
+    if not mask.any():
+        return False, None
     return True, mask
 
 
