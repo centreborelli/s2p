@@ -173,3 +173,6 @@ cfg['cargarse_basura'] = True
 # "+proj=utm +zone=40 +south +datum=WGS84 +units=m +vunits=m +no_defs +type=crs" (proj4 string)
 # If None, the local UTM zone will be used
 cfg['out_crs'] = None
+
+# Whether to use EGM96 geoid vertical datum for the out_crs (this parameter is only used if out_crs is None)
+cfg['out_geoid'] = False
