@@ -16,8 +16,8 @@ def main():
                               'input and output files and the algorithm '
                               'parameters'))
     parser.add_argument('--start_from', dest='start_from', type=int,
-                        default=0, help="Integer that indicates the step number from which to "
-                                        "restart the s2p process.")
+                        default=0, help="Restart the process from a given step in "
+                                        "case of an interruption or to try different parameters.")
     args = parser.parse_args()
 
     user_cfg = s2p.read_config_file(args.config)
