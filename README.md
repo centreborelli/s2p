@@ -131,6 +131,7 @@ The `s2p` CLI usage instructions can be printed with the `-h` and `--help` switc
                             output files and the algorithm parameters
 
     optional arguments:
+      --start_from          Restart from a given step in case of an interruption or to try different parameters.
       -h, --help            show this help message and exit
 
 To run the whole pipeline, call `s2p` with a json configuration file as unique argument:
