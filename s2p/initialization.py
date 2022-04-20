@@ -136,6 +136,9 @@ def build_cfg(user_cfg):
         utm_zone = rpc_utils.utm_zone(cfg['images'][0]['rpcm'], x, y, w, h)
         epsg_code = geographiclib.epsg_code_from_utm_zone(utm_zone)
         cfg['out_crs'] = "epsg:{}".format(epsg_code)
+        if cfg['out_geoid']:
+            # Use the EGM96 geoid model for the output CRS if out_geoid is True
+            cfg['out_crs'] += "+5773"
     geographiclib.pyproj_crs(cfg['out_crs'])
 
     # get image ground sampling distance
