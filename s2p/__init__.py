@@ -525,12 +525,13 @@ def global_dsm(tiles):
                              dst_kwds=creation_options)
 
 
-def main(user_cfg):
+def main(user_cfg, start_from=0):
     """
     Launch the s2p pipeline with the parameters given in a json file.
 
     Args:
         user_cfg: user config dictionary
+        start_from: the step to start from (default: 0)
     """
     common.print_elapsed_time.t0 = datetime.datetime.now()
     initialization.build_cfg(user_cfg)
@@ -548,69 +549,80 @@ def main(user_cfg):
         print('ERROR: the ROI is not seen in two images or is totally masked.')
         sys.exit(1)
 
-    # initialisation: write the list of tilewise json files to outdir/tiles.txt
-    with open(tiles_txt, 'w') as f:
-        for t in tiles:
-            print(t['json'], file=f)
+    if start_from > 0:
+        assert os.path.exists(tiles_txt), "start_from set to {} but tiles.txt is not found in '{}'. Make sure this is" \
+                                          " the output directory of a previous run.".format(start_from, cfg['out_dir'])
+    else:
+        # initialisation: write the list of tilewise json files to outdir/tiles.txt
+        with open(tiles_txt, 'w') as f:
+            for t in tiles:
+                print(t['json'], file=f)
 
     n = len(cfg['images'])
     tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
     timeout = cfg['timeout']
 
     # local-pointing step:
-    print('correcting pointing locally...')
-    parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers,
-                          timeout=timeout)
+    if start_from <= 1:
+        print('1) correcting pointing locally...')
+        parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers,
+                              timeout=timeout)
 
     # global-pointing step:
-    print('correcting pointing globally...')
-    global_pointing_correction(tiles)
-    common.print_elapsed_time()
+    if start_from <= 2:
+        print('2) correcting pointing globally...')
+        global_pointing_correction(tiles)
+        common.print_elapsed_time()
 
     # rectification step:
-    print('rectifying tiles...')
-    parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
-                          timeout=timeout)
+    if start_from <= 3:
+        print('3) rectifying tiles...')
+        parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
+                              timeout=timeout)
 
     # matching step:
-    print('running stereo matching...')
-    if cfg['max_processes_stereo_matching'] is not None:
-        nb_workers_stereo = cfg['max_processes_stereo_matching']
-    else:
-        nb_workers_stereo = nb_workers
-    parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
-                          timeout=timeout)
-
-    if n > 2:
-        # disparity-to-height step:
-        print('computing height maps...')
-        parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers,
+    if start_from <= 4:
+        print('4) running stereo matching...')
+        if cfg['max_processes_stereo_matching'] is not None:
+            nb_workers_stereo = cfg['max_processes_stereo_matching']
+        else:
+            nb_workers_stereo = nb_workers
+        parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
                               timeout=timeout)
 
-        print('computing local pairwise height offsets...')
-        parallel.launch_calls(mean_heights, tiles, nb_workers, timeout=timeout)
+    if start_from <= 5:
+        if n > 2:
+            # disparity-to-height step:
+            print('5a) computing height maps...')
+            parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers,
+                                  timeout=timeout)
 
-        # global-mean-heights step:
-        print('computing global pairwise height offsets...')
-        global_mean_heights(tiles)
+            print('5b) computing local pairwise height offsets...')
+            parallel.launch_calls(mean_heights, tiles, nb_workers, timeout=timeout)
 
-        # heights-to-ply step:
-        print('merging height maps and computing point clouds...')
-        parallel.launch_calls(heights_to_ply, tiles, nb_workers,
-                              timeout=timeout)
-    else:
-        # triangulation step:
-        print('triangulating tiles...')
-        parallel.launch_calls(disparity_to_ply, tiles, nb_workers,
-                              timeout=timeout)
+            # global-mean-heights step:
+            print('5c) computing global pairwise height offsets...')
+            global_mean_heights(tiles)
+
+            # heights-to-ply step:
+            print('5d) merging height maps and computing point clouds...')
+            parallel.launch_calls(heights_to_ply, tiles, nb_workers,
+                                  timeout=timeout)
+        else:
+            # triangulation step:
+            print('5) triangulating tiles...')
+            parallel.launch_calls(disparity_to_ply, tiles, nb_workers,
+                                  timeout=timeout)
 
     # local-dsm-rasterization step:
-    print('computing DSM by tile...')
-    parallel.launch_calls(plys_to_dsm, tiles, nb_workers, timeout=timeout)
+    if start_from <= 6:
+        print('computing DSM by tile...')
+        parallel.launch_calls(plys_to_dsm, tiles, nb_workers, timeout=timeout)
 
     # global-dsm-rasterization step:
-    print('computing global DSM...')
-    global_dsm(tiles)
+    if start_from <= 7:
+        print('7) computing global DSM...')
+        global_dsm(tiles)
     common.print_elapsed_time()
 
     # cleanup
