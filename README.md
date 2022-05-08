@@ -23,7 +23,7 @@ to produce surface models and 3D point clouds from arbitrarily large regions
 of interest or from complete images. If needed, it cuts the region of interest
 in several small tiles and process them in parallel.
 
-Its main source code repository is https://github.com/cmla/s2p.
+Its main source code repository is https://github.com/centreborelli/s2p.
 
 
 # Dependencies
@@ -62,7 +62,7 @@ in the s2p makefiles if compiling it from source.
 Alternatively, if you want to get the latest commit or want to edit the
 sources, install it in editable mode from a git clone:
 
-    git clone https://github.com/cmla/s2p.git --recursive
+    git clone https://github.com/centreborelli/s2p.git --recursive
     cd s2p
     pip install -e ".[test]"
 
@@ -104,7 +104,7 @@ The following invocation can be used then on Linux:
 and the same for the `s2p` command later. One macOS one may use instead 
 `DYLD_FALLBACK_LIBRARY_PATH`.
 
-## Docker image
+## Docker image (old)
 [![Docker Status](http://dockeri.co/image/cmla/s2p)](https://hub.docker.com/r/cmla/s2p/)
 
 A precompiled docker image is available and ready to use:
