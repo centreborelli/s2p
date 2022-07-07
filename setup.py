@@ -51,7 +51,7 @@ requirements = ['numpy',
                 'plyfile',
                 'plyflatten>=0.2.0',
                 'ransac',
-                'rpcm>=1.4.6',
+                'rpcm @ https://github.com/20treeAI/rpcm/archive/refs/tags/v1.4.8.tar.gz',
                 'srtm4>=1.1.2',
                 'requests']
 
@@ -60,7 +60,7 @@ extras_require = {
 }
 
 setup(name="s2p",
-      version="1.0b26dev",
+      version="1.2",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
