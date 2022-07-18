@@ -273,8 +273,17 @@ def disparity_to_ply(tile):
             ww, hh = f.width, f.height
 
         colors = common.tmpfile(".tif")
-        common.image_apply_homography(colors, cfg['images'][0]['clr'],
+        success_state = common.image_apply_homography(colors, cfg['images'][0]['clr'],
                                       np.loadtxt(H_ref), ww, hh)
+        if success_state is False:
+            # If homography fails the tile will be skipped (instead of crashing the entire process)
+            if cfg['clean_intermediate']:
+                common.remove(H_ref)
+                common.remove(H_sec)
+                common.remove(disp)
+                common.remove(mask_rect)
+                common.remove(mask_orig)
+            return None
         with rasterio.open(colors, "r") as f:
             colors = f.read()
 
@@ -316,7 +325,7 @@ def disparity_to_ply(tile):
         common.remove(mask_rect)
         common.remove(mask_orig)
         common.remove(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'))
-
+    return tile
 
 def mean_heights(tile):
     """
@@ -611,8 +620,11 @@ def main(user_cfg, start_from=0):
         else:
             # triangulation step:
             print('5) triangulating tiles...')
-            parallel.launch_calls(disparity_to_ply, tiles, nb_workers,
+            num_tiles = len(tiles)
+            tiles = parallel.launch_calls(disparity_to_ply, tiles, nb_workers,
                                   timeout=timeout)
+            if len(tiles) != num_tiles:
+                print(f'WARNING: {num_tiles-len(tiles)}/{num_tiles} tiles failed when applying homography and will be skipped.')
 
     # local-dsm-rasterization step:
     if start_from <= 6:
