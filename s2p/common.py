@@ -67,7 +67,7 @@ def tmpfile(ext=''):
     return out
 
 
-def run(cmd, env=os.environ, timeout=None, shell=False):
+def run(cmd, env=os.environ, timeout=None, shell=False, raise_errors=True):
     """
     Runs a shell command, and print it before running.
 
@@ -89,10 +89,18 @@ def run(cmd, env=os.environ, timeout=None, shell=False):
     t = datetime.datetime.now()
     if not isinstance(cmd, list) and not shell:
         cmd = cmd.split()
-    subprocess.run(cmd, shell=shell, stdout=sys.stdout, stderr=sys.stderr,
+    try:
+        subprocess.run(cmd, shell=shell, stdout=sys.stdout, stderr=sys.stderr,
                    env=env, timeout=timeout, check=True)
+    except subprocess.CalledProcessError as e:
+        print("ERROR: command failed: %s" % cmd)
+        print("ERROR: return code: %s" % e.returncode)
+        print("ERROR: output: %s" % e.output)
+        if raise_errors:
+            raise e
+        return False
     print(datetime.datetime.now() - t)
-
+    return True
 
 def mkdir_p(path):
     """
@@ -189,7 +197,7 @@ def image_apply_homography(out, im, H, w, h):
     hij = " ".join(str(x) for x in H.flatten())
 
     # apply the homography
-    run(["homography", im, "-h", hij, out, "%d" % w, "%d" % h])
+    return run(["homography", im, "-h", hij, out, "%d" % w, "%d" % h], raise_errors=False)
 
 
 def points_apply_homography(H, pts):
