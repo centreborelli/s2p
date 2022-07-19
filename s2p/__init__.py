@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import subprocess
 import sys
 import os.path
 import json
@@ -146,13 +146,17 @@ def rectification_pair(tile, i):
 
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
-    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2,
-                                                            rpc1, rpc2,
-                                                            x, y, w, h,
-                                                            rect1, rect2, A, m,
-                                                            method=cfg['rectification_method'],
-                                                            hmargin=cfg['horizontal_margin'],
-                                                            vmargin=cfg['vertical_margin'])
+    try:
+        H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2,
+                                                                rpc1, rpc2,
+                                                                x, y, w, h,
+                                                                rect1, rect2, A, m,
+                                                                method=cfg['rectification_method'],
+                                                                hmargin=cfg['horizontal_margin'],
+                                                                vmargin=cfg['vertical_margin'])
+    except subprocess.CalledProcessError as e:
+        print(f'ERROR: {e} while rectifying tile {out_dir}')
+        return None
     np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'H_sec.txt'), H2, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
@@ -161,7 +165,7 @@ def rectification_pair(tile, i):
     if cfg['clean_intermediate']:
         common.remove(os.path.join(out_dir, 'pointing.txt'))
         common.remove(os.path.join(out_dir, 'sift_matches.txt'))
-
+    return tile
 
 def stereo_matching(tile, i):
     """
@@ -586,8 +590,13 @@ def main(user_cfg, start_from=0):
     # rectification step:
     if start_from <= 3:
         print('3) rectifying tiles...')
-        parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
+        num_tiles = len(tiles)
+        tiles = parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
                               timeout=timeout)
+        tiles = [t for t in tiles if t is not None]
+        if num_tiles != len(tiles):
+            print(f'WARNING: {num_tiles-len(tiles)}/{num_tiles} tiles were not rectified. Skipping.')
+            tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
 
     # matching step:
     if start_from <= 4:
@@ -623,6 +632,7 @@ def main(user_cfg, start_from=0):
             num_tiles = len(tiles)
             tiles = parallel.launch_calls(disparity_to_ply, tiles, nb_workers,
                                   timeout=timeout)
+            tiles = [t for t in tiles if t is not None]
             if len(tiles) != num_tiles:
                 print(f'WARNING: {num_tiles-len(tiles)}/{num_tiles} tiles failed when applying homography and will be skipped.')
 
