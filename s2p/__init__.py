@@ -632,7 +632,8 @@ def main(user_cfg, start_from=0):
                                   timeout=timeout)
             tiles = [t for t in tiles if t is not None]
             if len(tiles) != num_tiles:
-                print(f'WARNING: {num_tiles-len(tiles)}/{num_tiles} tiles failed when applying homography and will be skipped.')
+                print(f'WARNING: {len(tiles)-num_tiles}/{num_tiles} tiles failed when applying homography '
+                      'and will be skipped.')
 
     # local-dsm-rasterization step:
     if start_from <= 6:
