@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import subprocess
 import sys
 import os.path
 import json
@@ -153,6 +153,7 @@ def rectification_pair(tile, i):
                                                             method=cfg['rectification_method'],
                                                             hmargin=cfg['horizontal_margin'],
                                                             vmargin=cfg['vertical_margin'])
+
     np.savetxt(os.path.join(out_dir, 'H_ref.txt'), H1, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'H_sec.txt'), H2, fmt='%12.6f')
     np.savetxt(os.path.join(out_dir, 'disp_min_max.txt'), [disp_min, disp_max],
@@ -161,7 +162,6 @@ def rectification_pair(tile, i):
     if cfg['clean_intermediate']:
         common.remove(os.path.join(out_dir, 'pointing.txt'))
         common.remove(os.path.join(out_dir, 'sift_matches.txt'))
-
 
 def stereo_matching(tile, i):
     """
@@ -588,6 +588,7 @@ def main(user_cfg, start_from=0):
         print('3) rectifying tiles...')
         parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
                               timeout=timeout)
+        tiles = [t for t in tiles if t is not None]
 
     # matching step:
     if start_from <= 4:
@@ -595,9 +596,15 @@ def main(user_cfg, start_from=0):
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
         else:
-            nb_workers_stereo = nb_workers
-        parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
-                              timeout=timeout)
+            # Set the number of stereo workers to 2/3 of the number of cores by default
+            nb_workers_stereo = min(1, int(2 * (nb_workers / 3)))
+        try:
+            parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
+                          timeout=timeout)
+        except subprocess.CalledProcessError as e:
+            print(f'ERROR: stereo matching failed. In case this is due too little RAM set '
+                  f'"max_processes_stereo_matching" to a lower value (currently set to: {nb_workers_stereo}).')
+            raise e
 
     if start_from <= 5:
         if n > 2:
@@ -623,8 +630,10 @@ def main(user_cfg, start_from=0):
             num_tiles = len(tiles)
             tiles = parallel.launch_calls(disparity_to_ply, tiles, nb_workers,
                                   timeout=timeout)
+            tiles = [t for t in tiles if t is not None]
             if len(tiles) != num_tiles:
-                print(f'WARNING: {num_tiles-len(tiles)}/{num_tiles} tiles failed when applying homography and will be skipped.')
+                print(f'WARNING: {len(tiles)-num_tiles}/{num_tiles} tiles failed when applying homography '
+                      'and will be skipped.')
 
     # local-dsm-rasterization step:
     if start_from <= 6:
