@@ -4,19 +4,28 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import subprocess
-import numpy as np
 import warnings
+
+import numpy as np
 import rasterio
 
 from s2p import common
 
 # silent rasterio NotGeoreferencedWarning
-warnings.filterwarnings("ignore",
-                        category=rasterio.errors.NotGeoreferencedWarning)
+warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
 
-def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
-                    img_shape=None, border_margin=10):
+def image_tile_mask(
+    x,
+    y,
+    w,
+    h,
+    roi_gml=None,
+    cld_gml=None,
+    raster_mask=None,
+    img_shape=None,
+    border_margin=10,
+):
     """
     Compute a validity mask for an image tile from vector/raster image masks.
 
@@ -39,36 +48,37 @@ def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
 
     # coefficients of the transformation associated to the crop
     H = common.matrix_translation(-x, -y)
-    hij = ' '.join([str(el) for el in H.flatten()])
+    hij = " ".join([str(el) for el in H.flatten()])
 
     mask = np.ones((h, w), dtype=np.bool)
 
     if roi_gml is not None:  # image domain mask (polygons)
-        tmp = common.tmpfile('.png')
-        subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
-                                                               roi_gml, tmp),
-                              shell=True)
-        with rasterio.open(tmp, 'r') as f:
+        tmp = common.tmpfile(".png")
+        subprocess.check_call(
+            'cldmask %d %d -h "%s" %s %s' % (w, h, hij, roi_gml, tmp), shell=True
+        )
+        with rasterio.open(tmp, "r") as f:
             mask = np.logical_and(mask, f.read().squeeze().astype(bool))
 
         if not mask.any():
             return mask
 
     if cld_gml is not None:  # cloud mask (polygons)
-        tmp = common.tmpfile('.png')
-        subprocess.check_call('cldmask %d %d -h "%s" %s %s' % (w, h, hij,
-                                                               cld_gml, tmp),
-                              shell=True)
-        with rasterio.open(tmp, 'r') as f:
+        tmp = common.tmpfile(".png")
+        subprocess.check_call(
+            'cldmask %d %d -h "%s" %s %s' % (w, h, hij, cld_gml, tmp), shell=True
+        )
+        with rasterio.open(tmp, "r") as f:
             mask = np.logical_and(mask, ~f.read().squeeze().astype(bool))
 
         if not mask.any():
             return mask
 
     if raster_mask is not None:
-        with rasterio.open(raster_mask, 'r') as f:
-            mask = np.logical_and(mask, f.read(window=((y, y+h), (x, x+w)),
-                                               boundless=True).squeeze())
+        with rasterio.open(raster_mask, "r") as f:
+            mask = np.logical_and(
+                mask, f.read(window=((y, y + h), (x, x + w)), boundless=True).squeeze()
+            )
         if not mask.any():
             return mask
 
@@ -94,4 +104,4 @@ def erosion(out, msk, radius):
         radius (in pixels): size of the disk used for the erosion
     """
     if radius >= 2:
-        common.run('morsi disk%d erosion %s %s' % (int(radius), msk, out))
+        common.run("morsi disk%d erosion %s %s" % (int(radius), msk, out))

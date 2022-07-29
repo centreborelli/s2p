@@ -3,17 +3,16 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
-import os
 import ctypes
+import os
 import warnings
 
 import numpy as np
+import ransac
 import rasterio as rio
 from numpy.ctypeslib import ndpointer
-import ransac
 
-from s2p import rpc_utils
-from s2p import estimation
+from s2p import estimation, rpc_utils
 
 # Locate sift4ctypes library and raise an ImportError if it can not be
 # found This call will raise an exception if library can not be found,
@@ -22,7 +21,7 @@ from s2p import estimation
 # TODO: This is kind of ugly. Cleaner way to do this is to update
 # LD_LIBRARY_PATH, which we should do once we have a proper config file
 here = os.path.dirname(os.path.abspath(__file__))
-sift4ctypes = os.path.join(os.path.dirname(here), 'lib', 'libsift4ctypes.so')
+sift4ctypes = os.path.join(os.path.dirname(here), "lib", "libsift4ctypes.so")
 lib = ctypes.CDLL(sift4ctypes)
 
 
@@ -30,7 +29,9 @@ lib = ctypes.CDLL(sift4ctypes)
 warnings.filterwarnings("ignore", category=rio.errors.NotGeoreferencedWarning)
 
 
-def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, offset=None):
+def keypoints_from_nparray(
+    arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, offset=None
+):
     """
     Runs SIFT (the keypoints detection and description only, no matching) on an image stored in a 2D numpy array
 
@@ -51,8 +52,16 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
     h, w = arr.shape
 
     # Set expected args and return types
-    lib.sift.argtypes = (ndpointer(dtype=ctypes.c_float, shape=(h, w)), ctypes.c_uint, ctypes.c_uint, ctypes.c_float,
-                         ctypes.c_uint, ctypes.c_uint, ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint))
+    lib.sift.argtypes = (
+        ndpointer(dtype=ctypes.c_float, shape=(h, w)),
+        ctypes.c_uint,
+        ctypes.c_uint,
+        ctypes.c_float,
+        ctypes.c_uint,
+        ctypes.c_uint,
+        ctypes.POINTER(ctypes.c_uint),
+        ctypes.POINTER(ctypes.c_uint),
+    )
     lib.sift.restype = ctypes.POINTER(ctypes.c_float)
 
     # Create variables to be updated by function call
@@ -60,15 +69,24 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
     desc_size = ctypes.c_uint()
 
     # Call sift fonction from sift4ctypes.so
-    keypoints_ptr = lib.sift(arr.astype(np.float32), w, h, thresh_dog,
-                             nb_octaves, nb_scales, ctypes.byref(desc_size), ctypes.byref(nb_points))
+    keypoints_ptr = lib.sift(
+        arr.astype(np.float32),
+        w,
+        h,
+        thresh_dog,
+        nb_octaves,
+        nb_scales,
+        ctypes.byref(desc_size),
+        ctypes.byref(nb_points),
+    )
 
     # Transform result into a numpy array
-    keypoints = np.asarray([keypoints_ptr[i]
-                            for i in range(nb_points.value*desc_size.value)])
+    keypoints = np.asarray(
+        [keypoints_ptr[i] for i in range(nb_points.value * desc_size.value)]
+    )
 
     # Delete results to release memory
-    lib.delete_buffer.argtypes = (ctypes.POINTER(ctypes.c_float)),
+    lib.delete_buffer.argtypes = ((ctypes.POINTER(ctypes.c_float)),)
     lib.delete_buffer(keypoints_ptr)
 
     # Reshape keypoints array
@@ -82,7 +100,9 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
     return keypoints
 
 
-def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8, nb_scales=3):
+def image_keypoints(
+    im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8, nb_scales=3
+):
     """
     Runs SIFT (the keypoints detection and description only, no matching).
 
@@ -112,9 +132,13 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
         in_buffer = ds.read(window=rio.windows.Window(x, y, w, h))
 
     # Detect keypoints on first band
-    keypoints = keypoints_from_nparray(in_buffer[0], thresh_dog=thresh_dog,
-                                       nb_octaves=nb_octaves,
-                                       nb_scales=nb_scales, offset=(x, y))
+    keypoints = keypoints_from_nparray(
+        in_buffer[0],
+        thresh_dog=thresh_dog,
+        nb_octaves=nb_octaves,
+        nb_scales=nb_scales,
+        offset=(x, y),
+    )
 
     # Limit number of keypoints if needed
     if max_nb is not None:
@@ -142,8 +166,16 @@ def string_dump_of_keypoint_and_descriptor(k):
     return s
 
 
-def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
-                    epipolar_threshold=10, model=None, ransac_max_err=0.3):
+def keypoints_match(
+    k1,
+    k2,
+    method="relative",
+    sift_thresh=0.6,
+    F=None,
+    epipolar_threshold=10,
+    model=None,
+    ransac_max_err=0.3,
+):
     """
     Find matches among two lists of sift keypoints.
 
@@ -174,31 +206,41 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
         if any, a numpy 2D array containing the list of inliers matches.
     """
     # compute matches
-    matches = keypoints_match_from_nparray(k1, k2, method, sift_thresh,
-                                           epipolar_threshold, F)
+    matches = keypoints_match_from_nparray(
+        k1, k2, method, sift_thresh, epipolar_threshold, F
+    )
 
     # filter matches with ransac
-    if model == 'fundamental' and len(matches) >= 7:
-        inliers = ransac.find_fundamental_matrix(matches, ntrials=1000,
-                                                 max_err=ransac_max_err)[0]
+    if model == "fundamental" and len(matches) >= 7:
+        inliers = ransac.find_fundamental_matrix(
+            matches, ntrials=1000, max_err=ransac_max_err
+        )[0]
         matches = matches[inliers]
 
     return matches
 
 
-def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
-                                 epi_threshold=10, F=None):
+def keypoints_match_from_nparray(
+    k1, k2, method, sift_threshold, epi_threshold=10, F=None
+):
     """
     Wrapper for the sift keypoints matching function of libsift4ctypes.so.
     """
     # Set expected args and return types
-    lib.matching.argtypes = (ndpointer(dtype=ctypes.c_float, shape=k1.shape),
-                             ndpointer(dtype=ctypes.c_float, shape=k2.shape),
-                             ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
-                             ctypes.c_uint, ctypes.c_float, ctypes.c_float,
-                             ndpointer(dtype=ctypes.c_double, shape=(5,)),
-                             ctypes.c_bool, ctypes.c_bool,
-                             ctypes.POINTER(ctypes.c_uint))
+    lib.matching.argtypes = (
+        ndpointer(dtype=ctypes.c_float, shape=k1.shape),
+        ndpointer(dtype=ctypes.c_float, shape=k2.shape),
+        ctypes.c_uint,
+        ctypes.c_uint,
+        ctypes.c_uint,
+        ctypes.c_uint,
+        ctypes.c_float,
+        ctypes.c_float,
+        ndpointer(dtype=ctypes.c_double, shape=(5,)),
+        ctypes.c_bool,
+        ctypes.c_bool,
+        ctypes.POINTER(ctypes.c_uint),
+    )
     lib.matching.restype = ctypes.POINTER(ctypes.c_float)
 
     # Get info of descriptor size
@@ -207,7 +249,7 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
     length_descr = descr - sift_offset
 
     # Transform information of method into boolean
-    use_relative_method = (method == 'relative')
+    use_relative_method = method == "relative"
 
     # Format fundamental matrix
     use_fundamental_matrix = False
@@ -220,25 +262,35 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
     nb_matches = ctypes.c_uint()
 
     # Call sift fonction from sift4ctypes.so
-    matches_ptr = lib.matching(k1.astype('float32'), k2.astype('float32'),
-                               length_descr, sift_offset, len(k1), len(k2),
-                               sift_threshold, epi_threshold, coeff_mat,
-                               use_fundamental_matrix, use_relative_method,
-                               ctypes.byref(nb_matches))
+    matches_ptr = lib.matching(
+        k1.astype("float32"),
+        k2.astype("float32"),
+        length_descr,
+        sift_offset,
+        len(k1),
+        len(k2),
+        sift_threshold,
+        epi_threshold,
+        coeff_mat,
+        use_fundamental_matrix,
+        use_relative_method,
+        ctypes.byref(nb_matches),
+    )
 
     # Transform result into a numpy array
     matches = np.asarray([matches_ptr[i] for i in range(nb_matches.value * 4)])
 
     # Delete results to release memory
-    lib.delete_buffer.argtypes = ctypes.POINTER(ctypes.c_float),
+    lib.delete_buffer.argtypes = (ctypes.POINTER(ctypes.c_float),)
     lib.delete_buffer(matches_ptr)
 
     # Reshape keypoints array
     return matches.reshape((nb_matches.value, 4))
 
 
-def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h,
-                       method, sift_thresh, epipolar_threshold):
+def matches_on_rpc_roi(
+    im1, im2, rpc1, rpc2, x, y, w, h, method, sift_thresh, epipolar_threshold
+):
     """
     Compute a list of SIFT matches between two images on a given roi.
 
@@ -270,9 +322,15 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h,
     for _ in range(2):
         p1 = image_keypoints(im1, x, y, w, h, thresh_dog=thresh_dog)
         p2 = image_keypoints(im2, x2, y2, w2, h2, thresh_dog=thresh_dog)
-        matches = keypoints_match(p1, p2, method, sift_thresh, F,
-                                  epipolar_threshold=epipolar_threshold,
-                                  model='fundamental')
+        matches = keypoints_match(
+            p1,
+            p2,
+            method,
+            sift_thresh,
+            F,
+            epipolar_threshold=epipolar_threshold,
+            model="fundamental",
+        )
         if matches is not None and matches.ndim == 2 and matches.shape[0] > 10:
             break
         thresh_dog /= 2.0

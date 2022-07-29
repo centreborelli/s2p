@@ -31,8 +31,8 @@ def test_run_timeout():
 
     # Get the names of the running processes
     proc_names = []
-    for proc in psutil.process_iter(attrs=['pid', 'name']):
-        proc_names.append(proc.info['name'])
+    for proc in psutil.process_iter(attrs=["pid", "name"]):
+        proc_names.append(proc.info["name"])
 
     # Check that our process has effectively been killed
     assert "sleep" not in proc_names

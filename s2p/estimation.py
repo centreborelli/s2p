@@ -63,8 +63,8 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
             stereo-rectified.
     """
     # check that the input matrix is an affine fundamental matrix
-    assert(np.shape(F) == (3, 3))
-    assert(np.linalg.matrix_rank(F) == 2)
+    assert np.shape(F) == (3, 3)
+    assert np.linalg.matrix_rank(F) == 2
     np.testing.assert_allclose(F[:2, :2], np.zeros((2, 2)))
 
     # notations
@@ -75,8 +75,8 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
     e = F[2, 2]
 
     # rotations
-    r = np.sqrt(c*c + d*d)
-    s = np.sqrt(a*a + b*b)
+    r = np.sqrt(c * c + d * d)
+    s = np.sqrt(a * a + b * b)
     R1 = 1 / r * np.array([[d, -c], [c, d]])
     R2 = 1 / s * np.array([[-b, a], [-a, -b]])
 
@@ -176,7 +176,7 @@ def affine_transformation(x, xx):
         return np.eye(3)
 
     # translate the input points so that the centroid is at the origin.
-    t = -np.mean(x,  0)
+    t = -np.mean(x, 0)
     tt = -np.mean(xx, 0)
     x = x + t
     xx = xx + tt
@@ -193,7 +193,7 @@ def affine_transformation(x, xx):
 
     # compute blocks B and C, then H
     tmp = np.vstack((v1, v2)).T
-    assert(np.shape(tmp) == (4, 2))
+    assert np.shape(tmp) == (4, 2)
     B = tmp[0:2, :]
     C = tmp[2:4, :]
     H = np.dot(C, np.linalg.inv(B))

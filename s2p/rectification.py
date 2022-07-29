@@ -8,11 +8,7 @@ import warnings
 
 import numpy as np
 
-from s2p import rpc_utils
-from s2p import estimation
-from s2p import evaluation
-from s2p import common
-from s2p import visualisation
+from s2p import common, estimation, evaluation, rpc_utils, visualisation
 from s2p.config import cfg
 
 

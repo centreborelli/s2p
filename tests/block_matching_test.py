@@ -2,9 +2,9 @@ import os
 import subprocess
 
 import pytest
+from tests_utils import data_path
 
 import s2p
-from tests_utils import data_path
 
 
 def test_compute_disparity_map_timeout(timeout=1):
@@ -16,9 +16,9 @@ def test_compute_disparity_map_timeout(timeout=1):
     mask = data_path(os.path.join("testoutput", "m.tif"))
 
     with pytest.raises(subprocess.TimeoutExpired):
-        s2p.block_matching.compute_disparity_map(img, img, disp, mask,
-                                                 "mgm_multi", -100, 100,
-                                                 timeout)
+        s2p.block_matching.compute_disparity_map(
+            img, img, disp, mask, "mgm_multi", -100, 100, timeout
+        )
 
 
 def test_compute_disparity_map_max_disp_range(max_disp_range=10):
@@ -31,6 +31,6 @@ def test_compute_disparity_map_max_disp_range(max_disp_range=10):
     mask = data_path(os.path.join("testoutput", "m.tif"))
 
     with pytest.raises(s2p.block_matching.MaxDisparityRangeError):
-        s2p.block_matching.compute_disparity_map(img, img, disp, mask,
-                                                 "mgm_multi", -100, 100,
-                                                 max_disp_range=max_disp_range)
+        s2p.block_matching.compute_disparity_map(
+            img, img, disp, mask, "mgm_multi", -100, 100, max_disp_range=max_disp_range
+        )

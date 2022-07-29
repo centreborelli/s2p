@@ -2,21 +2,20 @@
 # Copyright (C) 2015, Gabriele Facciolo <facciolo@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
-import os
 import ctypes
-from ctypes import c_int, c_float, c_double, byref, POINTER
-from numpy.ctypeslib import ndpointer
-import numpy as np
-from scipy import ndimage
-import rasterio
+import os
+from ctypes import POINTER, byref, c_double, c_float, c_int
 
-from s2p import common
+import numpy as np
+import rasterio
+from numpy.ctypeslib import ndpointer
+from scipy import ndimage
+
+from s2p import common, geographiclib, ply
 from s2p.config import cfg
-from s2p import ply
-from s2p import geographiclib
 
 here = os.path.dirname(os.path.abspath(__file__))
-lib_path = os.path.join(os.path.dirname(here), 'lib', 'disp_to_h.so')
+lib_path = os.path.join(os.path.dirname(here), "lib", "disp_to_h.so")
 lib = ctypes.CDLL(lib_path)
 
 
@@ -24,21 +23,24 @@ class RPCStruct(ctypes.Structure):
     """
     ctypes version of the RPC C struct defined in rpc.h.
     """
-    _fields_ = [("numx", c_double * 20),
-                ("denx", c_double * 20),
-                ("numy", c_double * 20),
-                ("deny", c_double * 20),
-                ("scale", c_double * 3),
-                ("offset", c_double * 3),
-                ("inumx", c_double * 20),
-                ("idenx", c_double * 20),
-                ("inumy", c_double * 20),
-                ("ideny", c_double * 20),
-                ("iscale", c_double * 3),
-                ("ioffset", c_double * 3),
-                ("dmval", c_double * 4),
-                ("imval", c_double * 4),
-                ("delta", c_double)]
+
+    _fields_ = [
+        ("numx", c_double * 20),
+        ("denx", c_double * 20),
+        ("numy", c_double * 20),
+        ("deny", c_double * 20),
+        ("scale", c_double * 3),
+        ("offset", c_double * 3),
+        ("inumx", c_double * 20),
+        ("idenx", c_double * 20),
+        ("inumy", c_double * 20),
+        ("ideny", c_double * 20),
+        ("iscale", c_double * 3),
+        ("ioffset", c_double * 3),
+        ("dmval", c_double * 4),
+        ("imval", c_double * 4),
+        ("delta", c_double),
+    ]
 
     def __init__(self, rpc, delta=1.0):
         """
@@ -65,7 +67,7 @@ class RPCStruct(ctypes.Structure):
             self.inumy[i] = rpc.row_num[i]
             self.ideny[i] = rpc.row_den[i]
 
-        if hasattr(rpc, 'lat_num'):
+        if hasattr(rpc, "lat_num"):
             for i in range(20):
                 self.numx[i] = rpc.lon_num[i]
                 self.denx[i] = rpc.lon_den[i]
@@ -78,12 +80,13 @@ class RPCStruct(ctypes.Structure):
                 self.numy[i] = np.nan
                 self.deny[i] = np.nan
 
-	# initialization factor for iterative localization
+        # initialization factor for iterative localization
         self.delta = delta
 
 
-def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None,
-                out_crs=None):
+def disp_to_xyz(
+    rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None, out_crs=None
+):
     """
     Compute a 3D coordinates map from a disparity map, using RPC camera models.
 
@@ -117,32 +120,48 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None,
     # define the argument types of the disp_to_lonlatalt function from disp_to_h.so
     h, w = disp.shape
     hh, ww = mask_orig.shape
-    lib.disp_to_lonlatalt.argtypes = (ndpointer(dtype=c_double, shape=(h, w, 3)),
-                                      ndpointer(dtype=c_float, shape=(h, w)),
-                                      ndpointer(dtype=c_float, shape=(h, w)),
-                                      ndpointer(dtype=c_float, shape=(h, w)),
-                                      ndpointer(dtype=c_float, shape=(h, w)),
-                                      c_int, c_int,
-                                      ndpointer(dtype=c_float, shape=(hh, ww)),
-                                      c_int, c_int,
-                                      ndpointer(dtype=c_double, shape=(9,)),
-                                      ndpointer(dtype=c_double, shape=(9,)),
-                                      POINTER(RPCStruct), POINTER(RPCStruct),
-                                      ndpointer(dtype=c_float, shape=(4,)))
-
+    lib.disp_to_lonlatalt.argtypes = (
+        ndpointer(dtype=c_double, shape=(h, w, 3)),
+        ndpointer(dtype=c_float, shape=(h, w)),
+        ndpointer(dtype=c_float, shape=(h, w)),
+        ndpointer(dtype=c_float, shape=(h, w)),
+        ndpointer(dtype=c_float, shape=(h, w)),
+        c_int,
+        c_int,
+        ndpointer(dtype=c_float, shape=(hh, ww)),
+        c_int,
+        c_int,
+        ndpointer(dtype=c_double, shape=(9,)),
+        ndpointer(dtype=c_double, shape=(9,)),
+        POINTER(RPCStruct),
+        POINTER(RPCStruct),
+        ndpointer(dtype=c_float, shape=(4,)),
+    )
 
     # call the disp_to_lonlatalt function from disp_to_h.so
-    lonlatalt = np.zeros((h, w, 3), dtype='float64')
-    err = np.zeros((h, w), dtype='float32')
-    dispx = disp.astype('float32')
-    dispy = np.zeros((h, w), dtype='float32')
-    msk_rect = mask_rect.astype('float32')
-    msk_orig = mask_orig.astype('float32')
-    lib.disp_to_lonlatalt(lonlatalt, err, dispx, dispy, msk_rect, w, h,
-                          msk_orig, ww, hh,
-                          H1.flatten(), H2.flatten(),
-                          byref(rpc1_c_struct), byref(rpc2_c_struct),
-                          np.asarray(img_bbx, dtype='float32'))
+    lonlatalt = np.zeros((h, w, 3), dtype="float64")
+    err = np.zeros((h, w), dtype="float32")
+    dispx = disp.astype("float32")
+    dispy = np.zeros((h, w), dtype="float32")
+    msk_rect = mask_rect.astype("float32")
+    msk_orig = mask_orig.astype("float32")
+    lib.disp_to_lonlatalt(
+        lonlatalt,
+        err,
+        dispx,
+        dispy,
+        msk_rect,
+        w,
+        h,
+        msk_orig,
+        ww,
+        hh,
+        H1.flatten(),
+        H2.flatten(),
+        byref(rpc1_c_struct),
+        byref(rpc2_c_struct),
+        np.asarray(img_bbx, dtype="float32"),
+    )
 
     # output CRS conversion
     in_crs = geographiclib.pyproj_crs("epsg:4979")
@@ -152,8 +171,9 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None,
         # reshape the lonlatlat array into a 3-column 2D-array
         lonlatalt = lonlatalt.reshape(-1, 3)
 
-        x, y, z = geographiclib.pyproj_transform(lonlatalt[:, 0], lonlatalt[:, 1],
-                                                 in_crs, out_crs, lonlatalt[:, 2])
+        x, y, z = geographiclib.pyproj_transform(
+            lonlatalt[:, 0], lonlatalt[:, 1], in_crs, out_crs, lonlatalt[:, 2]
+        )
 
         xyz_array = np.column_stack((x, y, z)).reshape(h, w, 3).astype(np.float64)
     else:
@@ -207,8 +227,7 @@ def height_map_to_xyz(heights, rpc, off_x=0, off_y=0, out_crs=None):
     in_crs = geographiclib.pyproj_crs("epsg:4979")
 
     if out_crs and out_crs != in_crs:
-        x, y, z = geographiclib.pyproj_transform(lons, lats,
-                                                 in_crs, out_crs, heights)
+        x, y, z = geographiclib.pyproj_transform(lons, lats, in_crs, out_crs, heights)
     else:
         x, y, z = lons, lats, heights
 
@@ -244,26 +263,37 @@ def stereo_corresp_to_xyz(rpc1, rpc2, pts1, pts2, out_crs=None):
     n = pts1.shape[0]
 
     # define the argument types of the stereo_corresp_to_lonlatalt function from disp_to_h.so
-    lib.stereo_corresp_to_lonlatalt.argtypes = (ndpointer(dtype=c_double, shape=(n, 3)),
-                                                ndpointer(dtype=c_float, shape=(n, 1)),
-                                                ndpointer(dtype=c_float, shape=(n, 2)),
-                                                ndpointer(dtype=c_float, shape=(n, 2)),
-                                                c_int, POINTER(RPCStruct), POINTER(RPCStruct))
+    lib.stereo_corresp_to_lonlatalt.argtypes = (
+        ndpointer(dtype=c_double, shape=(n, 3)),
+        ndpointer(dtype=c_float, shape=(n, 1)),
+        ndpointer(dtype=c_float, shape=(n, 2)),
+        ndpointer(dtype=c_float, shape=(n, 2)),
+        c_int,
+        POINTER(RPCStruct),
+        POINTER(RPCStruct),
+    )
 
     # call the stereo_corresp_to_lonlatalt function from disp_to_h.so
-    lonlatalt =  np.zeros((n, 3), dtype='float64')
-    err =  np.zeros((n, 1), dtype='float32')
-    lib.stereo_corresp_to_lonlatalt(lonlatalt, err,
-                                    pts1.astype('float32'), pts2.astype('float32'),
-                                    n, byref(rpc1_c_struct), byref(rpc2_c_struct))
+    lonlatalt = np.zeros((n, 3), dtype="float64")
+    err = np.zeros((n, 1), dtype="float32")
+    lib.stereo_corresp_to_lonlatalt(
+        lonlatalt,
+        err,
+        pts1.astype("float32"),
+        pts2.astype("float32"),
+        n,
+        byref(rpc1_c_struct),
+        byref(rpc2_c_struct),
+    )
 
     # output CRS conversion
     in_crs = geographiclib.pyproj_crs("epsg:4979")
 
     if out_crs and out_crs != in_crs:
 
-        x, y, z = geographiclib.pyproj_transform(lonlatalt[:, 0], lonlatalt[:, 1],
-                                                 in_crs, out_crs, lonlatalt[:, 2])
+        x, y, z = geographiclib.pyproj_transform(
+            lonlatalt[:, 0], lonlatalt[:, 1], in_crs, out_crs, lonlatalt[:, 2]
+        )
 
         xyz_array = np.column_stack((x, y, z)).astype(np.float64)
     else:
@@ -287,15 +317,20 @@ def count_3d_neighbors(xyz, r, p):
         less than r units from the current 3D point
     """
     h, w, d = xyz.shape
-    assert(d == 3)
+    assert d == 3
 
     # define the argument types of the count_3d_neighbors function from disp_to_h.so
-    lib.count_3d_neighbors.argtypes = (ndpointer(dtype=c_int, shape=(h, w)),
-                                       ndpointer(dtype=c_double, shape=(h, w, 3)),
-                                       c_int, c_int, c_float, c_int)
+    lib.count_3d_neighbors.argtypes = (
+        ndpointer(dtype=c_int, shape=(h, w)),
+        ndpointer(dtype=c_double, shape=(h, w, 3)),
+        c_int,
+        c_int,
+        c_float,
+        c_int,
+    )
 
     # call the count_3d_neighbors function from disp_to_h.so
-    out = np.zeros((h, w), dtype='int32')
+    out = np.zeros((h, w), dtype="int32")
     lib.count_3d_neighbors(out, np.ascontiguousarray(xyz), w, h, r, p)
 
     return out
@@ -319,11 +354,17 @@ def remove_isolated_3d_points(xyz, r, p, n, q=1):
         q (int): 2nd filtering window radius, in pixels (square of size 2q+1)
     """
     h, w, d = xyz.shape
-    assert d == 3, 'expecting a 3-channels image with shape (h, w, 3)'
+    assert d == 3, "expecting a 3-channels image with shape (h, w, 3)"
 
     lib.remove_isolated_3d_points.argtypes = (
         ndpointer(dtype=c_double, shape=(h, w, 3)),
-        c_int, c_int, c_float, c_int, c_int, c_int)
+        c_int,
+        c_int,
+        c_float,
+        c_int,
+        c_int,
+        c_int,
+    )
 
     lib.remove_isolated_3d_points(np.ascontiguousarray(xyz), w, h, r, p, n, q)
 
@@ -368,28 +409,38 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, mask_orig, A=None):
     # rectified domain to original domain
     p = 1
 
-    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask,
-                           img_bbx=(x-p, x+w+2*p, y-p, y+h+2*p),
-                           mask_orig=np.pad(mask_orig, p, constant_values=1),
-                           A=A, out_crs=None)
+    xyz, err = disp_to_xyz(
+        rpc1,
+        rpc2,
+        H1,
+        H2,
+        disp,
+        mask,
+        img_bbx=(x - p, x + w + 2 * p, y - p, y + h + 2 * p),
+        mask_orig=np.pad(mask_orig, p, constant_values=1),
+        A=A,
+        out_crs=None,
+    )
     height_map = xyz[:, :, 2].squeeze()
 
     # transfer the rectified height map onto an unrectified height map
     H = np.dot(H1, common.matrix_translation(x, y))
-    out = ndimage.affine_transform(np.nan_to_num(height_map).T, H,
-                                   output_shape=(w, h), order=1).T
+    out = ndimage.affine_transform(
+        np.nan_to_num(height_map).T, H, output_shape=(w, h), order=1
+    ).T
 
     # nearest-neighbor interpolation of nan locations in the resampled image
     if np.isnan(height_map).any():
-        i = ndimage.affine_transform(np.isnan(height_map).T, H,
-                                     output_shape=(w, h), order=0).T
+        i = ndimage.affine_transform(
+            np.isnan(height_map).T, H, output_shape=(w, h), order=0
+        ).T
         i = ndimage.binary_dilation(i, structure=np.ones((3, 3)))
         out[i] = np.nan  # put nans back in the resampled image
 
     return out
 
 
-def write_to_ply(path_to_ply_file, xyz, colors=None, proj_com='', confidence=''):
+def write_to_ply(path_to_ply_file, xyz, colors=None, proj_com="", confidence=""):
     """
     Write raster of 3D point coordinates as a 3D point cloud in a .ply file
 
@@ -411,19 +462,21 @@ def write_to_ply(path_to_ply_file, xyz, colors=None, proj_com='', confidence='')
         colors_list = None
 
     # read extra field (confidence) if present
-    if confidence != '':
-        with rasterio.open(confidence, 'r') as f:
+    if confidence != "":
+        with rasterio.open(confidence, "r") as f:
             img = f.read()
-        extra_list  = img.flatten()[valid].astype(np.float32)
-        extra_names = ['confidence']
+        extra_list = img.flatten()[valid].astype(np.float32)
+        extra_names = ["confidence"]
     else:
-        extra_list  = None
+        extra_list = None
         extra_names = None
 
     # write the point cloud to a ply file
-    ply.write_3d_point_cloud_to_ply(path_to_ply_file, xyz_list[valid],
-                                    colors=colors_list,
-                                    extra_properties=extra_list,
-                                    extra_properties_names=extra_names,
-                                    comments=["created by S2P",
-                                              "projection: {}".format(proj_com)])
+    ply.write_3d_point_cloud_to_ply(
+        path_to_ply_file,
+        xyz_list[valid],
+        colors=colors_list,
+        extra_properties=extra_list,
+        extra_properties_names=extra_names,
+        comments=["created by S2P", "projection: {}".format(proj_com)],
+    )

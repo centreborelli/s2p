@@ -4,14 +4,13 @@
 
 
 import warnings
-import rasterio
-import numpy as np
 
+import numpy as np
+import rasterio
 import rpcm
 import srtm4
 
-from s2p import geographiclib
-from s2p import common
+from s2p import common, geographiclib
 from s2p.config import cfg
 
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
@@ -63,9 +62,9 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
 
     for i in range(100):
         tx, ty, tz = find_corresponding_point(model_a, model_b, x1, y1, h0)
-        r0 = np.vstack([tx,ty]).T
-        tx, ty, tz = find_corresponding_point(model_a, model_b, x1, y1, h0+HSTEP)
-        r1 = np.vstack([tx,ty]).T
+        r0 = np.vstack([tx, ty]).T
+        tx, ty, tz = find_corresponding_point(model_a, model_b, x1, y1, h0 + HSTEP)
+        r1 = np.vstack([tx, ty]).T
         a = r1 - r0
         b = p2 - r0
         # implements: h0_inc = dot(a,b) / dot(a,a)
@@ -76,18 +75,20 @@ def compute_height(model_a, model_b, x1, y1, x2, y2):
         diagabdot = np.multiply(a[:, 0], b[:, 0]) + np.multiply(a[:, 1], b[:, 1])
         diagaadot = np.multiply(a[:, 0], a[:, 0]) + np.multiply(a[:, 1], a[:, 1])
         h0_inc = np.divide(diagabdot, diagaadot)
-#        if np.any(np.isnan(h0_inc)):
-#            print(x1, y1, x2, y2)
-#            print(a)
-#            return h0, h0*0
+        #        if np.any(np.isnan(h0_inc)):
+        #            print(x1, y1, x2, y2)
+        #            print(a)
+        #            return h0, h0*0
         # implements:   q = r0 + h0_inc * a
         q = r0 + np.dot(np.diag(h0_inc), a)
         # implements: err = sqrt(dot(q-p2, q-p2))
-        tmp = q-p2
-        err =  np.sqrt(np.multiply(tmp[:, 0], tmp[:, 0]) + np.multiply(tmp[:, 1], tmp[:, 1]))
-#       print(np.arctan2(tmp[:, 1], tmp[:, 0])) # for debug
-#       print(err) # for debug
-        h0 = np.add(h0, h0_inc*HSTEP)
+        tmp = q - p2
+        err = np.sqrt(
+            np.multiply(tmp[:, 0], tmp[:, 0]) + np.multiply(tmp[:, 1], tmp[:, 1])
+        )
+        #       print(np.arctan2(tmp[:, 1], tmp[:, 0])) # for debug
+        #       print(err) # for debug
+        h0 = np.add(h0, h0_inc * HSTEP)
         # implements: if fabs(h0_inc) < 0.0001:
         if np.max(np.fabs(h0_inc)) < 0.001:
             break
@@ -115,9 +116,9 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     M = rpc.alt_offset + rpc.alt_scale
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
-    x = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
-    y = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
-    a = np.array([m, M,   m,   M,   m,   M,   m,   M])
+    x = np.array([x, x, x, x, x + w, x + w, x + w, x + w])
+    y = np.array([y, y, y + h, y + h, y, y, y + h, y + h])
+    a = np.array([m, M, m, M, m, M, m, M])
 
     # compute geodetic coordinates of corresponding world points
     lon, lat = rpc.localization(x, y, a)
@@ -157,13 +158,12 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
         hmin, hmax: min, max heights
     """
     # open image
-    dataset = rasterio.open(im, 'r')
+    dataset = rasterio.open(im, "r")
 
     # convert lon/lat to im projection
-    x_im_proj, y_im_proj = geographiclib.pyproj_transform([lon_m, lon_M],
-                                                          [lat_m, lat_M],
-                                                          4326,
-                                                          dataset.crs.to_epsg())
+    x_im_proj, y_im_proj = geographiclib.pyproj_transform(
+        [lon_m, lon_M], [lat_m, lat_M], 4326, dataset.crs.to_epsg()
+    )
 
     # convert im projection to pixel
     pts = []
@@ -173,18 +173,17 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
     py = [p[1] for p in pts]
 
     # get footprint
-    [px_min, px_max, py_min, py_max] = map(int, [np.amin(px),
-                                                 np.amax(px)+1,
-                                                 np.amin(py),
-                                                 np.amax(py)+1])
+    [px_min, px_max, py_min, py_max] = map(
+        int, [np.amin(px), np.amax(px) + 1, np.amin(py), np.amax(py) + 1]
+    )
 
     # limits of im extract
     x, y, w, h = px_min, py_min, px_max - px_min + 1, py_max - py_min + 1
     sizey, sizex = dataset.shape
-    x0 = np.clip(x, 0, sizex-1)
-    y0 = np.clip(y, 0, sizey-1)
-    w -= (x0-x)
-    h -= (y0-y)
+    x0 = np.clip(x, 0, sizex - 1)
+    y0 = np.clip(y, 0, sizey - 1)
+    w -= x0 - x
+    h -= y0 - y
     w = np.clip(w, 0, sizex - 1 - x0)
     h = np.clip(h, 0, sizey - 1 - y0)
 
@@ -195,15 +194,17 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc):
         hmin = np.nanmin(array)
         hmax = np.nanmax(array)
 
-        if cfg['exogenous_dem_geoid_mode'] is True:
-            offset = geographiclib.geoid_to_ellipsoid((lat_m + lat_M)/2, (lon_m + lon_M)/2, 0)
+        if cfg["exogenous_dem_geoid_mode"] is True:
+            offset = geographiclib.geoid_to_ellipsoid(
+                (lat_m + lat_M) / 2, (lon_m + lon_M) / 2, 0
+            )
             hmin += offset
             hmax += offset
         return hmin, hmax
     else:
         print("WARNING: rpc_utils.min_max_heights_from_bbx: access window out of range")
         print("returning coarse range from rpc")
-        return altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
+        return altitude_range_coarse(rpc, cfg["rpc_alt_range_scale_factor"])
 
 
 def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
@@ -234,21 +235,25 @@ def altitude_range(rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     lon_m, lon_M, lat_m, lat_M = geodesic_bounding_box(rpc, x, y, w, h)
 
     # compute heights on this bounding box
-    if cfg['exogenous_dem'] is not None:
-        h_m, h_M = min_max_heights_from_bbx(cfg['exogenous_dem'],
-                                            lon_m, lon_M, lat_m, lat_M, rpc)
+    if cfg["exogenous_dem"] is not None:
+        h_m, h_M = min_max_heights_from_bbx(
+            cfg["exogenous_dem"], lon_m, lon_M, lat_m, lat_M, rpc
+        )
         h_m += margin_bottom
         h_M += margin_top
-    elif cfg['use_srtm']:
+    elif cfg["use_srtm"]:
         s = 0.001 / 12  # SRTM90 pixel spacing is 0.001 / 12 degrees
-        points = [(lon, lat) for lon in np.arange(lon_m, lon_M, s)
-                             for lat in np.arange(lat_m, lat_M, s)]
+        points = [
+            (lon, lat)
+            for lon in np.arange(lon_m, lon_M, s)
+            for lat in np.arange(lat_m, lat_M, s)
+        ]
         lons, lats = np.asarray(points).T
         alts = srtm4.srtm4(lons, lats)  # TODO use srtm4 nn interpolation option
         h_m = min(alts) + margin_bottom
         h_M = max(alts) + margin_top
     else:
-        h_m, h_M = altitude_range_coarse(rpc, cfg['rpc_alt_range_scale_factor'])
+        h_m, h_M = altitude_range_coarse(rpc, cfg["rpc_alt_range_scale_factor"])
 
     return h_m, h_M
 
@@ -272,13 +277,14 @@ def utm_zone(rpc, x, y, w, h):
         rpc = rpcm.rpc_from_geotiff(rpc)
 
     # determine lat lon of the center of the roi, assuming median altitude
-    lon, lat = rpc.localization(x + .5*w, y + .5*h, rpc.alt_offset)[:2]
+    lon, lat = rpc.localization(x + 0.5 * w, y + 0.5 * h, rpc.alt_offset)[:2]
 
     return geographiclib.compute_utm_zone(lon, lat)
 
 
-def roi_process(rpc, ll_poly, use_srtm=False, exogenous_dem=None,
-                exogenous_dem_geoid_mode=True):
+def roi_process(
+    rpc, ll_poly, use_srtm=False, exogenous_dem=None, exogenous_dem_geoid_mode=True
+):
     """
     Convert a (lon, lat) polygon into a rectangular bounding box in image space.
 
@@ -313,7 +319,7 @@ def roi_process(rpc, ll_poly, use_srtm=False, exogenous_dem=None,
 
     # return image roi
     x, y, w, h = common.bounding_box2D(list(zip(*img_pts)))
-    return {'x': x, 'y': y, 'w': w, 'h': h}
+    return {"x": x, "y": y, "w": w, "h": h}
 
 
 def generate_point_mesh(col_range, row_range, alt_range):
@@ -331,16 +337,24 @@ def generate_point_mesh(col_range, row_range, alt_range):
         3 lists, containing the col, row and alt coordinates.
     """
     # input points in col, row, alt space
-    cols, rows, alts = [np.linspace(v[0], v[1], v[2]) for v in
-            [col_range, row_range, alt_range]]
+    cols, rows, alts = [
+        np.linspace(v[0], v[1], v[2]) for v in [col_range, row_range, alt_range]
+    ]
 
     # make it a kind of meshgrid (but with three components)
     # if cols, rows and alts are lists of length 5, then after this operation
     # they will be lists of length 5x5x5
-    cols, rows, alts =\
-            (  cols+0*rows[:,np.newaxis]+0*alts[:,np.newaxis,np.newaxis]).reshape(-1),\
-            (0*cols+  rows[:,np.newaxis]+0*alts[:,np.newaxis,np.newaxis]).reshape(-1),\
-            (0*cols+0*rows[:,np.newaxis]+  alts[:,np.newaxis,np.newaxis]).reshape(-1)
+    cols, rows, alts = (
+        (cols + 0 * rows[:, np.newaxis] + 0 * alts[:, np.newaxis, np.newaxis]).reshape(
+            -1
+        ),
+        (0 * cols + rows[:, np.newaxis] + 0 * alts[:, np.newaxis, np.newaxis]).reshape(
+            -1
+        ),
+        (0 * cols + 0 * rows[:, np.newaxis] + alts[:, np.newaxis, np.newaxis]).reshape(
+            -1
+        ),
+    )
 
     return cols, rows, alts
 
@@ -364,8 +378,8 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
     # points will be sampled in [x, x+w] and [y, y+h]. To avoid always sampling
     # the same four corners with each value of n, we make these intervals a
     # little bit smaller, with a dependence on n.
-    col_range = [x+(1.0/(2*n))*w, x+((2*n-1.0)/(2*n))*w, n]
-    row_range = [y+(1.0/(2*n))*h, y+((2*n-1.0)/(2*n))*h, n]
+    col_range = [x + (1.0 / (2 * n)) * w, x + ((2 * n - 1.0) / (2 * n)) * w, n]
+    row_range = [y + (1.0 / (2 * n)) * h, y + ((2 * n - 1.0) / (2 * n)) * h, n]
     alt_range = [m, M, n]
     col, row, alt = generate_point_mesh(col_range, row_range, alt_range)
     lon, lat = rpc.localization(col, row, alt)
@@ -397,9 +411,9 @@ def corresponding_roi(rpc1, rpc2, x, y, w, h):
     m, M = altitude_range(rpc1, x, y, w, h, 0, 0)
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
-    a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
-    b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
-    c = np.array([m, M,   m,   M,   m,   M,   m,   M])
+    a = np.array([x, x, x, x, x + w, x + w, x + w, x + w])
+    b = np.array([y, y, y + h, y + h, y, y, y + h, y + h])
+    c = np.array([m, M, m, M, m, M, m, M])
 
     # corresponding points in im2
     xx, yy = find_corresponding_point(rpc1, rpc2, a, b, c)[0:2]
@@ -467,8 +481,9 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     return disp
 
 
-def exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
-                                    margin_top=0, margin_bottom=0):
+def exogenous_disp_range_estimation(
+    rpc1, rpc2, x, y, w, h, H1, H2, A=None, margin_top=0, margin_bottom=0
+):
     """
     Args:
         rpc1: an instance of the rpcm.RPCModel class for the reference
@@ -489,17 +504,19 @@ def exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, A=None,
         disparity is made horizontal thanks to the two rectifying homographies
         H1 and H2.
     """
-    if cfg['exogenous_dem'] is None:
+    if cfg["exogenous_dem"] is None:
         return
 
     m, M = altitude_range(rpc1, x, y, w, h, margin_top, margin_bottom)
 
-    return altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2,
-                                        A, margin_top, margin_bottom)
+    return altitude_range_to_disp_range(
+        m, M, rpc1, rpc2, x, y, w, h, H1, H2, A, margin_top, margin_bottom
+    )
 
 
-def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
-                                 margin_top=0, margin_bottom=0):
+def altitude_range_to_disp_range(
+    m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None, margin_top=0, margin_bottom=0
+):
     """
     Args:
         m: min altitude over the tile
@@ -519,9 +536,9 @@ def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
         H1 and H2.
     """
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
-    a = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
-    b = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
-    c = np.array([m, M,   m,   M,   m,   M,   m,   M])
+    a = np.array([x, x, x, x, x + w, x + w, x + w, x + w])
+    b = np.array([y, y, y + h, y + h, y, y, y + h, y + h])
+    c = np.array([m, M, m, M, m, M, m, M])
 
     # compute the disparities of these 8 points
     d = alt_to_disp(rpc1, rpc2, a, b, c, H1, H2, A)
@@ -545,6 +562,6 @@ def gsd_from_rpc(rpc, z=0):
     c = rpc.col_offset
     r = rpc.row_offset
 
-    a = geographiclib.lonlat_to_geocentric(*rpc.localization(c+0, r, z), alt=z)
-    b = geographiclib.lonlat_to_geocentric(*rpc.localization(c+1, r, z), alt=z)
+    a = geographiclib.lonlat_to_geocentric(*rpc.localization(c + 0, r, z), alt=z)
+    b = geographiclib.lonlat_to_geocentric(*rpc.localization(c + 1, r, z), alt=z)
     return np.linalg.norm(np.asarray(b) - np.asarray(a))

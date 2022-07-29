@@ -2,11 +2,11 @@ import os
 import shutil
 
 import pytest
+from tests_utils import data_path
 
 from s2p import disparity_to_ply, read_config_file
 from s2p.initialization import build_cfg
 from s2p.ply import read_3d_point_cloud_from_ply
-from tests_utils import data_path
 
 
 @pytest.mark.parametrize("out_crs", [None, "epsg:32740", "epsg:32740+5773"])

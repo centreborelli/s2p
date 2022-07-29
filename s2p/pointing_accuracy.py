@@ -5,15 +5,14 @@
 
 
 import os
+
 import numpy as np
 
-from s2p import sift
-from s2p import rpc_utils
-from s2p import estimation
+from s2p import estimation, rpc_utils, sift
 from s2p.config import cfg
 
 
-def error_vectors(m, F, ind='ref'):
+def error_vectors(m, F, ind="ref"):
     """
     Computes the error vectors for a list of matches and a given fundamental
     matrix.
@@ -35,23 +34,23 @@ def error_vectors(m, F, ind='ref'):
     """
     # divide keypoints in two lists: x (first image) and xx (second image), and
     # convert them to homogeneous coordinates
-    N  = len(m)
-    x  = np.ones((N, 3))
+    N = len(m)
+    x = np.ones((N, 3))
     xx = np.ones((N, 3))
-    x [:, 0:2] = m[:, 0:2]
+    x[:, 0:2] = m[:, 0:2]
     xx[:, 0:2] = m[:, 2:4]
 
     # epipolar lines: 2D array of size Nx3, one epipolar line per row
-    if ind == 'sec':
+    if ind == "sec":
         l = np.dot(x, F.T)
-    elif ind == 'ref':
+    elif ind == "ref":
         l = np.dot(xx, F)
     else:
         print("pointing_accuracy.error_vectors: invalid 'ind' argument")
 
     # compute the error vectors (going from the projection of x or xx on l to x
     # or xx)
-    if ind == 'sec':
+    if ind == "sec":
         n = np.multiply(xx[:, 0], l[:, 0]) + np.multiply(xx[:, 1], l[:, 1]) + l[:, 2]
     else:
         n = np.multiply(x[:, 0], l[:, 0]) + np.multiply(x[:, 1], l[:, 1]) + l[:, 2]
@@ -79,28 +78,27 @@ def local_translation(r1, r2, x, y, w, h, m):
         order to correct the pointing error.
     """
     # estimate the affine fundamental matrix between the two views
-    n = cfg['n_gcp_per_axis']
+    n = cfg["n_gcp_per_axis"]
     rpc_matches = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, n)
     F = estimation.affine_fundamental_matrix(rpc_matches)
 
     # compute the error vectors
-    e = error_vectors(m, F, 'sec')
+    e = error_vectors(m, F, "sec")
 
     # compute the median: as the vectors are collinear (because F is affine)
     # computing the median of each component independently is correct
     N = len(e)
-    out_x = np.sort(e[:, 0])[int(N/2)]
-    out_y = np.sort(e[:, 1])[int(N/2)]
+    out_x = np.sort(e[:, 0])[int(N / 2)]
+    out_y = np.sort(e[:, 1])[int(N / 2)]
 
     # the correction to be applied to the second view is the opposite
-    A = np.array([[1, 0, -out_x],
-                  [0, 1, -out_y],
-                  [0, 0, 1]])
+    A = np.array([[1, 0, -out_x], [0, 1, -out_y], [0, 0, 1]])
     return A
 
 
-def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
-                       method, sift_thresh, epipolar_threshold):
+def compute_correction(
+    img1, img2, rpc1, rpc2, x, y, w, h, method, sift_thresh, epipolar_threshold
+):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -121,8 +119,9 @@ def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
         order to correct the pointing error, and the list of sift matches used
         to compute this correction.
     """
-    m = sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, x, y, w, h,
-                                method, sift_thresh, epipolar_threshold)
+    m = sift.matches_on_rpc_roi(
+        img1, img2, rpc1, rpc2, x, y, w, h, method, sift_thresh, epipolar_threshold
+    )
 
     if m is not None:
         A = local_translation(rpc1, rpc2, x, y, w, h, m)
@@ -149,13 +148,13 @@ def global_from_local(tiles):
     coordinates of the mean of the keypoints of the secondary image.
     """
     # lists of matching points
-    x  = []
+    x = []
     xx = []
 
     # loop over all the tiles
     for f in tiles:
-        center = os.path.join(f, 'center_keypts_sec.txt')
-        pointing = os.path.join(f, 'pointing.txt')
+        center = os.path.join(f, "center_keypts_sec.txt")
+        pointing = os.path.join(f, "pointing.txt")
         if os.path.isfile(center) and os.path.isfile(pointing):
             A = np.loadtxt(pointing)
             p = np.loadtxt(center)
@@ -169,7 +168,7 @@ def global_from_local(tiles):
     elif len(x) == 1:
         return A
     elif len(x) == 2:
-        #TODO: replace translation with similarity
+        # TODO: replace translation with similarity
         return estimation.translation(np.array(x), np.array(xx))
     else:
         # estimate an affine transformation transforming x in xx

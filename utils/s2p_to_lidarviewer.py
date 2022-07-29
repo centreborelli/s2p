@@ -13,20 +13,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import json
 import argparse
+import json
+import os
 import subprocess
 
 import s2p
 from s2p import common
 
-
-
-
 ## temp files
 garbage = list()
-def tmpfile(ext='', tmpdir='tmp'):
+
+
+def tmpfile(ext="", tmpdir="tmp"):
     """
     Creates a temporary file in the cfg['temporary_dir'] directory.
 
@@ -46,12 +45,12 @@ def tmpfile(ext='', tmpdir='tmp'):
     except OSError:
         pass
     pass
-    fd, out = tempfile.mkstemp(suffix=ext, prefix='s2p_',
-                               dir=os.path.expandvars(tmpdir))
-    os.close(fd)           # http://www.logilab.org/blogentry/17873
+    fd, out = tempfile.mkstemp(
+        suffix=ext, prefix="s2p_", dir=os.path.expandvars(tmpdir)
+    )
+    os.close(fd)  # http://www.logilab.org/blogentry/17873
     garbage.append(out)
     return out
-
 
 
 def read_tiles(tile_files):
@@ -59,13 +58,12 @@ def read_tiles(tile_files):
     tile_file_dir = os.path.dirname(tile_files)
     err_log = os.path.join(outdir, "%s_invalid_tiles.txt" % key)
 
-    with open(tile_files, 'r') as f:
-        readlines = list(map(str.strip,
-                             f.readlines()))
-        with open(err_log, 'w') as ferr:
+    with open(tile_files, "r") as f:
+        readlines = list(map(str.strip, f.readlines()))
+        with open(err_log, "w") as ferr:
             for el in readlines:
                 t = os.path.dirname(os.path.join(tile_file_dir, el))
-                dsm = os.path.join(t, 'dsm.tif')
+                dsm = os.path.join(t, "dsm.tif")
                 message = "ok"
                 if os.path.exists(dsm) is False:
                     message = "no dsm"
@@ -84,38 +82,49 @@ def produce_lidarviewer(s2poutdir, output):
         tiles: list of tiles dictionaries
     """
 
-    tiles_file = os.path.join(s2poutdir, 'tiles.txt')
+    tiles_file = os.path.join(s2poutdir, "tiles.txt")
 
     # Read the tiles file
     tiles = s2p.read_tiles(tiles_file)
-    print(str(len(tiles))+' tiles found')
+    print(str(len(tiles)) + " tiles found")
 
     # collect all plys
-    plys = [os.path.join(os.path.abspath(os.path.dirname(t)), 'cloud.ply') for t in tiles]
-
+    plys = [
+        os.path.join(os.path.abspath(os.path.dirname(t)), "cloud.ply") for t in tiles
+    ]
 
     nthreads = 4
-    plys = ' '.join(plys)
-    common.run("LidarPreprocessor -to %s.LidarO -tp %s.LidarP -nt %d %s -o %s" % (output,
-                                                                           output,
-                                                                           nthreads,
-                                                                           plys,
-                                                                           output))
+    plys = " ".join(plys)
+    common.run(
+        "LidarPreprocessor -to %s.LidarO -tp %s.LidarP -nt %d %s -o %s"
+        % (output, output, nthreads, plys, output)
+    )
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=('S2P: lidarviewer generation tool'))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=("S2P: lidarviewer generation tool"))
 
-    parser.add_argument('s2pout',metavar='s2poutdir',
-                        help=('path to the s2p output directory'))
-    parser.add_argument('outdir',metavar='potreeoutdir', default='',nargs='?',
-                        help=('path to output lidarviewer (default: current dir)'))
+    parser.add_argument(
+        "s2pout", metavar="s2poutdir", help=("path to the s2p output directory")
+    )
+    parser.add_argument(
+        "outdir",
+        metavar="potreeoutdir",
+        default="",
+        nargs="?",
+        help=("path to output lidarviewer (default: current dir)"),
+    )
     args = parser.parse_args()
 
     try:
-    	produce_lidarviewer(args.s2pout,args.outdir)
+        produce_lidarviewer(args.s2pout, args.outdir)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        print ('------------------------------------------------------------------------------------')
-        print ('\nYou must install LidarPreprocessor from https://github.com/KeckCAVES/LidarViewer\n')
-        print ('------------------------------------------------------------------------------------')
-
+        print(
+            "------------------------------------------------------------------------------------"
+        )
+        print(
+            "\nYou must install LidarPreprocessor from https://github.com/KeckCAVES/LidarViewer\n"
+        )
+        print(
+            "------------------------------------------------------------------------------------"
+        )

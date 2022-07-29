@@ -2,6 +2,7 @@
 # Copyright (C) 2019, Julien Michel (CNES) <julien.michel@cnes.fr>
 
 import os
+
 import s2p
 
 
@@ -16,4 +17,4 @@ def data_path(p):
         str: absolute path to that data file
     """
     here = os.path.abspath(os.path.dirname(__file__))
-    return os.path.join(here, 'data', p)
+    return os.path.join(here, "data", p)

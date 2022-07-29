@@ -13,25 +13,33 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
+import sys
 import tempfile
 
 import rasterio
 import rpcm
+
 from s2p import common
 
-available_filters = ['near', 'bilinear',
-                     'cubic', 'cubicspline', 'lanczos', 'average']
+available_filters = ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average"]
 
 if __name__ == "__main__":
 
     if len(sys.argv) not in [7, 8]:
-        print("Usage: {} im_in rpc_in im_out rpc_out filter scale_x [scale_y]".format(
-            sys.argv[0]))
-        print("Use scale_x (resp. scale_y) > 1 to zoom in, and scale_x (resp. scale_y) < 1 to zoom out")
-        print("Filter should be one of the following gdal filters: {}".format(
-            available_filters))
+        print(
+            "Usage: {} im_in rpc_in im_out rpc_out filter scale_x [scale_y]".format(
+                sys.argv[0]
+            )
+        )
+        print(
+            "Use scale_x (resp. scale_y) > 1 to zoom in, and scale_x (resp. scale_y) < 1 to zoom out"
+        )
+        print(
+            "Filter should be one of the following gdal filters: {}".format(
+                available_filters
+            )
+        )
         sys.exit(1)
     in_img_file = sys.argv[1]
     in_rpc_file = sys.argv[2]
@@ -48,8 +56,7 @@ if __name__ == "__main__":
 
     # check if filter is valid
     if filt not in available_filters:
-        print("Unknown filter {}. Should be one of {}".format(
-            filt, available_filters))
+        print("Unknown filter {}. Should be one of {}".format(filt, available_filters))
         sys.exit(1)
 
     # generate image
@@ -61,16 +68,21 @@ if __name__ == "__main__":
         h = f.height
 
     # Generate a temporary vrt file to have the proper geotransform
-    fd, tmp_vrt = tempfile.mkstemp(suffix='.vrt',
-                                   dir=os.path.dirname(out_img_file))
+    fd, tmp_vrt = tempfile.mkstemp(suffix=".vrt", dir=os.path.dirname(out_img_file))
 
     os.close(fd)
 
-    common.run('gdal_translate -of VRT -a_ullr 0 0 %d %d %s %s' %
-               (w, h, in_img_file, tmp_vrt))
+    common.run(
+        "gdal_translate -of VRT -a_ullr 0 0 %d %d %s %s" % (w, h, in_img_file, tmp_vrt)
+    )
 
-    common.run(('gdalwarp -co RPB=NO -co PROFILE=GeoTIFF -r %s -co "BIGTIFF=IF_NEEDED" -co "TILED=YES" -ovr NONE -overwrite -to SRC_METHOD=NO_GEOTRANSFORM -to DST_METHOD=NO_GEOTRANSFORM -tr'
-                ' %d %d %s %s') % (filt, scale_x, scale_y, tmp_vrt, out_img_file))
+    common.run(
+        (
+            'gdalwarp -co RPB=NO -co PROFILE=GeoTIFF -r %s -co "BIGTIFF=IF_NEEDED" -co "TILED=YES" -ovr NONE -overwrite -to SRC_METHOD=NO_GEOTRANSFORM -to DST_METHOD=NO_GEOTRANSFORM -tr'
+            " %d %d %s %s"
+        )
+        % (filt, scale_x, scale_y, tmp_vrt, out_img_file)
+    )
 
     try:
         # Remove aux files if any

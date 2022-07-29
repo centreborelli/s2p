@@ -5,7 +5,6 @@ import math
 import numpy as np
 import rasterio
 from plyflatten import plyflatten_from_plyfiles_list
-
 from tests_utils import data_path
 
 
@@ -28,17 +27,17 @@ def test_plyflatten():
     assert np.allclose(test_raster, expected_raster, equal_nan=True)
 
     # Check that both images have the same CRS
-    test_crs = profile['crs']
+    test_crs = profile["crs"]
     assert test_crs == expected_crs
 
     # Check that both images have the same transform
-    test_transform = profile['transform']
+    test_transform = profile["transform"]
     assert np.allclose(test_transform, expected_transform)
 
-    test_is_tiled = profile['tiled']
+    test_is_tiled = profile["tiled"]
     assert test_is_tiled == expected_is_tiled
 
-    test_nodata = profile.get('nodata')
+    test_nodata = profile.get("nodata")
     if expected_nodata and math.isnan(expected_nodata):
         assert math.isnan(test_nodata)
     else:

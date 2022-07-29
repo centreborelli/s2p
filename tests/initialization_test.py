@@ -3,12 +3,12 @@ import os
 import shutil
 from unittest.mock import MagicMock
 
+import pytest
 import rasterio
 import rpcm
-
-import pytest
-import s2p
 from tests_utils import data_path
+
+import s2p
 
 
 @pytest.fixture(name="mocks")

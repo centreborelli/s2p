@@ -4,6 +4,7 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import numpy as np
+
 import s2p
 
 

@@ -5,8 +5,7 @@
 import numpy as np
 import rasterio
 
-from s2p import common
-from s2p import rpc_utils
+from s2p import common, rpc_utils
 
 
 def plot_line(im, x1, y1, x2, y2, colour):
@@ -28,7 +27,7 @@ def plot_line(im, x1, y1, x2, y2, colour):
     # the biggest dimension.
     if np.abs(x2 - x1) >= np.abs(y2 - y1):
         n = np.abs(x2 - x1)
-        for i in range(int(n+1)):
+        for i in range(int(n + 1)):
             x = int(x1 + i * (x2 - x1) / n)
             y = int(np.round(y1 + i * (y2 - y1) / n))
             try:
@@ -37,7 +36,7 @@ def plot_line(im, x1, y1, x2, y2, colour):
                 pass
     else:
         n = np.abs(y2 - y1)
-        for i in range(int(n+1)):
+        for i in range(int(n + 1)):
             y = int(y1 + i * (y2 - y1) / n)
             x = int(np.round(x1 + i * (x2 - x1) / n))
             try:
@@ -63,7 +62,7 @@ def plot_matches_low_level(img1, img2, matches, outfile):
     if img1.ndim < 3:
         img1 = np.dstack([img1] * 3)
     if img2.ndim < 3:
-        img2= np.dstack([img2] * 3)
+        img2 = np.dstack([img2] * 3)
 
     # if images have more than 3 channels, keep only the first 3
     if img1.shape[2] > 3:

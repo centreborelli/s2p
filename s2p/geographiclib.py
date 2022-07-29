@@ -71,8 +71,9 @@ def epsg_code_from_utm_zone(utm_zone):
     hemisphere = utm_zone[-1]
 
     if hemisphere not in ["N", "S"]:
-        raise ValueError("unknown hemisphere {} in utm_zone {}".format(hemisphere,
-                                                                       utm_zone))
+        raise ValueError(
+            "unknown hemisphere {} in utm_zone {}".format(hemisphere, utm_zone)
+        )
 
     # EPSG = CONST + ZONE where CONST is
     # - 32600 for positive latitudes
@@ -221,8 +222,9 @@ def crs_bbx(ll_poly, crs=None, align=None):
         crs = pyproj_crs(epsg)
 
     # convert lon lat polygon to target CRS
-    easting, northing = pyproj.transform(pyproj.Proj(init="epsg:4326"),
-                                         crs, ll_poly[:, 0], ll_poly[:, 1])
+    easting, northing = pyproj.transform(
+        pyproj.Proj(init="epsg:4326"), crs, ll_poly[:, 0], ll_poly[:, 1]
+    )
 
     # CRS bounding box
     left = min(easting)
