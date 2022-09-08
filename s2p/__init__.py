@@ -604,17 +604,19 @@ def main(user_cfg, start_from=0):
         print('3) rectifying tiles...')
         parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
                               timeout=timeout)
-        tiles = [t for t in tiles if t is not None]
+
 
     # matching step:
     if start_from <= 4:
-        print('4) running stereo matching...')
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
         else:
-            # Set the number of stereo workers to 2/3 of the number of cores by default
-            nb_workers_stereo = min(1, int(2 * (nb_workers / 3)))
+            # Set the number of stereo workers to 2/3 of the number of cores by default, divided
+            # by a certain amount depending on the tile_size this should be a generally safe number of workers.
+            divider = (cfg['tile_size'] / 800.0) * (cfg['tilesize'] / 800.0)
+            nb_workers_stereo = min(nb_workers, max(1, int((2 * (nb_workers / 3)) / divider)))
         try:
+            print(f'4) running stereo matching using {nb_workers_stereo} workers...')
             parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
                           timeout=timeout)
         except subprocess.CalledProcessError as e:
