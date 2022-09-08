@@ -46,6 +46,21 @@ from s2p import fusion
 from s2p import visualisation
 
 
+def check_missing_sift(tiles_pairs):
+    missing_sift = []
+    with open(os.path.join(cfg["out_dir"], "missing_sift.txt"), "w") as f:
+        for tile, i in tiles_pairs:
+            out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
+            path = os.path.join(out_dir, 'sift_matches.txt')
+            if not os.path.exists(path):
+                missing_sift.append(path)
+                f.write(path + "\n")
+    if len(missing_sift) > 0:
+        print(" --- ")
+        print(f"WARNING: missing {len(missing_sift)}/{len(tiles_pairs)} "
+              "SIFT matches, this may deteriorate output quality")
+        print(" --- ")
+
 def pointing_correction(tile, i):
     """
     Compute the translation that corrects the pointing error on a pair of tiles.
@@ -576,6 +591,7 @@ def main(user_cfg, start_from=0):
         print('1) correcting pointing locally...')
         parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers,
                               timeout=timeout)
+        check_missing_sift(tiles_pairs)
 
     # global-pointing step:
     if start_from <= 2:
