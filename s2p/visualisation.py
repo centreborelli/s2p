@@ -8,6 +8,7 @@ import rasterio
 from s2p import common
 from s2p import rpc_utils
 
+from rasterio.windows import Window
 
 def plot_line(im, x1, y1, x2, y2, colour):
     """
@@ -48,41 +49,42 @@ def plot_line(im, x1, y1, x2, y2, colour):
     return im
 
 
-def plot_matches_low_level(img1, img2, matches, outfile):
+def plot_matches_low_level(crop1, crop2, matches, outfile):
     """
     Displays two images side by side with matches highlighted
 
     Args:
-        img1, img2 (np.array): two input images
+        crop1, crop2 (np.array): two input images
         matches: 2D numpy array of size 4xN containing a list of matches (a
             list of pairs of points, each pair being represented by x1, y1, x2,
             y2)
         outfile (str): path where to write the resulting image, to be displayed
     """
     # transform single channel to 3-channels
-    if img1.ndim < 3:
-        img1 = np.dstack([img1] * 3)
-    if img2.ndim < 3:
-        img2= np.dstack([img2] * 3)
+    if crop1.shape[0] < 3:
+        crop1 = np.concatenate([crop1] * 3, axis=0)
+    if crop2.shape[0] < 3:
+        crop2 = np.concatenate([crop2] * 3, axis=0)
 
     # if images have more than 3 channels, keep only the first 3
-    if img1.shape[2] > 3:
-        img1 = img1[:, :, 0:3]
-    if img2.shape[2] > 3:
-        img2 = img2[:, :, 0:3]
+    if crop1.shape[0] > 3:
+        crop1 = crop1[:3, :, :]
+    if crop2.shape[0] > 3:
+        crop2 = crop2[:3, :, :]
 
     # build the output image
-    h1, w1 = img1.shape[:2]
-    h2, w2 = img2.shape[:2]
+    h1, w1 = crop1.shape[1:]
+    h2, w2 = crop2.shape[1:]
     w = w1 + w2
     h = max(h1, h2)
-    out = np.zeros((h, w, 3), np.uint8)
-    out[:h1, :w1] = img1
-    out[:h2, w1:w] = img2
+    out = np.zeros((3, h, w), np.uint8)
+    out[:, :h1, :w1] = crop1
+    out[:, :h2, w1:w] = crop2
+    out = np.transpose(out, [1, 2, 0])
 
     # define colors, according to min/max intensity values
-    out_min = min(np.nanmin(img1), np.nanmin(img2))
-    out_max = max(np.nanmax(img1), np.nanmax(img2))
+    out_min = min(np.nanmin(crop1), np.nanmin(crop2))
+    out_max = max(np.nanmax(crop1), np.nanmax(crop2))
     green = [out_min, out_max, out_min]
     blue = [out_min, out_min, out_max]
 
@@ -105,7 +107,7 @@ def plot_matches_low_level(img1, img2, matches, outfile):
     common.rasterio_write(outfile, out)
 
 
-def plot_matches(im1, im2, rpc1, rpc2, matches, outfile, x, y, w, h):
+def plot_matches(img1, img2, rpc1, rpc2, matches, outfile, x, y, w, h):
     """
     Plot keypoint matches on images corresponding ROIs.
 
@@ -129,11 +131,11 @@ def plot_matches(im1, im2, rpc1, rpc2, matches, outfile, x, y, w, h):
     x1, y1, w1, h1 = x, y, w, h
     x2, y2, w2, h2 = map(int, rpc_utils.corresponding_roi(rpc1, rpc2, x1, y1, w1, h1))
 
-    # do the crops
-    with rasterio.open(im1, "r") as f:
-        crop1 = f.read(window=((y1, y1 + h1), (x1, x1 + w1)))
-    with rasterio.open(im2, "r") as f:
-        crop2 = f.read(window=((y2, y2 + h2), (x2, x2 + w2)))
+    # read the crops
+    with rasterio.open(img1, "r") as f:
+        crop1 = f.read(window=Window(x1, y1, w1, h1))
+    with rasterio.open(img2, "r") as f:
+        crop2 = f.read(window=Window(x2, y2, w2, h2))
 
     crop1 = common.linear_stretching_and_quantization_8bit(crop1)
     crop2 = common.linear_stretching_and_quantization_8bit(crop2)
