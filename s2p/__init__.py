@@ -613,7 +613,7 @@ def main(user_cfg, start_from=0):
         else:
             # Set the number of stereo workers to 2/3 of the number of cores by default, divided
             # by a certain amount depending on the tile_size this should be a generally safe number of workers.
-            divider = (cfg['tile_size'] / 800.0) * (cfg['tilesize'] / 800.0)
+            divider = (cfg['tile_size'] / 800.0) * (cfg['tile_size'] / 800.0)
             nb_workers_stereo = min(nb_workers, max(1, int((2 * (nb_workers / 3)) / divider)))
         try:
             print(f'4) running stereo matching using {nb_workers_stereo} workers...')
