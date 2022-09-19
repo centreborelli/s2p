@@ -611,10 +611,12 @@ def main(user_cfg, start_from=0):
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
         else:
-            # Set the number of stereo workers to 2/3 of the number of cores by default, divided
-            # by a certain amount depending on the tile_size this should be a generally safe number of workers.
+            # Set the number of stereo workers to the number of workers divided
+            # by a certain amount depending on the tile_size and number of tiles
+            # this should be a generally safe number of workers.
             divider = (cfg['tile_size'] / 800.0) * (cfg['tile_size'] / 800.0)
-            nb_workers_stereo = int(min(nb_workers, max(1, int(nb_workers / 2.0) / divider)))
+            divider *= (len(tiles_pairs) / 500.0)
+            nb_workers_stereo = int(min(nb_workers, max(1, int(nb_workers / divider))))
         try:
             print(f'4) running stereo matching using {nb_workers_stereo} workers...')
             parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
