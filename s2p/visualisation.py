@@ -49,7 +49,7 @@ def plot_line(im, x1, y1, x2, y2, colour):
     return im
 
 
-def plot_matches_low_level(crop1, crop2, matches, outfile):
+def plot_matches_low_level(crop1, crop2, matches, outfile, max_matches=100):
     """
     Displays two images side by side with matches highlighted
 
@@ -88,8 +88,8 @@ def plot_matches_low_level(crop1, crop2, matches, outfile):
     green = [out_min, out_max, out_min]
     blue = [out_min, out_min, out_max]
 
-    # plot the matches
-    for i in range(len(matches)):
+    # plot the matches (not more than max_matches)
+    for i in range(min(max_matches, len(matches))):
         x1 = matches[i, 0]
         y1 = matches[i, 1]
         x2 = matches[i, 2] + w1
