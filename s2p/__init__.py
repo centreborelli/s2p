@@ -565,6 +565,7 @@ def main(user_cfg, start_from=0):
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
     if cfg['max_processes'] is not None:
         nb_workers = cfg['max_processes']
+        print(f"Running s2p using {nb_workers} workers.")
 
     tw, th = initialization.adjust_tile_size()
     tiles_txt = os.path.join(cfg['out_dir'], 'tiles.txt')
@@ -610,13 +611,15 @@ def main(user_cfg, start_from=0):
     if start_from <= 4:
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
-        else:
+        elif cfg['matching_algorithm'] == 'mgm_multi':
             # Set the number of stereo workers to the number of workers divided
             # by a certain amount depending on the tile_size and number of tiles
             # this should be a generally safe number of workers.
-            divider = (cfg['tile_size'] / 800.0) * (cfg['tile_size'] / 800.0)
+            divider = 2 * (cfg['tile_size'] / 800.0) * (cfg['tile_size'] / 800.0)
             divider *= (len(tiles_pairs) / 500.0)
             nb_workers_stereo = int(min(nb_workers, max(1, int(nb_workers / divider))))
+        else:
+            nb_workers_stereo = int((2/3) * nb_workers)
         try:
             print(f'4) running stereo matching using {nb_workers_stereo} workers...')
             parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
@@ -657,7 +660,7 @@ def main(user_cfg, start_from=0):
 
     # local-dsm-rasterization step:
     if start_from <= 6:
-        print('computing DSM by tile...')
+        print('6) computing DSM by tile...')
         parallel.launch_calls(plys_to_dsm, tiles, nb_workers, timeout=timeout)
 
     # global-dsm-rasterization step:
