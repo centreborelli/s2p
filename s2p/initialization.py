@@ -298,6 +298,9 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
         mask (np.array): tile validity mask. Set to None if the tile is discarded
     """
     # check if the tile is partly contained in at least one other image
+    if w <= 0 or h <= 0:
+        return False, None
+
     rpc = cfg['images'][0]['rpcm']
     for img, size in zip(cfg['images'][1:], images_sizes[1:]):
         coords = rpc_utils.corresponding_roi(rpc, img['rpcm'], x, y, w, h)

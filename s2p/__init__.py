@@ -46,6 +46,21 @@ from s2p import fusion
 from s2p import visualisation
 
 
+def check_missing_sift(tiles_pairs):
+    missing_sift = []
+    with open(os.path.join(cfg["out_dir"], "missing_sift.txt"), "w") as f:
+        for tile, i in tiles_pairs:
+            out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
+            path = os.path.join(out_dir, 'sift_matches.txt')
+            if not os.path.exists(path):
+                missing_sift.append(path)
+                f.write(path + "\n")
+    if len(missing_sift) > 0:
+        print(" --- ")
+        print(f"WARNING: missing {len(missing_sift)}/{len(tiles_pairs)} "
+              "SIFT matches, this may deteriorate output quality")
+        print(" --- ")
+
 def pointing_correction(tile, i):
     """
     Compute the translation that corrects the pointing error on a pair of tiles.
@@ -550,6 +565,7 @@ def main(user_cfg, start_from=0):
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
     if cfg['max_processes'] is not None:
         nb_workers = cfg['max_processes']
+        print(f"Running s2p using {nb_workers} workers.")
 
     tw, th = initialization.adjust_tile_size()
     tiles_txt = os.path.join(cfg['out_dir'], 'tiles.txt')
@@ -576,6 +592,7 @@ def main(user_cfg, start_from=0):
         print('1) correcting pointing locally...')
         parallel.launch_calls(pointing_correction, tiles_pairs, nb_workers,
                               timeout=timeout)
+        check_missing_sift(tiles_pairs)
 
     # global-pointing step:
     if start_from <= 2:
@@ -588,17 +605,25 @@ def main(user_cfg, start_from=0):
         print('3) rectifying tiles...')
         parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
                               timeout=timeout)
-        tiles = [t for t in tiles if t is not None]
+
 
     # matching step:
     if start_from <= 4:
-        print('4) running stereo matching...')
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
         else:
-            # Set the number of stereo workers to 2/3 of the number of cores by default
-            nb_workers_stereo = min(1, int(2 * (nb_workers / 3)))
+            # Set the number of stereo workers to the number of workers divided
+            # by a certain amount depending on the tile_size and number of tiles
+            # this should be a generally safe number of workers.
+            divider = 2 * (cfg['tile_size'] / 800.0) * (cfg['tile_size'] / 800.0)
+            divider *= (len(tiles_pairs) / 500.0)
+            if cfg['matching_algorithm'] == 'mgm_multi':
+                nb_workers_stereo = int(min(nb_workers, max(1, int(nb_workers / divider))))
+            else:
+                # For non mgm_multi don't use less than 2/3 of the workers (much less RAM intensive)
+                nb_workers_stereo = int(min(nb_workers, max(((2 / 3) * nb_workers), nb_workers / divider)))
         try:
+            print(f'4) running stereo matching using {nb_workers_stereo} workers...')
             parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
                           timeout=timeout)
         except subprocess.CalledProcessError as e:
@@ -637,7 +662,7 @@ def main(user_cfg, start_from=0):
 
     # local-dsm-rasterization step:
     if start_from <= 6:
-        print('computing DSM by tile...')
+        print('6) computing DSM by tile...')
         parallel.launch_calls(plys_to_dsm, tiles, nb_workers, timeout=timeout)
 
     # global-dsm-rasterization step:
