@@ -194,6 +194,8 @@ def stereo_matching(tile, i):
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
+    if not os.path.exists(rect1) or not os.path.exists(rect2) or not os.path.exists(mask):
+        return None
     disp_min, disp_max = np.loadtxt(os.path.join(out_dir, 'disp_min_max.txt'))
 
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
@@ -209,7 +211,7 @@ def stereo_matching(tile, i):
             common.remove(rect1)
         common.remove(rect2)
         common.remove(os.path.join(out_dir, 'disp_min_max.txt'))
-
+    return (tile, i)
 
 def disparity_to_height(tile, i):
     """
@@ -624,8 +626,12 @@ def main(user_cfg, start_from=0):
                 nb_workers_stereo = int(min(nb_workers, max(((2 / 3) * nb_workers), nb_workers / divider)))
         try:
             print(f'4) running stereo matching using {nb_workers_stereo} workers...')
-            parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
+            tiles_pairs = parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
                           timeout=timeout)
+            missing = len([t for t in tiles_pairs if t is None])
+            if missing > 0:
+                print(f"WARNING: Skipping {missing} tiles that are missing files")
+            tiles_pairs = [t for t in tiles_pairs if t is not None]
         except subprocess.CalledProcessError as e:
             print(f'ERROR: stereo matching failed. In case this is due too little RAM set '
                   f'"max_processes_stereo_matching" to a lower value (currently set to: {nb_workers_stereo}).')
