@@ -608,19 +608,24 @@ def main(user_cfg, start_from=0):
 
     # matching step:
     if start_from <= 4:
-        tiles_pairs_new = []
-        for tile, i in tiles_pairs:
-            out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
-            paths = [
-                os.path.join(out_dir, 'rectified_ref.tif'),
-                os.path.join(out_dir, 'rectified_sec.tif')
-            ]
+        # Check which tiles were rectified correctly, and skip tiles that have missing files
+        tiles_new = []
+        for tile in tiles:
+            paths = []
+            for i in range(1, n):
+                out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
+                paths += [
+                    os.path.join(out_dir, 'rectified_ref.tif'),
+                    os.path.join(out_dir, 'rectified_sec.tif')
+                ]
             missing = sum(not os.path.exists(p) for p in paths)
             if missing > 0:
-                print(f"WARNING: tile {out_dir} is missing {missing}/2 input files for stereo matching, skipping...")
+                print(f"WARNING: tile {tile['dir']} is missing {missing}/{len(paths)} "
+                      "input files for stereo matching, skipping...")
                 continue
-            tiles_pairs_new.append((tile, i))
-        tiles_pairs = tiles_pairs_new
+            tiles_new.append(tile)
+        tiles = tiles_new
+        tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
 
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
