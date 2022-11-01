@@ -606,7 +606,6 @@ def main(user_cfg, start_from=0):
         parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
                               timeout=timeout)
 
-
     # matching step:
     if start_from <= 4:
         tiles_pairs_new = []
@@ -614,9 +613,7 @@ def main(user_cfg, start_from=0):
             out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
             paths = [
                 os.path.join(out_dir, 'rectified_ref.tif'),
-                os.path.join(out_dir, 'rectified_sec.tif'),
-                os.path.join(out_dir, 'rectified_disp.tif'),
-                os.path.join(out_dir, 'rectified_mask.png')
+                os.path.join(out_dir, 'rectified_sec.tif')
             ]
             missing = sum(not os.path.exists(p) for p in paths)
             if missing > 0:
