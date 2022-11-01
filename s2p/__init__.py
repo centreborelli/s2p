@@ -617,7 +617,7 @@ def main(user_cfg, start_from=0):
             ]
             missing = sum(not os.path.exists(p) for p in paths)
             if missing > 0:
-                print(f"WARNING: tile {out_dir} is missing {missing}/4 input files for stereo matching, skipping...")
+                print(f"WARNING: tile {out_dir} is missing {missing}/2 input files for stereo matching, skipping...")
                 continue
             tiles_pairs_new.append((tile, i))
         tiles_pairs = tiles_pairs_new
