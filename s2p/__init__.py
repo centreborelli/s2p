@@ -194,6 +194,7 @@ def stereo_matching(tile, i):
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
+
     disp_min, disp_max = np.loadtxt(os.path.join(out_dir, 'disp_min_max.txt'))
 
     block_matching.compute_disparity_map(rect1, rect2, disp, mask,
@@ -209,7 +210,6 @@ def stereo_matching(tile, i):
             common.remove(rect1)
         common.remove(rect2)
         common.remove(os.path.join(out_dir, 'disp_min_max.txt'))
-
 
 def disparity_to_height(tile, i):
     """
@@ -606,9 +606,27 @@ def main(user_cfg, start_from=0):
         parallel.launch_calls(rectification_pair, tiles_pairs, nb_workers,
                               timeout=timeout)
 
-
     # matching step:
     if start_from <= 4:
+        # Check which tiles were rectified correctly, and skip tiles that have missing files
+        tiles_new = []
+        for tile in tiles:
+            paths = []
+            for i in range(1, n):
+                out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
+                paths += [
+                    os.path.join(out_dir, 'rectified_ref.tif'),
+                    os.path.join(out_dir, 'rectified_sec.tif')
+                ]
+            missing = sum(not os.path.exists(p) for p in paths)
+            if missing > 0:
+                print(f"WARNING: tile {tile['dir']} is missing {missing}/{len(paths)} "
+                      "input files for stereo matching, skipping...")
+                continue
+            tiles_new.append(tile)
+        tiles = tiles_new
+        tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
+
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
         else:
@@ -623,6 +641,7 @@ def main(user_cfg, start_from=0):
                 # For non mgm_multi don't use less than 2/3 of the workers (much less RAM intensive)
                 nb_workers_stereo = int(min(nb_workers, max(((2 / 3) * nb_workers), nb_workers / divider)))
         try:
+
             print(f'4) running stereo matching using {nb_workers_stereo} workers...')
             parallel.launch_calls(stereo_matching, tiles_pairs, nb_workers_stereo,
                           timeout=timeout)

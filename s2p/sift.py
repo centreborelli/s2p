@@ -109,6 +109,8 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
         # if extract not completely inside the full image then resize (w, h)
         w = min(w, ds.width - x)
         h = min(h, ds.height - y)
+        if w <= 0 or h <= 0:
+            return np.array([])
         in_buffer = ds.read(window=rio.windows.Window(x, y, w, h))
 
     # Detect keypoints on first band
