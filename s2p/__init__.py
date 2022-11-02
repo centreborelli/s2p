@@ -610,6 +610,7 @@ def main(user_cfg, start_from=0):
     if start_from <= 4:
         # Check which tiles were rectified correctly, and skip tiles that have missing files
         tiles_new = []
+        deleted_tiles = []
         for tile in tiles:
             paths = []
             for i in range(1, n):
@@ -622,9 +623,14 @@ def main(user_cfg, start_from=0):
             if missing > 0:
                 print(f"WARNING: tile {tile['dir']} is missing {missing}/{len(paths)} "
                       "input files for stereo matching, skipping...")
+                deleted_tiles.append(tile['dir']])
                 continue
             tiles_new.append(tile)
         tiles = tiles_new
+        # Remove deleted tiles from neighborhood_dirs
+        for i in range(len(tiles)):
+            tiles[i]['neighborhood_dirs']  = [d for d in tiles[i]['neighborhood_dirs'] if d not in deleted_tiles]
+
         tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
 
         if cfg['max_processes_stereo_matching'] is not None:
