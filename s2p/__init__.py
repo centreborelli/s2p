@@ -623,7 +623,7 @@ def main(user_cfg, start_from=0):
             if missing > 0:
                 print(f"WARNING: tile {tile['dir']} is missing {missing}/{len(paths)} "
                       "input files for stereo matching, skipping...")
-                deleted_tiles.append(tile['dir']])
+                deleted_tiles.append(tile['dir'])
                 continue
             tiles_new.append(tile)
         tiles = tiles_new
