@@ -621,9 +621,10 @@ def main(user_cfg, start_from=0):
                 ]
             missing = sum(not os.path.exists(p) for p in paths)
             if missing > 0:
-                print(f"WARNING: tile {tile['dir']} is missing {missing}/{len(paths)} "
+                relative_path = os.path.join('../../..', initialization.get_tile_dir(*tile['coordinates']))
+                print(f"WARNING: tile {relative_path} is missing {missing}/{len(paths)} "
                       "input files for stereo matching, skipping...")
-                deleted_tiles.append(os.path.join('../../..', tile['dir']))
+                deleted_tiles.append(relative_path)
                 continue
             tiles_new.append(tile)
         tiles = tiles_new
