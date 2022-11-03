@@ -72,7 +72,7 @@ def remove_missing_tiles(tiles):
     for i in range(len(tiles_new)):
         tiles_new[i]['neighborhood_dirs']  = [d for d in tiles_new[i]['neighborhood_dirs'] if d not in deleted_tiles]
     
-    tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
+    tiles_pairs = [(t, i) for i in range(1, n) for t in tiles_new]
     return tiles_new, tiles_pairs
 
 
