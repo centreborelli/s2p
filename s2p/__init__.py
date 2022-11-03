@@ -48,6 +48,7 @@ from s2p import visualisation
 
 def remove_missing_tiles(tiles):
     """Remove tiles where any of the rectified images is missing (also remove from neighborhood_dirs)."""
+    n = len(cfg['images'])
     tiles_new = []
     deleted_tiles = []
     for tile in tiles:
@@ -70,7 +71,9 @@ def remove_missing_tiles(tiles):
     # Remove deleted tiles from neighborhood_dirs
     for i in range(len(tiles)):
         tiles_new[i]['neighborhood_dirs']  = [d for d in tiles_new[i]['neighborhood_dirs'] if d not in deleted_tiles]
-    return tiles_new
+    
+    tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
+    return tiles_new, tiles_pairs
 
 
 def check_missing_sift(tiles_pairs):
@@ -636,8 +639,7 @@ def main(user_cfg, start_from=0):
     # matching step:
     if start_from <= 4:
         # Check which tiles were rectified correctly, and skip tiles that have missing files
-        tiles = remove_missing_tiles(tiles)
-        tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
+        tiles, tiles_pairs = remove_missing_tiles(tiles)
 
         if cfg['max_processes_stereo_matching'] is not None:
             nb_workers_stereo = cfg['max_processes_stereo_matching']
