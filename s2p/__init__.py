@@ -46,6 +46,33 @@ from s2p import fusion
 from s2p import visualisation
 
 
+def remove_missing_tiles(tiles):
+    """Remove tiles where any of the rectified images is missing (also remove from neighborhood_dirs)."""
+    tiles_new = []
+    deleted_tiles = []
+    for tile in tiles:
+        paths = []
+        for i in range(1, n):
+            out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
+            paths += [
+                os.path.join(out_dir, 'rectified_ref.tif'),
+                os.path.join(out_dir, 'rectified_sec.tif')
+            ]
+        missing = sum(not os.path.exists(p) for p in paths)
+        if missing > 0:
+            relative_path = os.path.join('../../..', initialization.get_tile_dir(*tile['coordinates']))
+            print(f"WARNING: tile {relative_path} is missing {missing}/{len(paths)} "
+                "input files, removing tile...")
+            deleted_tiles.append(relative_path)
+            continue
+        tiles_new.append(tile)
+
+    # Remove deleted tiles from neighborhood_dirs
+    for i in range(len(tiles)):
+        tiles_new[i]['neighborhood_dirs']  = [d for d in tiles_new[i]['neighborhood_dirs'] if d not in deleted_tiles]
+    return tiles_new
+
+
 def check_missing_sift(tiles_pairs):
     missing_sift = []
     with open(os.path.join(cfg["out_dir"], "missing_sift.txt"), "w") as f:
@@ -609,29 +636,7 @@ def main(user_cfg, start_from=0):
     # matching step:
     if start_from <= 4:
         # Check which tiles were rectified correctly, and skip tiles that have missing files
-        tiles_new = []
-        deleted_tiles = []
-        for tile in tiles:
-            paths = []
-            for i in range(1, n):
-                out_dir = os.path.join(tile['dir'], 'pair_{}'.format(i))
-                paths += [
-                    os.path.join(out_dir, 'rectified_ref.tif'),
-                    os.path.join(out_dir, 'rectified_sec.tif')
-                ]
-            missing = sum(not os.path.exists(p) for p in paths)
-            if missing > 0:
-                relative_path = os.path.join('../../..', initialization.get_tile_dir(*tile['coordinates']))
-                print(f"WARNING: tile {relative_path} is missing {missing}/{len(paths)} "
-                      "input files for stereo matching, skipping...")
-                deleted_tiles.append(relative_path)
-                continue
-            tiles_new.append(tile)
-        tiles = tiles_new
-        # Remove deleted tiles from neighborhood_dirs
-        for i in range(len(tiles)):
-            tiles[i]['neighborhood_dirs']  = [d for d in tiles[i]['neighborhood_dirs'] if d not in deleted_tiles]
-
+        tiles = remove_missing_tiles(tiles)
         tiles_pairs = [(t, i) for i in range(1, n) for t in tiles]
 
         if cfg['max_processes_stereo_matching'] is not None:
