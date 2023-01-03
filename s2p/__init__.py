@@ -90,6 +90,15 @@ def check_missing_sift(tiles_pairs):
         print(f"WARNING: missing {len(missing_sift)}/{len(tiles_pairs)} "
               "SIFT matches, this may deteriorate output quality")
 
+def merge_all_match_files():
+    read_files = glob.glob("**/*sift_matches.txt", recursive=True)
+    with open(os.path.join(cfg["out_dir"], "merged_sift_matches.txt"), "w") as outfile:
+        for f in read_files:
+            if os.stat(f).st_size == 0:
+                continue
+            with open(f, "r") as infile:
+                outfile.write(infile.read())
+                
 
 def pointing_correction(tile, i):
     """
