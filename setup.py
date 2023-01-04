@@ -42,7 +42,7 @@ except ImportError:
     BdistWheel = None
 
 
-requirements = ['numpy',
+requirements = ['numpy==1.22.2',
                 'scipy',
                 'rasterio[s3] @ https://github.com/rasterio/rasterio/archive/refs/tags/1.3.3.tar.gz',
                 'utm',
@@ -53,7 +53,9 @@ requirements = ['numpy',
                 'ransac',
                 'rpcm @ https://github.com/20treeAI/rpcm/archive/refs/tags/v1.4.8.tar.gz',
                 'srtm4 @ https://github.com/20treeAI/srtm4/archive/refs/tags/1.2.4.tar.gz',
-                'requests']
+                'requests',
+                'geopandas',
+                'geopy']
 
 extras_require = {
     "test": ["pytest", "pytest-cov", "psutil"],
