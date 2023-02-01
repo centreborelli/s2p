@@ -94,18 +94,6 @@ def run(cmd, env=os.environ, timeout=None, shell=False):
     print(datetime.datetime.now() - t)
 
 
-def mkdir_p(path):
-    """
-    Create a directory without complaining if it already exists.
-    """
-    try:
-        os.makedirs(path)
-    except OSError as exc: # requires Python > 2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else: raise
-
-
 def matrix_translation(x, y):
     t = np.eye(3)
     t[0, 2] = x

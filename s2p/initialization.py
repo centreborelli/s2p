@@ -149,8 +149,8 @@ def make_dirs():
     """
     Create directories needed to run s2p.
     """
-    common.mkdir_p(cfg['out_dir'])
-    common.mkdir_p(os.path.expandvars(cfg['temporary_dir']))
+    os.makedirs(cfg['out_dir'], exist_ok=True)
+    os.makedirs(os.path.expandvars(cfg['temporary_dir']), exist_ok=True)
 
     # store a json dump of the config.cfg dictionary
     with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
@@ -372,9 +372,9 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
             tiles.append(tile)
 
             # make tiles directories and store json configuration dumps
-            common.mkdir_p(tile['dir'])
+            os.makedirs(tile['dir'], exist_ok=True)
             for i in range(1, len(cfg['images'])):
-                common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
+                os.makedirs(os.path.join(tile['dir'], 'pair_{}'.format(i)), exist_ok=True)
 
             # save a json dump of the tile configuration
             tile_cfg = copy.deepcopy(cfg)
