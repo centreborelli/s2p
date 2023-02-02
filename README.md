@@ -4,7 +4,7 @@
 ![Tests Status](https://github.com/centreborelli/s2p/actions/workflows/tests.yml/badge.svg)
 [![PyPI version](https://img.shields.io/pypi/v/s2p)](https://pypi.org/project/s2p)
 
-S2P is a Python library and command line tool that implements a stereo
+S2P is a Python library and command line tool that implements a stereo 
 pipeline which produces elevation models from images taken by high resolution
 optical satellites such as Pléiades, WorldView, QuickBird, Spot or Ikonos. It
 generates 3D point clouds and digital surface models from stereo pairs (two
