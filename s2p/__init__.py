@@ -65,8 +65,9 @@ def pointing_correction(tile, i):
     print('correcting pointing on tile {} {} pair {}...'.format(x, y, i))
     method = 'relative' if cfg['relative_sift_match_thresh'] is True else 'absolute'
     A, m = pointing_accuracy.compute_correction(
-        img1, img2, rpc1, rpc2, x, y, w, h, method,
-        cfg['sift_match_thresh'], cfg['max_pointing_error']
+        cfg, img1, img2, rpc1, rpc2, x, y, w, h, method,
+        cfg['sift_match_thresh'], cfg['max_pointing_error'],
+        cfg['n_gcp_per_axis']
     )
 
     if A is not None:  # A is the correction matrix
@@ -146,7 +147,7 @@ def rectification_pair(tile, i):
 
     rect1 = os.path.join(out_dir, 'rectified_ref.tif')
     rect2 = os.path.join(out_dir, 'rectified_sec.tif')
-    H1, H2, disp_min, disp_max = rectification.rectify_pair(img1, img2,
+    H1, H2, disp_min, disp_max = rectification.rectify_pair(cfg, img1, img2,
                                                             rpc1, rpc2,
                                                             x, y, w, h,
                                                             rect1, rect2, A, m,
@@ -181,7 +182,7 @@ def stereo_matching(tile, i):
     mask = os.path.join(out_dir, 'rectified_mask.png')
     disp_min, disp_max = np.loadtxt(os.path.join(out_dir, 'disp_min_max.txt'))
 
-    block_matching.compute_disparity_map(rect1, rect2, disp, mask,
+    block_matching.compute_disparity_map(cfg, rect1, rect2, disp, mask,
                                          cfg['matching_algorithm'], disp_min,
                                          disp_max, timeout=cfg['mgm_timeout'],
                                          max_disp_range=cfg['max_disp_range'])
@@ -378,7 +379,7 @@ def heights_fusion(tile):
     # merge the height maps (applying mean offset to register)
     fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
                    global_mean_heights, averaging=cfg['fusion_operator'],
-                   threshold=cfg['fusion_thresh'])
+                   threshold=cfg['fusion_thresh'], debug=cfg['debug'])
 
     if cfg['clean_intermediate']:
         for f in height_maps:

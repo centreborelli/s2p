@@ -9,7 +9,6 @@ import shutil
 import numpy as np
 import rasterio
 
-from s2p.config import cfg
 from s2p import common
 
 
@@ -22,7 +21,7 @@ def average_if_close(x, threshold):
         return np.nanmedian(x)
 
 
-def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
+def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1, debug=False):
     """
     Merge n images of equal sizes by taking the median/mean/min/max pixelwise.
 
@@ -47,7 +46,7 @@ def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1):
     for i, img in enumerate(inputs):
         with rasterio.open(img, 'r') as f:
             x[:, :, i] = f.read(1) - offsets[i]
-        if cfg['debug']:
+        if debug:
             common.rasterio_write('{}_registered.tif'.format(os.path.splitext(img)[0]),
                                   x[:, :, i] + np.mean(offsets))
 

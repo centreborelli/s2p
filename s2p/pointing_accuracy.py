@@ -10,7 +10,6 @@ import numpy as np
 from s2p import sift
 from s2p import rpc_utils
 from s2p import estimation
-from s2p.config import cfg
 
 
 def error_vectors(m, F, ind='ref'):
@@ -60,7 +59,7 @@ def error_vectors(m, F, ind='ref'):
     return np.vstack((np.multiply(a, l[:, 0]), np.multiply(a, l[:, 1]))).T
 
 
-def local_translation(r1, r2, x, y, w, h, m):
+def local_translation(cfg, r1, r2, x, y, w, h, m, n_gcp_per_axis):
     """
     Estimates the optimal translation to minimise the relative pointing error
     on a given tile.
@@ -72,6 +71,7 @@ def local_translation(r1, r2, x, y, w, h, m):
             match is given by (p1, p2, q1, q2) where (p1, p2) is a point of the
             reference view and (q1, q2) is the corresponding point in the
             secondary view.
+        n_gcp_per_axis: cube root of the desired number of matches
 
     Returns:
         3x3 numpy array containing the homogeneous representation of the
@@ -79,8 +79,7 @@ def local_translation(r1, r2, x, y, w, h, m):
         order to correct the pointing error.
     """
     # estimate the affine fundamental matrix between the two views
-    n = cfg['n_gcp_per_axis']
-    rpc_matches = rpc_utils.matches_from_rpc(r1, r2, x, y, w, h, n)
+    rpc_matches = rpc_utils.matches_from_rpc(cfg, r1, r2, x, y, w, h, n_gcp_per_axis)
     F = estimation.affine_fundamental_matrix(rpc_matches)
 
     # compute the error vectors
@@ -99,8 +98,8 @@ def local_translation(r1, r2, x, y, w, h, m):
     return A
 
 
-def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
-                       method, sift_thresh, epipolar_threshold):
+def compute_correction(cfg, img1, img2, rpc1, rpc2, x, y, w, h, method,
+                       sift_thresh, epipolar_threshold, n_gcp_per_axis):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -115,17 +114,18 @@ def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
             1 Mpix, only five crops will be used to compute sift matches.
         method, sift_thresh, epipolar_threshold: see docstring of
             s2p.sift.keypoints_match()
+        n_gcp_per_axis: cube root of the desired number of matches
 
     Returns:
         a 3x3 matrix representing the planar transformation to apply to img2 in
         order to correct the pointing error, and the list of sift matches used
         to compute this correction.
     """
-    m = sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, x, y, w, h,
+    m = sift.matches_on_rpc_roi(cfg, img1, img2, rpc1, rpc2, x, y, w, h,
                                 method, sift_thresh, epipolar_threshold)
 
     if m is not None:
-        A = local_translation(rpc1, rpc2, x, y, w, h, m)
+        A = local_translation(cfg, rpc1, rpc2, x, y, w, h, m, n_gcp_per_axis)
     else:
         A = None
 

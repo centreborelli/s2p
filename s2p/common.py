@@ -6,7 +6,6 @@
 
 import os
 import sys
-import errno
 import datetime
 import warnings
 import tempfile

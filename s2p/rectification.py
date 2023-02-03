@@ -13,7 +13,6 @@ from s2p import estimation
 from s2p import evaluation
 from s2p import common
 from s2p import visualisation
-from s2p.config import cfg
 
 
 class NoRectificationMatchesError(Exception):
@@ -50,7 +49,7 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     return np.array(out)
 
 
-def register_horizontally_shear(matches, H1, H2):
+def register_horizontally_shear(matches, H1, H2, debug=False):
     """
     Adjust rectifying homographies with tilt, shear and translation to reduce the disparity range.
 
@@ -73,7 +72,7 @@ def register_horizontally_shear(matches, H1, H2):
     x2 = p2[:, 0]
     y2 = p2[:, 1]
 
-    if cfg['debug']:
+    if debug:
         print("Residual vertical disparities: max, min, mean. Should be zero")
         print(np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1))
 
@@ -86,7 +85,7 @@ def register_horizontally_shear(matches, H1, H2):
     return np.dot(np.array([[a, b, c], [0, 1, 0], [0, 0, 1]]), H2)
 
 
-def register_horizontally_translation(matches, H1, H2, flag='center'):
+def register_horizontally_translation(matches, H1, H2, flag='center', debug=False):
     """
     Adjust rectifying homographies with a translation to modify the disparity range.
 
@@ -117,7 +116,7 @@ def register_horizontally_translation(matches, H1, H2, flag='center'):
     y2 = p2[:, 1]
 
     # for debug, print the vertical disparities. Should be zero.
-    if cfg['debug']:
+    if debug:
         print("Residual vertical disparities: max, min, mean. Should be zero")
         print(np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1))
 
@@ -134,7 +133,7 @@ def register_horizontally_translation(matches, H1, H2, flag='center'):
     return np.dot(common.matrix_translation(-t, 0), H2)
 
 
-def disparity_range_from_matches(matches, H1, H2, w, h):
+def disparity_range_from_matches(matches, H1, H2, disp_range_extra_margin):
     """
     Compute the disparity range of a ROI from a list of point matches.
 
@@ -158,12 +157,12 @@ def disparity_range_from_matches(matches, H1, H2, w, h):
     disp_max = np.ceil(np.max(x2 - x1))
 
     # add a security margin to the disparity range
-    disp_min -= (disp_max - disp_min) * cfg['disp_range_extra_margin']
-    disp_max += (disp_max - disp_min) * cfg['disp_range_extra_margin']
+    disp_min -= (disp_max - disp_min) * disp_range_extra_margin
+    disp_max += (disp_max - disp_min) * disp_range_extra_margin
     return disp_min, disp_max
 
 
-def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
+def disparity_range(cfg, rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     """
     Compute the disparity range of a ROI from a list of point matches.
 
@@ -183,8 +182,8 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
         disp: 2-uple containing the horizontal disparity range
     """
     # compute exogenous disparity range if needed
-    if cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']:
-        exogenous_disp = rpc_utils.exogenous_disp_range_estimation(rpc1, rpc2,
+    if cfg['exogenous_dem'] and cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']:
+        exogenous_disp = rpc_utils.exogenous_disp_range_estimation(cfg, rpc1, rpc2,
                                                                    x, y, w, h,
                                                                    H1, H2, A,
                                                                    cfg['disp_range_exogenous_high_margin'],
@@ -195,7 +194,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     # compute SIFT disparity range if needed
     if cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']:
         if matches is not None and len(matches) >= 2:
-            sift_disp = disparity_range_from_matches(matches, H1, H2, w, h)
+            sift_disp = disparity_range_from_matches(matches, H1, H2, cfg['disp_range_extra_margin'])
         else:
             sift_disp = None
         print("SIFT disparity range:", sift_disp)
@@ -239,7 +238,7 @@ def disparity_range(rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     return disp
 
 
-def rectification_homographies(matches, x, y, w, h):
+def rectification_homographies(matches, x, y, w, h, debug=False):
     """
     Computes rectifying homographies from point matches for a given ROI.
 
@@ -262,9 +261,9 @@ def rectification_homographies(matches, x, y, w, h):
     F = estimation.affine_fundamental_matrix(matches)
 
     # compute rectifying similarities
-    S1, S2 = estimation.rectifying_similarities_from_affine_fundamental_matrix(F, cfg['debug'])
+    S1, S2 = estimation.rectifying_similarities_from_affine_fundamental_matrix(F, debug)
 
-    if cfg['debug']:
+    if debug:
         y1 = common.points_apply_homography(S1, matches[:, :2])[:, 1]
         y2 = common.points_apply_homography(S2, matches[:, 2:])[:, 1]
         err = np.abs(y1 - y2)
@@ -278,7 +277,7 @@ def rectification_homographies(matches, x, y, w, h):
     return np.dot(T, S1), np.dot(T, S2), F
 
 
-def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matches=None,
+def rectify_pair(cfg, im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matches=None,
                  method='rpc', hmargin=0, vmargin=0):
     """
     Rectify a ROI in a pair of images.
@@ -305,10 +304,11 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
         have been applied to the two original (large) images.
         disp_min, disp_max: horizontal disparity range
     """
+    debug = cfg['debug']
     # compute real or virtual matches
     if method == 'rpc':
         # find virtual matches from RPC camera models
-        matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h,
+        matches = rpc_utils.matches_from_rpc(cfg, rpc1, rpc2, x, y, w, h,
                                              cfg['n_gcp_per_axis'])
 
         # correct second image coordinates with the pointing correction matrix
@@ -327,17 +327,17 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
         )
 
     # compute rectifying homographies
-    H1, H2, F = rectification_homographies(matches, x, y, w, h)
+    H1, H2, F = rectification_homographies(matches, x, y, w, h, debug=debug)
 
     if cfg['register_with_shear']:
         # compose H2 with a horizontal shear to reduce the disparity range
-        a = np.mean(rpc_utils.altitude_range(rpc1, x, y, w, h))
+        a = np.mean(rpc_utils.altitude_range(cfg, rpc1, x, y, w, h))
         lon, lat, alt = rpc_utils.ground_control_points(rpc1, x, y, w, h, a, a, 4)
         x1, y1 = rpc1.projection(lon, lat, alt)
         x2, y2 = rpc2.projection(lon, lat, alt)
         m = np.vstack([x1, y1, x2, y2]).T
         m = np.vstack(list({tuple(row) for row in m}))  # remove duplicates due to no alt range
-        H2 = register_horizontally_shear(m, H1, H2)
+        H2 = register_horizontally_shear(m, H1, H2, debug=debug)
 
     # compose H2 with a horizontal translation to center disp range around 0
     if sift_matches is not None:
@@ -349,10 +349,11 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
                 category=NoHorizontalRegistrationWarning,
             )
         else:
-            H2 = register_horizontally_translation(sift_matches, H1, H2)
+            H2 = register_horizontally_translation(sift_matches, H1, H2,
+                                                   debug=debug)
 
     # compute disparity range
-    if cfg['debug']:
+    if debug:
         out_dir = os.path.dirname(out1)
         np.savetxt(os.path.join(out_dir, 'sift_matches_disp.txt'),
                    sift_matches, fmt='%9.3f')
@@ -360,7 +361,7 @@ def rectify_pair(im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matc
                                    os.path.join(out_dir,
                                                 'sift_matches_disp.png'),
                                    x, y, w, h)
-    disp_m, disp_M = disparity_range(rpc1, rpc2, x, y, w, h, H1, H2,
+    disp_m, disp_M = disparity_range(cfg, rpc1, rpc2, x, y, w, h, H1, H2,
                                      sift_matches, A)
 
     # recompute hmargin and homographies

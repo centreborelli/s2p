@@ -5,6 +5,7 @@ import pytest
 from rpcm import rpc_from_geotiff
 
 import s2p
+from s2p.config import cfg
 from tests_utils import data_path
 
 
@@ -46,6 +47,7 @@ def test_rectify_pair_no_matches(tmp_path, images):
     im1, rpc1, im2, rpc2 = images
     with pytest.raises(s2p.rectification.NoRectificationMatchesError):
         s2p.rectification.rectify_pair(
+            cfg,
             im1=im1,
             im2=im2,
             rpc1=rpc1,
@@ -68,6 +70,7 @@ def test_rectify_pair_few_matches(tmp_path, matches, images):
     im1, rpc1, im2, rpc2 = images
     with pytest.raises(s2p.rectification.NoRectificationMatchesError):
         s2p.rectification.rectify_pair(
+            cfg,
             im1=im1,
             im2=im2,
             rpc1=rpc1,
@@ -89,6 +92,7 @@ def test_rectify_pair_with_matches(tmp_path, matches, images):
     """
     im1, rpc1, im2, rpc2 = images
     s2p.rectification.rectify_pair(
+        cfg,
         im1=im1,
         im2=im2,
         rpc1=rpc1,

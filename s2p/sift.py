@@ -237,7 +237,7 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
     return matches.reshape((nb_matches.value, 4))
 
 
-def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h,
+def matches_on_rpc_roi(cfg, im1, im2, rpc1, rpc2, x, y, w, h,
                        method, sift_thresh, epipolar_threshold):
     """
     Compute a list of SIFT matches between two images on a given roi.
@@ -259,10 +259,10 @@ def matches_on_rpc_roi(im1, im2, rpc1, rpc2, x, y, w, h,
             contains one pair of points, ordered as x1 y1 x2 y2.
             The coordinate system is that of the full images.
     """
-    x2, y2, w2, h2 = rpc_utils.corresponding_roi(rpc1, rpc2, x, y, w, h)
+    x2, y2, w2, h2 = rpc_utils.corresponding_roi(cfg, rpc1, rpc2, x, y, w, h)
 
     # estimate an approximate affine fundamental matrix from the rpcs
-    rpc_matches = rpc_utils.matches_from_rpc(rpc1, rpc2, x, y, w, h, 5)
+    rpc_matches = rpc_utils.matches_from_rpc(cfg, rpc1, rpc2, x, y, w, h, 5)
     F = estimation.affine_fundamental_matrix(rpc_matches)
 
     # if less than 10 matches, lower thresh_dog. An alternative would be ASIFT

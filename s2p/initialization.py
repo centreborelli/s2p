@@ -332,7 +332,7 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
     # check if the tile is partly contained in at least one other image
     rpc = cfg['images'][0]['rpcm']
     for img, size in zip(cfg['images'][1:], images_sizes[1:]):
-        coords = rpc_utils.corresponding_roi(rpc, img['rpcm'], x, y, w, h)
+        coords = rpc_utils.corresponding_roi(cfg, rpc, img['rpcm'], x, y, w, h)
         if rectangles_intersect(coords, (0, 0, size[1], size[0])):
             break  # the tile is partly contained
     else:  # we've reached the end of the loop hence the tile is not contained

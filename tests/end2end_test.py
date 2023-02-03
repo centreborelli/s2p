@@ -7,7 +7,6 @@ import sys
 import glob
 import numpy as np
 from plyflatten import plyflatten_from_plyfiles_list
-import pytest
 
 import s2p
 from s2p import common
