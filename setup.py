@@ -46,7 +46,7 @@ requirements = ['numpy',
                 'scipy',
                 'rasterio[s3]>=1.2a1',
                 'utm',
-                'pyproj>=2.0.2,<3.0.0',
+                'pyproj>=3.0.0',
                 'beautifulsoup4[lxml]',
                 'plyfile',
                 'plyflatten>=0.2.0',
@@ -60,7 +60,7 @@ extras_require = {
 }
 
 setup(name="s2p",
-      version="1.0b26dev",
+      version="1.0b26.dev0",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',

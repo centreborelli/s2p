@@ -41,7 +41,7 @@ def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
     H = common.matrix_translation(-x, -y)
     hij = ' '.join([str(el) for el in H.flatten()])
 
-    mask = np.ones((h, w), dtype=np.bool)
+    mask = np.ones((h, w), dtype=bool)
 
     if roi_gml is not None:  # image domain mask (polygons)
         tmp = common.tmpfile('.png')
