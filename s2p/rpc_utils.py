@@ -3,9 +3,12 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 
 
+from typing import Dict, Optional, Tuple, Union
 import warnings
 import rasterio
+import rasterio.errors
 import numpy as np
+import numpy.typing as npt
 
 import rpcm
 import srtm4
@@ -16,7 +19,11 @@ from s2p import common
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
 
-def find_corresponding_point(model_a, model_b, x, y, z):
+def find_corresponding_point(model_a: rpcm.RPCModel,
+                             model_b: rpcm.RPCModel,
+                             x: npt.ArrayLike,
+                             y: npt.ArrayLike,
+                             z: npt.ArrayLike) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
     """
     Finds corresponding points in the second image, given the heights.
 
@@ -35,10 +42,14 @@ def find_corresponding_point(model_a, model_b, x, y, z):
     """
     t1, t2 = model_a.localization(x, y, z)
     xp, yp = model_b.projection(t1, t2, z)
-    return (xp, yp, z)
+    return xp, yp, z
 
 
-def geodesic_bounding_box(rpc, x, y, w, h):
+def geodesic_bounding_box(rpc: rpcm.RPCModel,
+                          x: int,
+                          y: int,
+                          w: int,
+                          h: int) -> Tuple[float, float, float, float]:
     """
     Computes a bounding box on the WGS84 ellipsoid associated to a Pleiades
     image region of interest, through its rpc function.
@@ -58,12 +69,12 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     M = rpc.alt_offset + rpc.alt_scale
 
     # build an array with vertices of the 3D ROI, obtained as {2D ROI} x [m, M]
-    x = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
-    y = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
+    xx = np.array([x, x,   x,   x, x+w, x+w, x+w, x+w])
+    yy = np.array([y, y, y+h, y+h,   y,   y, y+h, y+h])
     a = np.array([m, M,   m,   M,   m,   M,   m,   M])
 
     # compute geodetic coordinates of corresponding world points
-    lon, lat = rpc.localization(x, y, a)
+    lon, lat = rpc.localization(xx, yy, a)
 
     # extract extrema
     # TODO: handle the case where longitudes pass over -180 degrees
@@ -72,7 +83,7 @@ def geodesic_bounding_box(rpc, x, y, w, h):
     return np.min(lon), np.max(lon), np.min(lat), np.max(lat)
 
 
-def altitude_range_coarse(rpc, scale_factor=1):
+def altitude_range_coarse(rpc: rpcm.RPCModel, scale_factor: float = 1.0) -> Tuple[float, float]:
     """
     Computes a coarse altitude range using the RPC informations only.
 
@@ -88,8 +99,14 @@ def altitude_range_coarse(rpc, scale_factor=1):
     return m, M
 
 
-def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc,
-                             exogenous_dem_geoid_mode, rpc_alt_range_scale_factor):
+def min_max_heights_from_bbx(im: str,
+                             lon_m: float,
+                             lon_M: float,
+                             lat_m: float,
+                             lat_M: float,
+                             rpc: rpcm.RPCModel,
+                             exogenous_dem_geoid_mode: bool,
+                             rpc_alt_range_scale_factor: float) -> Tuple[float, float]:
     """
     Compute min, max heights from bounding box
 
@@ -150,7 +167,14 @@ def min_max_heights_from_bbx(im, lon_m, lon_M, lat_m, lat_M, rpc,
         return altitude_range_coarse(rpc, rpc_alt_range_scale_factor)
 
 
-def altitude_range(cfg, rpc, x, y, w, h, margin_top=0, margin_bottom=0):
+def altitude_range(cfg,
+                   rpc: rpcm.RPCModel,
+                   x: int,
+                   y: int,
+                   w: int,
+                   h: int,
+                   margin_top: float = 0,
+                   margin_bottom: float = 0) -> Tuple[float, float]:
     """
     Computes an altitude range using the exogenous dem.
 
@@ -193,6 +217,7 @@ def altitude_range(cfg, rpc, x, y, w, h, margin_top=0, margin_bottom=0):
                              for lat in np.arange(lat_m, lat_M, s)]
         lons, lats = np.asarray(points).T
         alts = srtm4.srtm4(lons, lats)  # TODO use srtm4 nn interpolation option
+        assert isinstance(alts, list)
         h_m = min(alts) + margin_bottom
         h_M = max(alts) + margin_top
     else:
@@ -201,7 +226,11 @@ def altitude_range(cfg, rpc, x, y, w, h, margin_top=0, margin_bottom=0):
     return h_m, h_M
 
 
-def utm_zone(rpc, x, y, w, h):
+def utm_zone(rpc: Union[rpcm.RPCModel, str],
+             x: int,
+             y: int,
+             w: int,
+             h: int) -> str:
     """
     Compute the UTM zone where the ROI probably falls (or close to its border).
 
@@ -225,8 +254,11 @@ def utm_zone(rpc, x, y, w, h):
     return geographiclib.compute_utm_zone(lon, lat)
 
 
-def roi_process(rpc, ll_poly, use_srtm=False, exogenous_dem=None,
-                exogenous_dem_geoid_mode=True):
+def roi_process(rpc: rpcm.RPCModel,
+                ll_poly: npt.NDArray[np.float64],
+                use_srtm: bool = False,
+                exogenous_dem: Optional[str] = None,
+                exogenous_dem_geoid_mode: bool = True) -> Dict[str, float]:
     """
     Convert a (lon, lat) polygon into a rectangular bounding box in image space.
 
@@ -264,7 +296,9 @@ def roi_process(rpc, ll_poly, use_srtm=False, exogenous_dem=None,
     return {'x': x, 'y': y, 'w': w, 'h': h}
 
 
-def generate_point_mesh(col_range, row_range, alt_range):
+def generate_point_mesh(col_range: Tuple[float, float, int],
+                        row_range: Tuple[float, float, int],
+                        alt_range: Tuple[float, float, int]) -> Tuple[npt.NDArray[np.float64],npt.NDArray[np.float64],npt.NDArray[np.float64]]:
     """
     Generates image coordinates (col, row, alt) of 3D points located on the grid
     defined by col_range and row_range, at uniformly sampled altitudes defined
@@ -293,7 +327,14 @@ def generate_point_mesh(col_range, row_range, alt_range):
     return cols, rows, alts
 
 
-def ground_control_points(rpc, x, y, w, h, m, M, n):
+def ground_control_points(rpc: rpcm.RPCModel,
+                          x: int,
+                          y: int,
+                          w: int,
+                          h: int,
+                          m: float,
+                          M: float,
+                          n: int) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Computes a set of ground control points (GCP), corresponding to RPC data.
 
@@ -312,15 +353,21 @@ def ground_control_points(rpc, x, y, w, h, m, M, n):
     # points will be sampled in [x, x+w] and [y, y+h]. To avoid always sampling
     # the same four corners with each value of n, we make these intervals a
     # little bit smaller, with a dependence on n.
-    col_range = [x+(1.0/(2*n))*w, x+((2*n-1.0)/(2*n))*w, n]
-    row_range = [y+(1.0/(2*n))*h, y+((2*n-1.0)/(2*n))*h, n]
-    alt_range = [m, M, n]
+    col_range = (x+(1.0/(2*n))*w, x+((2*n-1.0)/(2*n))*w, n)
+    row_range = (y+(1.0/(2*n))*h, y+((2*n-1.0)/(2*n))*h, n)
+    alt_range = (m, M, n)
     col, row, alt = generate_point_mesh(col_range, row_range, alt_range)
     lon, lat = rpc.localization(col, row, alt)
     return lon, lat, alt
 
 
-def corresponding_roi(cfg, rpc1, rpc2, x, y, w, h):
+def corresponding_roi(cfg,
+                      rpc1: Union[rpcm.RPCModel, str],
+                      rpc2: Union[rpcm.RPCModel, str],
+                      x: int,
+                      y: int,
+                      w: int,
+                      h: int) -> Tuple[int, int, int, int]:
     """
     Uses RPC functions to determine the region of im2 associated to the
     specified ROI of im1.
@@ -353,11 +400,18 @@ def corresponding_roi(cfg, rpc1, rpc2, x, y, w, h):
     xx, yy = find_corresponding_point(rpc1, rpc2, a, b, c)[0:2]
 
     # return coordinates of the bounding box in im2
-    out = common.bounding_box2D(np.vstack([xx, yy]).T)
-    return np.round(out)
+    i, j, k, l = common.bounding_box2D(np.vstack([xx, yy]).T)
+    return int(round(i)), int(round(j)), int(round(k)), int(round(l))
 
 
-def matches_from_rpc(cfg, rpc1, rpc2, x, y, w, h, n):
+def matches_from_rpc(cfg,
+                     rpc1: rpcm.RPCModel,
+                     rpc2: rpcm.RPCModel,
+                     x: int,
+                     y: int,
+                     w: int,
+                     h: int,
+                     n: int) -> npt.NDArray[np.float64]:
     """
     Uses RPC functions to generate matches between two Pleiades images.
 
@@ -380,7 +434,14 @@ def matches_from_rpc(cfg, rpc1, rpc2, x, y, w, h, n):
     return np.vstack([x1, y1, x2, y2]).T
 
 
-def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
+def alt_to_disp(rpc1: rpcm.RPCModel,
+                rpc2: rpcm.RPCModel,
+                x: npt.ArrayLike,
+                y: npt.ArrayLike,
+                alt: npt.ArrayLike,
+                H1: npt.NDArray[np.float64],
+                H2: npt.NDArray[np.float64],
+                A: Optional[npt.NDArray[np.float64]] = None) -> npt.NDArray[np.float64]:
     """
     Converts an altitude into a disparity.
 
@@ -415,8 +476,18 @@ def alt_to_disp(rpc1, rpc2, x, y, alt, H1, H2, A=None):
     return disp
 
 
-def exogenous_disp_range_estimation(cfg, rpc1, rpc2, x, y, w, h, H1, H2,
-                                    A=None, margin_top=0, margin_bottom=0):
+def exogenous_disp_range_estimation(cfg,
+                                    rpc1: rpcm.RPCModel,
+                                    rpc2: rpcm.RPCModel,
+                                    x: int,
+                                    y: int,
+                                    w: int,
+                                    h: int,
+                                    H1: npt.NDArray[np.float64],
+                                    H2: npt.NDArray[np.float64],
+                                    A: Optional[npt.NDArray[np.float64]] = None,
+                                    margin_top: float = 0,
+                                    margin_bottom: float = 0) -> Tuple[float, float]:
     """
     Args:
         rpc1: an instance of the rpcm.RPCModel class for the reference
@@ -438,12 +509,20 @@ def exogenous_disp_range_estimation(cfg, rpc1, rpc2, x, y, w, h, H1, H2,
         H1 and H2.
     """
     m, M = altitude_range(cfg, rpc1, x, y, w, h, margin_top, margin_bottom)
-    return altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2,
-                                        A, margin_top, margin_bottom)
+    return altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A)
 
 
-def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
-                                 margin_top=0, margin_bottom=0):
+def altitude_range_to_disp_range(m: float,
+                                 M: float,
+                                 rpc1: rpcm.RPCModel,
+                                 rpc2: rpcm.RPCModel,
+                                 x: int,
+                                 y: int,
+                                 w: int,
+                                 h: int,
+                                 H1: npt.NDArray[np.float64],
+                                 H2: npt.NDArray[np.float64],
+                                 A: Optional[npt.NDArray[np.float64]] = None) -> Tuple[float, float]:
     """
     Args:
         m: min altitude over the tile
@@ -471,10 +550,10 @@ def altitude_range_to_disp_range(m, M, rpc1, rpc2, x, y, w, h, H1, H2, A=None,
     d = alt_to_disp(rpc1, rpc2, a, b, c, H1, H2, A)
 
     # return min and max disparities
-    return np.min(d), np.max(d)
+    return float(np.min(d)), float(np.max(d))
 
 
-def gsd_from_rpc(rpc, z=0):
+def gsd_from_rpc(rpc: rpcm.RPCModel, z: float = 0) -> np.float64:
     """
     Compute an image ground sampling distance from its RPC camera model.
 
@@ -489,6 +568,8 @@ def gsd_from_rpc(rpc, z=0):
     c = rpc.col_offset
     r = rpc.row_offset
 
-    a = geographiclib.lonlat_to_geocentric(*rpc.localization(c+0, r, z), alt=z)
-    b = geographiclib.lonlat_to_geocentric(*rpc.localization(c+1, r, z), alt=z)
+    lon0, lat0 = rpc.localization(c+0, r, z)
+    lon1, lat1 = rpc.localization(c+1, r, z)
+    a = geographiclib.lonlat_to_geocentric(lon0, lat0, alt=z)
+    b = geographiclib.lonlat_to_geocentric(lon1, lat1, alt=z)
     return np.linalg.norm(np.asarray(b) - np.asarray(a))

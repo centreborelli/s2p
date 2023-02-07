@@ -6,13 +6,15 @@
 import os
 import sys
 import shutil
+from typing import List, Union
 import numpy as np
+import numpy.typing as npt
 import rasterio
 
 from s2p import common
 
 
-def average_if_close(x, threshold):
+def average_if_close(x: npt.NDArray[np.float64], threshold: float) -> Union[float, np.float64]:
     """
     """
     if np.nanmax(x) - np.nanmin(x) > threshold:
@@ -21,7 +23,12 @@ def average_if_close(x, threshold):
         return np.nanmedian(x)
 
 
-def merge_n(output, inputs, offsets, averaging='average_if_close', threshold=1, debug=False):
+def merge_n(output: str,
+            inputs: List[str],
+            offsets: npt.NDArray[np.float64],
+            averaging: str = 'average_if_close',
+            threshold: float = 1.0,
+            debug: bool = False) -> None:
     """
     Merge n images of equal sizes by taking the median/mean/min/max pixelwise.
 

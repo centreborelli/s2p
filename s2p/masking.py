@@ -4,9 +4,12 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import subprocess
+from typing import Optional, Tuple
 import numpy as np
+import numpy.typing as npt
 import warnings
 import rasterio
+import rasterio.errors
 
 from s2p import common
 
@@ -15,8 +18,15 @@ warnings.filterwarnings("ignore",
                         category=rasterio.errors.NotGeoreferencedWarning)
 
 
-def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
-                    img_shape=None, border_margin=10):
+def image_tile_mask(x: int,
+                    y: int,
+                    w: int,
+                    h: int,
+                    roi_gml: Optional[str] = None,
+                    cld_gml: Optional[str] = None,
+                    raster_mask: Optional[str] = None,
+                    img_shape: Optional[Tuple[int, int]] = None,
+                    border_margin: int = 10) -> npt.NDArray[np.bool_]:
     """
     Compute a validity mask for an image tile from vector/raster image masks.
 
@@ -84,7 +94,7 @@ def image_tile_mask(x, y, w, h, roi_gml=None, cld_gml=None, raster_mask=None,
     return mask
 
 
-def erosion(out, msk, radius):
+def erosion(out: str, msk: str, radius: int) -> None:
     """
     Erodes the accepted regions (ie eliminates more pixels)
 

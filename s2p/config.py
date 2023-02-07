@@ -9,7 +9,10 @@
 # user is not forced to define in config.json) must be defined here, otherwise
 # they won't have a default value.
 
-cfg = {}
+from typing import Any, Dict
+
+
+cfg: Dict[str, Any] = {}
 
 # path to output directory
 cfg['out_dir'] = "s2p_output"

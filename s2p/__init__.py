@@ -534,7 +534,7 @@ def main(user_cfg, start_from=0):
         user_cfg: user config dictionary
         start_from: the step to start from (default: 0)
     """
-    common.print_elapsed_time.t0 = datetime.datetime.now()
+    common.reset_elapsed_time()
     initialization.build_cfg(user_cfg)
     initialization.make_dirs()
 

@@ -76,7 +76,7 @@ def main(user_cfg):
     Args:
         user_cfg: user config dictionary
     """
-    common.print_elapsed_time.t0 = datetime.datetime.now()
+    common.reset_elapsed_time()
     initialization.build_cfg(user_cfg)
 
     tw, th = initialization.adjust_tile_size()
