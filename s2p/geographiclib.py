@@ -3,17 +3,15 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+from typing import Tuple, Union, List, Optional
+
 import geojson
-from distutils.version import LooseVersion
-
-import pyproj
 import numpy as np
-import rasterio
-from rasterio.crs import CRS as RioCRS
-from pyproj.enums import WktVersion
+import numpy.typing as npt
+import pyproj
 
 
-def geoid_to_ellipsoid(lat, lon, z):
+def geoid_to_ellipsoid(lat: float, lon: float, z: float) -> float:
     """
     Converts a height, in meters, from the EGM96 geoid datum
     to the WGS84 ellipsoid datum.
@@ -37,7 +35,7 @@ def geoid_to_ellipsoid(lat, lon, z):
     return height
 
 
-def compute_utm_zone(lon, lat):
+def compute_utm_zone(lon: float, lat: float) -> str:
     """
     Compute the UTM zone containing the point with given longitude and latitude.
 
@@ -57,7 +55,7 @@ def compute_utm_zone(lon, lat):
     return utm_zone
 
 
-def epsg_code_from_utm_zone(utm_zone):
+def epsg_code_from_utm_zone(utm_zone: str) -> int:
     """
     Compute the EPSG code of a given UTM zone.
 
@@ -81,42 +79,23 @@ def epsg_code_from_utm_zone(utm_zone):
     return const + zone_number
 
 
-def rasterio_crs(projparams):
+def pyproj_crs(projparams: Union[int, str, dict]) -> pyproj.CRS:
     """
-    Return a rasterio.crs.CRS object that corresponds to the given parameters.
-    See: https://pyproj4.github.io/pyproj/stable/crs_compatibility.html#converting-from-pyproj-crs-crs-to-rasterio-crs-crs
-
-    Args:
-        projparams (int, str, dict, pyproj.CRS): PROJ parameters
-
-    Returns:
-        rasterio.crs.CRS: object that can be used with rasterio
-    """
-    proj_crs = pyproj_crs(projparams)
-    if LooseVersion(rasterio.__gdal_version__) < LooseVersion("3.0.0"):
-        rio_crs = RioCRS.from_wkt(proj_crs.to_wkt(WktVersion.WKT1_GDAL))
-    else:
-        rio_crs = RioCRS.from_wkt(proj_crs.to_wkt())
-    return rio_crs
-
-
-def pyproj_crs(projparams):
-    """
-    Wrapper around pyproj to return a pyproj.crs.CRS object that corresponds
+    Wrapper around pyproj to return a pyproj.CRS object that corresponds
     to the given parameters
 
     Args:
         projparams (int, str, dict): CRS parameters
 
     Returns:
-        pyproj.crs.CRS: object that defines a CRS
+        pyproj.CRS: object that defines a CRS
     """
     if isinstance(projparams, str):
         try:
             projparams = int(projparams)
-        except (ValueError, TypeError):
+        except ValueError:
             pass
-    return pyproj.crs.CRS(projparams)
+    return pyproj.CRS(projparams)
 
 
 def pyproj_transform(x, y, in_crs, out_crs, z=None):
@@ -126,8 +105,8 @@ def pyproj_transform(x, y, in_crs, out_crs, z=None):
     Args:
         x (scalar or array): x coordinate(s), expressed in in_crs
         y (scalar or array): y coordinate(s), expressed in in_crs
-        in_crs (pyproj.crs.CRS or int): input coordinate reference system or EPSG code
-        out_crs (pyproj.crs.CRS or int): output coordinate reference system or EPSG code
+        in_crs (pyproj.CRS or int): input coordinate reference system or EPSG code
+        out_crs (pyproj.CRS or int): output coordinate reference system or EPSG code
         z (scalar or array): z coordinate(s), expressed in in_crs
 
     Returns:
@@ -142,7 +121,7 @@ def pyproj_transform(x, y, in_crs, out_crs, z=None):
         return transformer.transform(x, y, z)
 
 
-def lonlat_to_utm(lon, lat, utm_zone):
+def lonlat_to_utm(lon: float, lat: float, utm_zone: str) -> Tuple[float, float]:
     """
     Compute UTM easting and northing of a given lon, lat point.
 
@@ -158,7 +137,11 @@ def lonlat_to_utm(lon, lat, utm_zone):
     return e, n
 
 
-def lonlat_to_geocentric(lon, lat, alt):
+def lonlat_to_geocentric(
+        lon: Union[float, List[float]],
+        lat: Union[float, List[float]],
+        alt: Union[float, List[float]]
+    ) -> Union[Tuple[float, float, float], Tuple[List[float], List[float], List[float]]]:
     """
     Compute geocentric cartesian coordinates of a given lon, lat, alt point.
 
@@ -174,7 +157,7 @@ def lonlat_to_geocentric(lon, lat, alt):
     return x, y, z
 
 
-def read_lon_lat_poly_from_geojson(poly):
+def read_lon_lat_poly_from_geojson(poly: Union[str, dict]) -> npt.NDArray[np.float64]:
     """
     Read a (lon, lat) polygon from a geojson file or dict.
 
@@ -184,7 +167,7 @@ def read_lon_lat_poly_from_geojson(poly):
             type should be either FeatureCollection, Feature, or Polygon.
 
     Returns:
-        list: polygon vertices (lon, lat) coordinates
+        numpy array: polygon vertices (lon, lat) coordinates
     """
     if isinstance(poly, str):
         with open(poly, "r") as f:
@@ -201,13 +184,15 @@ def read_lon_lat_poly_from_geojson(poly):
     return np.asarray(a["coordinates"][0])
 
 
-def crs_bbx(ll_poly, crs=None, align=None):
+def crs_bbx(ll_poly: npt.NDArray[np.float64],
+            crs: Optional[pyproj.CRS] = None,
+            align: Optional[float] = None) -> Tuple[int, int, int, int]:
     """
     Compute the bounding box of a (lon, lat) polygon in a given CRS.
 
     Args:
         ll_poly (np.ndarray): array of shape (n, 2)
-        crs (pyproj.crs.CRS): pyproj CRS object. If not specified, the default
+        crs (pyproj.CRS): pyproj CRS object. If not specified, the default
             CRS of the UTM zone for the given geography is used.
         align (float): adjust the bounds, by slightly expanding them, in order to
             fit a regular grid of resolution `align` (in crs units)

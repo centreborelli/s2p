@@ -22,8 +22,8 @@
 import sys
 import os.path
 import json
-import datetime
 import multiprocessing
+from typing import List
 
 import numpy as np
 import rasterio
@@ -46,7 +46,7 @@ from s2p import fusion
 from s2p import visualisation
 
 
-def pointing_correction(tile, i):
+def pointing_correction(tile: dict, i: int) -> None:
     """
     Compute the translation that corrects the pointing error on a pair of tiles.
 
@@ -83,7 +83,7 @@ def pointing_correction(tile, i):
                                        x, y, w, h)
 
 
-def global_pointing_correction(tiles):
+def global_pointing_correction(tiles: List[dict]) -> None:
     """
     Compute the global pointing corrections for each pair of images.
 
@@ -100,7 +100,7 @@ def global_pointing_correction(tiles):
                 common.remove(os.path.join(d, 'center_keypts_sec.txt'))
 
 
-def rectification_pair(tile, i):
+def rectification_pair(tile: dict, i: int) -> None:
     """
     Rectify a pair of images on a given tile.
 
@@ -164,7 +164,7 @@ def rectification_pair(tile, i):
         common.remove(os.path.join(out_dir, 'sift_matches.txt'))
 
 
-def stereo_matching(tile, i):
+def stereo_matching(tile: dict, i: int) -> None:
     """
     Compute the disparity of a pair of images on a given tile.
 
@@ -197,7 +197,7 @@ def stereo_matching(tile, i):
         common.remove(os.path.join(out_dir, 'disp_min_max.txt'))
 
 
-def disparity_to_height(tile, i):
+def disparity_to_height(tile: dict, i: int) -> None:
     """
     Compute a height map from the disparity map of a pair of image tiles.
 
@@ -211,8 +211,10 @@ def disparity_to_height(tile, i):
     print('triangulating tile {} {} pair {}...'.format(x, y, i))
     rpc1 = cfg['images'][0]['rpcm']
     rpc2 = cfg['images'][i]['rpcm']
-    H_ref = np.loadtxt(os.path.join(out_dir, 'H_ref.txt'))
-    H_sec = np.loadtxt(os.path.join(out_dir, 'H_sec.txt'))
+    H_ref_path = os.path.join(out_dir, 'H_ref.txt')
+    H_sec_path = os.path.join(out_dir, 'H_sec.txt')
+    H_ref = np.loadtxt(H_ref_path)
+    H_sec = np.loadtxt(H_sec_path)
     disp = os.path.join(out_dir, 'rectified_disp.tif')
     mask = os.path.join(out_dir, 'rectified_mask.png')
     mask_orig = os.path.join(tile['dir'], 'mask.png')
@@ -234,13 +236,13 @@ def disparity_to_height(tile, i):
     common.rasterio_write(os.path.join(out_dir, 'height_map.tif'), height_map)
 
     if cfg['clean_intermediate']:
-        common.remove(H_ref)
-        common.remove(H_sec)
+        common.remove(H_ref_path)
+        common.remove(H_sec_path)
         common.remove(disp)
         common.remove(mask)
 
 
-def disparity_to_ply(tile):
+def disparity_to_ply(tile: dict) -> None:
     """
     Compute a point cloud from the disparity map of a pair of image tiles.
 
@@ -273,10 +275,10 @@ def disparity_to_ply(tile):
         with rasterio.open(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif')) as f:
             ww, hh = f.width, f.height
 
-        colors = common.tmpfile(".tif")
-        common.image_apply_homography(colors, cfg['images'][0]['clr'],
+        colors_path = common.tmpfile(".tif")
+        common.image_apply_homography(colors_path, cfg['images'][0]['clr'],
                                       np.loadtxt(H_ref), ww, hh)
-        with rasterio.open(colors, "r") as f:
+        with rasterio.open(colors_path, "r") as f:
             colors = f.read()
 
     else:
@@ -293,7 +295,7 @@ def disparity_to_ply(tile):
         mask_orig_img = f.read().squeeze()
 
     out_crs = geographiclib.pyproj_crs(cfg['out_crs'])
-    xyz_array, err = triangulation.disp_to_xyz(rpc1, rpc2,
+    xyz_array, _ = triangulation.disp_to_xyz(rpc1, rpc2,
                                                np.loadtxt(H_ref), np.loadtxt(H_sec),
                                                disp_img, mask_rect_img,
                                                img_bbx=(x, x+w, y, y+h),
@@ -319,7 +321,7 @@ def disparity_to_ply(tile):
         common.remove(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'))
 
 
-def mean_heights(tile):
+def mean_heights(tile: dict) -> None:
     """
     """
     w, h = tile['coordinates'][2:]
@@ -341,7 +343,7 @@ def mean_heights(tile):
                [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)])
 
 
-def global_mean_heights(tiles):
+def global_mean_heights(tiles: List[dict]) -> None:
     """
     """
     local_mean_heights = [np.loadtxt(os.path.join(t['dir'], 'local_mean_heights.txt'))
@@ -353,7 +355,7 @@ def global_mean_heights(tiles):
                    [global_mean_heights[i]])
 
 
-def heights_fusion(tile):
+def heights_fusion(tile: dict) -> None:
     """
     Merge the height maps computed for each image pair and generate a ply cloud.
 
@@ -370,11 +372,10 @@ def heights_fusion(tile):
             common.cargarse_basura(img, img)
 
     # load global mean heights
-    global_mean_heights = []
-    for i in range(len(cfg['images']) - 1):
-        x = np.loadtxt(os.path.join(cfg['out_dir'],
-                                    'global_mean_height_pair_{}.txt'.format(i+1)))
-        global_mean_heights.append(x)
+    global_mean_heights = np.array([
+        np.loadtxt(os.path.join(cfg['out_dir'], 'global_mean_height_pair_{}.txt'.format(i+1)))
+        for i in range(len(cfg['images']) - 1)
+    ])
 
     # merge the height maps (applying mean offset to register)
     fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
@@ -386,7 +387,7 @@ def heights_fusion(tile):
             common.remove(f)
 
 
-def heights_to_ply(tile):
+def heights_to_ply(tile: dict) -> None:
     """
     Generate a ply cloud.
 
@@ -430,7 +431,7 @@ def heights_to_ply(tile):
         common.remove(os.path.join(out_dir, 'mask.png'))
 
 
-def plys_to_dsm(tile):
+def plys_to_dsm(tile: dict) -> None:
     """
     Generates DSM from plyfiles (cloud.ply)
 
@@ -477,7 +478,7 @@ def plys_to_dsm(tile):
         common.rasterio_write(out_conf, raster[:, :, 4], profile=profile)
 
 
-def global_dsm(tiles):
+def global_dsm(tiles: List[dict]) -> None:
     """
     Merge tilewise DSMs and confidence maps in a global DSM and confidence map.
     """
@@ -526,7 +527,7 @@ def global_dsm(tiles):
                              dst_kwds=creation_options)
 
 
-def main(user_cfg, start_from=0):
+def main(user_cfg: dict, start_from: int = 0) -> None:
     """
     Launch the s2p pipeline with the parameters given in a json file.
 
@@ -631,11 +632,11 @@ def main(user_cfg, start_from=0):
     common.print_elapsed_time(since_first_call=True)
 
 
-def make_path_relative_to_file(path, f):
+def make_path_relative_to_file(path: str, f: str) -> str:
     return os.path.join(os.path.abspath(os.path.dirname(f)), path)
 
 
-def read_tiles(tiles_file):
+def read_tiles(tiles_file: str) -> List[str]:
     outdir = os.path.dirname(tiles_file)
 
     with open(tiles_file) as f:
@@ -648,7 +649,7 @@ def read_tiles(tiles_file):
     return tiles
 
 
-def read_config_file(config_file):
+def read_config_file(config_file: str) -> dict:
     """
     Read a json configuration file and interpret relative paths.
 

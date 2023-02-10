@@ -5,10 +5,14 @@
 import os
 import ctypes
 from ctypes import c_int, c_float, c_double, byref, POINTER
+from typing import Optional, Tuple
 from numpy.ctypeslib import ndpointer
 import numpy as np
+import numpy.typing as npt
 from scipy import ndimage
 import rasterio
+import pyproj
+import rpcm
 
 from s2p import common
 from s2p import ply
@@ -39,7 +43,7 @@ class RPCStruct(ctypes.Structure):
                 ("imval", c_double * 4),
                 ("delta", c_double)]
 
-    def __init__(self, rpc, delta=1.0):
+    def __init__(self, rpc: rpcm.RPCModel, delta: float = 1.0):
         """
         Args:
             rpc (rpcm.RPCModel): rpc model
@@ -81,8 +85,17 @@ class RPCStruct(ctypes.Structure):
         self.delta = delta
 
 
-def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None,
-                out_crs=None):
+def disp_to_xyz(rpc1: rpcm.RPCModel,
+                rpc2: rpcm.RPCModel,
+                H1: npt.NDArray[np.float64],
+                H2: npt.NDArray[np.float64],
+                disp: npt.NDArray[np.float64],
+                mask_rect: npt.NDArray[np.bool_],
+                img_bbx: Tuple[int, int, int, int],
+                mask_orig: npt.NDArray[np.bool_],
+                A: Optional[npt.NDArray[np.float64]] = None,
+                out_crs: Optional[pyproj.CRS] = None
+            ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float32]]:
     """
     Compute a 3D coordinates map from a disparity map, using RPC camera models.
 
@@ -131,17 +144,17 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None,
 
 
     # call the disp_to_lonlatalt function from disp_to_h.so
-    lonlatalt = np.zeros((h, w, 3), dtype='float64')
-    err = np.zeros((h, w), dtype='float32')
-    dispx = disp.astype('float32')
-    dispy = np.zeros((h, w), dtype='float32')
-    msk_rect = mask_rect.astype('float32')
-    msk_orig = mask_orig.astype('float32')
+    lonlatalt = np.zeros((h, w, 3), dtype=np.float64)
+    err = np.zeros((h, w), dtype=np.float32)
+    dispx = disp.astype(np.float32)
+    dispy = np.zeros((h, w), dtype=np.float32)
+    msk_rect = mask_rect.astype(np.float32)
+    msk_orig = mask_orig.astype(np.float32)
     lib.disp_to_lonlatalt(lonlatalt, err, dispx, dispy, msk_rect, w, h,
                           msk_orig, ww, hh,
                           H1.flatten(), H2.flatten(),
                           byref(rpc1_c_struct), byref(rpc2_c_struct),
-                          np.asarray(img_bbx, dtype='float32'))
+                          np.asarray(img_bbx, dtype=np.float32))
 
     # output CRS conversion
     in_crs = geographiclib.pyproj_crs("epsg:4979")
@@ -161,7 +174,11 @@ def disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask_rect, img_bbx, mask_orig, A=None,
     return xyz_array, err
 
 
-def height_map_to_xyz(heights, rpc, off_x=0, off_y=0, out_crs=None):
+def height_map_to_xyz(heights: str,
+                      rpc: rpcm.RPCModel,
+                      off_x: int = 0,
+                      off_y: int = 0,
+                      out_crs: Optional[pyproj.CRS] = None) -> npt.NDArray[np.float64]:
     """
     Compute a 3D coordinates map from a height map, using an RPC camera model.
 
@@ -172,7 +189,7 @@ def height_map_to_xyz(heights, rpc, off_x=0, off_y=0, out_crs=None):
         off_{x,y} (optional, default 0): coordinates of the origin of the crop
             we are dealing with in the pixel coordinates of the original full
             size image
-        out_crs (pyproj.crs.CRS): object defining the desired coordinate
+        out_crs (pyproj.CRS): object defining the desired coordinate
             reference system for the output xyz map
 
     Returns:
@@ -216,7 +233,12 @@ def height_map_to_xyz(heights, rpc, off_x=0, off_y=0, out_crs=None):
     return xyz_array
 
 
-def stereo_corresp_to_xyz(rpc1, rpc2, pts1, pts2, out_crs=None):
+def stereo_corresp_to_xyz(rpc1: rpcm.RPCModel,
+                          rpc2: rpcm.RPCModel,
+                          pts1: npt.NDArray[np.int32],
+                          pts2: npt.NDArray[np.int32],
+                          out_crs: Optional[pyproj.CRS] = None
+                          ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Compute a point cloud from stereo correspondences between two images using RPC camera models.
     No need to go through the disparity map
@@ -260,7 +282,6 @@ def stereo_corresp_to_xyz(rpc1, rpc2, pts1, pts2, out_crs=None):
     in_crs = geographiclib.pyproj_crs("epsg:4979")
 
     if out_crs and out_crs != in_crs:
-
         x, y, z = geographiclib.pyproj_transform(lonlatalt[:, 0], lonlatalt[:, 1],
                                                  in_crs, out_crs, lonlatalt[:, 2])
 
@@ -271,7 +292,7 @@ def stereo_corresp_to_xyz(rpc1, rpc2, pts1, pts2, out_crs=None):
     return xyz_array, err
 
 
-def count_3d_neighbors(xyz, r, p):
+def count_3d_neighbors(xyz: npt.NDArray[np.float64], r: float, p: int) -> npt.NDArray[np.int32]:
     """
     Count 3D neighbors of a gridded set of 3D points.
 
@@ -294,13 +315,17 @@ def count_3d_neighbors(xyz, r, p):
                                        c_int, c_int, c_float, c_int)
 
     # call the count_3d_neighbors function from disp_to_h.so
-    out = np.zeros((h, w), dtype='int32')
+    out = np.zeros((h, w), dtype=np.int32)
     lib.count_3d_neighbors(out, np.ascontiguousarray(xyz), w, h, r, p)
 
     return out
 
 
-def remove_isolated_3d_points(xyz, r, p, n, q=1):
+def remove_isolated_3d_points(xyz: npt.NDArray[np.float64],
+                              r: float,
+                              p: int,
+                              n: int,
+                              q: int = 1) -> None:
     """
     Discard (in place) isolated (groups of) points in a gridded set of 3D points
 
@@ -324,10 +349,11 @@ def remove_isolated_3d_points(xyz, r, p, n, q=1):
         ndpointer(dtype=c_double, shape=(h, w, 3)),
         c_int, c_int, c_float, c_int, c_int, c_int)
 
-    lib.remove_isolated_3d_points(np.ascontiguousarray(xyz), w, h, r, p, n, q)
+    assert xyz.flags['C_CONTIGUOUS']
+    lib.remove_isolated_3d_points(xyz, w, h, r, p, n, q)
 
 
-def filter_xyz(xyz, r, n, img_gsd):
+def filter_xyz(xyz: npt.NDArray[np.float64], r: float, n: int, img_gsd: float) -> None:
     """
     Discard (in place) points that have less than n points closer than r units (ex: meters).
 
@@ -342,7 +368,18 @@ def filter_xyz(xyz, r, n, img_gsd):
     remove_isolated_3d_points(xyz, r, p, n)
 
 
-def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, mask_orig, A=None):
+def height_map(x: int,
+               y: int,
+               w: int,
+               h: int,
+               rpc1: rpcm.RPCModel,
+               rpc2: rpcm.RPCModel,
+               H1: npt.NDArray[np.float64],
+               H2: npt.NDArray[np.float64],
+               disp: npt.NDArray[np.float64],
+               mask: npt.NDArray[np.bool_],
+               mask_orig: npt.NDArray[np.bool_],
+               A: Optional[npt.NDArray[np.float64]] = None) -> npt.NDArray[np.float64]:
     """
     Computes an altitude map, on the grid of the original reference image, from
     a disparity map given on the grid of the rectified reference image.
@@ -367,7 +404,7 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, mask_orig, A=None):
     # rectified domain to original domain
     p = 1
 
-    xyz, err = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask,
+    xyz, _ = disp_to_xyz(rpc1, rpc2, H1, H2, disp, mask,
                            img_bbx=(x-p, x+w+2*p, y-p, y+h+2*p),
                            mask_orig=np.pad(mask_orig, p, constant_values=1),
                            A=A, out_crs=None)
@@ -388,7 +425,11 @@ def height_map(x, y, w, h, rpc1, rpc2, H1, H2, disp, mask, mask_orig, A=None):
     return out
 
 
-def write_to_ply(path_to_ply_file, xyz, colors=None, proj_com='', confidence=''):
+def write_to_ply(path_to_ply_file: str,
+                 xyz: npt.NDArray[np.float64],
+                 colors: Optional[npt.NDArray[np.uint8]] = None,
+                 proj_com: str = '',
+                 confidence: str = '') -> None:
     """
     Write raster of 3D point coordinates as a 3D point cloud in a .ply file
 

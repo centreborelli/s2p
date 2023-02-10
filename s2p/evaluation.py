@@ -4,8 +4,9 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import numpy as np
+import numpy.typing as npt
 
-def distance_point_to_line(x, l):
+def distance_point_to_line(x: npt.NDArray[np.float64], l: npt.NDArray[np.float64]) -> float:
     """
     Computes the distance between a point and a line expressed in homogeneous
     coordinates.
@@ -21,10 +22,10 @@ def distance_point_to_line(x, l):
     """
     if (np.abs(x[2]) < np.finfo(float).eps):
         # x is an ideal point, distance is +infty
-        return np.finfo(float).max
+        return float(np.finfo(float).max)
     if (np.hypot(l[0], l[1]) < np.finfo(float).eps):
         # l is the line at infinity, distance is +infty
-        return np.finfo(float).max
+        return float(np.finfo(float).max)
 
     num = np.abs(np.dot(x, l))
     den = np.hypot(l[0], l[1]) * np.abs(x[2])

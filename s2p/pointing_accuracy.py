@@ -5,14 +5,19 @@
 
 
 import os
+from typing import List, Optional, Tuple
 import numpy as np
+import numpy.typing as npt
+import rpcm
 
 from s2p import sift
 from s2p import rpc_utils
 from s2p import estimation
 
 
-def error_vectors(m, F, ind='ref'):
+def error_vectors(m: npt.NDArray[np.float32],
+                  F: npt.NDArray[np.float64],
+                  ind: str = 'ref') -> npt.NDArray[np.float64]:
     """
     Computes the error vectors for a list of matches and a given fundamental
     matrix.
@@ -46,7 +51,7 @@ def error_vectors(m, F, ind='ref'):
     elif ind == 'ref':
         l = np.dot(xx, F)
     else:
-        print("pointing_accuracy.error_vectors: invalid 'ind' argument")
+        raise ValueError("pointing_accuracy.error_vectors: invalid 'ind' argument")
 
     # compute the error vectors (going from the projection of x or xx on l to x
     # or xx)
@@ -59,7 +64,15 @@ def error_vectors(m, F, ind='ref'):
     return np.vstack((np.multiply(a, l[:, 0]), np.multiply(a, l[:, 1]))).T
 
 
-def local_translation(cfg, r1, r2, x, y, w, h, m, n_gcp_per_axis):
+def local_translation(cfg,
+                      r1: rpcm.RPCModel,
+                      r2: rpcm.RPCModel,
+                      x: int,
+                      y: int,
+                      w: int,
+                      h: int,
+                      m: npt.NDArray[np.float32],
+                      n_gcp_per_axis: int) -> npt.NDArray[np.float64]:
     """
     Estimates the optimal translation to minimise the relative pointing error
     on a given tile.
@@ -98,8 +111,20 @@ def local_translation(cfg, r1, r2, x, y, w, h, m, n_gcp_per_axis):
     return A
 
 
-def compute_correction(cfg, img1, img2, rpc1, rpc2, x, y, w, h, method,
-                       sift_thresh, epipolar_threshold, n_gcp_per_axis):
+def compute_correction(cfg,
+                       img1: str,
+                       img2: str,
+                       rpc1: rpcm.RPCModel,
+                       rpc2: rpcm.RPCModel,
+                       x: int,
+                       y: int,
+                       w: int,
+                       h: int,
+                       method: str,
+                       sift_thresh: float,
+                       epipolar_threshold: float,
+                       n_gcp_per_axis: int
+                       ) -> Tuple[Optional[npt.NDArray[np.float64]], Optional[npt.NDArray[np.float32]]]:
     """
     Computes pointing correction matrix for specific ROI
 
@@ -120,6 +145,7 @@ def compute_correction(cfg, img1, img2, rpc1, rpc2, x, y, w, h, method,
         a 3x3 matrix representing the planar transformation to apply to img2 in
         order to correct the pointing error, and the list of sift matches used
         to compute this correction.
+        m (see sift.matches_on_rpc_roi)
     """
     m = sift.matches_on_rpc_roi(cfg, img1, img2, rpc1, rpc2, x, y, w, h,
                                 method, sift_thresh, epipolar_threshold)
@@ -132,7 +158,7 @@ def compute_correction(cfg, img1, img2, rpc1, rpc2, x, y, w, h, method,
     return A, m
 
 
-def global_from_local(tiles):
+def global_from_local(tiles: List[str]) -> npt.NDArray[np.float64]:
     """
     Computes the pointing correction of a full roi using local corrections on
     tiles.
@@ -153,6 +179,7 @@ def global_from_local(tiles):
     xx = []
 
     # loop over all the tiles
+    A = None
     for f in tiles:
         center = os.path.join(f, 'center_keypts_sec.txt')
         pointing = os.path.join(f, 'pointing.txt')
@@ -166,7 +193,10 @@ def global_from_local(tiles):
 
     if not x:
         return np.eye(3)
-    elif len(x) == 1:
+
+    assert A is not None
+
+    if len(x) == 1:
         return A
     elif len(x) == 2:
         #TODO: replace translation with similarity

@@ -71,7 +71,7 @@ def tmpfile(ext: str = '') -> str:
 
 def run(cmd: Union[str, List[str]],
         env=os.environ,
-        timeout: Optional[bool] = None,
+        timeout: Optional[int] = None,
         shell: bool = False) -> None:
     """
     Runs a shell command, and print it before running.

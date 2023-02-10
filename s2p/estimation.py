@@ -3,10 +3,12 @@
 # Copyright (C) 2015, Enric Meinhardt <enric.meinhardt@cmla.ens-cachan.fr>
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
+from typing import Tuple
 import numpy as np
+import numpy.typing as npt
 
 
-def fundamental_matrix_cameras(P1, P2):
+def fundamental_matrix_cameras(P1: npt.NDArray[np.float64], P2: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     """
     Computes the fundamental matrix given the matrices of two cameras.
 
@@ -38,7 +40,7 @@ def fundamental_matrix_cameras(P1, P2):
     return F
 
 
-def get_angle_from_cos_and_sin(c, s):
+def get_angle_from_cos_and_sin(c: float, s: float) -> float:
     """
     Computes x in ]-pi, pi] such that cos(x) = c and sin(x) = s.
     """
@@ -48,7 +50,7 @@ def get_angle_from_cos_and_sin(c, s):
         return -np.arccos(c)
 
 
-def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
+def rectifying_similarities_from_affine_fundamental_matrix(F: npt.NDArray[np.float64], debug: bool = False) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Computes two similarities from an affine fundamental matrix.
 
@@ -111,7 +113,7 @@ def rectifying_similarities_from_affine_fundamental_matrix(F, debug=False):
     return S1, S2
 
 
-def affine_fundamental_matrix(matches):
+def affine_fundamental_matrix(matches: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     """
     Estimates the affine fundamental matrix given a set of point correspondences
     between two images.
@@ -130,11 +132,11 @@ def affine_fundamental_matrix(matches):
     X = matches[:, [2, 3, 0, 1]]
 
     # compute the centroid
-    N = len(X)
-    XX = np.sum(X, axis=0) / N
+    num = len(X)
+    XX = np.sum(X, axis=0) / num
 
     # compute the Nx4 matrix A
-    A = X - np.tile(XX, (N, 1))
+    A = X - np.tile(XX, (num, 1))
 
     # the solution is obtained as the singular vector corresponding to the
     # smallest singular value of matrix A. See Hartley and Zissermann for
@@ -154,7 +156,7 @@ def affine_fundamental_matrix(matches):
     return F
 
 
-def affine_transformation(x, xx):
+def affine_transformation(x: npt.NDArray[np.float64], xx :npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     """
     Estimates an affine homography from a list of correspondences
 
@@ -205,7 +207,7 @@ def affine_transformation(x, xx):
     return A
 
 
-def translation(x, xx):
+def translation(x: npt.NDArray[np.float64], xx :npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     """
     Estimates a planar translation from a list of correspondences
 

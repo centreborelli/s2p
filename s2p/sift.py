@@ -5,12 +5,17 @@
 
 import os
 import ctypes
+from typing import Optional, Tuple
 import warnings
 
 import numpy as np
-import rasterio as rio
+import numpy.typing as npt
+import rasterio
+import rasterio.windows
+import rasterio.errors
 from numpy.ctypeslib import ndpointer
 import ransac
+import rpcm
 
 from s2p import rpc_utils
 from s2p import estimation
@@ -27,10 +32,14 @@ lib = ctypes.CDLL(sift4ctypes)
 
 
 # Filter warnings from rasterio reading files wihtout georeferencing
-warnings.filterwarnings("ignore", category=rio.errors.NotGeoreferencedWarning)
+warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
 
-def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, offset=None):
+def keypoints_from_nparray(arr: npt.NDArray[np.float64],
+                           thresh_dog: float = 0.0133,
+                           nb_octaves: int = 8,
+                           nb_scales: int = 3,
+                           offset: Optional[Tuple[float, float]] = None) -> npt.NDArray[np.float32]:
     """
     Runs SIFT (the keypoints detection and description only, no matching) on an image stored in a 2D numpy array
 
@@ -82,7 +91,15 @@ def keypoints_from_nparray(arr, thresh_dog=0.0133, nb_octaves=8, nb_scales=3, of
     return keypoints
 
 
-def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8, nb_scales=3):
+def image_keypoints(im: str,
+                    x: int,
+                    y: int,
+                    w: int,
+                    h: int,
+                    max_nb: Optional[int] = None,
+                    thresh_dog: float = 0.0133,
+                    nb_octaves: int = 8,
+                    nb_scales: int = 3) -> npt.NDArray[np.float32]:
     """
     Runs SIFT (the keypoints detection and description only, no matching).
 
@@ -98,7 +115,7 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
         numpy array of shape (n, 132) containing, on each row: (y, x, s, o, 128-descriptor)
     """
     # Read file with rasterio
-    with rio.open(im) as ds:
+    with rasterio.open(im) as ds:
         # clip roi to stay inside the image boundaries
         if x < 0:  # if x is negative then replace it with 0 and reduce w
             w += x
@@ -109,7 +126,7 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
         # if extract not completely inside the full image then resize (w, h)
         w = min(w, ds.width - x)
         h = min(h, ds.height - y)
-        in_buffer = ds.read(window=rio.windows.Window(x, y, w, h))
+        in_buffer = ds.read(window=rasterio.windows.Window(x, y, w, h))
 
     # Detect keypoints on first band
     keypoints = keypoints_from_nparray(in_buffer[0], thresh_dog=thresh_dog,
@@ -123,7 +140,7 @@ def image_keypoints(im, x, y, w, h, max_nb=None, thresh_dog=0.0133, nb_octaves=8
     return keypoints
 
 
-def string_dump_of_keypoint_and_descriptor(k):
+def string_dump_of_keypoint_and_descriptor(k: npt.NDArray) -> str:
     """
     Return a string representing a keypoint and its descriptor.
 
@@ -142,8 +159,14 @@ def string_dump_of_keypoint_and_descriptor(k):
     return s
 
 
-def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
-                    epipolar_threshold=10, model=None, ransac_max_err=0.3):
+def keypoints_match(k1: npt.NDArray[np.float32],
+                    k2: npt.NDArray[np.float32],
+                    method: str = 'relative',
+                    sift_thresh: float = 0.6,
+                    F: Optional[npt.NDArray[np.float64]] = None,
+                    epipolar_threshold: float = 10,
+                    model: Optional[str] = None,
+                    ransac_max_err: float = 0.3) -> npt.NDArray[np.float32]:
     """
     Find matches among two lists of sift keypoints.
 
@@ -186,8 +209,12 @@ def keypoints_match(k1, k2, method='relative', sift_thresh=0.6, F=None,
     return matches
 
 
-def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
-                                 epi_threshold=10, F=None):
+def keypoints_match_from_nparray(k1: npt.NDArray[np.float32],
+                                 k2: npt.NDArray[np.float32],
+                                 method: str,
+                                 sift_threshold: float,
+                                 epi_threshold: float = 10.0,
+                                 F: Optional[npt.NDArray[np.float64]] =None) -> npt.NDArray[np.float32]:
     """
     Wrapper for the sift keypoints matching function of libsift4ctypes.so.
     """
@@ -220,7 +247,7 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
     nb_matches = ctypes.c_uint()
 
     # Call sift fonction from sift4ctypes.so
-    matches_ptr = lib.matching(k1.astype('float32'), k2.astype('float32'),
+    matches_ptr = lib.matching(k1.astype(np.float32), k2.astype(np.float32),
                                length_descr, sift_offset, len(k1), len(k2),
                                sift_threshold, epi_threshold, coeff_mat,
                                use_fundamental_matrix, use_relative_method,
@@ -237,8 +264,18 @@ def keypoints_match_from_nparray(k1, k2, method, sift_threshold,
     return matches.reshape((nb_matches.value, 4))
 
 
-def matches_on_rpc_roi(cfg, im1, im2, rpc1, rpc2, x, y, w, h,
-                       method, sift_thresh, epipolar_threshold):
+def matches_on_rpc_roi(cfg,
+                       im1: str,
+                       im2: str,
+                       rpc1: rpcm.RPCModel,
+                       rpc2: rpcm.RPCModel,
+                       x: int,
+                       y: int,
+                       w: int,
+                       h: int,
+                       method: str,
+                       sift_thresh: float,
+                       epipolar_threshold: float) -> Optional[npt.NDArray[np.float32]]:
     """
     Compute a list of SIFT matches between two images on a given roi.
 

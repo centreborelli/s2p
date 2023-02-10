@@ -4,6 +4,7 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import os
+from typing import Optional
 import numpy as np
 import rasterio
 
@@ -14,7 +15,7 @@ class MaxDisparityRangeError(Exception):
     pass
 
 
-def create_rejection_mask(disp, im1, im2, mask):
+def create_rejection_mask(disp: str, im1: str, im2: str, mask: str) -> None:
     """
     Create rejection mask (0 means rejected, 1 means accepted)
     Keep only the points that are matched and present in both input images
@@ -31,9 +32,16 @@ def create_rejection_mask(disp, im1, im2, mask):
     common.run(["plambda", disp, im1, tmp2, "x isfinite y isfinite z isfinite and and vmul", "-o", mask])
 
 
-def compute_disparity_map(cfg, im1, im2, disp, mask, algo, disp_min=None,
-                          disp_max=None, timeout=600, max_disp_range=None,
-                          extra_params=''):
+def compute_disparity_map(cfg, im1: str,
+                          im2: str,
+                          disp: str,
+                          mask: str,
+                          algo: str,
+                          disp_min: Optional[float] = None,
+                          disp_max: Optional[float] = None,
+                          timeout: int = 600,
+                          max_disp_range: Optional[float] = None,
+                          extra_params: str = '') -> None:
     """
     Runs a block-matching binary on a pair of stereo-rectified images.
 
@@ -74,6 +82,8 @@ def compute_disparity_map(cfg, im1, im2, disp, mask, algo, disp_min=None,
 
     if (
         max_disp_range is not None
+        and disp_max is not None
+        and disp_min is not None
         and disp_max - disp_min > max_disp_range
     ):
         raise MaxDisparityRangeError(
