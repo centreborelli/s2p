@@ -4,9 +4,12 @@
 
 
 import os
+from typing import Optional, Tuple
 import warnings
 
 import numpy as np
+import numpy.typing as npt
+import rpcm
 
 from s2p import rpc_utils
 from s2p import estimation
@@ -23,7 +26,9 @@ class NoHorizontalRegistrationWarning(Warning):
     pass
 
 
-def filter_matches_epipolar_constraint(F, matches, thresh):
+def filter_matches_epipolar_constraint(F: npt.NDArray[np.float64],
+                                       matches: npt.NDArray[np.float32],
+                                       thresh: float) -> npt.NDArray[np.float32]:
     """
     Discards matches that are not consistent with the epipolar constraint.
 
@@ -49,7 +54,10 @@ def filter_matches_epipolar_constraint(F, matches, thresh):
     return np.array(out)
 
 
-def register_horizontally_shear(matches, H1, H2, debug=False):
+def register_horizontally_shear(matches: npt.NDArray[np.float32],
+                                H1: npt.NDArray[np.float64],
+                                H2: npt.NDArray[np.float64],
+                                debug: bool = False) -> npt.NDArray[np.float64]:
     """
     Adjust rectifying homographies with tilt, shear and translation to reduce the disparity range.
 
@@ -85,7 +93,11 @@ def register_horizontally_shear(matches, H1, H2, debug=False):
     return np.dot(np.array([[a, b, c], [0, 1, 0], [0, 0, 1]]), H2)
 
 
-def register_horizontally_translation(matches, H1, H2, flag='center', debug=False):
+def register_horizontally_translation(matches: npt.NDArray[np.float32],
+                                      H1: npt.NDArray[np.float64],
+                                      H2: npt.NDArray[np.float64],
+                                      flag: str = 'center',
+                                      debug: bool = False) -> npt.NDArray[np.float64]:
     """
     Adjust rectifying homographies with a translation to modify the disparity range.
 
@@ -121,19 +133,22 @@ def register_horizontally_translation(matches, H1, H2, flag='center', debug=Fals
         print(np.max(y2 - y1), np.min(y2 - y1), np.mean(y2 - y1))
 
     # compute the disparity offset according to selected option
-    t = 0
-    if (flag == 'center'):
-        t = np.mean(x2 - x1)
-    if (flag == 'positive'):
-        t = np.min(x2 - x1)
-    if (flag == 'negative'):
-        t = np.max(x2 - x1)
+    t = 0.0
+    if flag == 'center':
+        t = float(np.mean(x2 - x1))
+    if flag == 'positive':
+        t = float(np.min(x2 - x1))
+    if flag == 'negative':
+        t = float(np.max(x2 - x1))
 
     # correct H2 with a translation
     return np.dot(common.matrix_translation(-t, 0), H2)
 
 
-def disparity_range_from_matches(matches, H1, H2, disp_range_extra_margin):
+def disparity_range_from_matches(matches: npt.NDArray[np.float32],
+                                 H1: npt.NDArray[np.float64],
+                                 H2: npt.NDArray[np.float64],
+                                 disp_range_extra_margin: float) -> Tuple[float, float]:
     """
     Compute the disparity range of a ROI from a list of point matches.
 
@@ -162,7 +177,17 @@ def disparity_range_from_matches(matches, H1, H2, disp_range_extra_margin):
     return disp_min, disp_max
 
 
-def disparity_range(cfg, rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
+def disparity_range(cfg,
+                    rpc1: rpcm.RPCModel,
+                    rpc2: rpcm.RPCModel,
+                    x: int,
+                    y: int,
+                    w: int,
+                    h: int,
+                    H1: npt.NDArray[np.float64],
+                    H2: npt.NDArray[np.float64],
+                    matches: Optional[npt.NDArray[np.float32]],
+                    A: Optional[npt.NDArray[np.float64]] = None) -> Tuple[float, float]:
     """
     Compute the disparity range of a ROI from a list of point matches.
 
@@ -182,6 +207,7 @@ def disparity_range(cfg, rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
         disp: 2-uple containing the horizontal disparity range
     """
     # compute exogenous disparity range if needed
+    exogenous_disp = None
     if cfg['exogenous_dem'] and cfg['disp_range_method'] in ['exogenous', 'wider_sift_exogenous']:
         exogenous_disp = rpc_utils.exogenous_disp_range_estimation(cfg, rpc1, rpc2,
                                                                    x, y, w, h,
@@ -192,14 +218,14 @@ def disparity_range(cfg, rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
         print("exogenous disparity range:", exogenous_disp)
 
     # compute SIFT disparity range if needed
+    sift_disp = None
     if cfg['disp_range_method'] in ['sift', 'wider_sift_exogenous']:
         if matches is not None and len(matches) >= 2:
             sift_disp = disparity_range_from_matches(matches, H1, H2, cfg['disp_range_extra_margin'])
-        else:
-            sift_disp = None
         print("SIFT disparity range:", sift_disp)
 
     # compute altitude range disparity if needed
+    alt_disp = None
     if cfg['disp_range_method'] == 'fixed_altitude_range':
         alt_disp = rpc_utils.altitude_range_to_disp_range(cfg['alt_min'],
                                                           cfg['alt_max'],
@@ -208,6 +234,8 @@ def disparity_range(cfg, rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
         print("disparity range computed from fixed altitude range:", alt_disp)
 
     # now compute disparity range according to selected method
+    disp = None
+
     if cfg['disp_range_method'] == 'exogenous':
         disp = exogenous_disp
 
@@ -238,7 +266,12 @@ def disparity_range(cfg, rpc1, rpc2, x, y, w, h, H1, H2, matches, A=None):
     return disp
 
 
-def rectification_homographies(matches, x, y, w, h, debug=False):
+def rectification_homographies(matches: npt.NDArray[np.float32],
+                               x: int,
+                               y: int,
+                               w: int,
+                               h: int,
+                               debug: bool = False) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Computes rectifying homographies from point matches for a given ROI.
 
@@ -277,8 +310,22 @@ def rectification_homographies(matches, x, y, w, h, debug=False):
     return np.dot(T, S1), np.dot(T, S2), F
 
 
-def rectify_pair(cfg, im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift_matches=None,
-                 method='rpc', hmargin=0, vmargin=0):
+def rectify_pair(cfg,
+                 im1: str,
+                 im2: str,
+                 rpc1: rpcm.RPCModel,
+                 rpc2: rpcm.RPCModel,
+                 x: int,
+                 y: int,
+                 w: int,
+                 h: int,
+                 out1: str,
+                 out2: str,
+                 A: Optional[npt.NDArray[np.float64]] = None,
+                 sift_matches: Optional[npt.NDArray[np.float32]] = None,
+                 method: str = 'rpc',
+                 hmargin: float = 0,
+                 vmargin: float = 0) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], float, float]:
     """
     Rectify a ROI in a pair of images.
 
@@ -306,6 +353,7 @@ def rectify_pair(cfg, im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift
     """
     debug = cfg['debug']
     # compute real or virtual matches
+    matches: Optional[npt.NDArray[np.float32]]
     if method == 'rpc':
         # find virtual matches from RPC camera models
         matches = rpc_utils.matches_from_rpc(cfg, rpc1, rpc2, x, y, w, h,
@@ -331,7 +379,7 @@ def rectify_pair(cfg, im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift
 
     if cfg['register_with_shear']:
         # compose H2 with a horizontal shear to reduce the disparity range
-        a = np.mean(rpc_utils.altitude_range(cfg, rpc1, x, y, w, h))
+        a = float(np.mean(rpc_utils.altitude_range(cfg, rpc1, x, y, w, h)))
         lon, lat, alt = rpc_utils.ground_control_points(rpc1, x, y, w, h, a, a, 4)
         x1, y1 = rpc1.projection(lon, lat, alt)
         x2, y2 = rpc2.projection(lon, lat, alt)
@@ -354,6 +402,7 @@ def rectify_pair(cfg, im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift
 
     # compute disparity range
     if debug:
+        assert sift_matches is not None
         out_dir = os.path.dirname(out1)
         np.savetxt(os.path.join(out_dir, 'sift_matches_disp.txt'),
                    sift_matches, fmt='%9.3f')
@@ -377,7 +426,9 @@ def rectify_pair(cfg, im1, im2, rpc1, rpc2, x, y, w, h, out1, out2, A=None, sift
     np.testing.assert_allclose(np.round([x0, y0]), [hmargin, vmargin], atol=.01)
 
     # apply homographies and do the crops
-    common.image_apply_homography(out1, im1, H1, w0 + 2*hmargin, h0 + 2*vmargin)
-    common.image_apply_homography(out2, im2, H2, w0 + 2*hmargin, h0 + 2*vmargin)
+    ww = int(w0 + 2*hmargin)
+    hh = int(h0 + 2*vmargin)
+    common.image_apply_homography(out1, im1, H1, ww, hh)
+    common.image_apply_homography(out2, im2, H2, ww, hh)
 
     return H1, H2, disp_m, disp_M

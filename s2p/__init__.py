@@ -123,7 +123,7 @@ def rectification_pair(tile: dict, i: int) -> None:
     except IOError:
         A = np.loadtxt(pointing)
     try:
-        m = np.loadtxt(os.path.join(out_dir, 'sift_matches.txt'))
+        m = np.loadtxt(os.path.join(out_dir, 'sift_matches.txt'), dtype=np.float32)
     except IOError:
         m = None
 
@@ -133,7 +133,7 @@ def rectification_pair(tile: dict, i: int) -> None:
         if os.path.exists(nei_dir) and not os.path.samefile(cur_dir, nei_dir):
             sift_from_neighborhood = os.path.join(nei_dir, 'sift_matches.txt')
             try:
-                m_n = np.loadtxt(sift_from_neighborhood)
+                m_n = np.loadtxt(sift_from_neighborhood, dtype=np.float32)
                 # added sifts in the ellipse of semi axes : (3*w/4, 3*h/4)
                 m_n = m_n[np.where(np.linalg.norm([(m_n[:, 0] - (x + w/2)) / w,
                                                    (m_n[:, 1] - (y + h/2)) / h],

@@ -113,7 +113,7 @@ def rectifying_similarities_from_affine_fundamental_matrix(F: npt.NDArray[np.flo
     return S1, S2
 
 
-def affine_fundamental_matrix(matches: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+def affine_fundamental_matrix(matches: npt.NDArray[np.float32]) -> npt.NDArray[np.float64]:
     """
     Estimates the affine fundamental matrix given a set of point correspondences
     between two images.

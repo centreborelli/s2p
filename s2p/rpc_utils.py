@@ -411,7 +411,7 @@ def matches_from_rpc(cfg,
                      y: int,
                      w: int,
                      h: int,
-                     n: int) -> npt.NDArray[np.float64]:
+                     n: int) -> npt.NDArray[np.float32]:
     """
     Uses RPC functions to generate matches between two Pleiades images.
 

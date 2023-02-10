@@ -5,7 +5,7 @@ import argparse
 import s2p
 
 
-def main():
+def main() -> None:
     """
     Command line parsing for s2p command line interface.
     """
