@@ -282,6 +282,35 @@ def rectangles_intersect(r, s):
     return True
 
 
+def is_tile_all_nodata(path:str, window:rasterio.windows.Window):
+    """Check if pixels in a given window are all nodata.
+
+    Parameters
+    ----------
+    path
+        Path to the raster.
+    window
+        A rasterio.windows.Window object.
+
+    Returns
+    -------
+        Return True if all pixels in the window are nodata.
+        Return False if at least one pixel is non-nodata.
+    """
+    with rasterio.open(path, "r") as ds:
+        arr = ds.read(window=window)
+
+        # NOTE: Many satellite imagery providers use ds.nodata as the value of
+        # nodata pixels. Pleiades and PNeo imagery use None as nodata in their
+        # profile while putting 0 to nodata pixel in reality. Thus, we have to
+        # check both ds.nodata and 0 here. I.e., if a window is full of nodata
+        # or 0, then this window is discarded.
+        if np.all(arr == 0) or np.all(arr == ds.nodata):
+            return True
+        else:
+            return False
+
+
 def is_this_tile_useful(x, y, w, h, images_sizes):
     """
     Check if a tile contains valid pixels.
@@ -297,6 +326,9 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
         useful (bool): bool telling if the tile has to be processed
         mask (np.array): tile validity mask. Set to None if the tile is discarded
     """
+    if is_tile_all_nodata(cfg["images"][0]["img"], rasterio.windows.Window(x, y, w, h)):
+        return False, None
+        
     # check if the tile is partly contained in at least one other image
     if w <= 0 or h <= 0:
         return False, None
