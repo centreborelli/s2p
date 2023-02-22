@@ -174,6 +174,6 @@ cfg['cargarse_basura'] = True
 # If None, the local UTM zone will be used
 cfg['out_crs'] = None
 
-# If the out_crs is not set this parameter determines if the output CRS uses the EGM96 geoid vertical datum (if True)
+# If the out_crs is not set this parameter determines if the output CRS uses the EGM2008 geoid vertical datum (if True)
 # or the WGS84 ellipsoid vertical datum (if False). If out_crs is set, this parameter is ignored.
 cfg['out_geoid'] = False
