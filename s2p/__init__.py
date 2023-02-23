@@ -46,7 +46,7 @@ from s2p import ply
 from s2p import triangulation
 from s2p import fusion
 from s2p import visualisation
-from utils.image_coordinates_to_coordinates import matches_to_geojson
+from s2p.image_coordinates_to_coordinates import matches_to_geojson
 
 
 def remove_missing_tiles(tiles):
