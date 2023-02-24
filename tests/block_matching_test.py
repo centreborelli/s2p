@@ -4,7 +4,7 @@ import subprocess
 import pytest
 
 import s2p
-from s2p.config import cfg
+from s2p.config import get_default_config
 from tests_utils import data_path
 
 
@@ -12,6 +12,7 @@ def test_compute_disparity_map_timeout(timeout=1):
     """
     Run a long call to compute_disparity_map to check that the timeout kills it.
     """
+    cfg = get_default_config()
     img = data_path(os.path.join("input_pair", "img_01.tif"))
     disp = data_path(os.path.join("testoutput", "d.tif"))
     mask = data_path(os.path.join("testoutput", "m.tif"))
@@ -27,6 +28,7 @@ def test_compute_disparity_map_max_disp_range(max_disp_range=10):
     Run a call to compute_disparity_map with a small max_disp_range
     to check that an error is raised.
     """
+    cfg = get_default_config()
     img = data_path(os.path.join("input_pair", "img_01.tif"))
     disp = data_path(os.path.join("testoutput", "d.tif"))
     mask = data_path(os.path.join("testoutput", "m.tif"))

@@ -4,6 +4,7 @@
 # Copyright (C) 2015, Julien Michel <julien.michel@cnes.fr>
 
 import os
+import tempfile
 from typing import Optional
 import numpy as np
 import rasterio
@@ -25,11 +26,13 @@ def create_rejection_mask(disp: str, im1: str, im2: str, mask: str) -> None:
         im1, im2: rectified stereo pair
         mask: path to the output rejection mask
     """
-    tmp1 = common.tmpfile('.tif')
-    tmp2 = common.tmpfile('.tif')
-    common.run(["plambda", disp, "x 0 join", "-o", tmp1])
-    common.run(["backflow", tmp1, im2, tmp2])
-    common.run(["plambda", disp, im1, tmp2, "x isfinite y isfinite z isfinite and and vmul", "-o", mask])
+    tmp1 = tempfile.NamedTemporaryFile()
+    tmp2 = tempfile.NamedTemporaryFile()
+    common.run(["plambda", disp, "x 0 join", "-o", tmp1.name])
+    common.run(["backflow", tmp1.name, im2, tmp2.name])
+    common.run(["plambda", disp, im1, tmp2.name, "x isfinite y isfinite z isfinite and and vmul", "-o", mask])
+    tmp1.close()
+    tmp2.close()
 
 
 def compute_disparity_map(cfg, im1: str,
@@ -133,12 +136,13 @@ def compute_disparity_map(cfg, im1: str,
 
         win = 3  # matched block size. It must be a positive odd number
         lr = 1  # maximum difference allowed in the left-right disparity check
-        cost = common.tmpfile('.tif')
+        cost = tempfile.NamedTemporaryFile()
         common.run('sgbm {} {} {} {} {} {} {} {} {} {}'.format(im1, im2,
-                                                               disp, cost,
+                                                               disp, cost.name,
                                                                disp_min,
                                                                disp_max,
                                                                win, p1, p2, lr))
+        cost.close()
 
         create_rejection_mask(disp, im1, im2, mask)
 
@@ -200,8 +204,8 @@ def compute_disparity_map(cfg, im1: str,
     if algo == 'mgm_multi_lsd':
         ref = im1
         sec = im2
-        wref = common.tmpfile('.tif')
-        wsec = common.tmpfile('.tif')
+        wref = tempfile.NamedTemporaryFile()
+        wsec = tempfile.NamedTemporaryFile()
         # TODO TUNE LSD PARAMETERS TO HANDLE DIRECTLY 12 bits images?
         # image dependent weights based on lsd segments
         with rasterio.open(ref, "r") as f:
@@ -212,7 +216,7 @@ def compute_disparity_map(cfg, im1: str,
                    lsd  -  - | \
                    cut -d\' \' -f1,2,3,4   | \
                    pview segments %d %d | \
-                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s' % (ref, width, height, wref),
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s' % (ref, width, height, wref.name),
                    shell=True)
         # image dependent weights based on lsd segments
         with rasterio.open(sec, "r") as f:
@@ -223,7 +227,7 @@ def compute_disparity_map(cfg, im1: str,
                    lsd  -  - | \
                    cut -d\' \' -f1,2,3,4   | \
                    pview segments %d %d | \
-                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s' % (sec, width, height, wsec),
+                   plambda -  "255 x - 255 / 2 pow 0.1 fmax" -o %s' % (sec, width, height, wsec.name),
                    shell=True)
 
 
@@ -259,8 +263,8 @@ def compute_disparity_map(cfg, im1: str,
                 disp_min=disp_min,
                 disp_max=disp_max,
                 nb_dir=nb_dir,
-                wref=wref,
-                wsec=wsec,
+                wref=wref.name,
+                wsec=wsec.name,
                 P1=P1,
                 P2=P2,
                 conf=conf,
@@ -271,6 +275,8 @@ def compute_disparity_map(cfg, im1: str,
             env=env,
             timeout=timeout,
         )
+        wref.close()
+        wsec.close()
 
         create_rejection_mask(disp, im1, im2, mask)
 

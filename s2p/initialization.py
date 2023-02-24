@@ -18,7 +18,6 @@ from s2p import geographiclib
 from s2p import rpc_utils
 from s2p import masking
 from s2p import parallel
-from s2p.config import cfg
 from s2p.tile import Tile
 
 # This function is here as a workaround to python bug #24313 When
@@ -39,7 +38,7 @@ def dict_has_keys(d: dict, l: List[str]) -> bool:
     return all(k in d for k in l)
 
 
-def check_parameters(d: dict) -> None:
+def check_parameters(cfg, d: dict) -> None:
     """
     Check that the provided dictionary defines all mandatory s2p arguments.
 
@@ -104,7 +103,7 @@ def check_parameters(d: dict) -> None:
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
 
-def build_cfg(user_cfg: dict) -> None:
+def build_cfg(cfg, user_cfg: dict) -> None:
     """
     Populate a dictionary containing the s2p parameters from a user config file.
 
@@ -115,7 +114,7 @@ def build_cfg(user_cfg: dict) -> None:
         user_cfg: user config dictionary
     """
     # check that all the mandatory arguments are defined
-    check_parameters(user_cfg)
+    check_parameters(cfg, user_cfg)
 
     # fill the config module: updates the content of the config.cfg dictionary
     # with the content of the user_cfg dictionary
@@ -151,7 +150,7 @@ def build_cfg(user_cfg: dict) -> None:
     cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpcm'])
 
 
-def make_dirs() -> None:
+def make_dirs(cfg) -> None:
     """
     Create directories needed to run s2p.
     """
@@ -167,7 +166,7 @@ def make_dirs() -> None:
         json.dump(cfg_copy, f, indent=2, default=workaround_json_int64)
 
 
-def adjust_tile_size() -> Tuple[int, int]:
+def adjust_tile_size(cfg) -> Tuple[int, int]:
     """
     Adjust the size of the tiles.
     """
@@ -228,7 +227,7 @@ def get_tile_dir(x: int, y: int, w: int, h: int) -> str:
 
 
 def create_tile(
-    coords: Tuple[int, int, int, int], neighborhood_coords_dict: dict
+    cfg, coords: Tuple[int, int, int, int], neighborhood_coords_dict: dict
 ) -> Tile:
     """
     Return a dictionary with the data of a tile.
@@ -319,7 +318,7 @@ def is_tile_all_nodata(path: str, window: rasterio.windows.Window) -> bool:
 
 
 def is_this_tile_useful(
-    x: int, y: int, w: int, h: int, images_sizes: List[Tuple[int, int]]
+    cfg, x: int, y: int, w: int, h: int, images_sizes: List[Tuple[int, int]]
 ) -> Tuple[bool, Optional[npt.NDArray[np.bool_]]]:
     """
     Check if a tile contains valid pixels.
@@ -350,14 +349,14 @@ def is_this_tile_useful(
     roi_msk = cfg['images'][0]['roi']
     cld_msk = cfg['images'][0]['cld']
     wat_msk = cfg['images'][0]['wat']
-    mask = masking.image_tile_mask(x, y, w, h, roi_msk, cld_msk, wat_msk,
+    mask = masking.image_tile_mask(cfg, x, y, w, h, roi_msk, cld_msk, wat_msk,
                                    images_sizes[0], cfg['border_margin'])
     if not mask.any():
         return False, None
     return True, mask
 
 
-def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False) -> List[Tile]:
+def tiles_full_info(cfg, tw: int, th: int, tiles_txt: str, create_masks: bool = False) -> List[Tile]:
     """
     List the tiles to process and prepare their output directories structures.
 
@@ -368,10 +367,6 @@ def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False
         a list of dictionaries. Each dictionary contains the image coordinates
         and the output directory path of a tile.
     """
-    rpc = cfg['images'][0]['rpcm']
-    roi_msk = cfg['images'][0]['roi']
-    cld_msk = cfg['images'][0]['cld']
-    wat_msk = cfg['images'][0]['wat']
     rx = cfg['roi']['x']
     ry = cfg['roi']['y']
     rw = cfg['roi']['w']
@@ -391,8 +386,8 @@ def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False
                 images_sizes.append(f.shape)
 
         # compute all masks in parallel as numpy arrays
-        tiles_usefulnesses = parallel.launch_calls(is_this_tile_useful,
-                                                   tiles_coords,
+        tiles_usefulnesses = parallel.launch_calls(cfg, is_this_tile_useful,
+                                                   [(cfg, *t) for t in tiles_coords],
                                                    cfg['max_processes'],
                                                    images_sizes,
                                                    tilewise=False,
@@ -404,12 +399,11 @@ def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False
             neighborhood_coords_dict[k] = list(set(v) - discarded_tiles)
 
         for coords, usefulness in zip(tiles_coords, tiles_usefulnesses):
-
             useful, mask = usefulness
             if not useful:
                 continue
 
-            tile = create_tile(coords, neighborhood_coords_dict)
+            tile = create_tile(cfg, coords, neighborhood_coords_dict)
             tiles.append(tile)
 
             # make tiles directories and store json configuration dumps
@@ -436,7 +430,7 @@ def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False
                                   mask.astype(np.uint8))
     else:
         if len(tiles_coords) == 1:
-            tiles.append(create_tile(tiles_coords[0], neighborhood_coords_dict))
+            tiles.append(create_tile(cfg, tiles_coords[0], neighborhood_coords_dict))
         else:
             with open(tiles_txt, 'r') as f_tiles:
                 for config_json in f_tiles:
@@ -445,6 +439,6 @@ def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False
                         tile_cfg = json.load(f_config)
                         roi = tile_cfg['roi']
                         coords = roi['x'], roi['y'], roi['w'], roi['h']
-                        tiles.append(create_tile(coords, neighborhood_coords_dict))
+                        tiles.append(create_tile(cfg, coords, neighborhood_coords_dict))
 
     return tiles

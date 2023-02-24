@@ -7,7 +7,6 @@ import traceback
 import multiprocessing
 
 from s2p import common
-from s2p.config import cfg
 
 
 def show_progress(a):
@@ -31,7 +30,7 @@ def show_progress(a):
     sys.stdout.flush()
 
 
-def tilewise_wrapper(fun, *args, **kwargs):
+def tilewise_wrapper(cfg, fun, *args, **kwargs):
     """
     """
     if not cfg['debug']:  # redirect stdout and stderr to log file
@@ -46,7 +45,6 @@ def tilewise_wrapper(fun, *args, **kwargs):
         traceback.print_exc()
         raise
 
-    common.garbage_cleanup()
     if not cfg['debug']:  # close logs
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
@@ -55,7 +53,7 @@ def tilewise_wrapper(fun, *args, **kwargs):
     return out
 
 
-def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True,
+def launch_calls(cfg, fun, list_of_args, nb_workers, *extra_args, tilewise=True,
                  timeout=600):
     """
     Run a function several times in parallel with different given inputs.
@@ -86,11 +84,14 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True,
             args += (x,)
         args += extra_args
         if tilewise:
-            if type(x) == tuple:  # we expect x = (tile_dictionary, pair_id)
-                log = os.path.join(x[0].dir, 'pair_%d' % x[1], 'stdout.log')
+            if type(x) == tuple:
+                if len(x) == 3:  # we expect x = (cfg, tile_dictionary, pair_id)
+                    log = os.path.join(x[1].dir, 'pair_%d' % x[2], 'stdout.log')
+                else:  # we expect x = (cfg, tile_dictionary)
+                    log = os.path.join(x[1].dir, 'stdout.log')
             else:  # we expect x = tile_dictionary
                 log = os.path.join(x.dir, 'stdout.log')
-            args = (fun,) + args
+            args = (cfg, fun,) + args
             results.append(pool.apply_async(tilewise_wrapper, args=args,
                                             kwds={'stdout': log},
                                             callback=show_progress))

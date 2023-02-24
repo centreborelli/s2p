@@ -6,7 +6,7 @@ import numpy as np
 import rpcm
 
 from s2p import sift
-from s2p.config import cfg
+from s2p.config import get_default_config
 from tests_utils import data_path
 
 
@@ -42,6 +42,7 @@ def test_matches_on_rpc_roi():
     img2 = data_path('input_triplet/img_02.tif')
     rpc1 = rpcm.rpc_from_geotiff(img1)
     rpc2 = rpcm.rpc_from_geotiff(img2)
+    cfg = get_default_config()
     computed = sift.matches_on_rpc_roi(
         cfg, img1, img2, rpc1, rpc2, 100, 100, 200, 200,
         method='relative', sift_thresh=0.6, epipolar_threshold=10

@@ -8,6 +8,7 @@ import rpcm
 
 import pytest
 import s2p
+from s2p.config import get_default_config
 from tests_utils import data_path
 
 
@@ -50,7 +51,8 @@ def test_no_rpc(data, mocks):
 
     tmp_config, _, _, _ = data
     user_cfg = s2p.read_config_file(tmp_config)
-    s2p.initialization.build_cfg(user_cfg)
+    cfg = get_default_config()
+    s2p.initialization.build_cfg(cfg, user_cfg)
 
     rpcm.rpc_from_geotiff.assert_called()
     assert rpcm.rpc_from_geotiff.call_count == 2
@@ -77,8 +79,9 @@ def test_rpc_path(data, mocks):
     with open(tmp_config, "w") as f:
         json.dump(cfg, f)
 
+    cfg = get_default_config()
     user_cfg = s2p.read_config_file(tmp_config)
-    s2p.initialization.build_cfg(user_cfg)
+    s2p.initialization.build_cfg(cfg, user_cfg)
 
     rpcm.rpc_from_geotiff.assert_not_called()
     rpcm.rpc_from_rpc_file.assert_called()
@@ -100,8 +103,9 @@ def test_rpc_dict(data, mocks):
     with open(tmp_config, "w") as f:
         json.dump(cfg, f)
 
+    cfg = get_default_config()
     user_cfg = s2p.read_config_file(tmp_config)
-    s2p.initialization.build_cfg(user_cfg)
+    s2p.initialization.build_cfg(cfg, user_cfg)
 
     rpcm.rpc_from_geotiff.assert_not_called()
     rpcm.rpc_from_rpc_file.assert_not_called()
@@ -109,6 +113,7 @@ def test_rpc_dict(data, mocks):
 
 def test_roi_geojson(data):
     tmp_config, _, _, _ = data
+    cfg = get_default_config()
     user_cfg = s2p.read_config_file(tmp_config)
 
     user_cfg["roi_geojson"] = {
@@ -139,5 +144,5 @@ def test_roi_geojson(data):
       "type" : "Polygon"
     }
 
-    s2p.initialization.build_cfg(user_cfg)
+    s2p.initialization.build_cfg(cfg, user_cfg)
     assert user_cfg["roi"] == {'x': 150, 'y': 150, 'w': 700, 'h': 700}

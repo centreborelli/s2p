@@ -55,11 +55,6 @@ def compare_dsm(computed, expected, absmean_tol, percentile_tol):
 
 
 def end2end(config_file, ref_dsm, absmean_tol=0.025, percentile_tol=1.):
-
-    # TODO: this is ugly, and will be fixed once we'll have implemented a better
-    # way to control the config parameters
-    if 'out_crs' in s2p.cfg: del s2p.cfg['out_crs']
-
     test_cfg = s2p.read_config_file(config_file)
     s2p.main(test_cfg)
 

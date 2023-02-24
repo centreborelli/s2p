@@ -25,5 +25,5 @@ def main() -> None:
     s2p.main(user_cfg, start_from=args.start_from)
 
     # Backup input file for sanity check
-    if not args.config.startswith(os.path.abspath(s2p.cfg['out_dir']+os.sep)):
-        shutil.copy2(args.config,os.path.join(s2p.cfg['out_dir'],'config.json.orig'))
+    if not args.config.startswith(os.path.abspath(user_cfg['out_dir'] + os.sep)):
+        shutil.copy2(args.config,os.path.join(user_cfg['out_dir'], 'config.json.orig'))
