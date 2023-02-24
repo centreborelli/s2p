@@ -19,6 +19,7 @@ from s2p import rpc_utils
 from s2p import masking
 from s2p import parallel
 from s2p.config import cfg
+from s2p.tile import Tile
 
 # This function is here as a workaround to python bug #24313 When
 # using python3, json does not know how to serialize numpy.int64 on
@@ -228,7 +229,7 @@ def get_tile_dir(x: int, y: int, w: int, h: int) -> str:
 
 def create_tile(
     coords: Tuple[int, int, int, int], neighborhood_coords_dict: dict
-) -> dict:
+) -> Tile:
     """
     Return a dictionary with the data of a tile.
 
@@ -244,22 +245,19 @@ def create_tile(
     Returns:
         tile (dict): dictionary with the metadata of a tile
     """
-    tile: dict = {}
-    tile['coordinates'] = coords
-    tile['dir'] = os.path.join(cfg['out_dir'], get_tile_dir(*coords))
-    tile['json'] = os.path.join(get_tile_dir(*coords), 'config.json')
+    dir = os.path.join(cfg['out_dir'], get_tile_dir(*coords))
+    json = os.path.join(get_tile_dir(*coords), 'config.json')
 
-    tile['neighborhood_dirs'] = list()
+    neighborhood_dirs = list()
     key = str(coords)
-
     if 'neighborhood_dirs' in cfg:
-        tile['neighborhood_dirs'] = cfg['neighborhood_dirs']
+        neighborhood_dirs = cfg['neighborhood_dirs']
     elif key in neighborhood_coords_dict:
         for coords2 in neighborhood_coords_dict[key]:
-            tile['neighborhood_dirs'].append(os.path.join('../../..',
-                                                          get_tile_dir(*coords2)))
+            neighborhood_dirs.append(os.path.join('../../..',
+                                                  get_tile_dir(*coords2)))
 
-    return tile
+    return Tile(coordinates=coords, dir=dir, json=json, neighborhood_dirs=neighborhood_dirs)
 
 
 def rectangles_intersect(
@@ -359,7 +357,7 @@ def is_this_tile_useful(
     return True, mask
 
 
-def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False) -> List[dict]:
+def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False) -> List[Tile]:
     """
     List the tiles to process and prepare their output directories structures.
 
@@ -415,26 +413,26 @@ def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False
             tiles.append(tile)
 
             # make tiles directories and store json configuration dumps
-            os.makedirs(tile['dir'], exist_ok=True)
+            os.makedirs(tile.dir, exist_ok=True)
             for i in range(1, len(cfg['images'])):
-                os.makedirs(os.path.join(tile['dir'], 'pair_{}'.format(i)), exist_ok=True)
+                os.makedirs(os.path.join(tile.dir, 'pair_{}'.format(i)), exist_ok=True)
 
             # save a json dump of the tile configuration
             tile_cfg = copy.deepcopy(cfg)
-            x, y, w, h = tile['coordinates']
+            x, y, w, h = tile.coordinates
             for img in tile_cfg['images']:
                 img.pop('rpcm', None)
             tile_cfg['roi'] = {'x': x, 'y': y, 'w': w, 'h': h}
             tile_cfg['full_img'] = False
             tile_cfg['max_processes'] = 1
-            tile_cfg['neighborhood_dirs'] = tile['neighborhood_dirs']
+            tile_cfg['neighborhood_dirs'] = tile.neighborhood_dirs
             tile_cfg['out_dir'] = '../../..'
 
-            with open(os.path.join(cfg['out_dir'], tile['json']), 'w') as f:
+            with open(os.path.join(cfg['out_dir'], tile.json), 'w') as f:
                 json.dump(tile_cfg, f, indent=2, default=workaround_json_int64)
 
             # save the mask
-            common.rasterio_write(os.path.join(tile['dir'], 'mask.png'),
+            common.rasterio_write(os.path.join(tile.dir, 'mask.png'),
                                   mask.astype(np.uint8))
     else:
         if len(tiles_coords) == 1:
@@ -442,7 +440,6 @@ def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False
         else:
             with open(tiles_txt, 'r') as f_tiles:
                 for config_json in f_tiles:
-                    tile = {}
                     with open(os.path.join(cfg['out_dir'],
                                            config_json.rstrip(os.linesep)), 'r') as f_config:
                         tile_cfg = json.load(f_config)

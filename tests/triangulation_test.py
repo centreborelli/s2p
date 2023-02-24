@@ -6,6 +6,7 @@ import pytest
 from s2p import disparity_to_ply, read_config_file
 from s2p.initialization import build_cfg
 from s2p.ply import read_3d_point_cloud_from_ply
+from s2p.tile import Tile
 from tests_utils import data_path
 
 
@@ -25,7 +26,7 @@ def test_disparity_to_ply(tmp_path, out_crs):
     test_cfg["out_crs"] = out_crs
     build_cfg(test_cfg)
 
-    tile = {"coordinates": [500, 150, 350, 350], "dir": tile_dir}
+    tile = Tile(coordinates=(500, 150, 350, 350), dir=tile_dir, neighborhood_dirs=[], json="")
     disparity_to_ply(tile)
 
     _, comments = read_3d_point_cloud_from_ply(os.path.join(tile_dir, "cloud.ply"))

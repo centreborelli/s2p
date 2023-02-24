@@ -87,9 +87,9 @@ def launch_calls(fun, list_of_args, nb_workers, *extra_args, tilewise=True,
         args += extra_args
         if tilewise:
             if type(x) == tuple:  # we expect x = (tile_dictionary, pair_id)
-                log = os.path.join(x[0]['dir'], 'pair_%d' % x[1], 'stdout.log')
+                log = os.path.join(x[0].dir, 'pair_%d' % x[1], 'stdout.log')
             else:  # we expect x = tile_dictionary
-                log = os.path.join(x['dir'], 'stdout.log')
+                log = os.path.join(x.dir, 'stdout.log')
             args = (fun,) + args
             results.append(pool.apply_async(tilewise_wrapper, args=args,
                                             kwds={'stdout': log},
