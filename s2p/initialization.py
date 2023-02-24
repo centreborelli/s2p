@@ -7,8 +7,10 @@ import os
 import sys
 import json
 import copy
+from typing import Any, List, Optional, Tuple
 import rasterio
 import numpy as np
+import numpy.typing as npt
 import rpcm
 
 from s2p import common
@@ -24,19 +26,19 @@ from s2p.config import cfg
 # is called. This results in our json not being serializable anymore
 # Calling json.dump(..,default=workaround_json_int64) fixes this
 # https://bugs.python.org/issue24313
-def workaround_json_int64(o):
+def workaround_json_int64(o: Any) -> int:
     if isinstance(o, np.integer) : return int(o)
     raise TypeError
 
 
-def dict_has_keys(d, l):
+def dict_has_keys(d: dict, l: List[str]) -> bool:
     """
     Return True if the dict d contains all the keys of the input list l.
     """
     return all(k in d for k in l)
 
 
-def check_parameters(d):
+def check_parameters(d: dict) -> None:
     """
     Check that the provided dictionary defines all mandatory s2p arguments.
 
@@ -76,10 +78,13 @@ def check_parameters(d):
         pass
     elif 'roi_geojson' in d:
         ll_poly = geographiclib.read_lon_lat_poly_from_geojson(d['roi_geojson'])
+        use_srtm = d.get('use_srtm', False)
+        exogenous_dem = d.get('exogenous_dem')
+        exogenous_dem_geoid_mode = d.get('exogenous_dem_geoid_mode', False)
         d['roi'] = rpc_utils.roi_process(d['images'][0]['rpcm'], ll_poly,
-                                         use_srtm=d.get('use_srtm'),
-                                         exogenous_dem=d.get('exogenous_dem'),
-                                         exogenous_dem_geoid_mode=d.get('exogenous_dem_geoid_mode'))
+                                         use_srtm=use_srtm,
+                                         exogenous_dem=exogenous_dem,
+                                         exogenous_dem_geoid_mode=exogenous_dem_geoid_mode)
     else:
         print('ERROR: missing or incomplete roi definition')
         sys.exit(1)
@@ -98,7 +103,7 @@ def check_parameters(d):
                 print('WARNING: ignoring unknown parameter {}.'.format(k))
 
 
-def build_cfg(user_cfg):
+def build_cfg(user_cfg: dict) -> None:
     """
     Populate a dictionary containing the s2p parameters from a user config file.
 
@@ -145,7 +150,7 @@ def build_cfg(user_cfg):
     cfg['gsd'] = rpc_utils.gsd_from_rpc(cfg['images'][0]['rpcm'])
 
 
-def make_dirs():
+def make_dirs() -> None:
     """
     Create directories needed to run s2p.
     """
@@ -161,7 +166,7 @@ def make_dirs():
         json.dump(cfg_copy, f, indent=2, default=workaround_json_int64)
 
 
-def adjust_tile_size():
+def adjust_tile_size() -> Tuple[int, int]:
     """
     Adjust the size of the tiles.
     """
@@ -185,9 +190,9 @@ def adjust_tile_size():
     return tile_w, tile_h
 
 
-def compute_tiles_coordinates(rx, ry, rw, rh, tw, th):
-    """
-    """
+def compute_tiles_coordinates(
+    rx: int, ry: int, rw: int, rh: int, tw: int, th: int
+) -> Tuple[List[Tuple[int, int, int, int]], dict]:
     out = []
     neighborhood_dict = dict()
 
@@ -213,7 +218,7 @@ def compute_tiles_coordinates(rx, ry, rw, rh, tw, th):
     return out, neighborhood_dict
 
 
-def get_tile_dir(x, y, w, h):
+def get_tile_dir(x: int, y: int, w: int, h: int) -> str:
     """
     Get the name of a tile directory
     """
@@ -221,7 +226,9 @@ def get_tile_dir(x, y, w, h):
                         'col_{:07d}_width_{}'.format(x, w))
 
 
-def create_tile(coords, neighborhood_coords_dict):
+def create_tile(
+    coords: Tuple[int, int, int, int], neighborhood_coords_dict: dict
+) -> dict:
     """
     Return a dictionary with the data of a tile.
 
@@ -237,7 +244,7 @@ def create_tile(coords, neighborhood_coords_dict):
     Returns:
         tile (dict): dictionary with the metadata of a tile
     """
-    tile = {}
+    tile: dict = {}
     tile['coordinates'] = coords
     tile['dir'] = os.path.join(cfg['out_dir'], get_tile_dir(*coords))
     tile['json'] = os.path.join(get_tile_dir(*coords), 'config.json')
@@ -255,7 +262,9 @@ def create_tile(coords, neighborhood_coords_dict):
     return tile
 
 
-def rectangles_intersect(r, s):
+def rectangles_intersect(
+    r: Tuple[int, int, int, int], s: Tuple[int, int, int, int]
+) -> bool:
     """
     Check intersection of two rectangles parallel to the coordinate axis.
 
@@ -282,7 +291,7 @@ def rectangles_intersect(r, s):
     return True
 
 
-def is_tile_all_nodata(path:str, window:rasterio.windows.Window):
+def is_tile_all_nodata(path: str, window: rasterio.windows.Window) -> bool:
     """Check if pixels in a given window are all nodata.
 
     Parameters
@@ -311,7 +320,9 @@ def is_tile_all_nodata(path:str, window:rasterio.windows.Window):
             return False
 
 
-def is_this_tile_useful(x, y, w, h, images_sizes):
+def is_this_tile_useful(
+    x: int, y: int, w: int, h: int, images_sizes: List[Tuple[int, int]]
+) -> Tuple[bool, Optional[npt.NDArray[np.bool_]]]:
     """
     Check if a tile contains valid pixels.
 
@@ -348,7 +359,7 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
     return True, mask
 
 
-def tiles_full_info(tw, th, tiles_txt, create_masks=False):
+def tiles_full_info(tw: int, th: int, tiles_txt: str, create_masks: bool = False) -> List[dict]:
     """
     List the tiles to process and prepare their output directories structures.
 
