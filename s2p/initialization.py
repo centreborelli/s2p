@@ -137,8 +137,8 @@ def build_cfg(user_cfg):
         epsg_code = geographiclib.epsg_code_from_utm_zone(utm_zone)
         cfg['out_crs'] = "epsg:{}".format(epsg_code)
         if cfg['out_geoid']:
-            # Use the EGM96 geoid model for the output CRS if out_geoid is True
-            cfg['out_crs'] += "+5773"
+            # Use the EGM2008 geoid model for the output CRS if out_geoid is True
+            cfg['out_crs'] += "+3855"
     geographiclib.pyproj_crs(cfg['out_crs'])
 
     # get image ground sampling distance

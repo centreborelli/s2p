@@ -46,7 +46,7 @@ requirements = ['numpy==1.22.2',
                 'scipy',
                 'rasterio[s3] @ https://github.com/rasterio/rasterio/archive/refs/tags/1.3.3.tar.gz',
                 'utm',
-                'pyproj>=2.0.2,<3.0.0',
+                'pyproj==3.3.0',
                 'beautifulsoup4[lxml]',
                 'plyfile',
                 'plyflatten>=0.2.0',
@@ -62,7 +62,7 @@ extras_require = {
 }
 
 setup(name="s2p",
-      version="1.3.7",
+      version="1.3.9",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
