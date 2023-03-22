@@ -100,7 +100,8 @@ def local_translation(r1, r2, x, y, w, h, m):
 
 
 def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
-                       method, sift_thresh, epipolar_threshold):
+                       method, sift_thresh, epipolar_threshold,
+                       matching_method, min_value, max_value, confidence_threshold):
     """
     Computes pointing correction matrix for specific ROI
 
@@ -125,7 +126,8 @@ def compute_correction(img1, img2, rpc1, rpc2, x, y, w, h,
         raise ValueError(f"width or height <= 0 for:\n{img1}\n{img2}\nx={x}, y={y}, w={w}, h={h}. Try a different"
                          f"tilesize or different ROI.")
     m = sift.matches_on_rpc_roi(img1, img2, rpc1, rpc2, x, y, w, h,
-                                method, sift_thresh, epipolar_threshold)
+                                method, sift_thresh, epipolar_threshold,
+                                matching_method, min_value, max_value, confidence_threshold)
 
     if m is not None:
         A = local_translation(rpc1, rpc2, x, y, w, h, m)

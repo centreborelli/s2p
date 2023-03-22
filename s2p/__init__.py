@@ -127,7 +127,8 @@ def pointing_correction(tile, i):
     method = 'relative' if cfg['relative_sift_match_thresh'] is True else 'absolute'
     A, m = pointing_accuracy.compute_correction(
         img1, img2, rpc1, rpc2, x, y, w, h, method,
-        cfg['sift_match_thresh'], cfg['max_pointing_error']
+        cfg['sift_match_thresh'], cfg['max_pointing_error'], cfg['matching_method'],
+        cfg['min_value'], cfg['max_value'], cfg['confidence_threshold']
     )
 
     if A is not None:  # A is the correction matrix
@@ -645,10 +646,10 @@ def main(user_cfg, start_from=0, merge_matches=False):
         print('2) correcting pointing globally...')
         global_pointing_correction(tiles)
         common.print_elapsed_time()
-    
+        
     # Create matches GeoJSON.
-    print("Creating matches GeoJSON")
     if merge_matches:
+        print("Creating matches GeoJSON")
         merge_all_match_files()
         matches_to_geojson(f"{cfg['out_dir']}/merged_sift_matches.txt",
                         cfg['images'][0]['rpcm'],
@@ -656,6 +657,7 @@ def main(user_cfg, start_from=0, merge_matches=False):
                         [0, 1],
                         f"{cfg['out_dir']}/matches.geojson"
         )
+
     # rectification step:
     if start_from <= 3:
         print('3) rectifying tiles...')

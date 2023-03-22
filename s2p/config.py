@@ -177,3 +177,13 @@ cfg['out_crs'] = None
 # If the out_crs is not set this parameter determines if the output CRS uses the EGM2008 geoid vertical datum (if True)
 # or the WGS84 ellipsoid vertical datum (if False). If out_crs is set, this parameter is ignored.
 cfg['out_geoid'] = False
+
+# LoFTR parameters, points whose confidence is below this value are ignored.
+cfg["confidence_threshold"] = 0.5
+
+# Matching parameters
+# Matching method to use, choose from ["sift", "loftr", "superglue", "all"]
+cfg["matching_method"] = "sift"
+# The min and max valeus to scale the image between 0 and 1 with, only used for non-SIFT methods.
+cfg["max_value"] = 3000
+cfg["min_value"] = 200

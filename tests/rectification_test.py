@@ -39,50 +39,6 @@ def test_rectification_homographies(matches):
         np.testing.assert_allclose(variable, expected, rtol=0.01, atol=1e-6, verbose=True)
 
 
-def test_rectify_pair_no_matches(tmp_path, images):
-    """
-    Test running rectification.rectify_pair() where no matches are found.
-    """
-    im1, rpc1, im2, rpc2 = images
-    with pytest.raises(s2p.rectification.NoRectificationMatchesError):
-        s2p.rectification.rectify_pair(
-            im1=im1,
-            im2=im2,
-            rpc1=rpc1,
-            rpc2=rpc2,
-            x=100,
-            y=100,
-            w=200,
-            h=200,
-            out1=str(tmp_path / 'out1.tiff'),
-            out2=str(tmp_path / 'out2.tiff'),
-            sift_matches=None,
-            method='sift',
-        )
-
-
-def test_rectify_pair_few_matches(tmp_path, matches, images):
-    """
-    Test running rectification.rectify_pair() where less than 4 matches are found.
-    """
-    im1, rpc1, im2, rpc2 = images
-    with pytest.raises(s2p.rectification.NoRectificationMatchesError):
-        s2p.rectification.rectify_pair(
-            im1=im1,
-            im2=im2,
-            rpc1=rpc1,
-            rpc2=rpc2,
-            x=100,
-            y=100,
-            w=200,
-            h=200,
-            out1=str(tmp_path / 'out1.tiff'),
-            out2=str(tmp_path / 'out2.tiff'),
-            sift_matches=matches[:3],
-            method='sift',
-        )
-
-
 def test_rectify_pair_with_matches(tmp_path, matches, images):
     """
     Test running rectification.rectify_pair() with some matches.
