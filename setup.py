@@ -44,7 +44,7 @@ except ImportError:
 
 requirements = ['numpy==1.22.2',
                 'scipy',
-                'rasterio[s3] @ https://github.com/rasterio/rasterio/archive/refs/tags/1.3.3.tar.gz',
+                'rasterio[s3] @ https://github.com/rasterio/rasterio/archive/refs/tags/1.3.6.tar.gz',
                 'utm',
                 'pyproj==3.3.0',
                 'beautifulsoup4[lxml]',
