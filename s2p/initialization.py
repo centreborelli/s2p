@@ -149,8 +149,8 @@ def make_dirs():
     """
     Create directories needed to run s2p.
     """
-    common.mkdir_p(cfg['out_dir'])
-    common.mkdir_p(os.path.expandvars(cfg['temporary_dir']))
+    os.makedirs(cfg['out_dir'], exist_ok=True)
+    os.makedirs(os.path.expandvars(cfg['temporary_dir']), exist_ok=True)
 
     # store a json dump of the config.cfg dictionary
     with open(os.path.join(cfg['out_dir'], 'config.json'), 'w') as f:
@@ -282,6 +282,35 @@ def rectangles_intersect(r, s):
     return True
 
 
+def is_tile_all_nodata(path:str, window:rasterio.windows.Window):
+    """Check if pixels in a given window are all nodata.
+
+    Parameters
+    ----------
+    path
+        Path to the raster.
+    window
+        A rasterio.windows.Window object.
+
+    Returns
+    -------
+        Return True if all pixels in the window are nodata.
+        Return False if at least one pixel is non-nodata.
+    """
+    with rasterio.open(path, "r") as ds:
+        arr = ds.read(window=window)
+
+        # NOTE: Many satellite imagery providers use ds.nodata as the value of
+        # nodata pixels. Pleiades and PNeo imagery use None as nodata in their
+        # profile while putting 0 to nodata pixel in reality. Thus, we have to
+        # check both ds.nodata and 0 here. I.e., if a window is full of nodata
+        # or 0, then this window is discarded.
+        if np.all(arr == 0) or np.all(arr == ds.nodata):
+            return True
+        else:
+            return False
+
+
 def is_this_tile_useful(x, y, w, h, images_sizes):
     """
     Check if a tile contains valid pixels.
@@ -297,6 +326,9 @@ def is_this_tile_useful(x, y, w, h, images_sizes):
         useful (bool): bool telling if the tile has to be processed
         mask (np.array): tile validity mask. Set to None if the tile is discarded
     """
+    if is_tile_all_nodata(cfg["images"][0]["img"], rasterio.windows.Window(x, y, w, h)):
+        return False, None
+        
     # check if the tile is partly contained in at least one other image
     if w <= 0 or h <= 0:
         return False, None
@@ -375,9 +407,9 @@ def tiles_full_info(tw, th, tiles_txt, create_masks=False):
             tiles.append(tile)
 
             # make tiles directories and store json configuration dumps
-            common.mkdir_p(tile['dir'])
+            os.makedirs(tile['dir'], exist_ok=True)
             for i in range(1, len(cfg['images'])):
-                common.mkdir_p(os.path.join(tile['dir'], 'pair_{}'.format(i)))
+                os.makedirs(os.path.join(tile['dir'], 'pair_{}'.format(i)), exist_ok=True)
 
             # save a json dump of the tile configuration
             tile_cfg = copy.deepcopy(cfg)

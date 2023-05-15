@@ -102,18 +102,6 @@ def run(cmd, env=os.environ, timeout=None, shell=False, raise_errors=True):
     print(datetime.datetime.now() - t)
     return True
 
-def mkdir_p(path):
-    """
-    Create a directory without complaining if it already exists.
-    """
-    try:
-        os.makedirs(path)
-    except OSError as exc: # requires Python > 2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else: raise
-
-
 def matrix_translation(x, y):
     t = np.eye(3)
     t[0, 2] = x
@@ -266,44 +254,6 @@ def crop_array(img, x, y, w, h, fill_value=0):
         crop[y0 - y:y1 - y, x0 - x:x1 - x] = img[y0:y1, x0:x1]
 
     return crop
-
-
-def run_binary_on_list_of_points(points, binary, option=None, env_var=None):
-    """
-    Runs a binary that reads its input on stdin.
-
-    Args:
-        points: numpy array containing all the input points, one per line
-        binary: path to the binary. It is supposed to write one output value on
-            stdout for each input point
-        option: optional option to pass to the binary
-        env_var (optional): environment variable that modifies the behaviour of
-            the binary. It is a tuple containing 2 strings, eg ('PATH', '/bin')
-
-    Returns:
-        a numpy array containing all the output points, one per line.
-    """
-    # send the input points to stdin
-    pts_file = tmpfile('.txt')
-    np.savetxt(pts_file, points, '%.18f')
-    p1 = subprocess.Popen(['cat', pts_file], stdout=subprocess.PIPE)
-
-    # run the binary
-    env = os.environ.copy()
-    if env_var is not None:
-        env[env_var[0]] = env_var[1]
-    cmd = [binary]
-    if option is not None:
-        cmd.append(option)
-    p2 = subprocess.Popen(cmd, env=env, stdin=p1.stdout,
-                          stdout=subprocess.PIPE)
-
-    # recover output values
-    out = []
-    for i in range(len(points)):
-        out.append([float(x) for x in p2.stdout.readline().split()])
-
-    return np.array(out)
 
 
 def cargarse_basura(inputf, outputf):
