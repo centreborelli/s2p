@@ -44,7 +44,7 @@ except ImportError:
 
 requirements = ['numpy==1.22.2',
                 'scipy',
-                'rasterio[s3] @ https://github.com/rasterio/rasterio/archive/refs/tags/1.3.3.tar.gz',
+                'rasterio[s3] @ https://github.com/rasterio/rasterio/archive/refs/tags/1.3.6.tar.gz',
                 'utm',
                 'pyproj>=3.0.0',
                 'beautifulsoup4[lxml]',
@@ -63,7 +63,7 @@ extras_require = {
 }
 
 setup(name="s2p",
-      version="1.5.0",
+      version="1.5.2",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
