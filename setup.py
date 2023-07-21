@@ -52,7 +52,7 @@ requirements = ['numpy==1.22.2',
                 'plyflatten>=0.2.0',
                 'ransac',
                 'rpcm @ git+https://github.com/20treeAI/rpcm.git@v1.4.9',
-                'srtm4 @ https://github.com/20treeAI/srtm4/archive/refs/tags/1.2.4.tar.gz',
+                'srtm4',
                 'requests',
                 'opencv-python',
                 'geopandas',
@@ -63,7 +63,7 @@ extras_require = {
 }
 
 setup(name="s2p",
-      version="1.5.3",
+      version="1.5.4",
       description="Satellite Stereo Pipeline.",
       long_description=readme(),
       long_description_content_type='text/markdown',
