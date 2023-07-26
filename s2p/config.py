@@ -26,6 +26,9 @@ cfg['clean_intermediate'] = False
 # switch to True if you want to process the whole image
 cfg['full_img'] = False
 
+# set to False if you don't want to merge the dsm tiles
+cfg['merge_dsms'] = True
+
 # s2p processes the images tile by tile. The tiles are squares cropped from the
 # reference image. The width and height of the tiles are given by this param, in pixels.
 cfg['tile_size'] = 800

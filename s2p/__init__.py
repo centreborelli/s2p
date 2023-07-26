@@ -718,7 +718,7 @@ def main(user_cfg, start_from=0, merge_matches=False):
         parallel.launch_calls(plys_to_dsm, tiles, nb_workers, timeout=timeout)
 
     # global-dsm-rasterization step:
-    if start_from <= 7:
+    if start_from <= 7 and cfg['merge_dsm']:
         print('7) computing global DSM...')
         global_dsm(tiles)
         
