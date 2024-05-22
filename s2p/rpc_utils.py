@@ -4,15 +4,14 @@
 
 
 import warnings
-import rasterio
-import numpy as np
 
-from pyproj import CRS
+import numpy as np
+import rasterio
 import rpcm
 import srtm4
+from pyproj import CRS
 
-from s2p import geographiclib
-from s2p import common
+from s2p import common, geographiclib
 
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
@@ -445,7 +444,7 @@ def exogenous_disp_range_estimation(rpc1, rpc2, x, y, w, h, H1, H2, cfg, A=None,
         disparity is made horizontal thanks to the two rectifying homographies
         H1 and H2.
     """
-    if cfg['exogenous_dem'] is None and cfg.get('exogenous_dem', None) in [None, False]:
+    if cfg['exogenous_dem'] is None and cfg.get('use_srtm', None) in [None, False]:
         return
 
     m, M = altitude_range(rpc1, x, y, w, h, cfg, margin_top, margin_bottom)
